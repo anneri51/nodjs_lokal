@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Starbucks® – Multi-Getränke Explorer | Attribut-Tabelle mit Zeilen-Popup & Sortierung</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #f5efe9;
+            color: #2c221b;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .tab-bar {
+            background: white;
+            border-bottom: 1px solid #e2d9d2;
+            padding: 0 24px;
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+            z-index: 20;
+            overflow-x: auto;
+        }
+        .tab-button {
+            background: none;
+            border: none;
+            padding: 14px 24px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #5e4b38;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .tab-button.active {
+            color: #1e5a3a;
+            border-bottom-color: #1e7b4b;
+            background: #fefcf9;
+        }
+        .panes {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+        .pane {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            display: none;
+        }
+        .pane.active {
+            display: flex;
+            flex-direction: column;
+        }
+        .app-container { display: flex; height: 100%; width: 100%; }
+        .sidebar { width: 420px; background: white; border-right: 1px solid #e2d9d2; display: flex; flex-direction: column; overflow-y: auto; flex-shrink: 0; }
+        .sidebar-header { padding: 20px 16px 12px; border-bottom: 2px solid #1e7b4b; }
+        .sidebar-header h2 { font-size: 1.3rem; font-weight: 800; color: #1e5a3a; }
+        .filter-section { padding: 12px 16px; background: #fefcf9; border-bottom: 1px solid #e9e0d8; position: sticky; top: 0; z-index: 15; }
+        .searchable-dropdown input, .tree-filter input { width: 100%; padding: 8px 12px; border-radius: 40px; border: 1px solid #d6cbbc; font-size: 0.85rem; background: #fff9f5; }
+        .tree-filter { margin-top: 12px; }
+        .multiselect-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+        .multiselect-actions button { background: #ede3db; border: none; border-radius: 40px; padding: 6px 12px; font-size: 0.7rem; font-weight: 600; cursor: pointer; }
+        .selected-counter { background: #1e7b4b; color: white; border-radius: 24px; padding: 4px 12px; font-size: 0.7rem; font-weight: bold; display: inline-block; margin-left: 8px; }
+        .tree-container { padding: 12px; flex: 1; overflow-y: auto; }
+        .tree, .tree ul { list-style: none; padding-left: 20px; }
+        .tree { padding-left: 0; }
+        .tree li { margin: 4px 0; }
+        .tree .node { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 28px; cursor: pointer; font-size: 0.85rem; }
+        .tree .node:hover { background: #ede3db; }
+        .toggle-icon { width: 18px; cursor: pointer; color: #1e7b4b; font-size: 0.7rem; user-select: none; text-align: center; }
+        .getraenk-checkbox { margin-left: 2px; width: 16px; height: 16px; cursor: pointer; accent-color: #1e7b4b; }
+        .node-content { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .node-badge { background: #e2d9d2; border-radius: 30px; padding: 0 8px; font-size: 0.65rem; }
+        .main-content { flex: 1; overflow-y: auto; padding: 20px 24px; background: #faf7f3; }
+        .grouped-drinks-container { display: flex; flex-direction: column; gap: 32px; }
+        .drink-card { background: white; border-radius: 28px; border: 1px solid #e2d9d2; overflow: hidden; }
+        .drink-card h2 { background: #fef3e8; margin: 0; padding: 14px 20px; font-size: 1.5rem; font-weight: 800; color: #1e5a3a; border-bottom: 2px solid #d4c9be; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .drink-header-left { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+        .drink-image-container { width: 70px; height: 70px; border-radius: 16px; background: #e9dfd7; overflow: hidden; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; border: 1px solid #d4c9be; }
+        .drink-image-container img { width: 100%; height: 100%; object-fit: cover; }
+        .table-wrapper { overflow-x: auto; font-size: 0.7rem; }
+        .nutrition-master-table { width: max-content; min-width: 100%; border-collapse: collapse; }
+        .nutrition-master-table th, .nutrition-master-table td { border: 1px solid #e9dfd6; padding: 6px 8px; text-align: center; }
+        .nutrition-master-table th { background: #f3ede7; font-weight: 800; color: #2c5a2e; position: sticky; top: 0; }
+        .grade-1 { background-color: #a3e4a7; } .grade-2 { background-color: #c8f0c0; }
+        .grade-3 { background-color: #fff2b5; } .grade-4 { background-color: #ffe68f; }
+        .grade-5 { background-color: #ffcc80; } .grade-6 { background-color: #ffb74d; }
+        .grade-7 { background-color: #ffa270; } .grade-8 { background-color: #ff8a6f; }
+        .grade-9 { background-color: #f56c4e; } .grade-10 { background-color: #e33b2c; color: white; }
+        .grade-na { background-color: #e9e0d8; }
+        .flat-data-container { display: flex; flex-direction: column; height: 100%; background: #faf7f3; padding: 20px 24px; gap: 16px; overflow: hidden; }
+        .stats-grid { display: flex; flex-wrap: wrap; gap: 12px; background: white; padding: 16px; border-radius: 28px; border: 1px solid #e2d9d2; }
+        .flat-search-bar { background: white; border-radius: 48px; padding: 8px 20px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; border: 1px solid #e2d9d2; }
+        .flat-table-wrapper { flex: 1; overflow: auto; background: white; border-radius: 24px; border: 1px solid #e2d9d2; }
+        .flat-data-table { width: 100%; border-collapse: collapse; font-size: 0.7rem; min-width: 1200px; }
+        .flat-data-table th { position: sticky; top: 0; background: #2c5a2e; color: white; padding: 8px 6px; }
+        .flat-data-table td { padding: 5px 6px; border-bottom: 1px solid #ecdfd5; }
+        .coffee-types-container { padding: 24px; background: #faf7f3; height: 100%; overflow-y: auto; }
+        .coffee-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 28px; margin-top: 20px; }
+        .coffee-card { background: white; border-radius: 32px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: transform 0.2s; border: 1px solid #e2d9d2; }
+        .coffee-card:hover { transform: translateY(-4px); }
+        .coffee-image { width: 100%; aspect-ratio: 1 / 1; background: #ede3db; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; }
+        .coffee-image img { width: 100%; height: 100%; object-fit: cover; }
+        .coffee-info { padding: 18px; text-align: center; }
+        .coffee-name { font-size: 1.4rem; font-weight: 800; color: #1e5a3a; }
+        .regions-layout { display: flex; height: 100%; width: 100%; background: #faf7f3; }
+        .regions-sidebar { width: 360px; background: white; border-right: 1px solid #e2d9d2; display: flex; flex-direction: column; overflow-y: auto; }
+        .regions-sidebar-header { padding: 20px 16px 12px; border-bottom: 2px solid #1e7b4b; }
+        .region-group { margin-bottom: 16px; border: 1px solid #ede3db; border-radius: 20px; background: #fefcf9; overflow: hidden; }
+        .region-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #f7f2ec; cursor: pointer; font-weight: 800; color: #1e5a3a; }
+        .region-toggle { font-size: 1rem; width: 20px; }
+        .drink-list { list-style: none; padding: 8px 8px 12px 32px; }
+        .drink-item { display: flex; align-items: center; gap: 12px; padding: 8px 12px; margin: 4px 0; border-radius: 40px; background: white; border: 1px solid #e9dfd6; cursor: pointer; transition: all 0.1s; }
+        .drink-thumb { width: 44px; height: 44px; background: #e9dfd7; border-radius: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .detail-panel { flex: 1; overflow-y: auto; padding: 20px 28px; }
+        .empty-detail { background: white; border-radius: 32px; padding: 40px; text-align: center; color: #8b7a6a; }
+        .rotating-container { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px 24px; background: linear-gradient(145deg, #fefaf5 0%, #f5efe9 100%); height: 100%; overflow-y: auto; }
+        .big-image-card { max-width: 700px; width: 90%; background: white; border-radius: 48px; box-shadow: 0 20px 35px rgba(0,0,0,0.15); overflow: hidden; margin-bottom: 30px; border: 1px solid #e2d9d2; }
+        .big-image-wrapper { width: 100%; aspect-ratio: 1 / 1; background: #ede3db; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; }
+        .big-image-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+        .details-panel { max-width: 700px; width: 90%; background: white; border-radius: 36px; padding: 24px 28px; text-align: center; }
+        .nutrient-badge-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; margin: 20px 0 10px; }
+        .nutrient-badge { background: #f3ede7; border-radius: 60px; padding: 8px 16px; font-weight: 600; font-size: 0.9rem; color: #2c5a2e; }
+        .nutrient-badge span { font-size: 1.2rem; font-weight: 800; color: #1e5a3a; }
+        .rotating-timer-info { font-size: 0.7rem; color: #8b7a6a; margin-top: 16px; display: flex; gap: 20px; justify-content: center; }
+        .control-btn { background: #1e7b4b; border: none; border-radius: 40px; padding: 6px 18px; color: white; font-weight: bold; cursor: pointer; transition: 0.1s; }
+        .control-btn:hover { background: #0f5a36; }
+        .group-gallery-container { padding: 24px; background: #faf7f3; height: 100%; overflow-y: auto; }
+        .group-header { background: white; border-radius: 28px; padding: 20px; margin-bottom: 24px; border: 1px solid #e2d9d2; }
+        .image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 24px; }
+        .image-card { background: white; border-radius: 28px; overflow: hidden; border: 1px solid #e2d9d2; transition: transform 0.2s, box-shadow 0.2s; }
+        .image-card:hover { transform: translateY(-5px); box-shadow: 0 12px 24px rgba(0,0,0,0.1); }
+        .image-thumb { width: 100%; aspect-ratio: 1 / 1; background: #ede3db; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; }
+        .image-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .image-info { padding: 16px; }
+        .image-id { font-size: 0.7rem; color: #1e7b4b; font-weight: bold; background: #e9f0ec; display: inline-block; padding: 2px 10px; border-radius: 20px; margin-bottom: 8px; }
+        .drink-names li { font-size: 0.8rem; color: #5e4b38; }
+        /* ATTRIBUT-TABELLE Styles */
+        .attr-table-container { display: flex; flex-direction: column; height: 100%; background: #faf7f3; padding: 20px 24px; gap: 16px; overflow: hidden; }
+        .attr-filters-bar { background: white; border-radius: 24px; padding: 16px; border: 1px solid #e2d9d2; max-height: 220px; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+        .attr-filter-item { background: #f3ede7; border-radius: 32px; padding: 4px 12px; display: inline-flex; align-items: center; gap: 6px; font-size: 0.7rem; }
+        .attr-filter-item label { font-weight: 700; color: #2c5a2e; }
+        .attr-filter-item input { border: none; background: white; border-radius: 24px; padding: 4px 8px; width: 130px; font-size: 0.7rem; }
+        .attr-table-wrapper { flex: 1; overflow: auto; background: white; border-radius: 24px; border: 1px solid #e2d9d2; }
+        .attr-data-table { width: 100%; border-collapse: collapse; font-size: 0.7rem; min-width: 1400px; }
+        .attr-data-table th { position: sticky; top: 0; background: #2c5a2e; color: white; padding: 8px 6px; z-index: 10; }
+        .attr-data-table td { padding: 6px 6px; border-bottom: 1px solid #ecdfd5; vertical-align: middle; cursor: pointer; transition: background 0.1s; }
+        .attr-data-table tr:hover td { background: #fef3e8; }
+        .image-thumb-small { width: 48px; height: 48px; background: #ede3db; border-radius: 12px; overflow: hidden; display: inline-block; cursor: pointer; border: 1px solid #d4c9be; margin-right: 8px; vertical-align: middle; }
+        .image-id-text { font-size: 0.65rem; color: #5e4b38; display: inline-block; vertical-align: middle; max-width: 100px; word-break: break-word; }
+        .detail-modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.75);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20000;
+            backdrop-filter: blur(3px);
+        }
+        .detail-modal-card {
+            background: white;
+            border-radius: 32px;
+            max-width: 90vw;
+            max-height: 85vh;
+            width: 700px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 40px rgba(0,0,0,0.3);
+            animation: fadeInUp 0.2s ease;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal-header { background: #1e5a3a; color: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+        .modal-header h3 { font-size: 1.2rem; }
+        .close-modal-btn { background: none; border: none; color: white; font-size: 1.8rem; cursor: pointer; line-height: 1; padding: 0 8px; }
+        .modal-body { overflow-y: auto; padding: 20px 24px; flex: 1; }
+        .detail-list { display: flex; flex-direction: column; gap: 12px; }
+        .detail-item { display: flex; border-bottom: 1px solid #ede3db; padding-bottom: 8px; font-size: 0.85rem; }
+        .detail-key { font-weight: 800; width: 200px; flex-shrink: 0; color: #1e5a3a; }
+        .detail-value { color: #2c221b; word-break: break-word; flex: 1; }
+        .modal-thumb { margin-top: 5px; width: 80px; height: 80px; border-radius: 12px; overflow: hidden; border: 1px solid #e2d9d2; display: inline-block; }
+        .record-count { background: #e9dfd7; padding: 6px 12px; border-radius: 24px; font-size: 0.75rem; }
+        .status-badge { background: #e9dfd7; border-radius: 20px; padding: 4px 12px; font-size: 0.7rem; display: inline-block; margin-left: 12px; }
+        .sort-badge-active { background: #1e7b4b; color: white; }
+        @media (max-width: 800px) { .sidebar { width: 280px; } .regions-sidebar { width: 280px; } .detail-key { width: 140px; } }
+    </style>
+</head>
+<body>
+<div style="display: flex; flex-direction: column; height: 100vh;">
+    <div class="tab-bar">
+        <button class="tab-button active" data-tab="tab1">🍹 Getränke Explorer</button>
+        <button class="tab-button" data-tab="tab2">📊 Rohdaten + Filter</button>
+        <button class="tab-button" data-tab="tab3">☕ Kaffee-Galerie</button>
+        <button class="tab-button" data-tab="tab4">🗺️ Regionen & Getränke</button>
+        <button class="tab-button" data-tab="tab5">🎠 Rotierende Drinks</button>
+        <button class="tab-button" data-tab="tab6">🖼️ Gruppe 65 (alle Bilder)</button>
+        <button class="tab-button" data-tab="tab7">📋 Attribut-Tabelle (mit Sortierung & Popup)</button>
+    </div>
+    <div class="panes">
+        <div id="paneExplorer" class="pane active"><div class="app-container"><div class="sidebar"><div class="sidebar-header"><h2>📁 Getränke-Explorer <span id="apiStatusBadge" class="status-badge">⚡ Live API</span></h2><p>✅ Bilder | Nährwert-Ampel</p></div><div class="filter-section"><div><span>🔍 GETRÄNK DIREKT</span><span id="drinkCountBadge" class="status-badge">0</span></div><div class="searchable-dropdown"><input type="text" id="getraenkSearchInput" placeholder="Name tippen & auswählen ..." list="getraenkList"><datalist id="getraenkList"></datalist></div><div class="tree-filter"><input type="text" id="treeFilterInput" placeholder="🔍 Baum filtern"></div><div class="multiselect-actions"><button id="selectAllBtn">✅ Alle auswählen</button><button id="clearAllBtn">❌ Alle abwählen</button><span id="selectedCountBadge" class="selected-counter">0 ausgewählt</span></div></div><div class="tree-container" id="treeContainer">🌿 Lade Daten...</div></div><div class="main-content" id="mainContentArea"><div id="detailContent">✨ Wählen Sie Getränke aus – mit Bildern, Größenfilter & farbcodierten Nährwerten.</div></div></div></div>
+        <div id="paneAllData" class="pane"><div class="flat-data-container"><div class="stats-grid" id="statsGrid"></div><div class="flat-search-bar"><input type="text" id="flatGlobalSearch" placeholder="🔍 Global suchen"><span id="flatRecordCount" class="record-count">0</span><button id="clearColumnFiltersBtn" style="background:#ede3db; border:none; border-radius:40px; padding:4px 12px;">🗑️ Alle Filter zurücksetzen</button></div><div class="flat-table-wrapper" id="flatTableWrapper"></div></div></div>
+        <div id="paneCoffeeTypes" class="pane"><div class="coffee-types-container"><div style="background:white; border-radius:28px; padding:20px;"><h2 style="color:#1e5a3a;">☕ Starbucks® Spezialitäten</h2><p>Bild-IDs: 20971–20974, 20981, 20982</p></div><div id="coffeeGridContainer" class="coffee-grid"></div></div></div>
+        <div id="paneRegions" class="pane"><div class="regions-layout"><div class="regions-sidebar"><div class="regions-sidebar-header"><h2>🗺️ Getränke nach Region</h2><p style="font-size:0.75rem;">Klick auf ein Getränk → Details rechts</p></div><div class="regions-list" id="regionsListContainer"></div></div><div class="detail-panel" id="regionDetailPanel"><div class="empty-detail">✨ Wählen Sie ein Getränk aus der Liste.</div></div></div></div>
+        <div id="paneRotating" class="pane"><div class="rotating-container"><div class="big-image-card" id="rotatingBigCard"><div class="big-image-wrapper" id="rotatingImageWrapper"><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">🖼️ Lade Getränkebild...</div></div></div><div class="details-panel" id="rotatingDetailsPanel"><h2 id="rotatingDrinkName" style="color:#1e5a3a;">—</h2><div class="nutrient-badge-grid" id="nutrientBadges"></div><div class="rotating-timer-info"><span>🔄 Wechsel alle 5 Sekunden</span><button id="pauseRotateBtn" class="control-btn">⏸️ Pause</button><button id="nextRandomBtn" class="control-btn">⏩ Nächstes Getränk</button></div><p style="margin-top:16px;font-size:0.75rem;color:#7e6b58;">✨ Zufällig ausgewählt aus allen Getränken mit Bildern</p></div></div></div>
+        <div id="paneGroup65" class="pane"><div class="group-gallery-container"><div class="group-header"><h2 style="color:#1e5a3a;">🖼️ Bildergalerie für Gruppe 65 (alle Bild-IDs)</h2><p>Basierend auf <strong>PK_STAR_STARBUCKS_GETRAENKE_GROUP = 65</strong> – beide Spalten: FK_BILD_BILDER / si_fk_bild_bilder.</p><p id="group65Info" style="margin-top:8px; font-size:0.8rem;">📡 Lade Bilderdaten...</p></div><div id="group65Grid" class="image-grid"><div class="image-card" style="text-align: center; padding: 40px;">🖼️ Lade Bilder...</div></div></div></div>
+        
+        <!-- TAB 7: ATTRIBUT-TABELLE MIT SORTIERUNG (PK_GROUP aufsteigend/absteigend) -->
+        <div id="paneAttrTable" class="pane">
+            <div class="attr-table-container">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                    <h3 style="color:#1e5a3a;">📋 Alle Attribute – Klick auf Zeile öffnet Detail-Popup</h3>
+                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                        <span id="attrRecordCount" class="record-count">0</span>
+                        <div style="display: flex; gap: 6px;">
+                            <button id="sortGroupAscBtn" class="control-btn" style="background:#2c5a2e;">⬆️ PK_GROUP aufsteigend</button>
+                            <button id="sortGroupDescBtn" class="control-btn" style="background:#2c5a2e;">⬇️ PK_GROUP absteigend</button>
+                            <button id="clearAttrSortBtn" class="control-btn" style="background:#5e4b38;">✖️ Sortierung löschen</button>
+                            <button id="resetAttrFiltersBtn" class="control-btn" style="background:#5e4b38;">🗑️ Filter zurücksetzen</button>
+                        </div>
+                        <span id="attrSortStatus" style="font-size:0.7rem; background:#ede3db; padding:4px 12px; border-radius: 40px;">🔄 Sortierung: keine</span>
+                    </div>
+                </div>
+                <div class="attr-filters-bar" id="attrFiltersBar"></div>
+                <div class="attr-table-wrapper" id="attrTableWrapper"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --------------------------------------------------------------
+    // GLOBALE VARIABLEN
+    // --------------------------------------------------------------
+    const API_URL = 'http://localhost:5000/star_starbucks_getraenke/full';
+    let allItems = [];
+    let structuredData = new Map();
+    let drinkToVariants = new Map();
+    let milkNutritionMap = new Map();
+    let allGetraenkNames = [];
+    let selectedGetraenke = new Set();
+    let currentTreeFilter = "";
+    let flatRawData = [];
+    let columnFilters = {};
+    let globalFilterFlat = "";
+    let groupToImageId = new Map();
+    let drinkNameToGroupId = new Map();
+    let globalNutrientValues = {};
+    let rotatingInterval = null;
+    let isRotating = true;
+    let validImageDrinks = [];
+    let group65Images = new Map();
+    const SIZE_ORDER = ["mini","short","tall","grande","venti","ohne"];
+    const SIZE_LABELS = { mini:"Mini", short:"Short", tall:"Tall", grande:"Grande", venti:"Venti", ohne:"Ohne" };
+    const NUTRIENT_MAPPING = [
+        { dbField: "kalorien_einh_kcal", label: "kcal", unit: "kcal", format: v => v ? Math.round(v) : "—" },
+        { dbField: "fett_total_einh_g", label: "Fett", unit: "g", format: v => v ? v.toFixed(1) : "—" },
+        { dbField: "davon_gesaettigte_fettsaeuren_einh_g", label: "ges.Fetts.", unit: "g", format: v => v ? v.toFixed(1) : "—" },
+        { dbField: "kohlenhydrate_total_einh_g", label: "Kohlenhydr.", unit: "g", format: v => v ? v.toFixed(1) : "—" },
+        { dbField: "davon_zucker_einh_g", label: "Zucker", unit: "g", format: v => v ? v.toFixed(1) : "—" },
+        { dbField: "eiweiss_einh_g", label: "Eiweiß", unit: "g", format: v => v ? v.toFixed(1) : "—" },
+        { dbField: "koffein_einh_mg", label: "Koffein", unit: "mg", format: v => v ? Math.round(v) : "—" }
+    ];
+    
+    // Sortierstatus für Attribut-Tabelle (PK_GROUP)
+    let attrSortDirection = null; // 'asc' oder 'desc'
+    
+    function escapeHtml(s) { return s ? String(s).replace(/[&<>]/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[m])) : ''; }
+    function parseNumber(v) { if(v===undefined||v===null) return null; let n=parseFloat(String(v).trim().replace(',','.')); return isNaN(n)?null:n; }
+    function extractSizeKey(sizeRaw){ if(!sizeRaw) return null; let raw=String(sizeRaw).trim().toLowerCase(); if(raw.includes('mini')) return 'mini'; if(raw.includes('short')) return 'short'; if(raw.includes('tall')) return 'tall'; if(raw.includes('grande')) return 'grande'; if(raw.includes('venti')) return 'venti'; if(raw.includes('ohne')) return 'ohne'; return null; }
+    
+    async function fetchAndDisplayImage(imageId, container, clickable=true) {
+        if(!imageId || imageId==='—'){ container.innerHTML='<div style="color:#aaa;">📷 kein Bild</div>'; return; }
+        try{
+            container.innerHTML='<div>🖼️...</div>';
+            let resp=await fetch(`http://localhost:5000/bild/1/${imageId}`);
+            if(resp.ok){
+                let imgData=await resp.json();
+                if(imgData[0]?.FILECONTENT?.data){
+                    let byteArray=new Uint8Array(imgData[0].FILECONTENT.data);
+                    let blob=new Blob([byteArray],{type:imgData[0].MIMETYPE||'image/jpeg'});
+                    let url=URL.createObjectURL(blob);
+                    let img=document.createElement('img');
+                    img.src=url;
+                    img.style.width='100%';
+                    img.style.height='100%';
+                    img.style.objectFit='cover';
+                    container.innerHTML='';
+                    container.appendChild(img);
+                    if(clickable){ img.onclick=(e)=>{ e.stopPropagation(); let modal=document.createElement('div'); modal.className='image-modal'; let bigImg=document.createElement('img'); bigImg.src=url; modal.appendChild(bigImg); modal.onclick=()=>modal.remove(); document.body.appendChild(modal); }; }
+                    img.onload=()=>URL.revokeObjectURL(url);
+                } else { container.innerHTML='<div>📷 keine Daten</div>'; }
+            } else { container.innerHTML='<div>❌ Fehler</div>'; }
+        } catch(e){ container.innerHTML='<div>⚠️ Netzwerk</div>'; }
+    }
+    
+    function buildDataStructures(items){
+        structuredData.clear(); drinkToVariants.clear(); milkNutritionMap.clear();
+        let tempDrinkSet=new Set();
+        for(let row of items){
+            let pk=row.PK_STAR_STARBUCKS_GETRAENKE_SIMPLE||row.pk;
+            if(!pk) continue;
+            let getraenk=(row.GETRAENK||row.getraenk||'Unbekannt').trim();
+            let mainGroup=row.MAIN_GETRAENK||row.main_getraenk||'Klassiker';
+            let milk=row.MILCHART||row.milchart||'Standard';
+            let sizeKey=extractSizeKey(row.getraenk_groesse||row.groesse);
+            if(!sizeKey) continue;
+            tempDrinkSet.add(getraenk);
+            let nutrition={};
+            for(let n of NUTRIENT_MAPPING){ let val=parseNumber(row[n.dbField]); nutrition[n.dbField]=val!==null?val:null; }
+            milkNutritionMap.set(`${pk}|${milk}|${sizeKey}`,nutrition);
+            if(!structuredData.has(mainGroup)) structuredData.set(mainGroup,new Map());
+            let getraenkMap=structuredData.get(mainGroup);
+            if(!getraenkMap.has(getraenk)) getraenkMap.set(getraenk,new Map());
+            let milkMap=getraenkMap.get(getraenk);
+            if(!milkMap.has(milk)) milkMap.set(milk,new Set());
+            milkMap.get(milk).add(sizeKey);
+            if(!drinkToVariants.has(getraenk)) drinkToVariants.set(getraenk,new Map());
+            let variantMap=drinkToVariants.get(getraenk);
+            if(!variantMap.has(milk)) variantMap.set(milk,new Map());
+            let sizeMap=variantMap.get(milk);
+            if(!sizeMap.has(sizeKey)) sizeMap.set(sizeKey,{pk,sizes:new Set()});
+            sizeMap.get(sizeKey).sizes.add(sizeKey);
+        }
+        allGetraenkNames=Array.from(tempDrinkSet).sort();
+        rebuildGlobalNutrientRanges(items);
+        buildImageMappings(items);
+        validImageDrinks = allGetraenkNames.filter(drink => { let gid = drinkNameToGroupId.get(drink); return gid && groupToImageId.has(gid); });
+    }
+    function rebuildGlobalNutrientRanges(items) { globalNutrientValues = {}; for(let nut of NUTRIENT_MAPPING) globalNutrientValues[nut.dbField] = []; for(let row of items){ for(let nut of NUTRIENT_MAPPING){ let val = parseNumber(row[nut.dbField]); if(val !== null) globalNutrientValues[nut.dbField].push(val); } } for(let nut of NUTRIENT_MAPPING) globalNutrientValues[nut.dbField].sort((a,b)=>a-b); }
+    function getGradeClass(nutrientDbField, value){ if(value===null||value==='—'||isNaN(value)) return 'grade-na'; let numeric=parseFloat(value); let arr=globalNutrientValues[nutrientDbField]||[]; if(!arr.length) return 'grade-na'; let rank=arr.findIndex(v=>v>=numeric); if(rank===-1) rank=arr.length-1; let percentile=(rank+1)/arr.length; let grade=Math.min(10,Math.max(1,Math.ceil(percentile*10))); const gradeMap={1:'grade-1',2:'grade-2',3:'grade-3',4:'grade-4',5:'grade-5',6:'grade-6',7:'grade-7',8:'grade-8',9:'grade-9',10:'grade-10'}; return gradeMap[grade]; }
+    function buildImageMappings(items){ groupToImageId.clear(); drinkNameToGroupId.clear(); group65Images.clear(); for(let row of items){ let groupPk = row.PK_STAR_STARBUCKS_GETRAENKE_GROUP; let gName = (row.GETRAENK || row.getraenk || '').trim(); let bildIdMain = row.FK_BILD_BILDER || row.si_fk_bild_bilder; if(groupPk && bildIdMain && !groupToImageId.has(groupPk)) groupToImageId.set(groupPk, bildIdMain); if(gName && groupPk && !drinkNameToGroupId.has(gName)) drinkNameToGroupId.set(gName, groupPk); if(groupPk === 65){ let fk = row.FK_BILD_BILDER; if(fk && String(fk).trim() !== ''){ if(!group65Images.has(fk)) group65Images.set(fk, { imageId: fk, drinkNames: new Set() }); if(gName) group65Images.get(fk).drinkNames.add(gName); } let si = row.si_fk_bild_bilder; if(si && String(si).trim() !== '' && si !== fk){ if(!group65Images.has(si)) group65Images.set(si, { imageId: si, drinkNames: new Set() }); if(gName) group65Images.get(si).drinkNames.add(gName); } } } }
+    function renderTree(){ let html='<ul class="tree">'; for(let main of Array.from(structuredData.keys()).sort()){ let map=structuredData.get(main); let filtered=Array.from(map.keys()).filter(n=>currentTreeFilter===''||n.toLowerCase().includes(currentTreeFilter.toLowerCase())); if(filtered.length===0) continue; html+=`<li><div class="node"><span class="toggle-icon">▶</span><span class="node-content">📂 ${escapeHtml(main)}<span class="node-badge">${filtered.length}</span></span></div><ul class="children" style="display:none;">`; for(let g of filtered){ let checked=selectedGetraenke.has(g)?'checked':''; html+=`<li><div class="node"><span class="toggle-icon">▶</span><input type="checkbox" class="getraenk-checkbox" value="${escapeHtml(g)}" ${checked}><span class="node-content">🍹 ${escapeHtml(g)}</span></div></li>`; } html+=`</ul></li>`; } html+='</ul>'; document.getElementById('treeContainer').innerHTML=html; attachTreeEvents(); }
+    function attachTreeEvents(){ document.querySelectorAll('.toggle-icon').forEach(icon=>{ icon.onclick=(e)=>{ e.stopPropagation(); let li=icon.closest('li'); let ul=li?.querySelector(':scope > .children'); if(ul){ let vis=ul.style.display!=='none'; ul.style.display=vis?'none':'block'; icon.textContent=vis?'▶':'▼'; } }; }); document.querySelectorAll('.getraenk-checkbox').forEach(cb=>{ cb.onchange=()=>{ if(cb.checked) selectedGetraenke.add(cb.value); else selectedGetraenke.delete(cb.value); renderSelectedTables(); document.getElementById('selectedCountBadge').innerText=`${selectedGetraenke.size} ausgewählt`; }; }); }
+    function renderSelectedTables(){ let container=document.getElementById('detailContent'); if(selectedGetraenke.size===0){ container.innerHTML='<div class="empty-message">✨ Keine Getränke ausgewählt.</div>'; return; } let html='<div class="grouped-drinks-container">'; for(let drink of Array.from(selectedGetraenke).sort()){ html+=`<div class="drink-card"><h2><div class="drink-header-left"><div class="drink-image-container" data-img-id="${drinkNameToGroupId.get(drink) ? groupToImageId.get(drinkNameToGroupId.get(drink)) || '' : ''}"></div><span>🍹 ${escapeHtml(drink)}</span></div></h2><div class="table-wrapper"><table class="nutrition-master-table"><thead><tr><th>Milchart</th><th>Größe</th>${NUTRIENT_MAPPING.map(n=>`<th>${n.label}</th>`).join('')}</tr></thead><tbody>`; let variant=drinkToVariants.get(drink); if(variant) for(let [milk,sizeMap] of variant.entries()){ for(let [size,info] of sizeMap.entries()){ let nut=milkNutritionMap.get(`${info.pk}|${milk}|${size}`)||{}; html+=`<tr><td>${escapeHtml(milk)}</td><td>${SIZE_LABELS[size]||size}</td>${NUTRIENT_MAPPING.map(n=>{ let val=nut[n.dbField]; let disp=n.format(val); let cls=getGradeClass(n.dbField,val); return `<td class="${cls}">${disp}</td>`; }).join('')}</tr>`; } } html+=`</tbody></table></div></div>`; } html+='</div>'; container.innerHTML=html; document.querySelectorAll('.drink-image-container').forEach(div=>{ let imgId=div.getAttribute('data-img-id'); if(imgId && imgId!=='null') fetchAndDisplayImage(imgId,div,true); else div.innerHTML='📷'; }); }
+    function renderFlatTable(){ let filtered=flatRawData.filter(row=>{ let gmatch=globalFilterFlat===''||Object.values(row).join(' ').toLowerCase().includes(globalFilterFlat.toLowerCase()); if(!gmatch) return false; for(let [col,fv] of Object.entries(columnFilters)) if(fv && !String(row[col]??'').toLowerCase().includes(fv.toLowerCase())) return false; return true; }); let headers=['GETRAENK','MILCHART','getraenk_groesse','kalorien_einh_kcal']; let thHtml=headers.map(h=>`<th>${h}</th>`).join(''); let tbody=filtered.map(row=>`<tr>${headers.map(h=>`<td>${escapeHtml(row[h]||'—')}</td>`).join('')}</tr>`).join(''); document.getElementById('flatTableWrapper').innerHTML=`<div style="overflow:auto;"><table class="flat-data-table"><thead><tr>${thHtml}</tr></thead><tbody>${tbody||'<tr><td colspan="4">Keine Treffer</td></tr>'}</tbody></table></div>`; document.getElementById('flatRecordCount').innerText=`${filtered.length}/${flatRawData.length}`; }
+    function renderRegionsTab(){ let container=document.getElementById('regionsListContainer'); if(!container) return; let html=''; for(let [region, map] of Array.from(structuredData.entries()).sort()){ let drinks=Array.from(map.keys()).sort(); html+=`<div class="region-group"><div class="region-header" data-toggle="${escapeHtml(region)}"><span class="region-toggle">▼</span><span class="region-title">📌 ${escapeHtml(region)}</span><span class="region-badge">${drinks.length}</span></div><ul class="drink-list">`; for(let d of drinks){ let imgId=drinkNameToGroupId.get(d)?groupToImageId.get(drinkNameToGroupId.get(d)):null; html+=`<li class="drink-item" data-drink="${escapeHtml(d)}"><div class="drink-thumb" data-img="${imgId||''}"></div><span>${escapeHtml(d)}</span></li>`; } html+=`</ul></div>`; } container.innerHTML=html; document.querySelectorAll('.region-header').forEach(h=>{ h.onclick=()=>{ let ul=h.closest('.region-group')?.querySelector('.drink-list'); if(ul){ let vis=ul.style.display!=='none'; ul.style.display=vis?'none':'block'; h.querySelector('.region-toggle').textContent=vis?'▶':'▼'; } }; }); document.querySelectorAll('.drink-item').forEach(item=>{ item.onclick=()=>{ let drink=item.getAttribute('data-drink'); if(drink){ document.getElementById('regionDetailPanel').innerHTML=`<div class="drink-card"><h2>🍹 ${escapeHtml(drink)}</h2><div>Details siehe Tab1</div></div>`; } }; let thumb=item.querySelector('.drink-thumb'); let imgId=thumb.getAttribute('data-img'); if(imgId&&imgId!=='null') fetchAndDisplayImage(imgId,thumb,false); else thumb.innerHTML='📷'; }); }
+    function initCoffeeTypes(){ const items=[{id:20971,name:"Espresso Romano"},{id:20972,name:"Caramel Macchiato"},{id:20973,name:"Caffè Latte"},{id:20974,name:"Flat White"},{id:20981,name:"Cinnamon Dolce Latte"},{id:20982,name:"Pumpkin Spice Latte"}]; let container=document.getElementById('coffeeGridContainer'); if(!container) return; container.innerHTML=''; items.forEach(item=>{ let card=document.createElement('div'); card.className='coffee-card'; let imgDiv=document.createElement('div'); imgDiv.className='coffee-image'; imgDiv.setAttribute('data-img-id',item.id); let infoDiv=document.createElement('div'); infoDiv.className='coffee-info'; infoDiv.innerHTML=`<div class="coffee-name">${escapeHtml(item.name)}</div>`; card.appendChild(imgDiv); card.appendChild(infoDiv); container.appendChild(card); fetchAndDisplayImage(item.id.toString(),imgDiv,true); }); }
+    function getAverageKcal(drink){ let variant=drinkToVariants.get(drink); if(!variant) return null; let kcal=[]; for(let [milk,sizeMap] of variant.entries()) for(let [size,info] of sizeMap.entries()){ let nut=milkNutritionMap.get(`${info.pk}|${milk}|${size}`); if(nut&&nut.kalorien_einh_kcal) kcal.push(nut.kalorien_einh_kcal); } if(!kcal.length) return null; return Math.round(kcal.reduce((a,b)=>a+b,0)/kcal.length); }
+    async function updateRotatingDrink(drink){ if(!drink) return; let imgId=drinkNameToGroupId.get(drink)?groupToImageId.get(drinkNameToGroupId.get(drink)):null; let wrapper=document.getElementById('rotatingImageWrapper'); if(wrapper && imgId) await fetchAndDisplayImage(imgId, wrapper, true); else if(wrapper) wrapper.innerHTML='<div>📷 Kein Bild</div>'; document.getElementById('rotatingDrinkName').innerText=escapeHtml(drink); let kcal=getAverageKcal(drink); document.getElementById('nutrientBadges').innerHTML=`<div class="nutrient-badge">🔥 <span>${kcal!==null?kcal:'—'}</span> kcal (⌀)</div>`; }
+    function getRandomValid(){ if(validImageDrinks.length) return validImageDrinks[Math.floor(Math.random()*validImageDrinks.length)]; return null; }
+    function rotateToRandom(){ if(isRotating){ let d=getRandomValid(); if(d) updateRotatingDrink(d); } }
+    function startRotating(){ if(rotatingInterval) clearInterval(rotatingInterval); rotatingInterval=setInterval(()=>{ if(isRotating) rotateToRandom(); },5000); }
+    function stopRotating(){ if(rotatingInterval) clearInterval(rotatingInterval); rotatingInterval=null; }
+    function renderGroup65Gallery(){ let grid=document.getElementById('group65Grid'); if(!grid) return; if(group65Images.size===0){ grid.innerHTML='<div class="image-card" style="padding:40px;">📷 Keine Bilder für Gruppe 65.</div>'; return; } let html=''; for(let [imgId, data] of group65Images.entries()){ let drinkList=Array.from(data.drinkNames).sort(); html+=`<div class="image-card" data-img-id="${escapeHtml(imgId)}"><div class="image-thumb" id="thumb-${imgId.replace(/[^a-z0-9]/gi,'')}"></div><div class="image-info"><div class="image-id">📸 Bild-ID: ${escapeHtml(imgId)}</div><div class="drink-names"><strong>🍹 Verknüpfte Getränke:</strong><ul>${drinkList.map(d=>`<li>${escapeHtml(d)}</li>`).join('')}</ul></div></div></div>`; } grid.innerHTML=html; for(let [imgId] of group65Images.entries()){ let thumbDiv=document.querySelector(`.image-card[data-img-id="${imgId.replace(/"/g, '&quot;')}"] .image-thumb`); if(thumbDiv) fetchAndDisplayImage(imgId, thumbDiv, false); } }
+    
+    // ATTRIBUT-TABELLE MIT SORTIERUNG (PK_GROUP)
+    const ATTR_COLUMNS = [
+        "PK_STAR_STARBUCKS_GETRAENKE_GROUP", "MAIN_GETRAENK", "GETRAENK", "FK_BILD_BILDER",
+        "type_Latte___", "type_Latte_Velvet Latte__", "type_Getränketypen_Lemonade__", "type_Getränketypen_Ube__",
+        "type_Getränketypen_Frappuccino__", "type_Getränketypen_Chai_Tea__", "type_Getränketypen_Tea__",
+        "type_Getränketypen_Tea_Hot_Tea_", "type_Getränketypen_Tea_Hot_Tea_English_Breakfast",
+        "type_Getränketypen_Tea_Hot_Tea_Emperors_Cloud", "type_Getränketypen_Tea_Iced_Tea_",
+        "type_Getränketypen_Tea_Iced_Tea_Peach", "type_Getränketypen_Matcha__", "type_Getränketypen_Chocolate__",
+        "type_Getränketypen_Coffee__", "type_Getränketypen_Coffee_Mocha_", "type_Getränketypen_Coffee_Macchiato_",
+        "type_Getränketypen_Coffee_Americano_", "type_Getränketypen_Coffee_Cappuccino_", "type_Getränketypen_Coffee_Espresso_",
+        "type_Getränketypen_Coffee_Espresso_Classic", "type_Getränketypen_Coffee_Espresso_Oat Shaken Espresso",
+        "type_Getränketypen_Coffee_Espresso_Cortado", "type_Getränketypen_Coffee_Cold Brew_", "type_Getränketypen_Coffee_Freshly Brew_",
+        "type_Getränketypen_Coffee_Filterkaffee_", "type_Getränketypen_Refresha__", "type_Getränketypen_Refresha_Cool_Lime_",
+        "type_Getränketypen_Refresha_Verry Berry_", "type_Temperature_Hot__", "type_Temperature_Cold__", "type_Temperature_Iced__",
+        "type_Geschmack_Vanilla__", "type_Geschmack_Pistachio__", "type_Geschmack_Caramel__", "type_Geschmack_Java Chip__",
+        "type_Geschmack_Brown Sugar__", "type_Size_Single__", "type_Size_Doppio__", "type_Size_Short__", "type_Size_Tall__",
+        "type_Size_Grande__", "type_Size_Venti__", "type_Type_Cream__", "type_Type_Coffee__", "type_Coffeein_Classic__",
+        "type_Coffeein_Blonde__", "type_Coffeein_Decaf__", "type_Merkmal_White__", "type_Merkmal_Signature__", "type_Merkmal_Protein__",
+        "type_Merkmal_Blended__", "type_Merkmal_Doubleshot__", "type_Merkmal_Cookies__", "type_Frucht_Mint__", "type_Frucht_Peach__",
+        "type_Frucht_Mango__", "type_Frucht_Orange__", "type_Frucht_Dragonfruit__", "type_Frucht_Passion__", "type_Frucht_Strawberry__",
+        "type_Frucht_Verry Berry__", "type_Frucht_Lemon (Lime)__", "type_Frucht_Hibiscus__", "type_Frucht_Frucht__", "type_Topping_Foam__",
+        "type_Topping_Syrup__", "type_Topping_Schlagsahne__", "type_Tea_Types_Black Tea__", "type_Tea_Types_Green Tea__", "type_Tea_Types_Mint Tea__",
+        "type_sugar___", "type_sugar_sugar__", "type_sugar_sugar_free__", "type_milk_milk__", "type_milk_Oatmilk__", "type_milk_Halbfettmilch__",
+        "type_milk_Vollmilch__", "type_milk_Magermilch__", "type_Bestandteile_Hafer__", "type_Bestandteile_Soja__", "type_Bestandteile_Kokosnuss__",
+        "type_Bestandteile_Mandel__"
+    ];
+    let attrFilters = {};
+    
+    function showRowDetailsModal(rowData) {
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = 'detail-modal-overlay';
+        const modalCard = document.createElement('div');
+        modalCard.className = 'detail-modal-card';
+        modalCard.innerHTML = `<div class="modal-header"><h3>📋 Details zum Datensatz</h3><button class="close-modal-btn">✕</button></div><div class="modal-body"><div class="detail-list" id="modalDetailList"></div></div>`;
+        modalOverlay.appendChild(modalCard);
+        document.body.appendChild(modalOverlay);
+        const detailList = modalCard.querySelector('#modalDetailList');
+        for (let col of ATTR_COLUMNS) {
+            let val = rowData[col] !== undefined && rowData[col] !== null ? rowData[col] : '—';
+            let formattedVal = escapeHtml(String(val));
+            if (col === "FK_BILD_BILDER" && val !== '—' && String(val).trim() !== '') {
+                const imgId = String(val).trim();
+                formattedVal = `<div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;"><div class="modal-thumb" data-img-id="${escapeHtml(imgId)}"></div><span>${escapeHtml(imgId)}</span></div>`;
+            }
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'detail-item';
+            itemDiv.innerHTML = `<div class="detail-key">${escapeHtml(col)}</div><div class="detail-value">${formattedVal}</div>`;
+            detailList.appendChild(itemDiv);
+        }
+        const thumbDiv = modalCard.querySelector('.modal-thumb');
+        if(thumbDiv) { const imgId = thumbDiv.getAttribute('data-img-id'); if(imgId) fetchAndDisplayImage(imgId, thumbDiv, true); else thumbDiv.innerHTML = '📷'; }
+        const closeBtn = modalCard.querySelector('.close-modal-btn');
+        closeBtn.onclick = () => modalOverlay.remove();
+        modalOverlay.onclick = (e) => { if(e.target === modalOverlay) modalOverlay.remove(); };
+    }
+    
+    function renderAttrTable() {
+        if(!allItems.length) return;
+        const wrapper = document.getElementById('attrTableWrapper');
+        const filterBar = document.getElementById('attrFiltersBar');
+        if(filterBar && filterBar.children.length === 0){
+            for(let col of ATTR_COLUMNS){
+                const div = document.createElement('div');
+                div.className = 'attr-filter-item';
+                div.innerHTML = `<label>${col.substring(0,24)}</label><input type="text" placeholder="Filter..." data-col="${escapeHtml(col)}">`;
+                filterBar.appendChild(div);
+            }
+            document.querySelectorAll('#attrFiltersBar input').forEach(inp => {
+                inp.addEventListener('input', (e) => {
+                    const col = inp.getAttribute('data-col');
+                    attrFilters[col] = inp.value.trim().toLowerCase();
+                    renderAttrTable();
+                });
+            });
+            document.getElementById('resetAttrFiltersBtn').addEventListener('click', () => {
+                attrFilters = {};
+                document.querySelectorAll('#attrFiltersBar input').forEach(inp => inp.value = '');
+                renderAttrTable();
+            });
+        }
+        // 1. Filter anwenden
+        let filtered = allItems.filter(row => {
+            for(let [col, filterVal] of Object.entries(attrFilters)){
+                if(!filterVal) continue;
+                let cellVal = String(row[col] !== undefined ? row[col] : '').toLowerCase();
+                if(!cellVal.includes(filterVal)) return false;
+            }
+            return true;
+        });
+        // 2. Sortierung nach PK_STAR_STARBUCKS_GETRAENKE_GROUP (numerisch)
+        if(attrSortDirection !== null) {
+            filtered.sort((a, b) => {
+                let valA = a['PK_STAR_STARBUCKS_GETRAENKE_GROUP'];
+                let valB = b['PK_STAR_STARBUCKS_GETRAENKE_GROUP'];
+                let numA = (valA !== undefined && valA !== null && valA !== '') ? Number(valA) : (attrSortDirection === 'asc' ? Infinity : -Infinity);
+                let numB = (valB !== undefined && valB !== null && valB !== '') ? Number(valB) : (attrSortDirection === 'asc' ? Infinity : -Infinity);
+                if(isNaN(numA)) numA = attrSortDirection === 'asc' ? Infinity : -Infinity;
+                if(isNaN(numB)) numB = attrSortDirection === 'asc' ? Infinity : -Infinity;
+                return attrSortDirection === 'asc' ? numA - numB : numB - numA;
+            });
+        }
+        document.getElementById('attrRecordCount').innerText = `${filtered.length} / ${allItems.length}`;
+        let html = `<div style="overflow:auto;"><table class="attr-data-table"><thead><tr>`;
+        for(let col of ATTR_COLUMNS) html += `<th>${escapeHtml(col)}</th>`;
+        html += `</tr></thead><tbody>`;
+        for(let [idx, row] of filtered.entries()){
+            const rowId = row.PK_STAR_STARBUCKS_GETRAENKE_SIMPLE || `row_${idx}`;
+            html += `<tr data-row-id="${escapeHtml(rowId)}" data-row-index="${idx}">`;
+            for(let col of ATTR_COLUMNS){
+                let val = row[col] !== undefined && row[col] !== null ? row[col] : '—';
+                if(col === "FK_BILD_BILDER" && val !== '—' && String(val).trim() !== ''){
+                    const imgId = String(val).trim();
+                    html += `<td style="white-space: nowrap;"><div class="image-thumb-small" data-img-id="${escapeHtml(imgId)}" style="display: inline-block;"></div><span class="image-id-text">${escapeHtml(imgId)}</span></td>`;
+                } else {
+                    html += `<td>${escapeHtml(String(val))}</td>`;
+                }
+            }
+            html += `</tr>`;
+        }
+        html += `</tbody></table></div>`;
+        wrapper.innerHTML = html;
+        document.querySelectorAll('#attrTableWrapper .image-thumb-small').forEach(thumb => {
+            const imgId = thumb.getAttribute('data-img-id');
+            if(imgId) fetchAndDisplayImage(imgId, thumb, true);
+            else thumb.innerHTML = '📷';
+        });
+        document.querySelectorAll('#attrTableWrapper tbody tr').forEach((tr, idx) => {
+            tr.style.cursor = 'pointer';
+            tr.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const rowIndex = tr.getAttribute('data-row-index');
+                if(rowIndex !== null && filtered[parseInt(rowIndex)]) {
+                    showRowDetailsModal(filtered[parseInt(rowIndex)]);
+                } else {
+                    const rowId = tr.getAttribute('data-row-id');
+                    const found = filtered.find(r => String(r.PK_STAR_STARBUCKS_GETRAENKE_SIMPLE) === rowId);
+                    if(found) showRowDetailsModal(found);
+                }
+            });
+        });
+        // Aktualisiere Sortierungsstatus
+        const statusSpan = document.getElementById('attrSortStatus');
+        if(statusSpan) {
+            if(attrSortDirection === 'asc') statusSpan.innerHTML = '🔼 Sortierung: PK_GROUP ↑ aufsteigend';
+            else if(attrSortDirection === 'desc') statusSpan.innerHTML = '🔽 Sortierung: PK_GROUP ↓ absteigend';
+            else statusSpan.innerHTML = '🔄 Sortierung: keine';
+        }
+    }
+    
+    // --------------------------------------------------------------
+    // INIT & Sortierungs-Event-Listener
+    // --------------------------------------------------------------
+    async function init(){
+        try{
+            let resp=await fetch(API_URL);
+            if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            let data=await resp.json();
+            allItems=(data.data&&Array.isArray(data.data))?data.data:(Array.isArray(data)?data:[]);
+            flatRawData=[...allItems];
+            buildDataStructures(allItems);
+            renderTree(); renderSelectedTables(); renderRegionsTab(); initCoffeeTypes(); renderGroup65Gallery();
+            renderAttrTable();
+            document.getElementById('apiStatusBadge').innerHTML='✅ Live';
+            document.getElementById('treeFilterInput').addEventListener('input',(e)=>{ currentTreeFilter=e.target.value; renderTree(); });
+            document.getElementById('selectAllBtn').onclick=()=>{ for(let g of allGetraenkNames) selectedGetraenke.add(g); renderTree(); renderSelectedTables(); document.getElementById('selectedCountBadge').innerText=`${selectedGetraenke.size} ausgewählt`; };
+            document.getElementById('clearAllBtn').onclick=()=>{ selectedGetraenke.clear(); renderTree(); renderSelectedTables(); document.getElementById('selectedCountBadge').innerText='0 ausgewählt'; };
+            document.getElementById('flatGlobalSearch').addEventListener('input',(e)=>{ globalFilterFlat=e.target.value; renderFlatTable(); });
+            document.getElementById('clearColumnFiltersBtn').onclick=()=>{ columnFilters={}; renderFlatTable(); };
+            document.getElementById('drinkCountBadge').innerText=allGetraenkNames.length;
+            document.getElementById('getraenkSearchInput').addEventListener('change',(e)=>{ let val=e.target.value.trim(); let match=allGetraenkNames.find(n=>n.toLowerCase()===val.toLowerCase()); if(match&&!selectedGetraenke.has(match)){ selectedGetraenke.add(match); renderTree(); renderSelectedTables(); e.target.value=''; } });
+            if(validImageDrinks.length){ await updateRotatingDrink(validImageDrinks[0]); startRotating(); }
+            document.getElementById('pauseRotateBtn').onclick=()=>{ if(isRotating){ isRotating=false; stopRotating(); document.getElementById('pauseRotateBtn').textContent='▶️ Start'; } else { isRotating=true; startRotating(); rotateToRandom(); document.getElementById('pauseRotateBtn').textContent='⏸️ Pause'; } };
+            document.getElementById('nextRandomBtn').onclick=()=>{ let d=getRandomValid(); if(d) updateRotatingDrink(d); };
+            
+            // --- SORTIERUNG FÜR ATTRIBUT TABELLE ---
+            const ascBtn = document.getElementById('sortGroupAscBtn');
+            const descBtn = document.getElementById('sortGroupDescBtn');
+            const clearSortBtn = document.getElementById('clearAttrSortBtn');
+            if(ascBtn) ascBtn.addEventListener('click', () => { attrSortDirection = 'asc'; renderAttrTable(); });
+            if(descBtn) descBtn.addEventListener('click', () => { attrSortDirection = 'desc'; renderAttrTable(); });
+            if(clearSortBtn) clearSortBtn.addEventListener('click', () => { attrSortDirection = null; renderAttrTable(); });
+        } catch(err){ document.getElementById('treeContainer').innerHTML=`<div>❌ Fehler: ${err.message}</div>`; }
+    }
+    
+    document.querySelectorAll('.tab-button').forEach(btn=>btn.addEventListener('click',()=>{
+        document.querySelectorAll('.tab-button').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
+        const id = btn.dataset.tab;
+        if(id==='tab1') document.getElementById('paneExplorer').classList.add('active');
+        else if(id==='tab2'){ document.getElementById('paneAllData').classList.add('active'); renderFlatTable(); }
+        else if(id==='tab3'){ document.getElementById('paneCoffeeTypes').classList.add('active'); initCoffeeTypes(); }
+        else if(id==='tab4'){ document.getElementById('paneRegions').classList.add('active'); renderRegionsTab(); }
+        else if(id==='tab5'){ document.getElementById('paneRotating').classList.add('active'); if(validImageDrinks.length && !document.getElementById('rotatingDrinkName').innerText.includes('—')) rotateToRandom(); if(!rotatingInterval && isRotating) startRotating(); }
+        else if(id==='tab6'){ document.getElementById('paneGroup65').classList.add('active'); renderGroup65Gallery(); }
+        else if(id==='tab7'){ document.getElementById('paneAttrTable').classList.add('active'); renderAttrTable(); }
+        if(id!=='tab5' && rotatingInterval) stopRotating();
+        else if(id==='tab5' && !rotatingInterval && isRotating) startRotating();
+    }));
+    init();
+</script>
+</body>
+</html>

@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Star Starbucks • Webservice Matrix • Spalten- & Zeilengruppen</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(125deg, #f4efe7 0%, #e3d8cd 100%);
+            padding: 2rem 1.5rem;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: rgba(255, 252, 245, 0.96);
+            border-radius: 2rem;
+            box-shadow: 0 25px 45px -12px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+            backdrop-filter: blur(2px);
+        }
+
+        .hero {
+            background: #1e3a2f;
+            padding: 1.5rem 2rem;
+            border-bottom: 5px solid #d4af7a;
+        }
+
+        .hero h1 {
+            font-size: 1.9rem;
+            font-weight: 700;
+            color: #f9e7cf;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .hero h1 span {
+            background: #d4af7a;
+            color: #1e3a2f;
+            font-size: 0.8rem;
+            padding: 4px 12px;
+            border-radius: 60px;
+            font-weight: 500;
+        }
+
+        .sub {
+            color: #cbbd9c;
+            margin-top: 8px;
+            font-size: 0.85rem;
+            border-left: 3px solid #d4af7a;
+            padding-left: 1rem;
+        }
+
+        .dashboard-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.8rem;
+            padding: 2rem;
+        }
+
+        .form-card {
+            flex: 1.2;
+            min-width: 280px;
+            background: white;
+            border-radius: 1.5rem;
+            padding: 1.6rem 1.8rem;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.05);
+            border: 1px solid #ede3d4;
+        }
+
+        .form-card h2 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #2c4b35;
+            border-left: 4px solid #c5a05e;
+            padding-left: 12px;
+            margin-bottom: 0.5rem;
+        }
+
+        .input-group {
+            margin-bottom: 1.2rem;
+        }
+
+        label {
+            font-weight: 600;
+            color: #4c3a28;
+            display: block;
+            margin-bottom: 0.4rem;
+            font-size: 0.8rem;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 0.7rem 1rem;
+            border-radius: 48px;
+            border: 1.5px solid #e4d9cd;
+            background: #fefaf5;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        input:focus, select:focus {
+            border-color: #b38754;
+            box-shadow: 0 0 0 3px rgba(179, 135, 84, 0.2);
+        }
+
+        button {
+            background: #2c5e3f;
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-right: 8px;
+            margin-top: 5px;
+            transition: 0.15s;
+        }
+
+        button:hover {
+            background: #1f452e;
+            transform: scale(0.97);
+        }
+
+        .btn-outline {
+            background: #e7ddd0;
+            color: #4d3a28;
+        }
+
+        .btn-outline:hover {
+            background: #dacbbc;
+        }
+
+        .table-section {
+            flex: 2.8;
+            min-width: 780px;
+            background: white;
+            border-radius: 1.5rem;
+            padding: 1.2rem;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.05);
+            border: 1px solid #ede3d4;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 1.2rem;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .search-wrapper {
+            flex: 2;
+            position: relative;
+        }
+
+        .search-wrapper input {
+            padding-left: 2.4rem;
+            border-radius: 40px;
+        }
+
+        .search-wrapper::before {
+            content: "🔍";
+            position: absolute;
+            left: 14px;
+            top: 10px;
+            font-size: 1rem;
+            opacity: 0.6;
+        }
+
+        .stats-badge {
+            background: #f0e7dd;
+            padding: 6px 16px;
+            border-radius: 60px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .matrix-container {
+            overflow-x: auto;
+            border-radius: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            min-width: 700px;
+        }
+
+        th, td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #f0e5da;
+            vertical-align: middle;
+        }
+
+        th {
+            background: #f6efe7;
+            color: #3e2d1d;
+            font-weight: 700;
+            font-size: 0.75rem;
+            text-align: left;
+        }
+
+        /* Column Group Header (Spaltengruppen) */
+        .col-group-header {
+            background: #e8ddcf;
+            text-align: center;
+            font-weight: 800;
+            color: #2c4b35;
+            font-size: 0.8rem;
+            border-bottom: 2px solid #cfbc9f;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.1s;
+        }
+        .col-group-header:hover {
+            background: #ddceba;
+        }
+        .col-group-toggle {
+            margin-right: 8px;
+            font-size: 0.8rem;
+            display: inline-block;
+        }
+        
+        /* Row Group Header (Zeilengruppen) */
+        .row-group-header {
+            background: #e3d5c4;
+            font-weight: 800;
+            color: #2c4b2f;
+            border-top: 2px solid #cfbc9f;
+            border-bottom: 2px solid #cfbc9f;
+            cursor: pointer;
+        }
+        .row-group-header td {
+            background: #e3d5c4;
+            padding: 10px 12px;
+            font-weight: 700;
+        }
+        .row-group-header:hover td {
+            background: #d9c8b3;
+        }
+        .row-group-toggle {
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        
+        .sub-row td {
+            background-color: #fefcf8;
+        }
+        
+        .badge {
+            background: #e5d5c0;
+            padding: 4px 10px;
+            border-radius: 50px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .value-present {
+            color: #2c6e3c;
+            font-weight: 600;
+        }
+        .value-absent {
+            color: #b87a5a;
+            opacity: 0.7;
+        }
+        .action-icons {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .edit-btn-sm, .delete-btn-sm {
+            background: none;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 0.7rem;
+            cursor: pointer;
+            margin: 0;
+        }
+        .edit-btn-sm {
+            background: #e9dfd2;
+            color: #4b3a28;
+        }
+        .delete-btn-sm {
+            background: #f5e5de;
+            color: #bc6f4b;
+        }
+        .status-msg {
+            margin-top: 1rem;
+            padding: 0.6rem;
+            background: #efe4d8;
+            border-radius: 60px;
+            text-align: center;
+            font-size: 0.75rem;
+        }
+        .error-msg {
+            background: #ffe1db;
+            color: #bc5a3c;
+        }
+        footer {
+            padding: 1rem 2rem;
+            text-align: center;
+            font-size: 0.7rem;
+            color: #8f7b62;
+            border-top: 1px solid #e8ddcf;
+        }
+        @media (max-width: 850px) {
+            .table-section { min-width: 95%; }
+            .dashboard-grid { padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="hero">
+        <h1>
+            ☕ STARBUCKS · WEBSERVICE MATRIX
+            <span>✔️ Spalten- & Zeilengruppen (kollabierbar)</span>
+        </h1>
+        <div class="sub">📡 Daten aus Webservice (GET http://localhost:5000/star_starbucks_getraenke) • Gruppierung nach VEGAN, VEGETARISCH, ZUSATZSTOFFE, ALLERGENE</div>
+    </div>
+
+    <div class="dashboard-grid">
+        <!-- Formular zum Hinzufügen / Bearbeiten -->
+        <div class="form-card">
+            <h2>📝 Merkmal / Attribut verwalten</h2>
+            <p>Neuen Eintrag hinzufügen oder bestehenden bearbeiten</p>
+            <form id="drink-form">
+                <input type="hidden" id="edit-id" value="">
+                <div class="input-group">
+                    <label>🏷️ Getränk / Zeilengruppe</label>
+                    <input type="text" id="rowgroup-input" placeholder="z.B. Klassiker, Pflanzenmilch, Frappuccino" required>
+                </div>
+                <div class="input-group">
+                    <label>📌 Attributname (Inhaltsstoff)</label>
+                    <input type="text" id="attribute-input" placeholder="z.B. vegan, laktosefrei, Soja" required>
+                </div>
+                <div class="input-group">
+                    <label>🧩 Spaltengruppe</label>
+                    <select id="colgroup-select">
+                        <option value="VEGAN">🌱 VEGAN</option>
+                        <option value="VEGETARISCH">🥕 VEGETARISCH</option>
+                        <option value="ZUSATZSTOFFE">🧪 ZUSATZSTOFFE</option>
+                        <option value="ALLERGENE">⚠️ ALLERGENE</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>✅ Wert / Status</label>
+                    <select id="value-select">
+                        <option value="✅ Ja">✅ Ja</option>
+                        <option value="❌ Nein">❌ Nein</option>
+                        <option value="⚠️ Spuren möglich">⚠️ Spuren möglich</option>
+                        <option value="? unbekannt">? unbekannt</option>
+                    </select>
+                </div>
+                <div style="display: flex; flex-wrap: wrap;">
+                    <button type="submit">💾 Speichern</button>
+                    <button type="button" id="cancelEditBtn" class="btn-outline">↺ Abbrechen</button>
+                    <button type="button" id="syncWsBtn" class="btn-outline">🔄 Webservice synchronisieren</button>
+                </div>
+            </form>
+            <div style="margin-top: 12px; font-size: 0.7rem; background:#f5efe8; border-radius: 24px; padding: 8px;">
+                💡 <strong>Spaltengruppen klickbar</strong> – VEGAN, VEGETARISCH, ZUSATZSTOFFE, ALLERGENE <br>
+                🧩 <strong>Zeilengruppen klickbar</strong> – jede Getränkekategorie einzeln ein-/ausklappbar
+            </div>
+        </div>
+
+        <!-- Matrix Tabelle -->
+        <div class="table-section">
+            <div class="toolbar">
+                <div class="search-wrapper">
+                    <input type="text" id="searchInput" placeholder="Suchen nach Getränk oder Attribut ...">
+                </div>
+                <div class="stats-badge" id="statsDisplay">0 Zeilen</div>
+                <button type="button" id="expandAllColsBtn" class="btn-outline">📂 Alle Spaltengruppen öffnen</button>
+                <button type="button" id="collapseAllColsBtn" class="btn-outline">📁 Alle Spaltengruppen schließen</button>
+            </div>
+            <div class="matrix-container">
+                <table id="matrixTable">
+                    <thead id="matrixHeader"></thead>
+                    <tbody id="matrixBody"><tr><td colspan="10">⏳ Lade Webservice-Daten ...</td></tr></tbody>
+                </table>
+            </div>
+            <div id="statusMessage" class="status-msg">✨ Bereit – Daten aus Webservice (localhost:5000) + lokale Bearbeitung</div>
+        </div>
+    </div>
+    <footer>
+        ⚡ REST Endpoint: <strong>http://localhost:5000/star_starbucks_getraenke</strong> | Spaltengruppen: VEGAN · VEGETARISCH · ZUSATZSTOFFE · ALLERGENE | Zeilengruppen kollabierbar
+    </footer>
+</div>
+
+<script>
+    // --------------------------------------------------------------
+    // SPALTENGRUPPEN DEFINITION (fixe Struktur)
+    // --------------------------------------------------------------
+    const columnGroups = {
+        VEGAN: {
+            label: "🌱 VEGAN",
+            columns: ["Vegan zertifiziert", "Pflanzlich", "Ohne tierische Aromen"]
+        },
+        VEGETARISCH: {
+            label: "🥕 VEGETARISCH",
+            columns: ["Vegetarisch geeignet", "Mit Ei/Milch möglich", "Lacto-ovo"]
+        },
+        ZUSATZSTOFFE: {
+            label: "🧪 ZUSATZSTOFFE",
+            columns: ["Konservierungsstoffe", "Farbstoffe", "Geschmacksverstärker", "Süßungsmittel"]
+        },
+        ALLERGENE: {
+            label: "⚠️ ALLERGENE",
+            columns: ["Gluten", "Milch/Laktose", "Soja", "Nüsse/Schalenfrüchte", "Sesam"]
+        }
+    };
+    
+    let allColumns = [];
+    let columnGroupMap = {};
+    for (let [grpKey, grpVal] of Object.entries(columnGroups)) {
+        grpVal.columns.forEach(col => {
+            allColumns.push(col);
+            columnGroupMap[col] = grpKey;
+        });
+    }
+    
+    // Datenmodell: Zeilengruppen
+    let rowGroups = {};       // key -> { label, items: [{ id, name, values: { columnName: cellValue } }], collapsed }
+    let nextId = 1000;
+    let collapsedColumnGroups = { VEGAN: false, VEGETARISCH: false, ZUSATZSTOFFE: false, ALLERGENE: false };
+    let collapsedRowGroups = {};
+    
+    // UI Elemente
+    const matrixHeader = document.getElementById('matrixHeader');
+    const matrixBody = document.getElementById('matrixBody');
+    const searchInput = document.getElementById('searchInput');
+    const statsDisplay = document.getElementById('statsDisplay');
+    const statusDiv = document.getElementById('statusMessage');
+    const syncBtn = document.getElementById('syncWsBtn');
+    const expandColsBtn = document.getElementById('expandAllColsBtn');
+    const collapseColsBtn = document.getElementById('collapseAllColsBtn');
+    
+    function setMessage(text, isError = false) {
+        statusDiv.textContent = text;
+        if (isError) statusDiv.classList.add('error-msg');
+        else statusDiv.classList.remove('error-msg');
+        setTimeout(() => {
+            if (statusDiv.textContent === text && !isError) statusDiv.classList.remove('error-msg');
+        }, 3000);
+    }
+    
+    // Helper: Persistenz im localStorage
+    function persistData() {
+        const exportData = { rowGroups, collapsedRowGroups, collapsedColumnGroups, nextId };
+        localStorage.setItem("starbucks_ws_matrix", JSON.stringify(exportData));
+    }
+    
+    function loadLocalData() {
+        const stored = localStorage.getItem("starbucks_ws_matrix");
+        if (stored) {
+            try {
+                const data = JSON.parse(stored);
+                rowGroups = data.rowGroups || {};
+                collapsedRowGroups = data.collapsedRowGroups || {};
+                collapsedColumnGroups = data.collapsedColumnGroups || { VEGAN: false, VEGETARISCH: false, ZUSATZSTOFFE: false, ALLERGENE: false };
+                nextId = data.nextId || 1000;
+                for (let key in rowGroups) {
+                    if (collapsedRowGroups[key] === undefined) collapsedRowGroups[key] = false;
+                    if (rowGroups[key].collapsed === undefined) rowGroups[key].collapsed = false;
+                }
+                return true;
+            } catch(e) { console.warn(e); }
+        }
+        return false;
+    }
+    
+    // Standard-Demo-Daten basierend auf Webservice-Ergebnissen (Soja, Kokos, Mandel, Hafer, Zusatzstoffe)
+    function initDefaultDataFromWebservice() {
+        rowGroups = {};
+        collapsedRowGroups = {};
+        function addRow(groupKey, groupLabel, rowName, values) {
+            if (!rowGroups[groupKey]) {
+                rowGroups[groupKey] = { label: groupLabel, items: [], collapsed: false };
+                collapsedRowGroups[groupKey] = false;
+            }
+            rowGroups[groupKey].items.push({ id: nextId++, name: rowName, values: values });
+        }
+        
+        // Basierend auf den echten Webservice-Hinweisen "Soja nein***", "Kokosnuss nein***", "Mandel", "Hafer"
+        addRow("milchalternativen", "🌿 Pflanzliche Drinks", "Soja Latte (Soja nein***)", {
+            "Vegan zertifiziert": "✅ Ja", "Pflanzlich": "✅ Ja", "Ohne tierische Aromen": "✅ Ja",
+            "Vegetarisch geeignet": "✅ Ja", "Mit Ei/Milch möglich": "❌ Nein", "Lacto-ovo": "❌ Nein",
+            "Konservierungsstoffe": "⚠️ Spuren", "Farbstoffe": "❌ Nein", "Geschmacksverstärker": "❌ Nein", "Süßungsmittel": "❌ Nein",
+            "Gluten": "❌ Nein", "Milch/Laktose": "❌ Nein", "Soja": "✅ Ja", "Nüsse/Schalenfrüchte": "❌ Nein", "Sesam": "❌ Nein"
+        });
+        addRow("milchalternativen", "🌿 Pflanzliche Drinks", "Kokosnuss Drink (nein***)", {
+            "Vegan zertifiziert": "✅ Ja", "Pflanzlich": "✅ Ja", "Ohne tierische Aromen": "✅ Ja",
+            "Vegetarisch geeignet": "✅ Ja", "Mit Ei/Milch möglich": "❌ Nein", "Lacto-ovo": "❌ Nein",
+            "Konservierungsstoffe": "❌ Nein", "Farbstoffe": "❌ Nein", "Geschmacksverstärker": "❌ Nein", "Süßungsmittel": "❌ Nein",
+            "Gluten": "❌ Nein", "Milch/Laktose": "❌ Nein", "Soja": "❌ Nein", "Nüsse/Schalenfrüchte": "❌ Nein", "Sesam": "❌ Nein"
+        });
+        addRow("milchalternativen", "🌿 Pflanzliche Drinks", "Mandel Drink (Mandel nein*** ja ? ? g)", {
+            "Vegan zertifiziert": "✅ Ja", "Pflanzlich": "✅ Ja", "Ohne tierische Aromen": "✅ Ja",
+            "Vegetarisch geeignet": "✅ Ja", "Mit Ei/Milch möglich": "❌ Nein", "Lacto-ovo": "❌ Nein",
+            "Konservierungsstoffe": "❌ Nein", "Farbstoffe": "❌ Nein", "Geschmacksverstärker": "❌ Nein", "Süßungsmittel": "❌ Nein",
+            "Gluten": "❌ Nein", "Milch/Laktose": "❌ Nein", "Soja": "❌ Nein", "Nüsse/Schalenfrüchte": "✅ Ja (Mandel)", "Sesam": "❌ Nein"
+        });
+        addRow("milchalternativen", "🌿 Pflanzliche Drinks", "Hafer Drink (Hafer nein*** ja ? d ?)", {
+            "Vegan zertifiziert": "✅ Ja", "Pflanzlich": "✅ Ja", "Ohne tierische Aromen": "✅ Ja",
+            "Vegetarisch geeignet": "✅ Ja", "Mit Ei/Milch möglich": "❌ Nein", "Lacto-ovo": "❌ Nein",
+            "Konservierungsstoffe": "❌ Nein", "Farbstoffe": "❌ Nein", "Geschmacksverstärker": "❌ Nein", "Süßungsmittel": "❌ Nein",
+            "Gluten": "⚠️ Spuren (Hafer)", "Milch/Laktose": "❌ Nein", "Soja": "❌ Nein", "Nüsse/Schalenfrüchte": "❌ Nein", "Sesam": "❌ Nein"
+        });
+        // Klassiker Gruppe
+        addRow("classic", "☕ Klassische Getränke", "Caffè Latte (mit Milch)", {
+            "Vegan zertifiziert": "❌ Nein", "Pflanzlich": "❌ Nein", "Ohne tierische Aromen": "❌ Nein",
+            "Vegetarisch geeignet": "✅ Ja", "Mit Ei/Milch möglich": "✅ Ja", "Lacto-ovo": "✅ Ja",
+            "Konservierungsstoffe": "❌ Nein", "Farbstoffe": "❌ Nein", "Geschmacksverstärker": "❌ Nein", "Süßungsmittel": "❌ Nein",
+            "Gluten": "❌ Nein", "Milch/Laktose": "✅ Ja", "Soja": "❌ Nein", "Nüsse/Schalenfrüchte": "❌ Nein", "Sesam": "❌ Nein"
+        });
+        addRow("classic", "☕ Klassische Getränke", "Java Chip Frappuccino", {
+            "Vegan zertifiziert": "❌ Nein", "Pflanzlich": "❌ Nein", "Ohne tierische Aromen": "❌ Nein",
+            "Vegetarisch geeignet": "✅ Ja", "Mit Ei/Milch möglich": "✅ Ja", "Lacto-ovo": "✅ Ja",
+            "Konservierungsstoffe": "✅ Ja", "Farbstoffe": "✅ Ja", "Geschmacksverstärker": "⚠️ Spuren", "Süßungsmittel": "✅ Ja",
+            "Gluten": "⚠️ Spuren", "Milch/Laktose": "✅ Ja", "Soja": "❌ Nein", "Nüsse/Schalenfrüchte": "❌ Nein", "Sesam": "❌ Nein"
+        });
+        // Zusatzstoffgruppe
+        addRow("additives", "🧪 Spezialsirupe & Zusätze", "Karamell Sauce (mit Konservierungsstoffen)", {
+            "Vegan zertifiziert": "❌ Nein", "Pflanzlich": "⚠️ Teilweise", "Ohne tierische Aromen": "❌ Nein",
+            "Vegetarisch geeignet": "✅ Ja", "Mit Ei/Milch möglich": "✅ Ja", "Lacto-ovo": "✅ Ja",
+            "Konservierungsstoffe": "✅ Ja", "Farbstoffe": "✅ Ja", "Geschmacksverstärker": "✅ Ja", "Süßungsmittel": "✅ Ja",
+            "Gluten": "❌ Nein", "Milch/Laktose": "✅ Ja", "Soja": "⚠️ Spuren", "Nüsse/Schalenfrüchte": "❌ Nein", "Sesam": "❌ Nein"
+        });
+        persistData();
+    }
+    
+    // Webservice synchronisieren (GET http://localhost:5000/star_starbucks_getraenke)
+    async function syncWithWebservice() {
+        setMessage("🔄 Synchronisiere mit Webservice (http://localhost:5000/star_starbucks_getraenke) ...");
+        try {
+            const response = await fetch('http://localhost:5000/star_starbucks_getraenke', {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' }
+            });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            let itemsArray = Array.isArray(data) ? data : (data.data || data.items || []);
+            if (!itemsArray.length) throw new Error("Keine Daten vom Webservice empfangen");
+            
+            // Webservice liefert Einträge mit Starbucks_Getraenke, VEGAN, VEGETARISCH, ZUSATZSTOFFE_*, ALLERGENE_*
+            // Wir bauen daraus neue Zeilen: pro Datensatz eine Zeile in der Matrix
+            const newRowGroups = {};
+            let newIdCounter = nextId;
+            for (let record of itemsArray) {
+                const getraenkName = record.Starbucks_Getraenke || record.GETRAENK || "Unbekanntes Getränk";
+                const groupLabel = "Webservice Import";
+                const groupKey = "ws_import_" + Date.now() + "_" + Math.random();
+                if (!newRowGroups[groupKey]) {
+                    newRowGroups[groupKey] = { label: groupLabel, items: [], collapsed: false };
+                }
+                const values = {};
+                // Befülle die Werte anhand der bekannten Spalten aus columnGroups
+                for (let col of allColumns) {
+                    let rawValue = "? unbekannt";
+                    if (col === "Vegan zertifiziert" && record.VEGAN === true) rawValue = "✅ Ja";
+                    else if (col === "Vegan zertifiziert" && record.VEGAN === false) rawValue = "❌ Nein";
+                    else if (col === "Vegetarisch geeignet" && record.VEGETARISCH === true) rawValue = "✅ Ja";
+                    else if (col === "Vegetarisch geeignet" && record.VEGETARISCH === false) rawValue = "❌ Nein";
+                    else if (col === "Konservierungsstoffe" && record.ZUSATZSTOFFE_Konservierungsmittel) rawValue = "✅ Ja";
+                    else if (col === "Farbstoffe" && record.ZUSATZSTOFFE_Farbstoffe) rawValue = "✅ Ja";
+                    else if (col === "Geschmacksverstärker" && record.ZUSATZSTOFFE_Geschmacksverstaerker) rawValue = "✅ Ja";
+                    else if (col === "Süßungsmittel" && record.ZUSATZSTOFFE_mit_Suessungsmitteln) rawValue = "✅ Ja";
+                    else if (col === "Gluten" && record.ALLERGENE_Glutenhaltige_Getreide) rawValue = "✅ Ja";
+                    else if (col === "Milch/Laktose" && record.ALLERGENE_Milch_Laktose) rawValue = "✅ Ja";
+                    else if (col === "Soja" && record.ALLERGENE_Soja) rawValue = "✅ Ja";
+                    else if (col === "Nüsse/Schalenfrüchte" && record.ALLERGENE_Schalenfrüchte) rawValue = "✅ Ja";
+                    else if (col === "Sesam" && record.ALLERGENE_Sesam) rawValue = "✅ Ja";
+                    else if (rawValue === "? unbekannt") rawValue = "❌ Nein";
+                    values[col] = rawValue;
+                }
+                newRowGroups[groupKey].items.push({ id: newIdCounter++, name: getraenkName, values: values });
+            }
+            if (Object.keys(newRowGroups).length > 0) {
+                rowGroups = newRowGroups;
+                collapsedRowGroups = {};
+                for (let k in rowGroups) collapsedRowGroups[k] = false;
+                collapsedColumnGroups = { VEGAN: false, VEGETARISCH: false, ZUSATZSTOFFE: false, ALLERGENE: false };
+                nextId = newIdCounter;
+                persistData();
+                setMessage(`✅ Webservice erfolgreich importiert: ${Object.values(rowGroups).reduce((s,g)=>s+g.items.length,0)} Getränke-Einträge.`);
+                renderMatrix();
+            } else {
+                throw new Error("Keine gültigen Datensätze");
+            }
+        } catch (err) {
+            console.warn(err);
+            setMessage(`⚠️ Webservice nicht erreichbar oder Fehler: ${err.message}. Verwende lokale Daten.`, true);
+            if (!loadLocalData() || Object.keys(rowGroups).length === 0) {
+                initDefaultDataFromWebservice();
+            }
+            renderMatrix();
+        }
+    }
+    
+    // Rendering der Matrix mit Spalten- & Zeilengruppen-Kollaps
+    function renderMatrix() {
+        const searchTerm = searchInput.value.trim().toLowerCase();
+        let filteredRowGroups = {};
+        for (let [grpKey, grp] of Object.entries(rowGroups)) {
+            let filteredItems = grp.items.filter(item =>
+                item.name.toLowerCase().includes(searchTerm) ||
+                Object.values(item.values).some(v => v.toLowerCase().includes(searchTerm))
+            );
+            if (filteredItems.length > 0 || searchTerm === '') {
+                filteredRowGroups[grpKey] = { ...grp, items: filteredItems };
+            }
+        }
+        let totalRows = 0;
+        for (let grp of Object.values(filteredRowGroups)) totalRows += grp.items.length;
+        statsDisplay.innerText = `${totalRows} Zeilen (${Object.keys(filteredRowGroups).length} Gruppen)`;
+        
+        // Kopfbereich mit kollabierbaren Spaltengruppen
+        let theadHtml = `<tr><th style="min-width:200px">Getränkegruppe / Getränk</th>`;
+        for (let [grpKey, grp] of Object.entries(columnGroups)) {
+            const isCollapsed = collapsedColumnGroups[grpKey];
+            const icon = isCollapsed ? '▶' : '▼';
+            const colSpan = grp.columns.length;
+            if (colSpan === 0) continue;
+            theadHtml += `<th colspan="${colSpan}" class="col-group-header" data-colgroup="${grpKey}" style="text-align:center;">
+                            <span class="col-group-toggle">${icon}</span> ${grp.label}
+                          </th>`;
+        }
+        theadHtml += `<th style="width:110px">Aktionen</th>`;
+        theadHtml += `</tr><tr><th>🏷️ Zeilen-Gruppe / Attribut</th>`;
+        for (let [grpKey, grp] of Object.entries(columnGroups)) {
+            if (collapsedColumnGroups[grpKey]) continue;
+            for (let col of grp.columns) {
+                theadHtml += `<th>${col}</th>`;
+            }
+        }
+        theadHtml += `<th></th></tr>`;
+        matrixHeader.innerHTML = theadHtml;
+        
+        let tbodyHtml = '';
+        for (let [grpKey, grp] of Object.entries(filteredRowGroups)) {
+            const isRowCollapsed = collapsedRowGroups[grpKey] || false;
+            const groupIcon = isRowCollapsed ? '▶' : '▼';
+            tbodyHtml += `<tr class="row-group-header" data-rowgroup="${grpKey}">
+                            <td colspan="${allColumns.length + 1}">
+                                <span class="row-group-toggle">${groupIcon}</span> 
+                                <strong>${escapeHtml(grp.label)}</strong> <span style="font-size:0.7rem;">(${grp.items.length})</span>
+                              </td>
+                          </tr>`;
+            if (!isRowCollapsed) {
+                for (let item of grp.items) {
+                    tbodyHtml += `<tr class="sub-row" data-item-id="${item.id}">`;
+                    tbodyHtml += `<td><strong>${escapeHtml(item.name)}</strong></td>`;
+                    for (let [colGrpKey, colGrp] of Object.entries(columnGroups)) {
+                        if (collapsedColumnGroups[colGrpKey]) continue;
+                        for (let col of colGrp.columns) {
+                            let val = item.values[col] || "?";
+                            let cls = (val.includes("✅") ? "value-present" : (val.includes("❌") ? "value-absent" : ""));
+                            tbodyHtml += `<td class="${cls}">${escapeHtml(val)}</td>`;
+                        }
+                    }
+                    tbodyHtml += `<td class="action-icons">
+                                    <button class="edit-item-btn" data-id="${item.id}" data-groupkey="${grpKey}">✏️</button>
+                                    <button class="delete-item-btn" data-id="${item.id}" data-groupkey="${grpKey}">🗑️</button>
+                                  </td></tr>`;
+                }
+            }
+        }
+        if (totalRows === 0) tbodyHtml = `<tr><td colspan="${allColumns.length+2}">Keine Einträge – synchronisiere Webservice oder füge manuell hinzu</td></tr>`;
+        matrixBody.innerHTML = tbodyHtml;
+        
+        // Event Listener für Spaltengruppen
+        document.querySelectorAll('.col-group-header').forEach(el => {
+            el.addEventListener('click', (e) => {
+                const grp = el.getAttribute('data-colgroup');
+                if (grp) { collapsedColumnGroups[grp] = !collapsedColumnGroups[grp]; persistData(); renderMatrix(); }
+            });
+        });
+        document.querySelectorAll('.row-group-header').forEach(header => {
+            header.addEventListener('click', (e) => {
+                const grpKey = header.getAttribute('data-rowgroup');
+                if (grpKey) { collapsedRowGroups[grpKey] = !collapsedRowGroups[grpKey]; persistData(); renderMatrix(); }
+            });
+        });
+        attachItemEvents();
+    }
+    
+    function attachItemEvents() {
+        document.querySelectorAll('.edit-item-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = parseInt(btn.getAttribute('data-id'));
+                const grpKey = btn.getAttribute('data-groupkey');
+                const group = rowGroups[grpKey];
+                if (group) {
+                    const item = group.items.find(i => i.id === id);
+                    if (item) {
+                        document.getElementById('rowgroup-input').value = group.label;
+                        document.getElementById('attribute-input').value = item.name;
+                        document.getElementById('edit-id').value = id;
+                        setMessage(`Bearbeite: ${item.name}`);
+                    }
+                }
+            });
+        });
+        document.querySelectorAll('.delete-item-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = parseInt(btn.getAttribute('data-id'));
+                const grpKey = btn.getAttribute('data-groupkey');
+                if (confirm('Eintrag löschen?')) {
+                    const group = rowGroups[grpKey];
+                    if (group) {
+                        group.items = group.items.filter(i => i.id !== id);
+                        if (group.items.length === 0) delete rowGroups[grpKey];
+                        persistData();
+                        renderMatrix();
+                        setMessage('Gelöscht');
+                    }
+                }
+            });
+        });
+    }
+    
+    function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;')); }
+    
+    // Formular: Speichern
+    document.getElementById('drink-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const rowGroupLabel = document.getElementById('rowgroup-input').value.trim();
+        const attrName = document.getElementById('attribute-input').value.trim();
+        const colGroup = document.getElementById('colgroup-select').value;
+        const selectedVal = document.getElementById('value-select').value;
+        if (!rowGroupLabel || !attrName) { setMessage("Bitte Gruppe und Attribut angeben", true); return; }
+        let targetKey = null;
+        for (let [k, g] of Object.entries(rowGroups)) if (g.label === rowGroupLabel) { targetKey = k; break; }
+        if (!targetKey) { targetKey = "group_" + Date.now(); rowGroups[targetKey] = { label: rowGroupLabel, items: [], collapsed: false }; collapsedRowGroups[targetKey] = false; }
+        const newValues = {};
+        allColumns.forEach(col => { newValues[col] = "? unbekannt"; });
+        const targetColumns = columnGroups[colGroup]?.columns || [];
+        if (targetColumns.length) newValues[targetColumns[0]] = selectedVal;
+        const newId = nextId++;
+        rowGroups[targetKey].items.push({ id: newId, name: attrName, values: newValues });
+        persistData();
+        renderMatrix();
+        setMessage(`Neuer Eintrag "${attrName}" hinzugefügt`);
+        document.getElementById('edit-id').value = '';
+    });
+    document.getElementById('cancelEditBtn').addEventListener('click', () => { document.getElementById('edit-id').value = ''; setMessage('Abgebrochen'); });
+    expandColsBtn.addEventListener('click', () => { Object.keys(collapsedColumnGroups).forEach(k => collapsedColumnGroups[k] = false); persistData(); renderMatrix(); });
+    collapseColsBtn.addEventListener('click', () => { Object.keys(collapsedColumnGroups).forEach(k => collapsedColumnGroups[k] = true); persistData(); renderMatrix(); });
+    searchInput.addEventListener('input', () => renderMatrix());
+    syncBtn.addEventListener('click', () => syncWithWebservice());
+    
+    // Initialisierung
+    if (!loadLocalData() || Object.keys(rowGroups).length === 0) {
+        initDefaultDataFromWebservice();
+    }
+    renderMatrix();
+    // Optional: Webservice automatisch im Hintergrund (nicht zwingend)
+    setTimeout(() => { syncWithWebservice(); }, 500);
+</script>
+</body>
+</html>

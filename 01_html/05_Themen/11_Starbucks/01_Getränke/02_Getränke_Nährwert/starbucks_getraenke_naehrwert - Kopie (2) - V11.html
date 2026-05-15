@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Starbucks® – Getränke Dashboard | Alle Milcharten pro Getränk</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            background: #f5efe9;
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 24px 20px;
+            color: #2c221b;
+        }
+        .global-container {
+            max-width: 100%;
+            display: flex;
+            gap: 24px;
+            position: relative;
+        }
+        .sidebar {
+            width: 280px;
+            flex-shrink: 0;
+            background: white;
+            border-radius: 28px;
+            border: 1px solid #e2d9d2;
+            padding: 16px 12px;
+            position: sticky;
+            top: 24px;
+            height: fit-content;
+            max-height: calc(100vh - 48px);
+            overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+        }
+        .sidebar h3 {
+            margin: 0 0 12px 0;
+            font-size: 1rem;
+            font-weight: 800;
+            color: #1e5a3a;
+            border-bottom: 2px solid #1e7b4b;
+            padding-bottom: 8px;
+        }
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .main-nav-btn {
+            background: #e9e0d7;
+            border: none;
+            border-radius: 60px;
+            padding: 8px 16px;
+            text-align: left;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.1s;
+            color: #2c221b;
+            width: 100%;
+            font-family: inherit;
+        }
+        .main-nav-btn:hover {
+            background: #d4c9be;
+            transform: translateX(4px);
+        }
+        .main-content {
+            flex: 1;
+            min-width: 0;
+        }
+        .tab-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            border-bottom: 2px solid #d4c9be;
+            padding-bottom: 8px;
+        }
+        .tab-button {
+            background: #ede5dd;
+            border: none;
+            border-radius: 40px;
+            padding: 10px 24px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.1s;
+            color: #5a4a3a;
+        }
+        .tab-button.active {
+            background: #1e7b4b;
+            color: white;
+        }
+        .filter-row {
+            background: #f9f5f0;
+            border-radius: 60px;
+            padding: 10px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .filter-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .filter-select {
+            padding: 8px 16px;
+            border-radius: 60px;
+            border: 1px solid #dccfc3;
+            background: white;
+            font-size: 0.85rem;
+            min-width: 220px;
+        }
+        .btn-secondary {
+            background: #c0a88e;
+            color: white;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 60px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn-primary, .btn-reset {
+            background: #1e7b4b;
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 60px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn-reset {
+            background: #c0a88e;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 24px;
+            padding: 16px;
+            border-left: 6px solid #1e7b4b;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #1e5a3a;
+        }
+        .data-table-wrapper {
+            max-height: 540px;
+            overflow-y: auto;
+            overflow-x: auto;
+            background: white;
+            border-radius: 24px;
+            border: 1px solid #e2d9d2;
+            margin-top: 16px;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.7rem;
+            min-width: 100%;
+        }
+        .data-table th {
+            background: #e7dfd7;
+            padding: 8px 5px;
+            text-align: center;
+            font-weight: 800;
+            position: sticky;
+            top: 0;
+            border-bottom: 2px solid #d4c9be;
+            white-space: nowrap;
+        }
+        .data-table td {
+            padding: 6px 4px;
+            border-bottom: 1px solid #efe3d8;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .data-table td.text-left {
+            text-align: left;
+        }
+        /* Gruppenrahmen (vertikale Trennlinien für Größen, Allergene, Zusatzstoffe) */
+        .size-group-start, .allergen-group-start, .zusatz-group-start {
+            border-left: 2px solid #b8a38c !important;
+        }
+        th.size-group-start, th.allergen-group-start, th.zusatz-group-start {
+            border-left: 2px solid #9b7f64 !important;
+        }
+        .group-card {
+            background: white;
+            border-radius: 32px;
+            border: 1px solid #e2d9d2;
+            margin-bottom: 32px;
+            overflow: hidden;
+            scroll-margin-top: 80px;
+        }
+        .group-header {
+            background: #1e7b4b;
+            color: white;
+            padding: 12px 20px;
+            font-weight: 800;
+            font-size: 1.2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .pk-badge {
+            font-family: monospace;
+            background: #f0e4d9;
+            padding: 2px 8px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            display: inline-block;
+        }
+        .available-sizes {
+            font-size: 0.7rem;
+            font-weight: 500;
+            background: #f0e4d9;
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
+        .filter-info-bar {
+            background: #e9e0d7;
+            border-radius: 40px;
+            padding: 6px 16px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        @media (max-width: 900px) {
+            .global-container { flex-direction: column; }
+            .sidebar { width: 100%; position: relative; top: 0; margin-bottom: 20px; }
+        }
+        .nutrient-sub {
+            font-size: 0.65rem;
+            font-weight: normal;
+        }
+        .milk-row-highlight {
+            background-color: #fef7e8;
+        }
+    </style>
+</head>
+<body>
+<div class="global-container">
+    <div id="globalSidebar" class="sidebar">
+        <h3 id="sidebarTitle">📁 GETRAENK Navigation</h3>
+        <div id="mainNavList" class="sidebar-nav"></div>
+<div id="mainNavList1" class="sidebar-nav"></div>
+    </div>
+
+    <div class="main-content">
+        <div class="tab-bar">
+            <button id="tab1Btn" class="tab-button">📊 Tab 1 – Dashboard</button>
+            <button id="tab2Btn" class="tab-button active">🍹 Tab 2 – Alle Milcharten pro Getränk</button>
+            <button id="tab3Btn" class="tab-button">🥛 Tab 3 – Gruppiert nach MILCHART</button>
+        </div>
+
+        <!-- TAB 1: Basisdaten -->
+        <div id="tab1Content" class="tab-content">
+            <div class="stats-grid" id="statsGrid"></div>
+            <div class="filter-group" style="margin-bottom:12px; gap:12px; flex-wrap:wrap;">
+                <span>🔎 PK_SIMPLE Filter (Tab 1):</span>
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <button id="pkDec" class="btn-secondary">−1</button>
+                    <input type="text" id="pkInput" placeholder="PK Wert" style="width:140px; padding:6px; border-radius:60px; border:1px solid #dccfc3;">
+                    <button id="pkInc" class="btn-secondary">+1</button>
+                    <button id="applyPkFilter" class="btn-primary">Filtern</button>
+                    <button id="clearPkFilter" class="btn-reset">Reset</button>
+                </div>
+                <span>📌 MAIN_GETRAENK Filter:</span>
+                <strong id="activeMainFilter">Kein Filter</strong>
+                <button id="resetMainFilter" class="btn-reset">Alle anzeigen</button>
+            </div>
+            <div class="data-table-wrapper"><table class="data-table" id="simpleTableTab1"><thead><tr><th>PK_SIMPLE</th><th>GETRAENK</th><th>SUB_GETRAENK</th><th>MAIN_GETRAENK</th></tr></thead><tbody></tbody></table></div>
+            <div class="data-table-wrapper"><table class="data-table" id="getraenkeTableTab1"><thead><tr><th>PK_GETRAENKE</th><th>GETRAENK</th><th>VEGAN</th><th>VEGETARISCH</th><th>Allergen Milch/Laktose</th><th>FK_SIMPLE</th></tr></thead><tbody></tbody></table></div>
+            <div class="data-table-wrapper"><table class="data-table" id="naehrTableTab1"><thead><tr><th>PK_NAEHR</th><th>GETRAENK</th><th>Größe</th><th>kcal</th><th>Koffein (mg)</th><th>FK_SIMPLE</th></tr></thead><tbody></tbody></table></div>
+        </div>
+
+        <!-- TAB 2: GETRAENK-Filter -> zeigt ALLE Milcharten des selektierten Getränks -->
+        <div id="tab2Content" class="tab-content active">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <span>🔍 Filter nach GETRAENK (NUR exakt dieses Getränk):</span>
+                    <select id="tab2GetraenkFilter" class="filter-select"></select>
+                    <button id="resetTab2Filter" class="btn-secondary">Alle Getränke anzeigen</button>
+                </div>
+                <span class="filter-info-bar" id="tab2FilterInfo">Kein Filter (alle Getränke)</span>
+            </div>
+            <div id="groupedByGetraenkContainer"></div>
+        </div>
+
+        <!-- TAB 3: Gruppiert nach Milchart -->
+        <div id="tab3Content" class="tab-content">
+            <div class="filter-row">
+                <div class="filter-group"><span>🔍 Filter nach GETRAENK:</span><select id="tab3GetraenkFilter" class="filter-select"></select><button id="resetTab3Filter" class="btn-secondary">Reset</button></div>
+                <span class="filter-info-bar" id="tab3FilterInfo">Kein Filter</span>
+            </div>
+            <div id="groupedByMilchartContainer"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_URL = 'http://localhost:5000/star_starbucks_getraenke/full';
+    let allItems = [];
+    let simpleMaster = [];
+    let productAttrMap = new Map();          // PK_SIMPLE -> attributes, allergene, zusatzstoffe
+    let milkNutritionMap = new Map();         // Key: "PK|MILCHART|size" -> nutrition object
+    let pkToMilksMap = new Map();             // PK -> Set of milk types available for that PK
+    let drinkToPksMap = new Map();            // GETRAENK name -> array of {pk, simple, attrs, milkSet}
+
+    // Konstanten
+    const ALLERGEN_FIELDS = [
+        "ALLERGENE_Glutenhaltige_Getreide", "ALLERGENE_Milch_Laktose", "ALLERGENE_Ei", "ALLERGENE_Soja",
+        "ALLERGENE_Schalenfrüchte", "ALLERGENE_SO2_und_Sulphite", "ALLERGENE_Sesam", "ALLERGENE_Erdnuesse",
+        "ALLERGENE_Senf", "ALLERGENE_Sellerie", "ALLERGENE_Lupinen", "ALLERGENE_Krebs",
+        "ALLERGENE_Weichtiere", "ALLERGENE_Fisch"
+    ];
+    const ZUSATZSTOFF_FIELDS = [
+        "ZUSATZSTOFFE_Konservierungsmittel", "ZUSATZSTOFFE_geschwaerzt", "ZUSATZSTOFFE_Geschmacksverstaerker",
+        "ZUSATZSTOFFE_Antioxidationsmittel", "ZUSATZSTOFFE_Farbstoffe", "ZUSATZSTOFFE_geschwefelt",
+        "ZUSATZSTOFFE_Phosphat", "ZUSATZSTOFFE_mit_Suessungsmitteln"
+    ];
+    const EXTRA_ATTRS = ["temperature", "koffeeiniert", "flavoured", "latte", "seasonal", "season", "sugar_free", "protein", "Sahne"];
+    const SIZE_ORDER = ["short", "single","doppio", "tall", "grande", "venti"];
+    const SIZE_LABELS = { short: "Short", single: "Single", doppio: "Doppio", tall: "Tall", grande: "Grande", venti: "Venti" };
+    const NUTRIENT_FIELDS = [
+        { field: "groesse_kilojoules_einh_kj", label: "kJ", unit: "kJ", format: v => v ? Math.round(v) : "—" },
+        { field: "kalorien_einh_kcal", label: "kcal", unit: "kcal", format: v => v ? Math.round(v) : "—" },
+        { field: "fett_total_einh_g", label: "Fett", unit: "g", format: v => v ? v.toFixed(1) : "—" },
+        { field: "davon_gesaettigte_fettsaeuren_einh_g", label: "ges.Fetts.", unit: "g", format: v => v ? v.toFixed(1) : "—" },
+        { field: "kohlenhydrate_total_einh_g", label: "Kohlenhydr.", unit: "g", format: v => v ? v.toFixed(1) : "—" },
+        { field: "davon_zucker_einh_g", label: "Zucker", unit: "g", format: v => v ? v.toFixed(1) : "—" },
+        { field: "ballaststoffe_einh_g", label: "Ballastst.", unit: "g", format: v => v ? v.toFixed(1) : "—" },
+        { field: "eiweiss_einh_g", label: "Eiweiß", unit: "g", format: v => v ? v.toFixed(1) : "—" },
+        { field: "salzgeh_alt_einh_g", label: "Salz", unit: "g", format: v => v ? v.toFixed(2) : "—" },
+        { field: "koffein_einh_mg", label: "Koffein", unit: "mg", format: v => v ? Math.round(v) : "—" }
+    ];
+
+    function escapeHtml(s) { if(!s && s!==0) return ''; return String(s).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+    function parseFlag(value) {
+        if (value === true || value === 1 || value === "1") return true;
+        if (typeof value === 'string') { let lower = value.toLowerCase(); return lower === 'ja' || lower === 'true' || lower === '1'; }
+        return false;
+    }
+    function formatBool(val) { return val ? '✅' : '❌'; }
+
+    // Datenaufbereitung: simpleMaster + Attribut + Milch-Nutrition + PK->MilchSet + GETRAENK->PKs
+    function buildDataStructures(items) {
+        const simpleMap = new Map();
+        for (let row of items) {
+            let pk = row.PK_STAR_STARBUCKS_GETRAENKE_SIMPLE;
+            if (pk && !simpleMap.has(pk)) {
+                simpleMap.set(pk, {
+                    PK: pk,
+                    GETRAENK: row.GETRAENK || '',
+                    SUB_GETRAENK: row.SUB_GETRAENK || '',
+                    MAIN_GETRAENK: row.main_getraenk || row.MAIN_GETRAENK || 'Unbekannt',
+                    FINAL_CNT_GETRAENKE_NAEHRWERT: row.FINAL_CNT_GETRAENKE_NAEHRWERT,
+                    FINAL_CNT_GETRAENKE: row.FINAL_CNT_GETRAENKE,
+ FINAL_CNT_ORIG_GETRAENKE_NAEHRWERT: row.FINAL_CNT_ORIG_GETRAENKE_NAEHRWERT,
+                    FINAL_CNT_ORIG_GETRAENKE: row.FINAL_CNT_ORIG_GETRAENKE,
+                    DATUM_FINAL_CNT_NAEHRWERT_OK: row.DATUM_FINAL_CNT_NAEHRWERT_OK,
+                    DATUM_FINAL_CNT_GETRAENKE_OK: row.DATUM_FINAL_CNT_GETRAENKE_OK
+                });
+            }
+        }
+        simpleMaster = Array.from(simpleMap.values());
+
+        // Produktattribute + Allergene/Zusatzstoffe
+        productAttrMap.clear();
+        milkNutritionMap.clear();
+        for (let row of items) {
+            let pk = row.PK_STAR_STARBUCKS_GETRAENKE_SIMPLE;
+            if (!pk) continue;
+            if (!productAttrMap.has(pk)) {
+                productAttrMap.set(pk, {
+                    isVegan: parseFlag(row.VEGAN),
+                    isVegetarisch: parseFlag(row.VEGETARISCH),
+                    temperature: row.temperature || row.TEMPERATUR || null,
+                    koffeeiniert: row.koffeeiniert || row.KOFFEINIERT || null,
+                    flavoured: row.flavoured,
+                    latte: row.latte,
+                    seasonal: parseFlag(row.seasonal),
+                    season: row.season || null,
+                    sugar_free: parseFlag(row.sugar_free),
+                    protein: row.protein ? parseFloat(row.protein) : null,
+                    Sahne: parseFlag(row.Sahne),
+                    allergene: {},
+                    zusatzstoffe: {},
+                    sort: row.sort,
+                    grundgetränk: row.Grundgetränk,
+                    getr_getraenk: row.getr_getraenk
+                });
+            }
+            let attrs = productAttrMap.get(pk);
+            if (!attrs.isVegan && parseFlag(row.VEGAN)) attrs.isVegan = true;
+            if (!attrs.isVegetarisch && parseFlag(row.VEGETARISCH)) attrs.isVegetarisch = true;
+            if (!attrs.temperature && (row.temperature || row.TEMPERATUR)) attrs.temperature = row.temperature || row.TEMPERATUR;
+            if (!attrs.koffeeiniert && (row.koffeeiniert || row.KOFFEINIERT)) attrs.koffeeiniert = row.koffeeiniert || row.KOFFEINIERT;
+            if (!attrs.season && row.season) attrs.season = row.season;
+            if (attrs.protein === null && row.protein !== undefined && !isNaN(parseFloat(row.protein))) attrs.protein = parseFloat(row.protein);
+            for (let af of ALLERGEN_FIELDS) if (parseFlag(row[af])) attrs.allergene[af] = true;
+            for (let zf of ZUSATZSTOFF_FIELDS) if (parseFlag(row[zf])) attrs.zusatzstoffe[zf] = true;
+            if (parseFlag(row.flavoured)) attrs.flavoured = true;
+            if (parseFlag(row.latte)) attrs.latte = true;
+            if (parseFlag(row.seasonal)) attrs.seasonal = true;
+            if (parseFlag(row.sugar_free)) attrs.sugar_free = true;
+            if (parseFlag(row.Sahne)) attrs.Sahne = true;
+
+            // Milch & Nährwerte
+            let milkName = row.MILCHART ? String(row.MILCHART).trim() : null;
+            if (milkName === null || milkName === '') milkName = '--- (keine Milchart)';
+            let sizeRaw = (row.getraenk_groesse || '').toLowerCase().trim();
+            let sizeKey = null;
+            if (sizeRaw.includes('short')) sizeKey = 'short';
+            else if (sizeRaw === 'single') sizeKey = 'single';
+            else if (sizeRaw.includes('tall')) sizeKey = 'tall';
+ else if (sizeRaw.includes('doppio')) sizeKey = 'doppio';
+            else if (sizeRaw.includes('grande')) sizeKey = 'grande';
+            else if (sizeRaw.includes('venti')) sizeKey = 'venti';
+            if (!sizeKey) continue;
+            let nutrition = {};
+            for (let f of NUTRIENT_FIELDS) {
+                let val = row[f.field];
+                if (val !== undefined && val !== null && !isNaN(parseFloat(val))) nutrition[f.field] = parseFloat(val);
+                else nutrition[f.field] = null;
+            }
+            milkNutritionMap.set(`${pk}|${milkName}|${sizeKey}`, nutrition);
+        }
+
+        // PK -> verfügbare Milcharten (unique)
+        pkToMilksMap.clear();
+        for (let key of milkNutritionMap.keys()) {
+            let [pk, milk] = key.split('|');
+            if (!pkToMilksMap.has(pk)) pkToMilksMap.set(pk, new Set());
+            pkToMilksMap.get(pk).add(milk);
+        }
+
+        // GETRAENK -> Liste aller PKs + deren Milcharten + simple + attrs
+        drinkToPksMap.clear();
+        for (let simple of simpleMaster) {
+            let pk = simple.PK;
+            let drinkName = simple.GETRAENK;
+            if (!drinkToPksMap.has(drinkName)) drinkToPksMap.set(drinkName, []);
+            let milkSet = pkToMilksMap.get(String(pk)) || new Set();
+            let attrs = productAttrMap.get(pk) || {};
+            drinkToPksMap.get(drinkName).push({
+                pk: pk,
+                simple: simple,
+                attrs: attrs,
+                milkSet: milkSet
+            });
+        }
+    }
+
+    // Hilfsfunktion: Für gegebenen PK, Milchart und Größe die Nährwerte holen
+    function getNutrition(pk, milk, size) {
+        return milkNutritionMap.get(`${pk}|${milk}|${size}`) || null;
+    }
+
+    // Verfügbare Größen für eine (PK, Milch) Kombination
+    function getAvailableSizesForPkMilk(pk, milk) {
+        let sizes = [];
+        for (let sz of SIZE_ORDER) if (milkNutritionMap.has(`${pk}|${milk}|${sz}`)) sizes.push(SIZE_LABELS[sz]);
+        return sizes.join(', ') || 'keine';
+    }
+
+    // Erweiterter Tabellenkopf (mit Gruppenrahmen)
+    function getExtendedTableHeader() {
+        let sizeHeadersHtml = '';
+        let nutrientSubHtml = '';
+        for (let idx = 0; idx < SIZE_ORDER.length; idx++) {
+            const groupClass = (idx === 0) ? '' : 'size-group-start';
+            sizeHeadersHtml += `<th colspan="${NUTRIENT_FIELDS.length}" class="size-group ${groupClass}">${SIZE_LABELS[SIZE_ORDER[idx]]}</th>`;
+        }
+        for (let idx = 0; idx < SIZE_ORDER.length; idx++) {
+            for (let nf of NUTRIENT_FIELDS) {
+                const sizeStartClass = (idx > 0 && NUTRIENT_FIELDS.indexOf(nf) === 0) ? 'size-group-start' : '';
+                nutrientSubHtml += `<th class="nutrient-sub ${sizeStartClass}">${nf.label}<br><span style="font-weight:normal;">${nf.unit}</span></th>`;
+            }
+        }
+           let extraCols = `<th>🌱 Vegan</th><th>🥚 Vegetarisch</th><th>🌡️ Temp.</th><th>☕ Koff.</th><th>🍬 Flavoured</th><th>🥛 Latte</th><th>🎄 Seasonal</th><th>📅 Season</th><th>🚫 Sugar free</th><th>💪 Protein</th><th>🍦 Sahne</th>`;
+        let allergenCols = ALLERGEN_FIELDS.map((f, i) => `<th class="${i===0 ? 'allergen-group-start' : ''}">${f.replace('ALLERGENE_','').substring(0,12)}</th>`).join('');
+        let zusatzCols = ZUSATZSTOFF_FIELDS.map((f, i) => `<th class="${i===0 ? 'zusatz-group-start' : ''}">${f.replace('ZUSATZSTOFFE_','').substring(0,8)}</th>`).join('');
+        return `<thead><tr><th rowspan="2">🔑 PK</th><th rowspan="2">🍹 GETRAENK / SUB</th><th rowspan="2">📏 Größen</th><th></th><th></th>${sizeHeadersHtml}<th colspan="${11 + ALLERGEN_FIELDS.length + ZUSATZSTOFF_FIELDS.length}">Merkmale + Allergene/Zusatzstoffe</th></tr>
+        <tr><th></th><th></th>${nutrientSubHtml}${extraCols}${allergenCols}${zusatzCols}</tr></thead>`;
+    }
+
+    // TAB 2: Gruppiert nach GETRAENK, zeigt ALLE Milcharten (über mehrere PKs hinweg)
+    let currentTab2Filter = '';
+    function renderGroupedByGetraenk() {
+    if (!simpleMaster.length) {
+        document.getElementById('groupedByGetraenkContainer').innerHTML = '<div class="empty-message">Keine Daten</div>';
+        return;
+    }
+    // Gefilterte Getränkenamen
+    let allDrinkNames = Array.from(drinkToPksMap.keys()).sort();
+    let filteredDrinks = currentTab2Filter ? allDrinkNames.filter(d => d === currentTab2Filter) : allDrinkNames;
+
+    const headerHtml = getExtendedTableHeader();
+    let html = '';
+    const sidebarNav = document.getElementById('mainNavList');
+    sidebarNav.innerHTML = '';
+  const sidebarNav1 = document.getElementById('mainNavList1');
+    sidebarNav1.innerHTML = '';
+
+    for (let drinkName of filteredDrinks) {
+        const pkEntries = drinkToPksMap.get(drinkName);
+        if (!pkEntries || pkEntries.length === 0) continue;
+        // Sammle ALLE Milcharten aus allen zugehörigen PKs (unique)
+        const allMilksSet = new Set();
+        for (let entry of pkEntries) {
+            for (let milk of entry.milkSet) allMilksSet.add(milk);
+        }
+        const allMilks = Array.from(allMilksSet).sort();
+        // Für jede Milchart den passenden PK finden (der diese Milch tatsächlich bereitstellt)
+        const milkToBestPk = new Map();
+        for (let milk of allMilks) {
+            for (let entry of pkEntries) {
+                if (entry.milkSet.has(milk)) {
+                    milkToBestPk.set(milk, entry);
+                    break;
+                }
+            }
+        }
+
+        // Milchvarianten nach "sort" ordnen
+        let milkEntries = [];
+        for (let milk of allMilks) {
+            const best = milkToBestPk.get(milk);
+            if (!best) continue;
+            milkEntries.push({ milk, best });
+        }
+
+        milkEntries.sort((a, b) => {
+            const sortA = a.best.attrs.sort;
+            const sortB = b.best.attrs.sort;
+            // Leere/fehlende Werte ans Ende
+            if (sortA == null || sortA === '') return 1;
+            if (sortB == null || sortB === '') return -1;
+            // Versuche numerischen Vergleich
+            const numA = parseFloat(sortA);
+            const numB = parseFloat(sortB);
+            if (!isNaN(numA) && !isNaN(numB)) {
+                return numA - numB;
+            }
+            // Sonst textuell
+            return String(sortA).localeCompare(String(sortB));
+        });
+
+        const groupId = `group-getraenk-${drinkName.replace(/[^a-z0-9]/gi, '-')}`;
+        html += `<div id="${groupId}" class="group-card"><div class="group-header"><span>🍹 ${escapeHtml(drinkName)}</span><span class="group-count">${allMilks.length} Milchvarianten (über alle PKs)</span></div>
+                 <div class="data-table-wrapper"><table class="data-table">${headerHtml}<tbody>`;
+
+        for (let { milk, best } of milkEntries) {
+            const pk = best.pk;
+            const attrs = best.attrs;
+            const simpleObj = best.simple;
+            // Nährwertzellen für jede Größe
+            let sizeCells = '';
+            for (let idxSize = 0; idxSize < SIZE_ORDER.length; idxSize++) {
+                const size = SIZE_ORDER[idxSize];
+                const nutrition = getNutrition(pk, milk, size);
+                for (let nfIdx = 0; nfIdx < NUTRIENT_FIELDS.length; nfIdx++) {
+                    const nf = NUTRIENT_FIELDS[nfIdx];
+                    let val = nutrition ? nutrition[nf.field] : null;
+                    const extraClass = (idxSize > 0 && nfIdx === 0) ? 'size-group-start' : '';
+                    sizeCells += `<td class="nutrition-value ${extraClass}">${nf.format(val)}</td>`;
+                }
+            }
+            const availableSizes = getAvailableSizesForPkMilk(pk, milk);
+            let temp = attrs.temperature || '—';
+let grundgetränk = attrs.grundgetränk || '—';
+let getr_getraenk = attrs.getr_getraenk || '—';
+
+            let sort = attrs.sort || '—';
+            let koff = attrs.koffeeiniert || '—';
+            let flavoured = attrs.flavoured ? '✅' : '❌';
+            let latte = attrs.latte ? '✅' : '❌';
+            let seasonal = attrs.seasonal ? '✅' : '❌';
+            let season = attrs.season ? escapeHtml(attrs.season) : '—';
+            let sugarFree = attrs.sugar_free ? '✅' : '❌';
+            let protein = attrs.protein ? attrs.protein.toFixed(1) + ' g' : '—';
+            let sahne = attrs.Sahne ? '✅' : '❌';
+            let vegan = attrs.isVegan ? '🌱 vegan' : (attrs.isVegetarisch ? '🥚 veget.' : '❌');
+            let vegetarisch = attrs.isVegetarisch ? '✅' : (attrs.isVegan ? '(vegan)' : '❌');
+
+            let allergenCells = '';
+            for (let ai = 0; ai < ALLERGEN_FIELDS.length; ai++) {
+                let isActive = attrs.allergene && attrs.allergene[ALLERGEN_FIELDS[ai]];
+                let classLeft = (ai === 0) ? 'allergen-group-start' : '';
+                allergenCells += `<td class="allergen-cell ${classLeft}">${isActive ? '⚠️' : '—'}</td>`;
+            }
+            let zusatzCells = '';
+            for (let zi = 0; zi < ZUSATZSTOFF_FIELDS.length; zi++) {
+                let isActive = attrs.zusatzstoffe && attrs.zusatzstoffe[ZUSATZSTOFF_FIELDS[zi]];
+                let classLeft = (zi === 0) ? 'zusatz-group-start' : '';
+                zusatzCells += `<td class="additive-cell ${classLeft}">${isActive ? '➕' : '—'}</td>`;
+            }
+
+            html += `<tr>
+                <td class="text-left"><span class="pk-badge">🔑 ${escapeHtml(pk)}</span></td>
+ <td>${escapeHtml(grundgetränk)}</td>
+                <td>${escapeHtml(sort)}</td>
+                <td class="text-left">${escapeHtml(milk)}</td>
+                <td class="text-left"><span class="available-sizes">${escapeHtml(availableSizes)}</span></td>
+                <td style="border-left: 2px solid #b8a38c !important;"></td>
+                ${sizeCells}
+                <td style="border-left: 2px solid #9b7f64 !important;">${vegan}</td>
+                <td>${vegetarisch}</td>
+                <td>${escapeHtml(temp)}</td>
+                <td>${escapeHtml(koff)}</td>
+                <td>${flavoured}</td>
+                <td>${latte}</td>
+                <td>${seasonal}</td>
+                <td>${season}</td>
+                <td>${sugarFree}</td>
+                <td>${protein}</td>
+                <td>${sahne}</td>
+                ${allergenCells}
+                ${zusatzCells}
+ <td>${escapeHtml(getr_getraenk)}</td>
+                <td>${best.simple.FINAL_CNT_GETRAENKE_NAEHRWERT}</td>
+                <td>${best.simple.FINAL_CNT_GETRAENKE}</td>
+ <td>${best.simple.FINAL_CNT_ORIG_GETRAENKE_NAEHRWERT}</td>
+                <td>${best.simple.FINAL_CNT_ORIG_GETRAENKE}</td>
+                <td>${best.simple.DATUM_FINAL_CNT_NAEHRWERT_OK}</td>
+                <td>${best.simple.DATUM_FINAL_CNT_GETRAENKE_OK}</td>
+             </tr>`;
+        }
+        html += `</tbody></table></div></div>`;
+
+        // Sidebar Navigation für dieses Getränk
+        const navBtn = document.createElement('button');
+        navBtn.textContent = drinkName;
+        navBtn.className = 'main-nav-btn';
+        navBtn.onclick = () => { const el = document.getElementById(groupId); if(el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+        sidebarNav.appendChild(navBtn);
+
+ // Sidebar Navigation für dieses Getränk
+        const navBtn1 = document.createElement('button');
+        navBtn1.textContent = drinkName;
+        navBtn1.className = 'main-nav-btn';
+        navBtn1.onclick = () => { const el = document.getElementById(groupId); if(el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+        sidebarNav1.appendChild(navBtn1);
+    }
+    document.getElementById('groupedByGetraenkContainer').innerHTML = html || '<div class="empty-message">Keine Getränke gefunden</div>';
+    document.getElementById('tab2FilterInfo').innerHTML = currentTab2Filter ? `GETRAENK = "${escapeHtml(currentTab2Filter)}" (alle Milcharten)` : 'Kein Filter – alle Getränke';
+    document.getElementById('sidebarTitle').innerHTML = '🍹 GETRAENK Navigation (Tab 2)';
+}
+
+    // TAB 3: Gruppiert nach MILCHART (vereinfacht, aber bleibt funktional)
+    let currentTab3Filter = '';
+    function renderGroupedByMilchart() {
+        if (!simpleMaster.length) { document.getElementById('groupedByMilchartContainer').innerHTML = '<div class="empty-message">Keine Daten</div>'; return; }
+        const milkGroups = new Map();
+        for (let simple of simpleMaster) {
+            const pk = simple.PK;
+            const milkSet = pkToMilksMap.get(String(pk)) || new Set();
+            for (let milk of milkSet) {
+                if (!milkGroups.has(milk)) milkGroups.set(milk, []);
+                milkGroups.get(milk).push({ simple, attrs: productAttrMap.get(pk) || {} });
+            }
+        }
+        let filteredGroups = new Map();
+        for (let [milk, items] of milkGroups.entries()) {
+            let filtered = currentTab3Filter ? items.filter(it => it.simple.GETRAENK === currentTab3Filter) : items;
+            if (filtered.length) filteredGroups.set(milk, filtered);
+        }
+        const milkNames = Array.from(filteredGroups.keys()).sort((a,b) => {
+            if (a === '--- (keine Milchart)') return -1;
+            if (b === '--- (keine Milchart)') return 1;
+            return a.localeCompare(b);
+        });
+        let html = '';
+        for (let milk of milkNames) {
+            const items = filteredGroups.get(milk);
+            html += `<div class="group-card"><div class="group-header"><span>🥛 ${escapeHtml(milk)}</span><span class="group-count">${items.length} Getränke</span></div>
+                     <div class="data-table-wrapper"><table class="data-table"><thead><tr><th>🔑 PK</th><th>GETRAENK</th><th>Größen (verfügbar)</th><th>Vegan</th><th>Veget.</th><th>Koffein</th></tr></thead><tbody>`;
+            for (let { simple, attrs } of items) {
+                const pk = simple.PK;
+                const sizes = getAvailableSizesForPkMilk(pk, milk);
+                html += `<tr><td>${escapeHtml(pk)}</td><td>${escapeHtml(simple.GETRAENK)}</td><td>${escapeHtml(sizes)}</td><td>${attrs.isVegan ? '🌱' : '—'}</td><td>${attrs.isVegetarisch ? '✅' : '—'}</td><td>${attrs.koffeeiniert || '—'}</td></tr>`;
+            }
+            html += `</tbody></table></div></div>`;
+        }
+        document.getElementById('groupedByMilchartContainer').innerHTML = html || '<div class="empty-message">Keine Daten</div>';
+        document.getElementById('tab3FilterInfo').innerHTML = currentTab3Filter ? `GETRAENK = "${escapeHtml(currentTab3Filter)}"` : 'Kein Filter';
+    }
+
+    // Tab1 Basisfunktionen (unverändert, aber notwendig)
+    let currentMainFilter = '', currentPkFilter = '';
+    function renderTab1() { 
+        const uniqueMain = [...new Set(simpleMaster.map(s => s.MAIN_GETRAENK))];
+        document.getElementById('statsGrid').innerHTML = `<div class="stat-card"><h3>📊 SIMPLE</h3><div class="stat-number">${simpleMaster.length}</div></div><div class="stat-card"><h3>🥤 GETRÄNKE</h3><div class="stat-number">${simpleMaster.length}</div></div><div class="stat-card"><h3>📈 NÄHRWERTE</h3><div class="stat-number">${milkNutritionMap.size}</div></div><div class="stat-card"><h3>📁 MAIN_GETRAENK</h3><div class="stat-number">${uniqueMain.length}</div></div>`;
+        renderTab1Tables();
+    }
+    function renderTab1Tables() {
+        let filteredSimple = simpleMaster.filter(s => (!currentMainFilter || s.MAIN_GETRAENK === currentMainFilter) && (!currentPkFilter || String(s.PK) === currentPkFilter));
+        document.querySelector('#simpleTableTab1 tbody').innerHTML = filteredSimple.map(s => `<tr><td>${escapeHtml(s.PK)}</td><td>${escapeHtml(s.GETRAENK)}</td><td>${escapeHtml(s.SUB_GETRAENK)}</td><td>${escapeHtml(s.MAIN_GETRAENK)}</td></tr>`).join('');
+        const fg = simpleMaster.filter(g => !currentPkFilter || String(g.PK) === currentPkFilter);
+        document.querySelector('#getraenkeTableTab1 tbody').innerHTML = fg.map(g => `<tr><td>${escapeHtml(g.PK)}</td><td>${escapeHtml(g.GETRAENK)}</td><td>—</td><td>—</td><td>—</td><td>${escapeHtml(g.PK)}</td></tr>`).join('');
+        const fn = []; document.querySelector('#naehrTableTab1 tbody').innerHTML = '<tr><td colspan="6">Nährwert-Details in Tab2/3</td></tr>';
+    }
+    function populateDropdowns() {
+        const unique = [...new Set(simpleMaster.map(s => s.GETRAENK))].sort();
+        const opts = '<option value="">-- Alle Getränke --</option>' + unique.map(g => `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join('');
+        document.getElementById('tab2GetraenkFilter').innerHTML = opts;
+        document.getElementById('tab3GetraenkFilter').innerHTML = opts;
+        document.getElementById('tab2GetraenkFilter').onchange = e => { currentTab2Filter = e.target.value; renderGroupedByGetraenk(); };
+        document.getElementById('tab3GetraenkFilter').onchange = e => { currentTab3Filter = e.target.value; renderGroupedByMilchart(); };
+        document.getElementById('resetTab2Filter').onclick = () => { currentTab2Filter = ''; document.getElementById('tab2GetraenkFilter').value = ''; renderGroupedByGetraenk(); };
+        document.getElementById('resetTab3Filter').onclick = () => { currentTab3Filter = ''; document.getElementById('tab3GetraenkFilter').value = ''; renderGroupedByMilchart(); };
+    }
+    function bindTab1Events() {
+        document.getElementById('pkDec').onclick = () => { let v = parseInt(document.getElementById('pkInput').value); if(!isNaN(v)) document.getElementById('pkInput').value = v-1; applyPkFilter(); };
+        document.getElementById('pkInc').onclick = () => { let v = parseInt(document.getElementById('pkInput').value); if(!isNaN(v)) document.getElementById('pkInput').value = v+1; applyPkFilter(); };
+        document.getElementById('applyPkFilter').onclick = applyPkFilter;
+        document.getElementById('clearPkFilter').onclick = () => { document.getElementById('pkInput').value = ''; currentPkFilter = ''; renderTab1Tables(); };
+        document.getElementById('resetMainFilter').onclick = () => { currentMainFilter = ''; document.getElementById('activeMainFilter').innerText = 'Kein Filter'; renderTab1Tables(); };
+    }
+    function applyPkFilter() { currentPkFilter = document.getElementById('pkInput').value.trim(); renderTab1Tables(); }
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-button').forEach(b=>b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+        if(tab==='tab1') { document.getElementById('tab1Btn').classList.add('active'); document.getElementById('tab1Content').classList.add('active'); renderTab1(); }
+        else if(tab==='tab2') { document.getElementById('tab2Btn').classList.add('active'); document.getElementById('tab2Content').classList.add('active'); renderGroupedByGetraenk(); }
+        else { document.getElementById('tab3Btn').classList.add('active'); document.getElementById('tab3Content').classList.add('active'); renderGroupedByMilchart(); }
+    }
+    async function load() {
+        let dataArray = [];
+        try {
+            const resp = await fetch(`${API_URL}?t=${Date.now()}`, { cache: 'no-store' });
+            if(resp.ok) dataArray = await resp.json();
+            if(!Array.isArray(dataArray)) dataArray = dataArray?.data || [];
+            if(!dataArray.length) throw new Error();
+        } catch(e) {
+            console.warn("Mock-Daten werden verwendet");
+            dataArray = [
+                { PK_STAR_STARBUCKS_GETRAENKE_SIMPLE:101, GETRAENK:"Caffè Latte", MAIN_GETRAENK:"Espresso", MILCHART:"Halbfettmilch", getraenk_groesse:"Grande", kalorien_einh_kcal:322, koffein_einh_mg:130, VEGAN:0, VEGETARISCH:1, temperature:"Heiß", koffeeiniert:"Ja", flavoured:0, latte:1, ALLERGENE_Milch_Laktose:1 },
+                { PK_STAR_STARBUCKS_GETRAENKE_SIMPLE:101, GETRAENK:"Caffè Latte", MILCHART:"Soja", getraenk_groesse:"Tall", kalorien_einh_kcal:180, koffein_einh_mg:90, VEGAN:1, VEGETARISCH:1, temperature:"Heiß", flavoured:0, latte:1, ALLERGENE_Soja:1 },
+                { PK_STAR_STARBUCKS_GETRAENKE_SIMPLE:101, GETRAENK:"Caffè Latte", MILCHART:"Hafer", getraenk_groesse:"Venti", kalorien_einh_kcal:250, koffein_einh_mg:130, VEGAN:1, flavoured:1, seasonal:0 },
+                { PK_STAR_STARBUCKS_GETRAENKE_SIMPLE:202, GETRAENK:"Iced Matcha Latte", MAIN_GETRAENK:"Tea", MILCHART:"Mandelmilch", getraenk_groesse:"Venti", kalorien_einh_kcal:275, koffein_einh_mg:65, VEGAN:1, flavoured:1, seasonal:1, season:"Spring", ALLERGENE_Schalenfrüchte:1, ZUSATZSTOFFE_Konservierungsmittel:1 },
+                { PK_STAR_STARBUCKS_GETRAENKE_SIMPLE:202, GETRAENK:"Iced Matcha Latte", MILCHART:"Hafer", getraenk_groesse:"Grande", kalorien_einh_kcal:240, VEGAN:1, protein:2.5 }
+            ];
+        }
+        allItems = dataArray;
+        buildDataStructures(allItems);
+        renderTab1();
+        populateDropdowns();
+        renderGroupedByGetraenk();
+        renderGroupedByMilchart();
+        bindTab1Events();
+        document.getElementById('tab1Btn').onclick = ()=>switchTab('tab1');
+        document.getElementById('tab2Btn').onclick = ()=>switchTab('tab2');
+        document.getElementById('tab3Btn').onclick = ()=>switchTab('tab3');
+        switchTab('tab2');
+    }
+    load();
+</script>
+</body>
+</html>

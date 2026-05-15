@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Starbucks® – Doppel-Baum | Dashboard + MAIN_GETRAENK + DATUM_OK + Gruppensortierung</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #f5efe9;
+            color: #2c221b;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        /* Dashboard Bereich */
+        .dashboard {
+            background: white;
+            margin: 12px 24px 0 24px;
+            border-radius: 32px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            border: 1px solid #e2d9d2;
+            padding: 16px 24px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 28px;
+            align-items: center;
+            backdrop-filter: blur(2px);
+            flex-shrink: 0;
+            z-index: 5;
+        }
+        .dashboard-card {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            background: #fefcf9;
+            padding: 8px 20px;
+            border-radius: 60px;
+            border-left: 5px solid #1e7b4b;
+        }
+        .dashboard-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #5e4b38;
+        }
+        .dashboard-number {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #1e5a3a;
+            line-height: 1;
+        }
+        .dashboard-sub {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #6f5b48;
+            margin-left: 6px;
+        }
+        .dashboard-percent {
+            background: #e0f2e9;
+            border-radius: 40px;
+            padding: 4px 12px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #146b3a;
+        }
+        .tab-bar {
+            background: white;
+            border-bottom: 1px solid #e2d9d2;
+            padding: 0 24px;
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+            overflow-x: auto;
+            margin-top: 8px;
+        }
+        .tab-button {
+            background: none;
+            border: none;
+            padding: 14px 24px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #5e4b38;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .tab-button.active {
+            color: #1e5a3a;
+            border-bottom-color: #1e7b4b;
+            background: #fefcf9;
+        }
+        .panes {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+        .pane {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            display: none;
+        }
+        .pane.active {
+            display: flex;
+            flex-direction: column;
+        }
+        .explorer-layout {
+            display: flex;
+            height: 100%;
+            width: 100%;
+        }
+        .tree-sidebar {
+            width: 480px;
+            background: white;
+            border-right: 1px solid #e2d9d2;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .sidebar-header {
+            padding: 20px 18px 12px;
+            border-bottom: 2px solid #1e7b4b;
+            background: #fefcf9;
+        }
+        .sidebar-header h2 {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: #1e5a3a;
+        }
+        .toolbar {
+            padding: 12px 16px;
+            background: #fefcf9;
+            border-bottom: 1px solid #e9e0d8;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+        .search-tree-input {
+            flex: 1;
+            padding: 8px 14px;
+            border-radius: 40px;
+            border: 1px solid #d6cbbc;
+            background: #fff9f5;
+            font-size: 0.8rem;
+        }
+        .btn-icon {
+            background: #ede3db;
+            border: none;
+            border-radius: 40px;
+            padding: 6px 14px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+        .btn-icon:hover {
+            background: #dfd2c6;
+        }
+        .sort-select {
+            background: #fff9f5;
+            border: 1px solid #d6cbbc;
+            border-radius: 40px;
+            padding: 6px 12px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            cursor: pointer;
+            color: #2c5a2e;
+        }
+        .tree-container-wrapper {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 8px 20px 12px;
+        }
+        .tree-root {
+            list-style: none;
+            padding-left: 0;
+        }
+        .tree-node {
+            list-style: none;
+            margin: 2px 0;
+        }
+        .node-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 6px;
+            border-radius: 28px;
+            cursor: pointer;
+            transition: background 0.1s;
+            flex-wrap: wrap;
+        }
+        .node-row:hover {
+            background: #ede3db;
+        }
+        .toggle-btn {
+            width: 20px;
+            font-size: 0.7rem;
+            color: #1e7b4b;
+            text-align: center;
+            user-select: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .node-icon {
+            font-size: 1rem;
+        }
+        .node-label {
+            font-weight: 500;
+            word-break: break-word;
+        }
+        .node-badge {
+            background: #e2d9d2;
+            border-radius: 30px;
+            padding: 0 8px;
+            font-size: 0.65rem;
+            margin-left: 6px;
+        }
+        .date-tree-badge {
+            background: #dff0e5;
+            color: #146b3a;
+            border-radius: 30px;
+            padding: 2px 8px;
+            font-size: 0.65rem;
+            font-weight: 500;
+            margin-left: 6px;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.1s;
+        }
+        .children {
+            padding-left: 26px;
+            display: block;
+        }
+        .children.collapsed {
+            display: none;
+        }
+        .type-leaf {
+            font-size: 0.75rem;
+            color: #4a6b3c;
+        }
+        .detail-panel {
+            flex: 1;
+            overflow-y: auto;
+            background: #faf7f3;
+            padding: 24px 30px;
+        }
+        .detail-card {
+            background: white;
+            border-radius: 32px;
+            border: 1px solid #e2d9d2;
+            overflow: hidden;
+        }
+        .detail-header {
+            background: #fef3e8;
+            padding: 20px 24px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+            border-bottom: 2px solid #d4c9be;
+        }
+        .detail-img {
+            width: 90px;
+            height: 90px;
+            background: #ede3db;
+            border-radius: 24px;
+            overflow: hidden;
+            flex-shrink: 0;
+            border: 1px solid #d4c9be;
+        }
+        .detail-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .detail-title h3 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #1e5a3a;
+        }
+        .detail-sub {
+            font-size: 0.8rem;
+            color: #6f5b48;
+            margin-top: 4px;
+        }
+        .detail-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            margin-top: 8px;
+        }
+        .date-badge {
+            background: #e0f2e9;
+            color: #1e7b4b;
+            font-weight: 700;
+            border-radius: 40px;
+            padding: 4px 14px;
+            font-size: 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            width: fit-content;
+        }
+        .group-badge {
+            background: #ede3db;
+            border-radius: 40px;
+            padding: 4px 14px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #4a3925;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .nutrition-table-wrapper {
+            overflow-x: auto;
+            padding: 20px 24px;
+        }
+        .nutri-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+        }
+        .nutri-table th, .nutri-table td {
+            border: 1px solid #e9dfd6;
+            padding: 10px 12px;
+            text-align: center;
+        }
+        .nutri-table th {
+            background: #f3ede7;
+            font-weight: 800;
+            color: #2c5a2e;
+        }
+        .grade-1 { background-color: #a3e4a7; }
+        .grade-2 { background-color: #c8f0c0; }
+        .grade-3 { background-color: #fff2b5; }
+        .grade-4 { background-color: #ffe68f; }
+        .grade-5 { background-color: #ffcc80; }
+        .grade-6 { background-color: #ffb74d; }
+        .grade-7 { background-color: #ffa270; }
+        .grade-8 { background-color: #ff8a6f; }
+        .grade-9 { background-color: #f56c4e; }
+        .grade-10 { background-color: #e33b2c; color: white; }
+        .grade-na { background-color: #e9e0d8; }
+        .empty-detail {
+            background: white;
+            border-radius: 32px;
+            padding: 48px;
+            text-align: center;
+            color: #8b7a6a;
+        }
+        .group-ref-badge {
+            background: #e8e0d8;
+            font-size: 0.6rem;
+            margin-left: 5px;
+            padding: 1px 6px;
+            border-radius: 20px;
+            color: #5d4a36;
+        }
+        @media (max-width: 800px) {
+            .tree-sidebar { width: 320px; }
+            .detail-title h3 { font-size: 1.3rem; }
+            .dashboard { margin: 8px 12px 0 12px; padding: 12px 16px; }
+            .dashboard-card { padding: 4px 12px; }
+            .dashboard-number { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+<!-- Dashboard: Anzahl Gruppen & Gruppen mit DATUM_OK (Prozent) -->
+<div class="dashboard" id="dashboardStats">
+    <div class="dashboard-card">
+        <span class="dashboard-label">📦 Gruppen (gesamt)</span>
+        <span class="dashboard-number" id="totalGroupsCount">—</span>
+    </div>
+    <div class="dashboard-card">
+        <span class="dashboard-label">✅ Gruppen mit DATUM_OK</span>
+        <span class="dashboard-number" id="groupsWithDateCount">—</span>
+        <span class="dashboard-percent" id="groupsPercent">0%</span>
+    </div>
+</div>
+
+<div class="tab-bar">
+    <button class="tab-button active" data-tab="tabTypeTree">🏷️ Typen-Baum (type_* zuerst)</button>
+    <button class="tab-button" data-tab="tabGroupTree">📂 MAIN_GETRAENK + DATUM_OK + SORTIERUNG nach GRUPPE</button>
+</div>
+<div class="panes">
+    <!-- TAB 1: TYPEN-BAUM -->
+    <div id="paneTypeTree" class="pane active">
+        <div class="explorer-layout">
+            <div class="tree-sidebar">
+                <div class="sidebar-header"><h2>🏷️ KATEGORIEN-BAUM</h2><p>Erste Ebene = type_* Merkmale | Gruppe + DATUM_OK</p></div>
+                <div class="toolbar">
+                    <input type="text" id="typeTreeSearch" class="search-tree-input" placeholder="🔍 Filtern (Typ/Gruppe/Getränk)">
+                    <button id="typeExpandAll" class="btn-icon">📂 Alle aufklappen</button>
+                    <button id="typeCollapseAll" class="btn-icon">📁 Alle zuklappen</button>
+                </div>
+                <div class="tree-container-wrapper" id="typeTreeContainer">🔄 Lade Typen-Baum...</div>
+            </div>
+            <div class="detail-panel" id="typeDetailPanel"><div class="empty-detail">✨ Wählen Sie ein Getränk aus dem linken Baum – Nährwerte & Bild werden angezeigt.</div></div>
+        </div>
+    </div>
+
+    <!-- TAB 2: KORRIGIERTE STRUKTUR + GRUPPEN-SORTIERUNG -->
+    <div id="paneGroupTree" class="pane">
+        <div class="explorer-layout">
+            <div class="tree-sidebar">
+                <div class="sidebar-header">
+                    <h2>📂 MAIN_GETRAENK · TOP-LEVEL</h2>
+                    <p>🍵 Hauptgetränk → Getränk (mit DATUM_OK) → Bild-ID → Typen | <strong>⬇️ Sortierung der Getränke nach Gruppe</strong></p>
+                </div>
+                <div class="toolbar">
+                    <input type="text" id="groupTreeSearch" class="search-tree-input" placeholder="🔍 Filtern (Hauptgetränk/Getränk/Bild)">
+                    <select id="groupSortSelect" class="sort-select">
+                        <option value="groupId" selected>📌 Nach Gruppen-ID sortieren (A–Z)</option>
+                        <option value="name">🍹 Nach Getränkename (A–Z)</option>
+                    </select>
+                    <button id="groupExpandAll" class="btn-icon">📂 Alle aufklappen</button>
+                    <button id="groupCollapseAll" class="btn-icon">📁 Alle zuklappen</button>
+                </div>
+                <div class="tree-container-wrapper" id="groupTreeContainer">🔄 Lade neue Baumstruktur...</div>
+            </div>
+            <div class="detail-panel" id="groupDetailPanel"><div class="empty-detail">✨ Wählen Sie ein Getränk – Nährwerte & Bild werden angezeigt.</div></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ======================== GLOBALE DATEN ========================
+    const API_URL = 'http://localhost:5000/star_starbucks_getraenke/full';
+    let allItems = [];
+    let allTypeColumns = [];
+    let globalNutrientValues = {};
+    let currentGroupSortMode = 'groupId';   // 'groupId' oder 'name'
+    
+    const NUTRIENT_FIELDS = [
+        { dbField: "kalorien_einh_kcal", label: "Kalorien", unit: "kcal", format: v => v ? Math.round(v) : "—" },
+        { dbField: "fett_total_einh_g", label: "Fett", unit: "g", format: v => v ? v.toFixed(1) : "—" },
+        { dbField: "davon_gesaettigte_fettsaeuren_einh_g", label: "gesätt. Fettsäuren", unit: "g", format: v => v ? v.toFixed(1) : "—" },
+        { dbField: "kohlenhydrate_total_einh_g", label: "Kohlenhydrate", unit: "g", format: v => v ? v.toFixed(1) : "—" },
+        { dbField: "davon_zucker_einh_g", label: "Zucker", unit: "g", format: v => v ? v.toFixed(1) : "—" },
+        { dbField: "eiweiss_einh_g", label: "Eiweiß", unit: "g", format: v => v ? v.toFixed(1) : "—" },
+        { dbField: "koffein_einh_mg", label: "Koffein", unit: "mg", format: v => v ? Math.round(v) : "—" }
+    ];
+    const SIZE_ORDER = ["mini","short","single","tall","grande","venti","ohne"];
+    const SIZE_LABELS = { mini:"Mini", short:"Short", tall:"Tall", grande:"Grande", venti:"Venti", ohne:"Ohne", single:"Single" };
+
+    function escapeHtml(str) { return str ? String(str).replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '&gt;':'&gt;' }[m])) : ''; }
+    function parseNumber(v) { if(v===undefined||v===null) return null; let n=parseFloat(String(v).trim().replace(',','.')); return isNaN(n)?null:n; }
+    function extractSizeKey(sizeRaw) { if(!sizeRaw) return null; let raw=String(sizeRaw).trim().toLowerCase(); if(raw.includes('mini')) return 'mini'; if(raw.includes('short')) return 'short'; if(raw.includes('tall')) return 'tall';if(raw.includes('single')) return 'single'; if(raw.includes('mini')) return 'mini'; if(raw.includes('grande')) return 'grande'; if(raw.includes('venti')) return 'venti'; if(raw.includes('ohne')) return 'ohne'; return null; }
+
+    function rebuildGlobalNutrientRanges(items) {
+        globalNutrientValues = {};
+        for(let nut of NUTRIENT_FIELDS) globalNutrientValues[nut.dbField] = [];
+        for(let row of items) {
+            for(let nut of NUTRIENT_FIELDS) {
+                let val = parseNumber(row[nut.dbField]);
+                if(val !== null) globalNutrientValues[nut.dbField].push(val);
+            }
+        }
+        for(let nut of NUTRIENT_FIELDS) globalNutrientValues[nut.dbField].sort((a,b)=>a-b);
+    }
+    function getGradeClass(nutrientDbField, value) {
+        if(value === null || value === '—' || isNaN(value)) return 'grade-na';
+        let numeric = parseFloat(value);
+        let arr = globalNutrientValues[nutrientDbField] || [];
+        if(!arr.length) return 'grade-na';
+        let rank = arr.findIndex(v => v >= numeric);
+        if(rank === -1) rank = arr.length-1;
+        let percentile = (rank+1)/arr.length;
+        let grade = Math.min(10, Math.max(1, Math.ceil(percentile*10)));
+        const gradeMap = {1:'grade-1',2:'grade-2',3:'grade-3',4:'grade-4',5:'grade-5',6:'grade-6',7:'grade-7',8:'grade-8',9:'grade-9',10:'grade-10'};
+        return gradeMap[grade];
+    }
+
+    function getDateBadgeFromRows(rows) {
+        if (!rows || rows.length === 0) return `<span class="date-tree-badge" style="background:#e2ddd7; color:#6b4f3a;">📅 Kein Datum</span>`;
+        const dateSet = new Set();
+        for (let row of rows) {
+            let dateVal = row.DATUM_OK || row.datum_ok;
+            if (dateVal && String(dateVal).trim() !== '' && String(dateVal).toLowerCase() !== 'null') dateSet.add(String(dateVal).trim());
+        }
+        if (dateSet.size === 0) return `<span class="date-tree-badge" style="background:#e2ddd7; color:#6b4f3a;">📅 Kein DATUM_OK</span>`;
+        let dates = Array.from(dateSet).sort();
+        let displayStr = (dates.length <= 2) ? dates.join(' | ') : `${dates.slice(0,2).join(' | ')} +${dates.length-2} weitere`;
+        const fullList = dates.join(', ');
+        return `<span class="date-tree-badge" title="Gültigkeitsdaten: ${escapeHtml(fullList)}">📅 ${escapeHtml(displayStr)}</span>`;
+    }
+
+    async function fetchAndDisplayImage(imageId, container, clickable=true) {
+        if(!imageId || imageId === '—') { container.innerHTML='<div>📷 kein Bild</div>'; return; }
+        try {
+            container.innerHTML='<div>🖼️ ⏳</div>';
+            let resp = await fetch(`http://localhost:5000/bild/1/${imageId}`);
+            if(resp.ok) {
+                let imgData = await resp.json();
+                if(imgData[0]?.FILECONTENT?.data) {
+                    let byteArray = new Uint8Array(imgData[0].FILECONTENT.data);
+                    let blob = new Blob([byteArray], {type: imgData[0].MIMETYPE || 'image/jpeg'});
+                    let url = URL.createObjectURL(blob);
+                    let img = document.createElement('img');
+                    img.src = url;
+                    img.style.width = '100%';
+                    img.style.height = '100%';
+                    img.style.objectFit = 'cover';
+                    container.innerHTML = '';
+                    container.appendChild(img);
+                    if(clickable) {
+                        img.style.cursor = 'pointer';
+                        img.onclick = (e) => {
+                            e.stopPropagation();
+                            let modal = document.createElement('div');
+                            modal.style.position = 'fixed'; modal.style.top=0; modal.style.left=0; modal.style.width='100%'; modal.style.height='100%';
+                            modal.style.background='rgba(0,0,0,0.85)'; modal.style.display='flex'; modal.style.alignItems='center'; modal.style.justifyContent='center';
+                            modal.style.zIndex = 20000;
+                            let bigImg = document.createElement('img');
+                            bigImg.src = url;
+                            bigImg.style.maxWidth = '90vw';
+                            bigImg.style.maxHeight = '90vh';
+                            bigImg.style.borderRadius = '24px';
+                            modal.appendChild(bigImg);
+                            modal.onclick = () => modal.remove();
+                            document.body.appendChild(modal);
+                        };
+                    }
+                    img.onload = () => URL.revokeObjectURL(url);
+                } else container.innerHTML='<div>📷 keine Daten</div>';
+            } else container.innerHTML='<div>❌ Fehler</div>';
+        } catch(e) { container.innerHTML='<div>⚠️ Netzwerk</div>'; }
+    }
+
+    function extractAllTypeColumns(items) {
+        if(!items.length) return [];
+        let cols = new Set();
+        for(let row of items) Object.keys(row).forEach(k => { if(k.startsWith('type_')) cols.add(k); });
+        const additional = ["type_Merkmal_Acai_", "type_Merkmal_Cloud_"];
+        for(let add of additional) cols.add(add);
+        return Array.from(cols).sort();
+    }
+    function formatTypeLabel(colName) {
+        let cleaned = colName.replace(/^type_/, '').replace(/__+$/, '').replace(/_/g, ' ');
+        cleaned = cleaned.replace(/\b\w/g, l => l.toUpperCase());
+        cleaned = cleaned.replace('Getränketypen', '').trim();
+        if(cleaned === 'Merkmal Acai') cleaned = 'Acai';
+        if(cleaned === 'Merkmal Cloud') cleaned = 'Cloud';
+        return cleaned.substring(0, 40);
+    }
+
+    // ================ DASHBOARD: Gruppenstatistik ================
+    function updateDashboard() {
+        if(!allItems.length) return;
+        const groupMap = new Map(); // gruppe -> hat mind. ein DATUM_OK?
+        for(let row of allItems) {
+            const groupId = row.PK_STAR_STARBUCKS_GETRAENKE_GROUP || 'unbekannte Gruppe';
+            if(!groupMap.has(groupId)) groupMap.set(groupId, false);
+            let dateVal = row.DATUM_OK || row.datum_ok;
+            let hasValidDate = dateVal && String(dateVal).trim() !== '' && String(dateVal).toLowerCase() !== 'null';
+            if(hasValidDate && groupMap.get(groupId) === false) groupMap.set(groupId, true);
+        }
+        const totalGroups = groupMap.size;
+        let groupsWithDate = 0;
+        for(let hasDate of groupMap.values()) if(hasDate) groupsWithDate++;
+        const percent = totalGroups > 0 ? ((groupsWithDate / totalGroups) * 100).toFixed(1) : "0";
+        document.getElementById('totalGroupsCount').innerText = totalGroups;
+        document.getElementById('groupsWithDateCount').innerText = groupsWithDate;
+        document.getElementById('groupsPercent').innerHTML = `📊 ${percent}%`;
+    }
+
+    // ================ TAB 1: TYPEN-BAUM ================
+    function buildTypeTree(items, typeCols) {
+        const typeTree = new Map();
+        for(let row of items) {
+            const groupId = row.PK_STAR_STARBUCKS_GETRAENKE_GROUP || 'unbekannte Gruppe';
+            const mainGetraenk = (row.MAIN_GETRAENK || row.main_getraenk || 'Allgemein').trim();
+            const getraenkName = (row.GETRAENK || row.getraenk || 'Unbekannt').trim();
+            const bildId = row.FK_BILD_BILDER || row.si_fk_bild_bilder || null;
+            for(let typeCol of typeCols) {
+                let val = row[typeCol];
+                let isActive = (val === 1 || val === '1' || val === true || val === 'true');
+                if(!isActive) continue;
+                let typeLabel = formatTypeLabel(typeCol);
+                if(!typeTree.has(typeLabel)) typeTree.set(typeLabel, new Map());
+                let groupMap = typeTree.get(typeLabel);
+                if(!groupMap.has(groupId)) groupMap.set(groupId, new Map());
+                let mainMap = groupMap.get(groupId);
+                if(!mainMap.has(mainGetraenk)) mainMap.set(mainGetraenk, new Map());
+                let drinkMap = mainMap.get(mainGetraenk);
+                if(!drinkMap.has(getraenkName)) drinkMap.set(getraenkName, { bildId, groupId, mainGetraenk, getraenk: getraenkName, allRows: [] });
+                let leaf = drinkMap.get(getraenkName);
+                if(!leaf.allRows) leaf.allRows = [];
+                leaf.allRows.push(row);
+                if(bildId && !leaf.bildId) leaf.bildId = bildId;
+            }
+        }
+        return typeTree;
+    }
+    function renderTypeTreeDOM(typeTree, searchTerm = '') { 
+        const container = document.getElementById('typeTreeContainer');
+        if(!typeTree || typeTree.size === 0) { container.innerHTML = '<div>Keine Typen gefunden</div>'; return; }
+        let html = '<ul class="tree-root">';
+        for(let [typeLabel, groupMap] of Array.from(typeTree.entries()).sort()) {
+            if(searchTerm && !typeLabel.toLowerCase().includes(searchTerm.toLowerCase()) && !Array.from(groupMap.values()).some(mainMap => Array.from(mainMap.values()).some(drinkMap => Array.from(drinkMap.keys()).some(dn => dn.toLowerCase().includes(searchTerm.toLowerCase()))))) continue;
+            html += `<li class="tree-node"><div class="node-row"><span class="toggle-btn" data-toggle="type">▶</span><span class="node-icon">🏷️</span><span class="node-label">${escapeHtml(typeLabel)}</span></div><ul class="children collapsed">`;
+            for(let [groupId, mainMap] of Array.from(groupMap.entries()).sort()) {
+                let groupRows = []; for(let dm of mainMap.values()) for(let leaf of dm.values()) groupRows.push(...leaf.allRows);
+                let dateBadge = getDateBadgeFromRows(groupRows);
+                html += `<li class="tree-node"><div class="node-row"><span class="toggle-btn" data-toggle="group">▼</span><span class="node-icon">📁</span><span class="node-label">Gruppe: ${escapeHtml(groupId)}</span>${dateBadge}</div><ul class="children">`;
+                for(let [mainName, drinkMap] of Array.from(mainMap.entries()).sort()) {
+                    html += `<li class="tree-node"><div class="node-row"><span class="toggle-btn" data-toggle="main">▼</span><span class="node-icon">🍵</span><span class="node-label">${escapeHtml(mainName)}</span></div><ul class="children">`;
+                    for(let [drinkName, leaf] of Array.from(drinkMap.entries()).sort()) {
+                        if(searchTerm && !drinkName.toLowerCase().includes(searchTerm.toLowerCase())) continue;
+                        html += `<li class="tree-node leaf-node" data-drink-key="${escapeHtml(drinkName)}" data-group="${escapeHtml(groupId)}" data-main="${escapeHtml(mainName)}" data-bild="${leaf.bildId || ''}" data-source="type"><div class="node-row"><span class="toggle-btn" style="visibility:hidden;">•</span><span class="node-icon">🍹</span><span class="node-label"><strong>${escapeHtml(drinkName)}</strong></span><span class="node-badge">${leaf.bildId ? '🖼️' : '📷'}</span></div></li>`;
+                    }
+                    html += `</ul></li>`;
+                }
+                html += `</ul></li>`;
+            }
+            html += `</ul></li>`;
+        }
+        html += '</ul>';
+        container.innerHTML = html;
+        attachToggleEventsToContainer('typeTreeContainer');
+        attachLeafClickEvents('type');
+    }
+
+    // ================ TAB 2: MAIN_GETRAENK + GRUPPENSORTIERUNG ================
+    function buildMainTopLevelTree(items, typeCols) {
+        const mainTopTree = new Map();
+        for(let row of items) {
+            const mainGetraenk = (row.MAIN_GETRAENK || row.main_getraenk || 'Allgemein').trim();
+            const getraenkName = (row.GETRAENK || row.getraenk || 'Unbekannt').trim();
+            const bildId = row.FK_BILD_BILDER || row.si_fk_bild_bilder || '—';
+            const groupId = row.PK_STAR_STARBUCKS_GETRAENKE_GROUP || 'unbekannte Gruppe';
+            let activeTypes = [];
+            for(let col of typeCols) { let val = row[col]; if(val === 1 || val === '1' || val === true) activeTypes.push(formatTypeLabel(col)); }
+            if(!mainTopTree.has(mainGetraenk)) mainTopTree.set(mainGetraenk, new Map());
+            let drinkMap = mainTopTree.get(mainGetraenk);
+            if(!drinkMap.has(getraenkName)) drinkMap.set(getraenkName, new Map());
+            let bildMap = drinkMap.get(getraenkName);
+            if(!bildMap.has(bildId)) bildMap.set(bildId, { bildId, typeSet: new Set(), sampleRows: [], groupIds: new Set() });
+            let node = bildMap.get(bildId);
+            for(let t of activeTypes) node.typeSet.add(t);
+            node.sampleRows.push(row);
+            node.groupIds.add(groupId);
+        }
+        return mainTopTree;
+    }
+
+    function getAllGroupIdsForDrink(bildMap) {
+        const allGroups = new Set();
+        for(let node of bildMap.values()) node.groupIds.forEach(g => allGroups.add(g));
+        return allGroups;
+    }
+
+    function renderMainTopLevelTree(mainTree, searchTerm = '', sortMode = currentGroupSortMode) {
+        const container = document.getElementById('groupTreeContainer');
+        if(!mainTree || mainTree.size === 0) { container.innerHTML = '<div>Keine Hauptgetränke gefunden</div>'; return; }
+        let html = '<ul class="tree-root">';
+        for(let [mainName, drinkMap] of Array.from(mainTree.entries()).sort()) {
+            if(searchTerm && !mainName.toLowerCase().includes(searchTerm.toLowerCase()) && !Array.from(drinkMap.keys()).some(drink => drink.toLowerCase().includes(searchTerm.toLowerCase()))) continue;
+            let allGroupIds = new Set();
+            let totalDrinks = 0;
+            let allRowsForMain = [];
+            for(let drinkNodes of drinkMap.values()) {
+                totalDrinks += drinkNodes.size;
+                for(let node of drinkNodes.values()) {
+                    allRowsForMain.push(...node.sampleRows);
+                    node.groupIds.forEach(g => allGroupIds.add(g));
+                }
+            }
+            const mainDateBadge = getDateBadgeFromRows(allRowsForMain);
+            const groupInfoStr = allGroupIds.size ? `<span class="group-ref-badge" title="Gruppen: ${Array.from(allGroupIds).join(', ')}">📁 ${Array.from(allGroupIds).slice(0,2).join(', ')}${allGroupIds.size>2 ? ' …' : ''}</span>` : '';
+            html += `<li class="tree-node"><div class="node-row"><span class="toggle-btn" data-toggle="mainTop">▼</span><span class="node-icon">🍵</span><span class="node-label" style="color:#1e5a3a"><strong>${escapeHtml(mainName)}</strong> </span><span class="node-badge">${totalDrinks} Getränke</span></div><ul class="children">`;
+            
+            let drinkEntries = Array.from(drinkMap.entries());
+            const enriched = drinkEntries.map(([drinkName, bildMap]) => {
+                const groupIdsSet = getAllGroupIdsForDrink(bildMap);
+                let primaryGroup = Array.from(groupIdsSet).sort()[0] || '';
+                return { drinkName, bildMap, primaryGroup };
+            });
+            if (sortMode === 'groupId') {
+                enriched.sort((a, b) => {
+                    if (a.primaryGroup === '' && b.primaryGroup !== '') return 1;
+                    if (a.primaryGroup !== '' && b.primaryGroup === '') return -1;
+                    const groupComp = a.primaryGroup.localeCompare(b.primaryGroup);
+                    if (groupComp !== 0) return groupComp;
+                    return a.drinkName.localeCompare(b.drinkName);
+                });
+            } else {
+                enriched.sort((a, b) => a.drinkName.localeCompare(b.drinkName));
+            }
+            
+            for(let { drinkName, bildMap, primaryGroup } of enriched) {
+                if(searchTerm && !drinkName.toLowerCase().includes(searchTerm.toLowerCase())) continue;
+                let drinkRows = [];
+                for(let node of bildMap.values()) drinkRows.push(...node.sampleRows);
+                const drinkDateBadge = getDateBadgeFromRows(drinkRows);
+                let anyGroup = primaryGroup || 'unbekannte Gruppe';
+                let anyBild = '—';
+                for(let node of bildMap.values()) { if(node.bildId !== '—') { anyBild = node.bildId; break; } }
+                const groupDisplayHint = (primaryGroup ? `<span class="group-ref-badge" title="Gruppe: ${escapeHtml(primaryGroup)}">🏷️ ${escapeHtml(primaryGroup)}</span>` : '');
+                html += `<li class="tree-node drink-node" data-drink-key="${escapeHtml(drinkName)}" data-main="${escapeHtml(mainName)}" data-group="${escapeHtml(anyGroup)}" data-bild="${escapeHtml(anyBild)}">
+                            <div class="node-row drink-node-click">
+                                <span class="toggle-btn" data-toggle="drinkTop">▼</span>
+                                <span class="node-icon">🍹</span>
+                                <span class="node-label"><strong>${escapeHtml(drinkName)}</strong> ${drinkDateBadge} ${groupDisplayHint}</span>
+                                <span class="node-badge">${bildMap.size} Bild(er)</span>
+                            </div>
+                            <ul class="children">`;
+                for(let [bildId, nodeData] of Array.from(bildMap.entries()).sort()) {
+                    if(searchTerm && !bildId.toLowerCase().includes(searchTerm.toLowerCase())) continue;
+                    let typeCount = nodeData.typeSet.size;
+                    let splitTypesHtml = typeCount > 0 ? buildSplitTypeListHtml(nodeData.typeSet) : '';
+                    const groupTooltip = nodeData.groupIds.size ? ` (Gruppe: ${Array.from(nodeData.groupIds).join(', ')})` : '';
+                    html += `<li class="tree-node">
+                                <div class="node-row">
+                                    <span class="toggle-btn" data-toggle="bildTop">▼</span>
+                                    <span class="node-icon">🖼️</span>
+                                    <span class="node-label">Bild-ID: ${escapeHtml(bildId)}${escapeHtml(groupTooltip)}</span>
+                                    <span class="node-badge">${typeCount} Typen</span>
+                                </div>
+                                <ul class="children bild-children">${splitTypesHtml}</ul>
+                            </li>`;
+                }
+                html += `</ul></li>`;
+            }
+            html += `</ul></li>`;
+        }
+        html += '</ul>';
+        container.innerHTML = html;
+        attachToggleEventsToContainer('groupTreeContainer');
+        attachDrinkClickOnGroupTreeFixed();
+    }
+
+    function buildSplitTypeListHtml(typeSet) {
+        const sortedTypes = Array.from(typeSet).sort();
+        const bestandteile = [], sized = [], seasonal = [], andere = [];
+        for(let t of sortedTypes) {
+            if(t.startsWith('Bestandteile') || ['Halbfettmilch','Vollmilch','Magermilch'].some(m => t.includes(m))) bestandteile.push(t);
+            else if(['Short','Tall','Grande','Venti','Size Ohne','Single','Doppio','Mini'].some(m => t.includes(m))) sized.push(t);
+            else if(t.includes('Seasonal')) seasonal.push(t);
+            else andere.push(t);
+        }
+        let subgroupsHtml = '';
+        if(bestandteile.length) { let itemsHtml = bestandteile.map(bt => `<li class="tree-node type-leaf"><div class="node-row"><span class="toggle-btn" style="visibility:hidden;">•</span><span class="node-icon">🌾</span><span class="node-label">${escapeHtml(bt)}</span></div></li>`).join(''); subgroupsHtml += `<li class="tree-node"><div class="node-row"><span class="toggle-btn" data-toggle="subgroup-best">▼</span><span class="node-icon">🌾</span><span class="node-label">Milcharten (${bestandteile.length})</span></div><ul class="children">${itemsHtml}</ul></li>`; }
+        if(sized.length) { let itemsHtml = sized.map(bt => `<li class="tree-node type-leaf"><div class="node-row"><span class="toggle-btn" style="visibility:hidden;">•</span><span class="node-icon">📏</span><span class="node-label">${escapeHtml(bt)}</span></div></li>`).join(''); subgroupsHtml += `<li class="tree-node"><div class="node-row"><span class="toggle-btn" data-toggle="subgroup-size">▼</span><span class="node-icon">📏</span><span class="node-label">Größen (${sized.length})</span></div><ul class="children">${itemsHtml}</ul></li>`; }
+        if(seasonal.length) { let itemsHtml = seasonal.map(bt => `<li class="tree-node type-leaf"><div class="node-row"><span class="toggle-btn" style="visibility:hidden;">•</span><span class="node-icon">🍂</span><span class="node-label">${escapeHtml(bt)}</span></div></li>`).join(''); subgroupsHtml += `<li class="tree-node"><div class="node-row"><span class="toggle-btn" data-toggle="subgroup-seasonal">▼</span><span class="node-icon">🍂</span><span class="node-label">Saisonale (${seasonal.length})</span></div><ul class="children">${itemsHtml}</ul></li>`; }
+        if(andere.length) { let itemsHtml = andere.map(other => `<li class="tree-node type-leaf"><div class="node-row"><span class="toggle-btn" style="visibility:hidden;">•</span><span class="node-icon">⚙️</span><span class="node-label">${escapeHtml(other)}</span></div></li>`).join(''); subgroupsHtml += `<li class="tree-node"><div class="node-row"><span class="toggle-btn" data-toggle="subgroup-other">▼</span><span class="node-icon">📌</span><span class="node-label">Weitere Merkmale (${andere.length})</span></div><ul class="children">${itemsHtml}</ul></li>`; }
+        return subgroupsHtml;
+    }
+
+    function attachToggleEventsToContainer(containerId) {
+        const container = document.getElementById(containerId);
+        if(!container) return;
+        container.querySelectorAll('.toggle-btn').forEach(btn => {
+            btn.onclick = (e) => { e.stopPropagation(); const parentLi = btn.closest('.tree-node'); const childUl = parentLi?.querySelector(':scope > .children'); if(childUl) { let isCollapsed = childUl.classList.contains('collapsed'); childUl.classList.toggle('collapsed', !isCollapsed); btn.textContent = isCollapsed ? '▼' : '▶'; } };
+        });
+    }
+    
+    function attachLeafClickEvents(source) {
+        const selector = source === 'type' ? '#typeTreeContainer .leaf-node' : '#groupTreeContainer .leaf-node';
+        document.querySelectorAll(selector).forEach(el => {
+            el.addEventListener('click', (e) => { e.stopPropagation(); const drinkName = el.getAttribute('data-drink-key'), groupId = el.getAttribute('data-group'), mainName = el.getAttribute('data-main'), bildId = el.getAttribute('data-bild'); if(!drinkName) return; let relevantRows = allItems.filter(row => (row.GETRAENK || row.getraenk || '').trim() === drinkName && String(row.PK_STAR_STARBUCKS_GETRAENKE_GROUP || '') === groupId && (row.MAIN_GETRAENK || row.main_getraenk || '') === mainName); showDrinkDetailsInPanel(drinkName, bildId, relevantRows, source === 'type' ? 'typeDetailPanel' : 'groupDetailPanel'); });
+        });
+    }
+
+    function attachDrinkClickOnGroupTreeFixed() {
+        document.querySelectorAll('#groupTreeContainer .drink-node').forEach(drinkNode => {
+            const clickRow = drinkNode.querySelector('.drink-node-click');
+            if(clickRow) {
+                clickRow.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const drinkName = drinkNode.getAttribute('data-drink-key');
+                    const mainName = drinkNode.getAttribute('data-main');
+                    const groupId = drinkNode.getAttribute('data-group');
+                    const bildId = drinkNode.getAttribute('data-bild');
+                    if(!drinkName) return;
+                    let relevantRows = allItems.filter(row => 
+                        (row.GETRAENK || row.getraenk || '').trim() === drinkName &&
+                        (row.MAIN_GETRAENK || row.main_getraenk || '') === mainName &&
+                        String(row.PK_STAR_STARBUCKS_GETRAENKE_GROUP || '') === groupId
+                    );
+                    showDrinkDetailsInPanel(drinkName, bildId, relevantRows, 'groupDetailPanel');
+                });
+            }
+        });
+    }
+
+    async function showDrinkDetailsInPanel(drinkName, bildId, rows, panelId) {
+        const panel = document.getElementById(panelId);
+        if(!rows.length) { panel.innerHTML = `<div class="detail-card" style="padding:24px;"><h3>${escapeHtml(drinkName)}</h3><p>Keine Nährwertdaten verfügbar.</p></div>`; return; }
+        const firstRow = rows[0];
+        let datumOkRaw = firstRow.DATUM_OK || firstRow.datum_ok || null;
+        let hasDate = datumOkRaw && String(datumOkRaw).trim() !== '' && String(datumOkRaw).toLowerCase() !== 'null';
+        const groupIdFromRow = `${firstRow.PK_STAR_STARBUCKS_GETRAENKE_GROUP}` || 'unbekannte Gruppe';
+        let milkSizeMap = new Map();
+        for(let row of rows) {
+            let milchart = row.MILCHART || row.milchart || 'Standard';
+            let groesseRaw = row.getraenk_groesse || row.groesse || '';
+            let sizeKey = extractSizeKey(groesseRaw);
+            if(!sizeKey) continue;
+            let nutrition = {}; for(let n of NUTRIENT_FIELDS) { let val = parseNumber(row[n.dbField]); nutrition[n.dbField] = val !== null ? val : null; }
+            let key = `${milchart}|${sizeKey}`;
+            if(!milkSizeMap.has(key)) milkSizeMap.set(key, { milchart, sizeKey, nutrition });
+        }
+        let tableRows = Array.from(milkSizeMap.values()).sort((a,b) => (SIZE_ORDER.indexOf(a.sizeKey)-SIZE_ORDER.indexOf(b.sizeKey)) || a.milchart.localeCompare(b.milchart));
+        let nutriHtml = `<div class="nutrition-table-wrapper"><table class="nutri-table"><thead><tr><th>Milchart</th><th>Größe</th>${NUTRIENT_FIELDS.map(n => `<th>${n.label} (${n.unit})</th>`).join('')}</tr></thead><tbody>`;
+        for(let entry of tableRows) {
+            let nut = entry.nutrition;
+            nutriHtml += `<tr><td>${escapeHtml(entry.milchart)}</td><td>${SIZE_LABELS[entry.sizeKey] || entry.sizeKey}</td>`;
+            for(let n of NUTRIENT_FIELDS) { let val = nut[n.dbField]; let display = n.format(val); let cls = getGradeClass(n.dbField, val); nutriHtml += `<td class="${cls}">${display}</td>`; }
+            nutriHtml += `</tr>`;
+        }
+        nutriHtml += `</tbody>}</div>`;
+        let imgHtml = `<div class="detail-img" id="detailImg-${panelId}"></div>`;
+        let metaHtml = `<div class="detail-meta"><span class="group-badge"><strong>🏷️ Gruppe: ${escapeHtml(groupIdFromRow)}</strong></span>${hasDate ? `<span class="date-badge">✅  ${escapeHtml(datumOkRaw)}</span>` : ''}</div>`;
+        let headerHtml = `<div class="detail-header">${imgHtml}<div class="detail-title"><h3>🍹 ${escapeHtml(drinkName)}</h3><div class="detail-sub">🖼️ Bild-ID: ${escapeHtml(bildId || '—')}</div>${metaHtml}</div></div>`;
+        panel.innerHTML = `<div class="detail-card">${headerHtml}${nutriHtml}</div>`;
+        let imgContainer = document.getElementById(`detailImg-${panelId}`);
+        if(imgContainer && bildId && bildId !== '—') await fetchAndDisplayImage(bildId, imgContainer, true);
+        else if(imgContainer) imgContainer.innerHTML = '<div>📷 kein Bild</div>';
+    }
+    
+    function setupExpandCollapse(expandBtnId, collapseBtnId, containerId) {
+        const expandBtn = document.getElementById(expandBtnId), collapseBtn = document.getElementById(collapseBtnId);
+        if(expandBtn) expandBtn.onclick = () => { document.querySelectorAll(`#${containerId} .children`).forEach(ul => ul.classList.remove('collapsed')); document.querySelectorAll(`#${containerId} .toggle-btn`).forEach(btn => btn.textContent = '▼'); };
+        if(collapseBtn) collapseBtn.onclick = () => { document.querySelectorAll(`#${containerId} .children`).forEach(ul => ul.classList.add('collapsed')); document.querySelectorAll(`#${containerId} .toggle-btn`).forEach(btn => btn.textContent = '▶'); };
+    }
+
+    let currentTypeTree = null, currentMainTopTree = null, currentTypeCols = [];
+    function refreshGroupTree() {
+        if(currentMainTopTree) {
+            const searchVal = document.getElementById('groupTreeSearch').value.trim();
+            renderMainTopLevelTree(currentMainTopTree, searchVal, currentGroupSortMode);
+        }
+    }
+    
+    async function init() {
+        try {
+            let resp = await fetch(API_URL); if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            let data = await resp.json();
+            allItems = (data.data && Array.isArray(data.data)) ? data.data : (Array.isArray(data) ? data : []);
+            if(!allItems.length) throw new Error("Keine Daten");
+            rebuildGlobalNutrientRanges(allItems);
+            updateDashboard();   // Dashboard mit Gruppen-Statistik füllen
+            currentTypeCols = extractAllTypeColumns(allItems);
+            currentTypeTree = buildTypeTree(allItems, currentTypeCols);
+            renderTypeTreeDOM(currentTypeTree, '');
+            currentMainTopTree = buildMainTopLevelTree(allItems, currentTypeCols);
+            refreshGroupTree();
+            
+            document.getElementById('typeTreeSearch').addEventListener('input', (e) => renderTypeTreeDOM(currentTypeTree, e.target.value.trim()));
+            document.getElementById('groupTreeSearch').addEventListener('input', () => refreshGroupTree());
+            const sortSelect = document.getElementById('groupSortSelect');
+            if(sortSelect) {
+                sortSelect.addEventListener('change', (e) => {
+                    currentGroupSortMode = e.target.value;
+                    refreshGroupTree();
+                });
+            }
+            setupExpandCollapse('typeExpandAll', 'typeCollapseAll', 'typeTreeContainer');
+            setupExpandCollapse('groupExpandAll', 'groupCollapseAll', 'groupTreeContainer');
+        } catch(err) { 
+            document.getElementById('typeTreeContainer').innerHTML = `<div style="color:red;">❌ Fehler: ${err.message}</div>`; 
+            document.getElementById('groupTreeContainer').innerHTML = `<div style="color:red;">❌ Fehler: ${err.message}</div>`;
+            document.getElementById('totalGroupsCount').innerText = '0';
+            document.getElementById('groupsWithDateCount').innerText = '0';
+            document.getElementById('groupsPercent').innerHTML = '0%';
+        }
+    }
+    document.querySelectorAll('.tab-button').forEach(btn => btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active')); btn.classList.add('active');
+        document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+        const id = btn.dataset.tab;
+        if(id === 'tabTypeTree') document.getElementById('paneTypeTree').classList.add('active');
+        else document.getElementById('paneGroupTree').classList.add('active');
+        if(id === 'tabGroupTree' && currentMainTopTree) refreshGroupTree();
+        if(id === 'tabTypeTree' && currentTypeTree) renderTypeTreeDOM(currentTypeTree, document.getElementById('typeTreeSearch').value.trim());
+    }));
+    init();
+</script>
+</body>
+</html>

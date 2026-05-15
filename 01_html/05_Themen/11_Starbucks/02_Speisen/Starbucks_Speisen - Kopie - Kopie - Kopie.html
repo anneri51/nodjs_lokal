@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Starbucks Speisen · Bildintegration per Webservice (JSON mit FILECONTENT)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(145deg, #f0ede8 0%, #e2d9d0 100%);
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, sans-serif;
+            padding: 2rem 1.5rem;
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            max-width: 1600px;
+            width: 100%;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.96);
+            border-radius: 2rem;
+            box-shadow: 0 25px 45px -12px rgba(0, 0, 0, 0.35);
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 1.6rem 2rem 0.8rem 2rem;
+            border-bottom: 1px solid #e5dfd7;
+            background: #ffffffd9;
+        }
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            background: linear-gradient(135deg, #1e3932, #2a6b4e);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            display: inline-block;
+        }
+        .header p {
+            color: #5e5b56;
+            margin-top: 0.4rem;
+            font-size: 0.9rem;
+        }
+        .badge {
+            background: #e8e0d5;
+            font-size: 0.7rem;
+            padding: 0.2rem 0.7rem;
+            border-radius: 40px;
+            margin-left: 0.8rem;
+            vertical-align: middle;
+            color: #2c3e2f;
+            font-weight: 500;
+        }
+        .legend {
+            display: inline-flex;
+            gap: 1rem;
+            margin-left: 1rem;
+            font-size: 0.7rem;
+            font-weight: normal;
+            background: #f4f0ea;
+            padding: 0.2rem 0.8rem;
+            border-radius: 40px;
+        }
+        .legend span { display: inline-flex; align-items: center; gap: 4px; }
+        .legend .blue-badge { background: #cce5ff; padding: 2px 8px; border-radius: 20px; }
+        .legend .orange-badge { background: #ffe0b3; padding: 2px 8px; border-radius: 20px; }
+        .legend .grey-badge { background: #d9d2c5; padding: 2px 8px; border-radius: 20px; }
+
+        .tab-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 1rem 2rem 0 2rem;
+            background: #ffffff;
+            border-bottom: 1px solid #ede6de;
+        }
+        .tab-btn {
+            background: transparent;
+            border: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 0.7rem 1.4rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #5c5a55;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tab-btn:hover { background: #f1ede8; color: #2d6a4f; }
+        .tab-btn.active { background: #1e3932; color: white; box-shadow: 0 6px 12px -8px rgba(0,0,0,0.2); }
+
+        .content-panel {
+            background: #fefcf9;
+            padding: 1.8rem 2rem 2rem 2rem;
+            min-height: 600px;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 1.2rem;
+            overflow-x: auto;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .search-bar {
+            margin-bottom: 1.2rem;
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .search-input {
+            flex: 1;
+            padding: 0.7rem 1rem;
+            border-radius: 2rem;
+            border: 1px solid #e2d8ce;
+            font-size: 0.9rem;
+            background: white;
+            min-width: 200px;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        .data-table thead tr {
+            background: #1e3932;
+            color: white;
+        }
+        .data-table th {
+            text-align: left;
+            padding: 1rem 1rem;
+            font-weight: 600;
+        }
+        .data-table td {
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid #ede6de;
+            vertical-align: middle;
+        }
+        .col-pro-100-g { background-color: #cce5ff !important; }
+        .col-pro-stk { background-color: #ffe0b3 !important; }
+        .col-all { background-color: #e2dfd7 !important; }
+        .col-zus { background-color: #e3d9ff !important; }
+        .data-table tr:hover td {
+            background-color: rgba(0,0,0,0.03) !important;
+        }
+        .json-cell {
+            font-family: monospace;
+            font-size: 0.75rem;
+            background: #f5f2ed;
+            padding: 0.2rem 0.4rem;
+            border-radius: 8px;
+            display: inline-block;
+        }
+        .range-green { background-color: #d4edda; color: #155724; font-weight: 500; padding: 0.2rem 0.5rem; border-radius: 20px; display: inline-block; }
+        .range-yellow { background-color: #fff3cd; color: #856404; font-weight: 500; padding: 0.2rem 0.5rem; border-radius: 20px; display: inline-block; }
+        .range-orange { background-color: #ffe0b3; color: #cc7b00; font-weight: 500; padding: 0.2rem 0.5rem; border-radius: 20px; display: inline-block; }
+        .range-light-red { background-color: #f8d7da; color: #721c24; font-weight: 500; padding: 0.2rem 0.5rem; border-radius: 20px; display: inline-block; }
+        .range-red { background-color: #f5c6cb; color: #a71d2a; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 20px; display: inline-block; }
+
+        /* Bild-Thumbnail Platzhalter und Styling */
+        .img-thumb-placeholder {
+            width: 60px;
+            height: 60px;
+            background: #f0ebe5;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #8a7f72;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .img-thumb-placeholder:hover { transform: scale(1.02); background: #e2d9ce; }
+        .thumbnail-img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 12px;
+            background: white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            cursor: pointer;
+        }
+        .detail-image-container {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            background: #faf6f0;
+            padding: 1rem;
+            border-radius: 2rem;
+        }
+        .detail-img {
+            max-width: 280px;
+            max-height: 220px;
+            border-radius: 24px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            object-fit: cover;
+            border: 2px solid white;
+        }
+        .image-placeholder {
+            background: #e9e0d6;
+            border-radius: 1rem;
+            padding: 1rem;
+            color: #6c5f55;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+        .loading-spinner-small {
+            border: 2px solid #e2dad2;
+            border-top: 2px solid #2a5f4b;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 0.6s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .split-layout { display: flex; gap: 2rem; flex-wrap: wrap; }
+        .tree-sidebar { flex: 1.2; min-width: 300px; background: #fffaf5; border-radius: 1.2rem; padding: 1rem; border: 1px solid #ede3d9; }
+        .right-content { flex: 3; background: white; border-radius: 1.2rem; padding: 1.2rem; border: 1px solid #ede3d9; overflow-x: auto; max-height: 75vh; overflow-y: auto; }
+        .tree-container { max-height: 65vh; overflow-y: auto; }
+        .tree-container details {
+            margin: 0.2rem 0;
+            font-size: 0.9rem;
+        }
+        .tree-container details > summary {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: 16px;
+            background: #f0eae2;
+            cursor: pointer;
+            list-style: none;
+            font-weight: 600;
+            color: #1e3932;
+        }
+        .tree-container details > summary::-webkit-details-marker { display: none; }
+        .tree-container details > summary::before {
+            content: "▶";
+            font-size: 0.85rem;
+            display: inline-block;
+            width: 20px;
+            color: #2c5a48;
+            transition: transform 0.1s;
+        }
+        .tree-container details[open] > summary::before { content: "▼"; }
+        .subgroup-clickable {
+            cursor: pointer;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            flex: 1;
+        }
+        .tree-article-list {
+            margin-left: 1.8rem;
+            margin-top: 0.4rem;
+            margin-bottom: 0.6rem;
+            padding-left: 0.5rem;
+            list-style: none;
+            border-left: 2px solid #e2d5c8;
+        }
+        .tree-article {
+            padding: 5px 8px 5px 24px;
+            border-radius: 14px;
+            font-size: 0.85rem;
+            color: #3b5c4c;
+            cursor: pointer;
+            margin: 2px 0;
+        }
+        .tree-article:hover { background: #e6dfd5; }
+        .selected-tree-node { background: #d0c2b0 !important; font-weight: 700; color: #1e3932; border-radius: 20px; }
+        .tree-toolbar button {
+            background: #e8e0d5;
+            border: none;
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .empty-msg { padding: 2rem; text-align: center; color: #8e887e; font-style: italic; }
+        footer { font-size: 0.7rem; text-align: center; padding: 1rem; color: #8d867c; border-top: 1px solid #ede3d9; }
+        @media (max-width: 800px) { .split-layout { flex-direction: column; } }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <div class="header">
+        <h1>☕ STARBUCKS · SPEISEN 
+            <span class="badge">Bilder via /bild/1/:id (JSON mit FILECONTENT)</span>
+            <span class="legend">
+                <span>🔵 <span class="blue-badge">pro_100_g</span></span>
+                <span>🟠 <span class="orange-badge">pro_Stk</span></span>
+                <span>⚪ <span class="grey-badge">Allergene</span></span>
+                <span>🟣 <span class="grey-badge">Zusatzstoffe</span></span>
+                <span>📸 <span class="grey-badge">Async Bild-Loader</span></span>
+            </span>
+        </h1>
+        <p>📡 Echtzeitdaten von <code>http://localhost:5000</code> · Jeder Artikel kann ein Bild (FILECONTENT) über <code>/bild/1/{FK_BILD_BILDER}</code> laden (JSON mit byte-array).<br>
+        🌳 Klick auf Untergruppe → Tabelle mit Bild-Thumbnails (asynchron). Klick auf Artikel → vollständige Detailansicht inkl. großem Bild.</p>
+    </div>
+    <div class="tab-bar" id="tabBar"></div>
+    <div class="content-panel" id="mainPanel">
+        <div id="contentContainer">Initialisiere ...</div>
+    </div>
+    <footer>✅ Verwendet fetch + JSON parsing (FILECONTENT.data) zum Anzeigen der Produktbilder.</footer>
+</div>
+
+<script>
+    (function() {
+        // --------------------------------------------------------------
+        // Endpunkte (lokal)
+        // --------------------------------------------------------------
+        const endpoints = [
+            { name: "🌲 Baum – Untergruppen zeigen Daten", url: "http://localhost:5000/star_starbucks_speisen_all", type: "tree" },
+            { name: "📋 Gruppen (Übersicht) · mit Bildern", url: "http://localhost:5000/star_starbucks_speisen_group", type: "table" },
+            { name: "🥐 Speisen 1 · inkl. Bilder", url: "http://localhost:5000/star_starbucks_speisen_1", type: "table" },
+            { name: "🍰 Speisen 2 · inkl. Bilder", url: "http://localhost:5000/star_starbucks_speisen_2", type: "table" }
+        ];
+
+        let currentAbortController = null;
+        let currentTreeSearch = "";
+        let treeHierarchy = new Map();
+
+        // ---------- HILFSFUNKTIONEN ----------
+        function escapeHtml(str) {
+            if (str == null) return '';
+            return String(str).replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
+        }
+
+        function getColumnClass(colName) {
+            if (!colName) return '';
+            const l = colName.toLowerCase();
+            if (l.includes('pro_100_g')) return 'col-pro-100-g';
+            if (l.includes('pro_stk')) return 'col-pro-stk';
+            if (l.includes('allergene')) return 'col-all';
+            if (l.includes('zusatzstoffe')) return 'col-zus';
+            return '';
+        }
+
+        function getRangeClass(val) {
+            let num = null;
+            if (typeof val === 'number') num = val;
+            else if (typeof val === 'string') {
+                const p = parseFloat(val);
+                if (!isNaN(p) && isFinite(p)) num = p;
+            }
+            if (num !== null && num >= 1 && num <= 10) {
+                if (num <= 2) return 'range-green';
+                if (num <= 4) return 'range-yellow';
+                if (num <= 6) return 'range-orange';
+                if (num <= 8) return 'range-light-red';
+                return 'range-red';
+            }
+            if (typeof val === 'string' && val.includes('kcal')) {
+                let kcal = parseInt(val);
+                if (!isNaN(kcal)) {
+                    if (kcal <= 300) return 'range-green';
+                    if (kcal <= 450) return 'range-yellow';
+                    if (kcal <= 600) return 'range-orange';
+                    return 'range-red';
+                }
+            }
+            return null;
+        }
+
+        function formatCellValue(value) {
+            if (value === null || value === undefined) return '—';
+            if (Array.isArray(value)) return value.map(v => escapeHtml(v)).join(', ');
+            if (typeof value === 'object') {
+                try {
+                    let js = JSON.stringify(value);
+                    if (js.length > 120) js = js.substring(0, 120) + '…';
+                    return `<span class="json-cell" title="${escapeHtml(JSON.stringify(value))}">${escapeHtml(js)}</span>`;
+                } catch(e) { return '[Objekt]'; }
+            }
+            const rangeClass = getRangeClass(value);
+            const display = escapeHtml(String(value));
+            if (rangeClass) return `<span class="${rangeClass}">${display}</span>`;
+            return display;
+        }
+
+        // ---------- KERN: BILD Laden aus JSON (FILECONTENT.data) ----------
+        async function fetchAndDisplayImage(imageId, container, isThumbnail = true) {
+            if (!imageId) {
+                container.innerHTML = '<span style="color:#aaa;">—</span>';
+                return;
+            }
+            // Loading anzeigen
+            if (isThumbnail) {
+                container.innerHTML = '<div class="loading-spinner-small" style="margin:0 auto;"></div>';
+            } else {
+                container.innerHTML = '<div class="image-placeholder"><div class="loading-spinner-small" style="margin:0 auto 8px;"></div> Bild wird geladen...</div>';
+            }
+
+            try {
+                const response = await fetch(`http://localhost:5000/bild/1/${encodeURIComponent(imageId)}`, { cache: 'no-cache' });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const imageData = await response.json();
+
+                // Erwartetes Format: Array mit einem Objekt, das FILECONTENT (mit data-array) und MIMETYPE, FILENAME enthält
+                let fileContentObj = null;
+                if (Array.isArray(imageData) && imageData.length > 0 && imageData[0].FILECONTENT) {
+                    fileContentObj = imageData[0];
+                } else if (imageData && imageData.FILECONTENT) {
+                    fileContentObj = imageData;
+                } else if (imageData && imageData.data) { // fallback
+                    fileContentObj = { FILECONTENT: { data: imageData.data }, MIMETYPE: imageData.MIMETYPE || 'image/jpeg', FILENAME: imageData.FILENAME };
+                }
+
+                if (!fileContentObj || !fileContentObj.FILECONTENT || !fileContentObj.FILECONTENT.data) {
+                    throw new Error('Keine gültigen Bilddaten (FILECONTENT.data fehlt)');
+                }
+
+                const byteArray = new Uint8Array(fileContentObj.FILECONTENT.data);
+                const mimeType = fileContentObj.MIMETYPE || 'image/jpeg';
+                const blob = new Blob([byteArray], { type: mimeType });
+                const imageUrl = URL.createObjectURL(blob);
+                const filename = fileContentObj.FILENAME || 'Produktbild';
+
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                img.alt = escapeHtml(filename);
+                if (isThumbnail) {
+                    img.className = 'thumbnail-img';
+                    img.style.cursor = 'pointer';
+                    img.title = `Klick für Detailansicht (${filename})`;
+                    // optional: Klick auf Thumbnail löst Detailansicht aus (kann später erweitert werden)
+                } else {
+                    img.className = 'detail-img';
+                }
+                container.innerHTML = '';
+                container.appendChild(img);
+                // Cleanup Blob-URL nach dem Laden
+                img.onload = () => URL.revokeObjectURL(imageUrl);
+                img.onerror = () => {
+                    URL.revokeObjectURL(imageUrl);
+                    container.innerHTML = '<span style="color:#c0392b;">❌ Bildfehler</span>';
+                };
+            } catch (err) {
+                console.warn(`Bild ${imageId} konnte nicht geladen werden:`, err.message);
+                container.innerHTML = isThumbnail ? '<span style="color:#bc9a6c;">📷</span>' : `<div class="image-placeholder">❌ Bild nicht verfügbar<br><small>${escapeHtml(err.message)}</small></div>`;
+            }
+        }
+
+        // Holt Bild-ID aus Artikel (verschiedene mögliche Keys)
+        function getImageIdFromItem(item) {
+            if (!item || typeof item !== 'object') return null;
+            const possibleKeys = ['FK_BILD_BILDER', 'BILD_ID', 'bild_id', 'image_id', 'fk_bild_bilder', 'BildID'];
+            for (let key of possibleKeys) {
+                if (item.hasOwnProperty(key) && item[key] != null && item[key] !== '') {
+                    return String(item[key]);
+                }
+            }
+            return null;
+        }
+
+        // ---------- TABELLE MIT BILDERN RENDERN (asynchrone Bildnachladung) ----------
+        function renderDataTable(container, title, items, showImages = true) {
+            if (!items || items.length === 0) {
+                container.innerHTML = `<div class="empty-msg">📭 Keine Artikel in dieser Ansicht</div>`;
+                return;
+            }
+
+            const allKeys = new Set();
+            items.forEach(it => { if (it && typeof it === 'object') Object.keys(it).forEach(k => allKeys.add(k)); });
+            let baseColumns = Array.from(allKeys);
+            let hasAnyImage = false;
+            if (showImages) {
+                hasAnyImage = items.some(it => getImageIdFromItem(it) != null);
+            }
+
+            let finalColumns = [];
+            if (hasAnyImage) finalColumns.push('🖼️ Bild');
+            const priority = ['SPEISEN_GROUP', 'SPEISEN_GROUP_SUB', 'name', 'FINAL_CNT_DATE', 'pro_100_g', 'pro_Stk', 'Allergene', 'Zusatzstoffe'];
+            let ordered = [...priority.filter(c => baseColumns.includes(c)), ...baseColumns.filter(c => !priority.includes(c))];
+            finalColumns.push(...ordered);
+
+            let html = `<h3 style="margin-bottom:1rem;">📋 ${escapeHtml(title)} (${items.length} Artikel)</h3>
+                        <div style="overflow-x:auto; max-height:60vh;" class="table-container">
+                        <table class="data-table" style="width:100%;" id="dynamicImageTable_${Date.now()}">
+                        <thead><tr>`;
+            for (let col of finalColumns) {
+                let colClass = (col !== '🖼️ Bild') ? getColumnClass(col) : '';
+                html += `<th class="${colClass}" style="padding:0.75rem;">${escapeHtml(col)}</th>`;
+            }
+            html += `</thead><tbody>`;
+
+            // Zeilen mit Platzhaltern für Bilder (data-image-id)
+            for (let it of items) {
+                html += `<tr>`;
+                if (hasAnyImage) {
+                    const imageId = getImageIdFromItem(it);
+                    const uniqueId = `img_${Math.random().toString(36).substr(2, 8)}_${Date.now()}_${Math.random()}`;
+                    html += `<td style="text-align:center; vertical-align:middle;"><div id="${uniqueId}" class="img-thumb-placeholder" data-image-id="${imageId || ''}" style="width:60px;height:60px;margin:0 auto;"></div></td>`;
+                    // Speichere nachfolgend die Referenz für async load
+                    setTimeout(() => {
+                        const placeholder = document.getElementById(uniqueId);
+                        if (placeholder && imageId) {
+                            fetchAndDisplayImage(imageId, placeholder, true);
+                        } else if (placeholder && !imageId) {
+                            placeholder.innerHTML = '<span style="font-size:10px;">—</span>';
+                        }
+                    }, 10);
+                }
+                for (let col of ordered) {
+                    let val = it[col];
+                    let tdClass = getColumnClass(col);
+                    html += `<td class="${tdClass}" style="padding:0.7rem; border-bottom:1px solid #ede0d2;">${formatCellValue(val)}</td>`;
+                }
+                html += `</tr>`;
+            }
+            html += `</tbody></table></div>`;
+            container.innerHTML = html;
+        }
+
+        // ---------- DETAILANSICHT MIT GROSSEM BILD ----------
+        function showArticleDetail(container, item) {
+            const imageId = getImageIdFromItem(item);
+            const articleTitle = item.name || item.Titel || item.SPEISE || 'Artikel';
+            let html = `<h3 style="margin-bottom: 0.75rem;">🔍 Detailansicht · ${escapeHtml(articleTitle)}</h3>`;
+            // Platzhalter für das große Bild
+            const imagePlaceholderId = `detail_img_${Date.now()}_${Math.random()}`;
+            html += `<div id="${imagePlaceholderId}" class="detail-image-container" style="min-height:180px;"></div>`;
+            // Attributtabelle
+            html += `<div style="overflow-x:auto; margin-top:1rem;"><table style="width:100%; border-collapse:collapse; background:#fefaf5;">`;
+            for (let [k, v] of Object.entries(item)) {
+                const colClass = getColumnClass(k);
+                html += `<tr style="border-bottom:1px solid #ede0d2;">
+                            <th style="width:35%; text-align:left; padding:0.8rem; background:#f5efe8;" class="${colClass}">${escapeHtml(k)}</th>
+                            <td style="padding:0.8rem;" class="${colClass}">${formatCellValue(v)}</td>
+                         </tr>`;
+            }
+            html += `</table></div>`;
+            container.innerHTML = html;
+            // Nach dem Einfügen das große Bild asynchron laden
+            const imgContainer = document.getElementById(imagePlaceholderId);
+            if (imgContainer && imageId) {
+                fetchAndDisplayImage(imageId, imgContainer, false);
+            } else if (imgContainer && !imageId) {
+                imgContainer.innerHTML = `<div class="image-placeholder">ℹ️ Keine Bild-ID (FK_BILD_BILDER) für diesen Artikel vorhanden.</div>`;
+            }
+        }
+
+        // ---------- TABELLE AUS URL (für klassische Tabs) ----------
+        async function renderTableFromUrl(url, container) {
+            if (currentAbortController) currentAbortController.abort();
+            const ac = new AbortController();
+            currentAbortController = ac;
+            container.innerHTML = `<div class="loading-state"><div class="spinner"></div><span>Lade Daten von ${escapeHtml(url)} …</span></div>`;
+            try {
+                const res = await fetch(url, { signal: ac.signal, cache: 'no-cache' });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                let rows = Array.isArray(data) ? data : (data && typeof data === 'object' ? [data] : []);
+                if (rows.length === 0) throw new Error('Keine Daten empfangen');
+                // Suchleiste + Rendering
+                const searchHtml = `<div class="search-bar">
+                                    <input type="text" id="dynamicTableSearch" class="search-input" placeholder="🔍 In dieser Tabelle suchen ...">
+                                    <span id="searchInfoCount">${rows.length} Einträge</span>
+                                  </div>
+                                  <div id="dynamicTableContainer"></div>`;
+                container.innerHTML = searchHtml;
+                const dynamicContainer = document.getElementById('dynamicTableContainer');
+                const searchInput = document.getElementById('dynamicTableSearch');
+                const filterAndRender = (term) => {
+                    const lowerTerm = term.toLowerCase().trim();
+                    const filtered = lowerTerm === "" ? rows : rows.filter(r => Object.values(r).some(v => v != null && v.toString().toLowerCase().includes(lowerTerm)));
+                    renderDataTable(dynamicContainer, `Ergebnisse (${filtered.length} / ${rows.length})`, filtered, true);
+                    const infoSpan = document.getElementById('searchInfoCount');
+                    if (infoSpan) infoSpan.textContent = `${filtered.length} / ${rows.length} Einträge`;
+                };
+                if (searchInput) searchInput.addEventListener('input', (e) => filterAndRender(e.target.value));
+                filterAndRender('');
+            } catch (err) {
+                if (err.name === 'AbortError') return;
+                container.innerHTML = `<div class="error-state">❌ Fehler: ${escapeHtml(err.message)}<br><small>Server unter Port 5000 erreichbar?</small></div>`;
+            }
+        }
+
+        // ---------- BAUM LOGIK (wie bisher, aber mit neuen renderDataTable) ----------
+        async function fetchAndBuildTree(url, container) {
+            if (currentAbortController) currentAbortController.abort();
+            const ac = new AbortController();
+            currentAbortController = ac;
+            container.innerHTML = `<div class="loading-state"><div class="spinner"></div><span>Baum wird aufgebaut …</span></div>`;
+            try {
+                const res = await fetch(url, { signal: ac.signal, cache: 'no-cache' });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                let items = Array.isArray(data) ? data : (data && typeof data === 'object' ? [data] : []);
+                if (items.length === 0) throw new Error('Keine Artikel für Baumstruktur');
+                const groupsMap = new Map();
+                for (const item of items) {
+                    let mainGroup = item.SPEISEN_GROUP ?? item.speisen_group ?? item.group ?? item.Gruppe ?? "Andere";
+                    if (typeof mainGroup !== 'string') mainGroup = String(mainGroup);
+                    let subGroup = item.SPEISEN_GROUP_SUB ?? item.speisen_group_sub ?? item.subgroup ?? item.Untergruppe ?? "Allgemein";
+                    if (typeof subGroup !== 'string') subGroup = String(subGroup);
+                    if (!groupsMap.has(mainGroup)) groupsMap.set(mainGroup, new Map());
+                    const subMap = groupsMap.get(mainGroup);
+                    if (!subMap.has(subGroup)) subMap.set(subGroup, []);
+                    subMap.get(subGroup).push(item);
+                }
+                treeHierarchy = groupsMap;
+                renderTwoLevelTree(container);
+            } catch (err) {
+                if (err.name === 'AbortError') return;
+                container.innerHTML = `<div class="error-state">🌿 Baum-Fehler: ${escapeHtml(err.message)}</div>`;
+            }
+        }
+
+        function renderTwoLevelTree(container) {
+            if (!treeHierarchy || treeHierarchy.size === 0) {
+                container.innerHTML = `<div class="empty-msg">🌲 Keine Baumdaten.</div>`;
+                return;
+            }
+            const searchTerm = currentTreeSearch.toLowerCase().trim();
+            const splitHtml = `<div class="split-layout">
+                <div class="tree-sidebar">
+                    <div class="tree-toolbar">
+                        <button id="expandAllBtnTree">▶ Alle aufklappen</button>
+                        <button id="collapseAllBtnTree">📁 Alle zuklappen</button>
+                    </div>
+                    <input type="text" id="treeSearchInputTree" class="search-input" placeholder="🔍 Gruppe / Untergruppe / Artikel durchsuchen" value="${escapeHtml(currentTreeSearch)}">
+                    <div id="treeContainerDynamic" class="tree-container"></div>
+                </div>
+                <div class="right-content" id="rightDetailArea">✨ <strong>Bedienung:</strong><br>
+                • Klicken Sie auf <strong>Untergruppen-Namen</strong> → Tabelle aller Artikel dieser Gruppe (mit Bildern).<br>
+                • Klicken Sie auf einen <strong>Artikel</strong> → vollständige Detailansicht mit großem Produktbild.<br>
+                • Oberste Gruppen nur zum Auf‑/Zuklappen.</div>
+            </div>`;
+            container.innerHTML = splitHtml;
+            const treeContainerDiv = document.getElementById('treeContainerDynamic');
+            const rightArea = document.getElementById('rightDetailArea');
+            if (!treeContainerDiv) return;
+            const rootUl = document.createElement('ul');
+            rootUl.style.listStyle = 'none';
+            rootUl.style.paddingLeft = '0';
+            const sortedGroups = Array.from(treeHierarchy.keys()).sort((a,b) => a.localeCompare(b));
+            let anyVisible = false;
+            for (const groupName of sortedGroups) {
+                const subMap = treeHierarchy.get(groupName);
+                let groupMatch = groupName.toLowerCase().includes(searchTerm);
+                let visibleSubs = [];
+                for (let [subName, items] of subMap.entries()) {
+                    let subMatch = subName.toLowerCase().includes(searchTerm);
+                    let filteredItems = searchTerm === "" ? items : items.filter(it => Object.values(it).some(v => v != null && v.toString().toLowerCase().includes(searchTerm)));
+                    if (subMatch || groupMatch || filteredItems.length > 0 || searchTerm === "") {
+                        visibleSubs.push({ subName, items: filteredItems, originalItems: items });
+                    }
+                }
+                if (visibleSubs.length === 0 && !groupMatch) continue;
+                anyVisible = true;
+                const groupLi = document.createElement('li');
+                const groupDetails = document.createElement('details');
+                if (searchTerm !== "") groupDetails.setAttribute('open', 'true');
+                const groupSummary = document.createElement('summary');
+                let totalArticles = 0;
+                for (let [,its] of subMap.entries()) totalArticles += its.length;
+                groupSummary.innerHTML = `<strong>${escapeHtml(groupName)}</strong> (${totalArticles} Artikel, ${subMap.size} Untergruppen)`;
+                groupDetails.appendChild(groupSummary);
+                const innerUl = document.createElement('ul');
+                innerUl.style.marginLeft = '0.8rem';
+                for (const { subName, items: filteredItems, originalItems } of visibleSubs) {
+                    const subLi = document.createElement('li');
+                    const subDetails = document.createElement('details');
+                    if (searchTerm !== "" && (subName.toLowerCase().includes(searchTerm) || filteredItems.length > 0)) subDetails.setAttribute('open', 'true');
+                    const subSummary = document.createElement('summary');
+                    const subNameSpan = document.createElement('span');
+                    subNameSpan.className = 'subgroup-clickable';
+                    subNameSpan.textContent = `${subName} (${originalItems.length} Artikel)`;
+                    subNameSpan.style.textDecoration = 'underline';
+                    subNameSpan.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (rightArea) renderDataTable(rightArea, `${groupName} › ${subName} (${originalItems.length})`, originalItems, true);
+                        clearAllSelections('.selected-tree-node');
+                        subNameSpan.classList.add('selected-tree-node');
+                    });
+                    subSummary.appendChild(subNameSpan);
+                    subDetails.appendChild(subSummary);
+                    const articleUl = document.createElement('ul');
+                    articleUl.className = 'tree-article-list';
+                    const itemsToRender = searchTerm !== "" ? filteredItems : originalItems;
+                    for (const art of itemsToRender) {
+                        const artLi = document.createElement('li');
+                        artLi.className = 'tree-article';
+                        const title = art.FINAL_CNT_DATE || art.name || art.Titel || art.SPEISE || 'Artikel';
+                        artLi.textContent = `🍽️ ${escapeHtml(String(title))}`;
+                        artLi.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            if (rightArea) showArticleDetail(rightArea, art);
+                            clearAllSelections('.selected-tree-node');
+                            artLi.classList.add('selected-tree-node');
+                        });
+                        articleUl.appendChild(artLi);
+                    }
+                    subDetails.appendChild(articleUl);
+                    subLi.appendChild(subDetails);
+                    innerUl.appendChild(subLi);
+                }
+                groupDetails.appendChild(innerUl);
+                groupLi.appendChild(groupDetails);
+                rootUl.appendChild(groupLi);
+            }
+            if (!anyVisible) treeContainerDiv.innerHTML = '<div class="empty-msg">🔍 Keine Treffer</div>';
+            else { treeContainerDiv.innerHTML = ''; treeContainerDiv.appendChild(rootUl); }
+            document.getElementById('expandAllBtnTree')?.addEventListener('click', () => document.querySelectorAll('#treeContainerDynamic details').forEach(d => d.setAttribute('open', 'true')));
+            document.getElementById('collapseAllBtnTree')?.addEventListener('click', () => document.querySelectorAll('#treeContainerDynamic details').forEach(d => d.removeAttribute('open')));
+            const searchTree = document.getElementById('treeSearchInputTree');
+            if (searchTree) searchTree.addEventListener('input', (e) => { currentTreeSearch = e.target.value; fetchAndBuildTree(endpoints[0].url, document.getElementById('contentContainer')); });
+        }
+        function clearAllSelections(selector) { document.querySelectorAll(selector).forEach(el => el.classList.remove('selected-tree-node')); }
+
+        // ---------- TAB-STEUERUNG ----------
+        function buildTabs() {
+            const bar = document.getElementById('tabBar');
+            const container = document.getElementById('contentContainer');
+            if (!bar || !container) return;
+            bar.innerHTML = '';
+            endpoints.forEach((ep, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'tab-btn';
+                if (idx === 0) btn.classList.add('active');
+                btn.innerHTML = ep.name;
+                btn.addEventListener('click', async () => {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    if (ep.type === 'table') await renderTableFromUrl(ep.url, container);
+                    else if (ep.type === 'tree') await fetchAndBuildTree(ep.url, container);
+                });
+                bar.appendChild(btn);
+            });
+            renderTableFromUrl(endpoints[0].url, container);
+        }
+        buildTabs();
+    })();
+</script>
+</body>
+</html>

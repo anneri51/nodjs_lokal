@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Starbucks Menü · Baumstruktur mit Gruppen & Artikeldetails</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(145deg, #f0ede8 0%, #e2d9d0 100%);
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, sans-serif;
+            padding: 2rem 1.5rem;
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            max-width: 1600px;
+            width: 100%;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.96);
+            border-radius: 2rem;
+            box-shadow: 0 25px 45px -12px rgba(0, 0, 0, 0.35);
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 1.6rem 2rem 0.8rem 2rem;
+            border-bottom: 1px solid #e5dfd7;
+            background: #ffffffd9;
+        }
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            background: linear-gradient(135deg, #1e3932, #2a6b4e);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            display: inline-block;
+        }
+        .header p {
+            color: #5e5b56;
+            margin-top: 0.4rem;
+            font-size: 0.9rem;
+        }
+        .badge {
+            background: #e8e0d5;
+            font-size: 0.7rem;
+            padding: 0.2rem 0.7rem;
+            border-radius: 40px;
+            margin-left: 0.8rem;
+            vertical-align: middle;
+            color: #2c3e2f;
+            font-weight: 500;
+        }
+        .legend {
+            display: inline-flex;
+            gap: 1rem;
+            margin-left: 1rem;
+            font-size: 0.7rem;
+            font-weight: normal;
+            background: #f4f0ea;
+            padding: 0.2rem 0.8rem;
+            border-radius: 40px;
+        }
+        .legend span { display: inline-flex; align-items: center; gap: 4px; }
+        .legend .blue-badge { background: #cce5ff; padding: 2px 8px; border-radius: 20px; }
+        .legend .orange-badge { background: #ffe0b3; padding: 2px 8px; border-radius: 20px; }
+        .legend .grey-badge { background: #d9d2c5; padding: 2px 8px; border-radius: 20px; }
+        .legend .purple-badge { background: #e3d9ff; padding: 2px 8px; border-radius: 20px; }
+
+        .tab-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 1rem 2rem 0 2rem;
+            background: #ffffff;
+            border-bottom: 1px solid #ede6de;
+        }
+        .tab-btn {
+            background: transparent;
+            border: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 0.7rem 1.4rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #5c5a55;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tab-btn:hover { background: #f1ede8; color: #2d6a4f; }
+        .tab-btn.active { background: #1e3932; color: white; box-shadow: 0 6px 12px -8px rgba(0,0,0,0.2); }
+
+        .content-panel {
+            background: #fefcf9;
+            padding: 1.8rem 2rem 2rem 2rem;
+            min-height: 600px;
+        }
+
+        /* Tabellen-Stile */
+        .table-container {
+            background: white;
+            border-radius: 1.2rem;
+            overflow-x: auto;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .search-bar {
+            margin-bottom: 1.2rem;
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .search-input {
+            flex: 1;
+            padding: 0.7rem 1rem;
+            border-radius: 2rem;
+            border: 1px solid #e2d8ce;
+            font-size: 0.9rem;
+            background: white;
+            min-width: 200px;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        .data-table thead tr {
+            background: #1e3932;
+            color: white;
+        }
+        .data-table th {
+            text-align: left;
+            padding: 1rem 1rem;
+            font-weight: 600;
+        }
+        .data-table td {
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid #ede6de;
+            vertical-align: top;
+        }
+        .col-pro-100-g { background-color: #cce5ff !important; }
+        .col-pro-stk { background-color: #ffe0b3 !important; }
+        .col-all { background-color: #e2dfd7 !important; }
+        .col-zus { background-color: #e3d9ff !important; }
+        .data-table tr:hover td {
+            background-color: rgba(0,0,0,0.03) !important;
+        }
+        .json-cell {
+            font-family: monospace;
+            font-size: 0.75rem;
+            background: #f5f2ed;
+            padding: 0.2rem 0.4rem;
+            border-radius: 8px;
+            display: inline-block;
+        }
+        .range-green { background-color: #d4edda; color: #155724; font-weight: 500; padding: 0.2rem 0.5rem; border-radius: 20px; display: inline-block; }
+        .range-yellow { background-color: #fff3cd; color: #856404; font-weight: 500; padding: 0.2rem 0.5rem; border-radius: 20px; display: inline-block; }
+        .range-orange { background-color: #ffe0b3; color: #cc7b00; font-weight: 500; padding: 0.2rem 0.5rem; border-radius: 20px; display: inline-block; }
+        .range-light-red { background-color: #f8d7da; color: #721c24; font-weight: 500; padding: 0.2rem 0.5rem; border-radius: 20px; display: inline-block; }
+        .range-red { background-color: #f5c6cb; color: #a71d2a; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 20px; display: inline-block; }
+
+        .loading-state, .error-state { text-align: center; padding: 2rem; }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2dad2;
+            border-top: 3px solid #2a5f4b;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 1rem auto;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error-state { background: #fff3f0; border-left: 5px solid #c7362b; border-radius: 1rem; }
+
+        /* Layout für Baumansicht */
+        .split-layout { display: flex; gap: 2rem; flex-wrap: wrap; }
+        .tree-sidebar { flex: 1.2; min-width: 300px; background: #fffaf5; border-radius: 1.2rem; padding: 1rem; border: 1px solid #ede3d9; }
+        .right-content { flex: 3; background: white; border-radius: 1.2rem; padding: 1.2rem; border: 1px solid #ede3d9; overflow-x: auto; max-height: 75vh; overflow-y: auto; }
+        .tree-container { max-height: 65vh; overflow-y: auto; }
+
+        /* Baum: Details & Summary Styles – Kein "Details" Standardtext, nur Gruppennamen */
+        .tree-container details {
+            margin: 0.2rem 0;
+            font-size: 0.9rem;
+        }
+        .tree-container details > summary {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: 16px;
+            background: #f0eae2;
+            cursor: pointer;
+            list-style: none;
+            font-weight: 600;
+            color: #1e3932;
+            transition: 0.1s;
+        }
+        .tree-container details > summary::-webkit-details-marker {
+            display: none;
+        }
+        /* eigener Marker mit Pseudoelement */
+        .tree-container details > summary::before {
+            content: "▶";
+            font-size: 0.85rem;
+            display: inline-block;
+            width: 20px;
+            color: #2c5a48;
+            transition: transform 0.1s;
+        }
+        .tree-container details[open] > summary::before {
+            content: "▼";
+        }
+        /* Untergruppe anderer Hintergrund */
+        .tree-container .subgroup-level details > summary {
+            background: #f8f3ec;
+        }
+        .tree-container summary:hover {
+            background: #e2d6ca;
+        }
+        .group-summary-name, .subgroup-summary-name {
+            flex: 1;
+        }
+        .subgroup-clickable {
+            cursor: pointer;
+            text-decoration: underline;
+            text-decoration-thickness: 1px;
+            text-underline-offset: 3px;
+        }
+        .subgroup-clickable:hover {
+            color: #0f3b2f;
+            font-weight: 700;
+        }
+        .tree-article-list {
+            margin-left: 1.8rem;
+            margin-top: 0.4rem;
+            margin-bottom: 0.6rem;
+            padding-left: 0.5rem;
+            list-style: none;
+            border-left: 2px solid #e2d5c8;
+        }
+        .tree-article {
+            padding: 5px 8px 5px 24px;
+            border-radius: 14px;
+            font-size: 0.85rem;
+            color: #3b5c4c;
+            cursor: pointer;
+            transition: 0.05s linear;
+            margin: 2px 0;
+        }
+        .tree-article:hover {
+            background: #e6dfd5;
+        }
+        .selected-tree-node {
+            background: #d0c2b0 !important;
+            font-weight: 700;
+            color: #1e3932;
+            box-shadow: inset 0 0 0 1px #b9aa96;
+            border-radius: 20px;
+        }
+        .tree-toolbar {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .tree-toolbar button {
+            background: #e8e0d5;
+            border: none;
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+        .tree-toolbar button:hover {
+            background: #cdc2b4;
+        }
+        .empty-msg {
+            padding: 2rem;
+            text-align: center;
+            color: #8e887e;
+            font-style: italic;
+        }
+        footer {
+            font-size: 0.7rem;
+            text-align: center;
+            padding: 1rem;
+            color: #8d867c;
+            border-top: 1px solid #ede3d9;
+        }
+        @media (max-width: 800px) {
+            .split-layout { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <div class="header">
+        <h1>☕ STARBUCKS · SPEISEN 
+            <span class="badge">Baum: Nur Untergruppen & Artikel zeigen Details</span>
+            <span class="legend">
+                <span>🔵 <span class="blue-badge">pro_100_g</span></span>
+                <span>🟠 <span class="orange-badge">pro_Stk</span></span>
+                <span>⚪ <span class="grey-badge">Allergene</span></span>
+                <span>🟣 <span class="purple-badge">Zusatzstoffe</span></span>
+            </span>
+        </h1>
+        <p>📁 <strong>Oberste Gruppen</strong> dienen nur zum Auf‑/Zuklappen – kein Detail‑Load. <br>
+        📂 <strong>Untergruppen (2. Ebene)</strong> – Klick auf den unterstrichenen Namen zeigt alle Artikel als Tabelle. <br>
+        🍽️ <strong>Artikel-Klick</strong> zeigt vollständige Detailansicht mit allen Feldern. <br>
+        ✅ Im Baum werden keine generischen „Details“-Labels verwendet, sondern immer Gruppen‑/Untergruppenname.</p>
+    </div>
+    <div class="tab-bar" id="tabBar"></div>
+    <div class="content-panel" id="mainPanel">
+        <div id="contentContainer">Lade Registerkarten ...</div>
+    </div>
+    <footer>🔍 Baumansicht: Klick auf Untergruppen-Name → Artikelübersicht | Klick auf Artikel → komplette Einzelansicht</footer>
+</div>
+
+<script>
+    (function() {
+        // API-Endpoints (lokaler Server Port 5000)
+        const endpoints = [
+            { name: "🍽️ Gruppen (Übersicht)", url: "http://localhost:5000/star_starbucks_speisen_group", type: "table" },
+            { name: "🥐 Speisen 1", url: "http://localhost:5000/star_starbucks_speisen_1", type: "table" },
+            { name: "🍰 Speisen 2", url: "http://localhost:5000/star_starbucks_speisen_2", type: "table" },
+            { name: "🌲 Baum – Nur Untergruppen zeigen Daten", url: "http://localhost:5000/star_starbucks_speisen_all", type: "tree" }
+        ];
+
+        let currentAbortController = null;
+        let treeHierarchy = new Map();   // groupName -> Map(subgroupName -> items[])
+        let currentSearch = "";
+
+        function escapeHtml(str) {
+            if (str == null) return '';
+            return String(str).replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
+        }
+
+        function getColumnClass(colName) {
+            if (!colName) return '';
+            const l = colName.toLowerCase();
+            if (l.includes('pro_100_g')) return 'col-pro-100-g';
+            if (l.includes('pro_stk')) return 'col-pro-stk';
+            if (l.includes('allergene')) return 'col-all';
+            if (l.includes('zusatzstoffe')) return 'col-zus';
+            return '';
+        }
+
+        function getRangeClass(val) {
+            let num = null;
+            if (typeof val === 'number') num = val;
+            else if (typeof val === 'string') {
+                const p = parseFloat(val);
+                if (!isNaN(p) && isFinite(p)) num = p;
+            }
+            if (num !== null && num >= 1 && num <= 10) {
+                if (num <= 2) return 'range-green';
+                if (num <= 4) return 'range-yellow';
+                if (num <= 6) return 'range-orange';
+                if (num <= 8) return 'range-light-red';
+                return 'range-red';
+            }
+            return null;
+        }
+
+        function formatCellValue(value) {
+            if (value === null || value === undefined) return '—';
+            if (typeof value === 'object') {
+                try {
+                    let js = JSON.stringify(value);
+                    if (js.length > 120) js = js.substring(0, 120) + '…';
+                    return `<span class="json-cell" title="${escapeHtml(JSON.stringify(value))}">${escapeHtml(js)}</span>`;
+                } catch(e) { return '[Objekt]'; }
+            }
+            const rangeClass = getRangeClass(value);
+            const display = escapeHtml(String(value));
+            if (rangeClass) return `<span class="${rangeClass}">${display}</span>`;
+            return display;
+        }
+
+        // ----- Tabellenansichten für nicht-Baum-Tabs -----
+        function buildTableStructure(data) {
+            let rows = Array.isArray(data) ? data : (data && typeof data === 'object' ? [data] : null);
+            if (!rows || rows.length === 0) return { html: `<div class="empty-row">📭 Keine Daten</div>`, columns: [], rows: [] };
+            const keys = new Set();
+            rows.forEach(r => { if (r && typeof r === 'object') Object.keys(r).forEach(k => keys.add(k)); });
+            if (keys.size === 0) return { html: `<div class="empty-row">⚠️ Keine Spalten</div>`, columns: [], rows: [] };
+            const cols = Array.from(keys);
+            let html = `<div class="table-container"><table class="data-table"><thead><tr>`;
+            for (let c of cols) html += `<th class="${getColumnClass(c)}">${escapeHtml(c)}</th>`;
+            html += `</table></thead><tbody id="tableBody"></tbody></table></div>`;
+            return { html, columns: cols, rows };
+        }
+
+        function filterAndRenderTable(rows, cols, term) {
+            const tbody = document.getElementById('tableBody');
+            if (!tbody) return;
+            const lowTerm = term.toLowerCase().trim();
+            const filtered = rows.filter(r => !lowTerm || Object.values(r).some(v => v != null && v.toString().toLowerCase().includes(lowTerm)));
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr class="empty-row"><td colspan="${cols.length}">🔍 Keine Treffer</td></tr>`;
+                return;
+            }
+            let html = '';
+            for (let r of filtered) {
+                html += '<tr>';
+                for (let c of cols) html += `<td class="${getColumnClass(c)}">${formatCellValue(r[c])}</td>`;
+                html += '</tr>';
+            }
+            tbody.innerHTML = html;
+        }
+
+        async function renderTableEndpoint(url) {
+            if (currentAbortController) currentAbortController.abort();
+            const ac = new AbortController();
+            currentAbortController = ac;
+            const container = document.getElementById('contentContainer');
+            container.innerHTML = `<div class="loading-state"><div class="spinner"></div><span>Tabellendaten werden geladen …</span></div>`;
+            try {
+                const res = await fetch(url, { signal: ac.signal, cache: 'no-cache' });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const txt = await res.text();
+                const data = JSON.parse(txt);
+                const { html, columns, rows } = buildTableStructure(data);
+                if (!rows.length) throw new Error('Keine Zeilen');
+                container.innerHTML = `<div class="search-bar"><input type="text" id="tableSearchInput" class="search-input" placeholder="🔍 Suchen ..."><span class="search-info" id="searchInfo">${rows.length} Einträge</span></div>${html}`;
+                filterAndRenderTable(rows, columns, '');
+                const inp = document.getElementById('tableSearchInput');
+                const info = document.getElementById('searchInfo');
+                if (inp) {
+                    const update = () => {
+                        const term = inp.value;
+                        const matched = rows.filter(r => !term || Object.values(r).some(v => v != null && v.toString().toLowerCase().includes(term.toLowerCase())));
+                        filterAndRenderTable(rows, columns, term);
+                        info.textContent = `${matched.length} / ${rows.length}`;
+                    };
+                    inp.addEventListener('input', update);
+                    update();
+                }
+            } catch (err) {
+                if (err.name === 'AbortError') return;
+                container.innerHTML = `<div class="error-state">❌ Fehler: ${escapeHtml(err.message)}<br><code>${escapeHtml(url)}</code><br><small>Server auf Port 5000 muss laufen.</small></div>`;
+            }
+        }
+
+        // ----- BAUM LOGIK: Nur relevante Namen im Summary, keine "Details" Platzhalter -----
+        function extractGroupAndSubgroup(item) {
+            let mainGroup = item.SPEISEN_GROUP ?? item.speisen_group ?? item.group ?? item.Gruppe ?? "Andere";
+            if (typeof mainGroup !== 'string') mainGroup = String(mainGroup);
+            let subGroup = item.SPEISEN_GROUP_SUB ?? item.speisen_group_sub ?? item.subgroup ?? item.Untergruppe ?? null;
+            if (!subGroup || (typeof subGroup === 'string' && subGroup.trim() === "")) subGroup = "Alle Artikel";
+            else if (typeof subGroup !== 'string') subGroup = String(subGroup);
+            return { mainGroup, subGroup };
+        }
+
+        async function fetchAndBuildTree(url) {
+            if (currentAbortController) currentAbortController.abort();
+            const ac = new AbortController();
+            currentAbortController = ac;
+            const container = document.getElementById('contentContainer');
+            container.innerHTML = `<div class="loading-state"><div class="spinner"></div><span>Baum wird aufgebaut …</span></div>`;
+            try {
+                const res = await fetch(url, { signal: ac.signal, cache: 'no-cache' });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const raw = await res.text();
+                let data = JSON.parse(raw);
+                if (!Array.isArray(data)) data = [data];
+                if (data.length === 0) throw new Error('Keine Artikel gefunden');
+                
+                const groupsMap = new Map();
+                for (const item of data) {
+                    const { mainGroup, subGroup } = extractGroupAndSubgroup(item);
+                    if (!groupsMap.has(mainGroup)) groupsMap.set(mainGroup, new Map());
+                    const subMap = groupsMap.get(mainGroup);
+                    if (!subMap.has(subGroup)) subMap.set(subGroup, []);
+                    subMap.get(subGroup).push(item);
+                }
+                treeHierarchy = groupsMap;
+                currentSearch = "";
+                renderTwoLevelTree();
+            } catch (err) {
+                if (err.name === 'AbortError') return;
+                container.innerHTML = `<div class="error-state">🌿 Baum-Fehler: ${escapeHtml(err.message)}<br><code>${escapeHtml(url)}</code></div>`;
+            }
+        }
+
+        // Hilfsfunktionen für rechten Bereich
+        function showSubgroupItems(groupName, subgroupName, items) {
+            displayDataAsTable(`📂 ${groupName} › ${subgroupName} (${items.length} Artikel)`, items);
+        }
+
+        function showArticleDetail(item) {
+            const rightDiv = document.getElementById('rightDetailArea');
+            if (!rightDiv) return;
+            let html = `<h3 style="margin-bottom: 1rem;">🔍 Detailansicht · Artikel</h3>
+                        <div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; background:#fefaf5;">`;
+            for (let [k, v] of Object.entries(item)) {
+                const colClass = getColumnClass(k);
+                html += `<tr style="border-bottom:1px solid #ede0d2;">
+                            <th style="width:35%; text-align:left; padding:0.8rem; background:#f5efe8;" class="${colClass}">${escapeHtml(k)}</th>
+                            <td style="padding:0.8rem;" class="${colClass}">${formatCellValue(v)}</td>
+                         </tr>`;
+            }
+            html += `</table></div>`;
+            rightDiv.innerHTML = html;
+        }
+
+        function displayDataAsTable(title, items) {
+            const rightDiv = document.getElementById('rightDetailArea');
+            if (!rightDiv) return;
+            if (!items.length) { rightDiv.innerHTML = `<div class="empty-msg">Keine Artikel</div>`; return; }
+            const allKeys = new Set();
+            items.forEach(it => Object.keys(it).forEach(k => allKeys.add(k)));
+            let cols = Array.from(allKeys);
+            const priority = ['SPEISEN_GROUP', 'SPEISEN_GROUP_SUB', 'FINAL_CNT_DATE', 'name', 'bezeichnung', 'Titel'];
+            let ordered = [...priority.filter(c => cols.includes(c)), ...cols.filter(c => !priority.includes(c))];
+            let html = `<h3 style="margin-bottom:1rem;">📋 ${escapeHtml(title)}</h3>
+                        <div style="overflow-x:auto; max-height:60vh;"><table class="data-table" style="width:100%;">`;
+            html += `<thead><tr style="background:#1e3932; color:white;">`;
+            for (let c of ordered) html += `<th class="${getColumnClass(c)}" style="padding:0.75rem;">${escapeHtml(c)}</th>`;
+            html += `</tr></thead><tbody>`;
+            for (let it of items) {
+                html += `<tr>`;
+                for (let c of ordered) html += `<td class="${getColumnClass(c)}" style="padding:0.7rem; border-bottom:1px solid #ede0d2;">${formatCellValue(it[c])}</td>`;
+                html += `</tr>`;
+            }
+            html += `</tbody>}</div>`;
+            rightDiv.innerHTML = html;
+        }
+
+        function clearAllSelections() {
+            document.querySelectorAll('.selected-tree-node').forEach(el => el.classList.remove('selected-tree-node'));
+        }
+
+        function setAllDetails(openState) {
+            const allDetails = document.querySelectorAll('#treeContainer details');
+            allDetails.forEach(detail => {
+                if (openState) detail.setAttribute('open', 'true');
+                else detail.removeAttribute('open');
+            });
+        }
+
+        // Vollständig überarbeitete Baumgenerierung: Verwendung von <details>/<summary> mit Gruppennamen, kein "Details"-Text
+        function renderTwoLevelTree() {
+            const container = document.getElementById('contentContainer');
+            if (!treeHierarchy || treeHierarchy.size === 0) {
+                container.innerHTML = `<div class="empty-msg">🌲 Keine Baumdaten.</div>`;
+                return;
+            }
+            const searchTerm = currentSearch.toLowerCase().trim();
+            let treeHtml = `<div class="split-layout">
+                <div class="tree-sidebar">
+                    <div class="tree-toolbar">
+                        <button id="expandAllBtn">▶ Alle aufklappen</button>
+                        <button id="collapseAllBtn">📁 Alle zuklappen</button>
+                    </div>
+                    <input type="text" id="treeSearchInput" class="search-input" placeholder="🔍 Gruppe / Untergruppe / Artikel durchsuchen" value="${escapeHtml(currentSearch)}">
+                    <div class="tree-container" id="treeContainer"></div>
+                </div>
+                <div class="right-content" id="rightDetailArea">✨ <strong>Interaktion:</strong> Klicken Sie auf einen <strong>Untergruppen-Namen</strong> (unterstrichen), um die Artikeltabelle anzuzeigen.<br>Klick auf einen <strong>Artikel</strong> zeigt alle Details. Oberste Gruppen dienen nur zum Auf‑/Zuklappen.</div>
+            </div>`;
+            container.innerHTML = treeHtml;
+            
+            const expandBtn = document.getElementById('expandAllBtn');
+            const collapseBtn = document.getElementById('collapseAllBtn');
+            if (expandBtn) expandBtn.addEventListener('click', () => setAllDetails(true));
+            if (collapseBtn) collapseBtn.addEventListener('click', () => setAllDetails(false));
+            
+            const searchInput = document.getElementById('treeSearchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    currentSearch = e.target.value;
+                    renderTwoLevelTree();
+                });
+            }
+            
+            const treeRootDiv = document.getElementById('treeContainer');
+            if (!treeRootDiv) return;
+            const rootUl = document.createElement('ul');
+            rootUl.style.listStyle = 'none';
+            rootUl.style.paddingLeft = '0';
+            
+            let anyVisible = false;
+            const sortedGroups = Array.from(treeHierarchy.keys()).sort((a,b) => a.localeCompare(b));
+            
+            for (const groupName of sortedGroups) {
+                const subMap = treeHierarchy.get(groupName);
+                let groupMatch = groupName.toLowerCase().includes(searchTerm);
+                let visibleSubgroups = [];
+                for (let [subName, items] of subMap.entries()) {
+                    let subMatch = subName.toLowerCase().includes(searchTerm);
+                    let filteredItems = [];
+                    if (searchTerm !== "") {
+                        filteredItems = items.filter(it => Object.values(it).some(v => v != null && v.toString().toLowerCase().includes(searchTerm)));
+                    } else {
+                        filteredItems = items;
+                    }
+                    if (subMatch || groupMatch || filteredItems.length > 0 || searchTerm === "") {
+                        visibleSubgroups.push({ subName, items: filteredItems, originalItems: items, subMatch });
+                    }
+                }
+                if (visibleSubgroups.length === 0 && !groupMatch) continue;
+                anyVisible = true;
+                
+                const groupLi = document.createElement('li');
+                groupLi.style.marginBottom = '0.5rem';
+                
+                const groupDetails = document.createElement('details');
+                if (searchTerm !== "") groupDetails.setAttribute('open', 'true');
+                else groupDetails.setAttribute('open', 'false');
+                const groupSummary = document.createElement('summary');
+                const totalSubs = subMap.size;
+                let totalArt = 0;
+                for (let [,its] of subMap.entries()) totalArt += its.length;
+                groupSummary.innerHTML = `<span class="group-summary-name"><strong>${escapeHtml(groupName)}</strong> (${totalArt} Artikel, ${totalSubs} Untergruppen)</span>`;
+                groupDetails.appendChild(groupSummary);
+                
+                const groupInnerUl = document.createElement('ul');
+                groupInnerUl.style.listStyle = 'none';
+                groupInnerUl.style.marginLeft = '0.8rem';
+                groupInnerUl.style.marginTop = '0.5rem';
+                
+                for (const { subName, items: filteredItems, originalItems, subMatch } of visibleSubgroups) {
+                    const subgroupLi = document.createElement('li');
+                    subgroupLi.style.marginBottom = '0.3rem';
+                    const subDetails = document.createElement('details');
+                    if (searchTerm !== "" && (subMatch || filteredItems.length > 0)) subDetails.setAttribute('open', 'true');
+                    
+                    const subSummary = document.createElement('summary');
+                    // Wichtiger Teil: Untergruppen-Name als klickbarer Teil (zeigt Tabelle)
+                    const subNameSpan = document.createElement('span');
+                    subNameSpan.className = 'subgroup-summary-name subgroup-clickable';
+                    subNameSpan.textContent = `${subName} (${originalItems.length} Artikel)`;
+                    subNameSpan.style.textDecoration = 'underline';
+                    subNameSpan.style.cursor = 'pointer';
+                    subNameSpan.style.fontWeight = '500';
+                    subNameSpan.addEventListener('click', (e) => {
+                        e.stopPropagation();  // verhindert toggeln von details
+                        showSubgroupItems(groupName, subName, originalItems);
+                        clearAllSelections();
+                        subNameSpan.classList.add('selected-tree-node');
+                    });
+                    subSummary.appendChild(subNameSpan);
+                    subDetails.appendChild(subSummary);
+                    
+                    const articleUl = document.createElement('ul');
+                    articleUl.className = 'tree-article-list';
+                    const itemsToRender = (searchTerm !== "") ? filteredItems : originalItems;
+                    for (const art of itemsToRender) {
+                        const artLi = document.createElement('li');
+                        artLi.className = 'tree-article';
+                        const title = art.FINAL_CNT_DATE || art.name || art.SPEISE || art.Titel || 'Artikel';
+                        artLi.textContent = `🍽️ ${escapeHtml(String(title))}`;
+                        artLi.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            showArticleDetail(art);
+                            clearAllSelections();
+                            artLi.classList.add('selected-tree-node');
+                        });
+                        articleUl.appendChild(artLi);
+                    }
+                    subDetails.appendChild(articleUl);
+                    subgroupLi.appendChild(subDetails);
+                    groupInnerUl.appendChild(subgroupLi);
+                }
+                groupDetails.appendChild(groupInnerUl);
+                groupLi.appendChild(groupDetails);
+                rootUl.appendChild(groupLi);
+            }
+            
+            if (!anyVisible) treeRootDiv.innerHTML = '<div class="empty-msg">🔍 Keine Treffer für die Suche</div>';
+            else treeRootDiv.appendChild(rootUl);
+        }
+        
+        // Tabs initialisieren
+        function buildTabBar() {
+            const bar = document.getElementById('tabBar');
+            bar.innerHTML = '';
+            endpoints.forEach((ep, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'tab-btn';
+                if (idx === 0) btn.classList.add('active');
+                btn.innerHTML = ep.name;
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    if (ep.type === 'tree') fetchAndBuildTree(ep.url);
+                    else renderTableEndpoint(ep.url);
+                });
+                bar.appendChild(btn);
+            });
+            renderTableEndpoint(endpoints[0].url);
+        }
+        buildTabBar();
+    })();
+</script>
+</body>
+</html>

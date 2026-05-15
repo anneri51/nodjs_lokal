@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Starbucks® – Multi-Getränke Explorer | Gruppensortierung nach sort_db</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #f5efe9;
+            color: #2c221b;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .tab-bar {
+            background: white;
+            border-bottom: 1px solid #e2d9d2;
+            padding: 0 24px;
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.02);
+            z-index: 20;
+        }
+        .tab-button {
+            background: none;
+            border: none;
+            padding: 14px 24px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #5e4b38;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .tab-button.active {
+            color: #1e5a3a;
+            border-bottom-color: #1e7b4b;
+            background: #fefcf9;
+        }
+        .tab-button:hover:not(.active) {
+            background: #f3ede7;
+            color: #2c5a2e;
+        }
+        .panes {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+        .pane {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            display: none;
+        }
+        .pane.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100%;
+            width: 100%;
+        }
+
+        .sidebar {
+            width: 400px;
+            background: white;
+            border-right: 1px solid #e2d9d2;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .sidebar-header {
+            padding: 20px 16px 12px;
+            border-bottom: 2px solid #1e7b4b;
+            background: #ffffff;
+        }
+        .sidebar-header h2 {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: #1e5a3a;
+        }
+        .filter-section {
+            padding: 12px 16px;
+            background: #fefcf9;
+            border-bottom: 1px solid #e9e0d8;
+            position: sticky;
+            top: 0;
+            z-index: 15;
+        }
+        .filter-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .searchable-dropdown input {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 40px;
+            border: 1px solid #d6cbbc;
+            font-size: 0.85rem;
+        }
+        .tree-filter {
+            margin-top: 12px;
+            margin-bottom: 8px;
+        }
+        .tree-filter input {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 40px;
+            border: 1px solid #d6cbbc;
+            font-size: 0.8rem;
+            background: #fff9f5;
+        }
+        .multiselect-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        .multiselect-actions button {
+            background: #ede3db;
+            border: none;
+            border-radius: 40px;
+            padding: 6px 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .multiselect-actions button:hover {
+            background: #d4c9be;
+        }
+        .selected-counter {
+            background: #1e7b4b;
+            color: white;
+            border-radius: 24px;
+            padding: 4px 12px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            display: inline-block;
+            margin-left: 8px;
+        }
+        .tree-container {
+            padding: 12px;
+            flex: 1;
+            overflow-y: auto;
+        }
+        .tree, .tree ul {
+            list-style: none;
+            padding-left: 20px;
+        }
+        .tree { padding-left: 0; }
+        .tree li { margin: 4px 0; }
+        .tree .node {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 8px;
+            border-radius: 28px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .tree .node:hover { background: #ede3db; }
+        .toggle-icon {
+            width: 18px;
+            cursor: pointer;
+            color: #1e7b4b;
+            font-size: 0.7rem;
+            user-select: none;
+        }
+        .getraenk-checkbox {
+            margin-left: 2px;
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: #1e7b4b;
+        }
+        .node-content {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .node-badge {
+            background: #e2d9d2;
+            border-radius: 30px;
+            padding: 0 8px;
+            font-size: 0.65rem;
+        }
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 24px;
+            background: #faf7f3;
+        }
+        .grouped-drinks-container {
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+        }
+        .drink-card {
+            background: white;
+            border-radius: 28px;
+            border: 1px solid #e2d9d2;
+            overflow: hidden;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+        }
+        .drink-card h2 {
+            background: #fef3e8;
+            margin: 0;
+            padding: 14px 20px;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #1e5a3a;
+            border-bottom: 2px solid #d4c9be;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .sort-reset {
+            font-size: 0.7rem;
+            background: #e2d9d2;
+            padding: 4px 12px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: normal;
+        }
+        .sort-reset:hover {
+            background: #c8beb2;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            background: white;
+            font-size: 0.7rem;
+        }
+        .nutrition-master-table {
+            width: max-content;
+            min-width: 100%;
+            border-collapse: collapse;
+        }
+        .nutrition-master-table th, .nutrition-master-table td {
+            border: 1px solid #e9dfd6;
+            padding: 6px 8px;
+            vertical-align: top;
+            text-align: center;
+        }
+        .nutrition-master-table th {
+            background: #f3ede7;
+            font-weight: 800;
+            color: #2c5a2e;
+            position: sticky;
+            top: 0;
+            white-space: nowrap;
+        }
+        .size-group-header { background: #e8dfd7; }
+        .allergen-group { background: #fff3eb; border-left: 2px solid #d4bca8; }
+        .zusatz-group { background: #fef5ed; border-left: 2px solid #b8a38c; }
+        .subnutrient { font-size: 0.65rem; font-weight: normal; display: block; color: #6b4e2e; }
+        .pk-badge { font-family: monospace; background: #ebe1d7; padding: 2px 6px; border-radius: 20px; }
+        .text-left { text-align: left; }
+        .empty-message, .error-message { text-align: center; padding: 48px; color: #a28e78; font-style: italic; }
+        .sortable-db {
+            cursor: pointer;
+            user-select: none;
+            background-color: #e8dfd7;
+        }
+        .sortable-db:hover {
+            background-color: #d4c9be;
+        }
+        .sort-indicator {
+            display: inline-block;
+            margin-left: 6px;
+            font-size: 0.7rem;
+        }
+        
+        .flat-data-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background: #faf7f3;
+            padding: 20px 24px;
+            gap: 16px;
+            overflow: hidden;
+        }
+        .flat-search-bar {
+            background: white;
+            border-radius: 48px;
+            padding: 8px 20px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            border: 1px solid #e2d9d2;
+        }
+        .flat-search-bar input {
+            flex: 1;
+            border: none;
+            padding: 12px 8px;
+            font-size: 0.9rem;
+            outline: none;
+            background: transparent;
+            font-weight: 500;
+        }
+        .flat-table-wrapper {
+            flex: 1;
+            overflow: auto;
+            background: white;
+            border-radius: 24px;
+            border: 1px solid #e2d9d2;
+        }
+        .flat-data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.7rem;
+            min-width: 1200px;
+        }
+        .flat-data-table th {
+            position: sticky;
+            top: 0;
+            background: #2c5a2e;
+            color: white;
+            padding: 8px 6px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .flat-data-table td {
+            padding: 5px 6px;
+            border-bottom: 1px solid #ecdfd5;
+        }
+        .record-count {
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: #e9dfd7;
+            padding: 6px 12px;
+            border-radius: 24px;
+        }
+        .status-badge {
+            background: #e9dfd7;
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 0.7rem;
+            display: inline-block;
+            margin-left: 12px;
+        }
+        .filter-hint {
+            font-size: 0.7rem;
+            color: #7e6b58;
+            margin-top: 6px;
+            padding-left: 12px;
+        }
+        @media (max-width: 800px) { .sidebar { width: 280px; } }
+    </style>
+</head>
+<body>
+<div style="display: flex; flex-direction: column; height: 100vh;">
+    <div class="tab-bar">
+        <button class="tab-button active" data-tab="tab1">🍹 Multi-Getränke Explorer | sortierbare Gruppen (sort_db)</button>
+        <button class="tab-button" data-tab="tab2">📊 Alle Webservice-Daten (Flat Table)</button>
+    </div>
+    <div class="panes">
+        <!-- Tab 1: Multi-Select + Tree Filter + sortierbare Gruppen -->
+        <div id="paneExplorer" class="pane active">
+            <div class="app-container">
+                <div class="sidebar">
+                    <div class="sidebar-header">
+                        <h2>📁 Getränke-Explorer <span id="apiStatusBadge" class="status-badge">⚡ Live API</span></h2>
+                        <p>✅ Mehrfachauswahl | Live-Filter | Jede Gruppe sortierbar nach <strong>sort_db</strong></p>
+                    </div>
+                    <div class="filter-section">
+                        <div class="filter-label">
+                            <span>🔍 GETRÄNK DIREKT AUSWÄHLEN</span>
+                            <span id="drinkCountBadge" style="background:#e2d9d2; padding:2px 8px; border-radius:20px;">0</span>
+                        </div>
+                        <div class="searchable-dropdown">
+                            <input type="text" id="getraenkSearchInput" placeholder="🔎 Getränk suchen & direkt auswählen ..." list="getraenkList" autocomplete="off">
+                            <datalist id="getraenkList"></datalist>
+                        </div>
+                        <div class="tree-filter">
+                            <input type="text" id="treeFilterInput" placeholder="🔍 Baum filtern (Getränkname enthält ...)" autocomplete="off">
+                            <div class="filter-hint">✏️ Filtert die Baumstruktur – Checkboxen bleiben erhalten</div>
+                        </div>
+                        <div class="multiselect-actions">
+                            <button id="selectAllBtn">✅ Alle (gefiltert) auswählen</button>
+                            <button id="clearAllBtn">❌ Alle abwählen</button>
+                            <span id="selectedCountBadge" class="selected-counter">0 ausgewählt</span>
+                        </div>
+                    </div>
+                    <div class="tree-container" id="treeContainer">🌿 Lade Daten von Webservice...</div>
+                </div>
+                <div class="main-content" id="mainContentArea">
+                    <div id="detailContent">✨ Wählen Sie ein oder mehrere Getränke über die Checkboxen aus. Klicken Sie auf die ⚙️ sort_db-Spaltenkopfzeile in jeder Tabelle, um die Varianten nach sort_db zu sortieren (aufsteigend/absteigend).</div>
+                </div>
+            </div>
+        </div>
+        <!-- Tab 2: Flat Data -->
+        <div id="paneAllData" class="pane">
+            <div class="flat-data-container">
+                <div class="flat-search-bar">
+                    <input type="text" id="flatSearchInput" placeholder="🔍 Suchen in allen Daten (Getränk, Milchart, Nährwerte...)" autocomplete="off">
+                    <span>🔎 live filter</span>
+                    <span id="flatRecordCount" class="record-count">0 Einträge</span>
+                </div>
+                <div class="flat-table-wrapper" id="flatTableWrapper">
+                    <div class="empty-message">📡 Daten werden geladen ...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ================================ WEBSERVICE =================================
+    const API_URL = 'http://localhost:5000/star_starbucks_getraenke/full';
+    let allItems = [];
+    
+    // Globale Strukturen für Tab1
+    let structuredData = new Map();        // Hauptgruppe -> Map<Getränk, Map<Milch, Set<flavoured>>
+    let drinkToVariants = new Map();        // Getränk -> Map<Milch, Map<flavoured, {pk, sizes, extraBySize}>>
+    let milkNutritionMap = new Map();       // key: `${pk}|${milk}|${sizeKey}` -> nutrition obj
+    let extraAttributesMap = new Map();     // key: `${pk}|${milk}|${sizeKey}|${flavoured}` -> attribut Objekt
+    let allGetraenkNames = [];
+    
+    // Multi-Select State
+    let selectedGetraenke = new Set();       // Namen der ausgewählten Getränke
+    let currentTreeFilter = "";             // aktueller Filterwert für Baum
+    
+    // Sortierstatus pro Getränk (für sort_db)
+    let drinkSortMap = new Map();  // key: getraenkName, value: 'asc' oder 'desc'
+    
+    // Globale Rohdaten für Tab2
+    let flatRawData = [];
+    let flatSortField = "PK_STAR_STARBUCKS_GETRAENKE_SIMPLE";
+    let flatSortDirection = "asc";
+    
+    // ========== Hilfsfunktionen ==========
+    const SIZE_ORDER = ["mini", "short", "single", "doppio", "tall", "grande", "venti", "1 Pump", "2 Pump", "3 Pump", "4 Pump", "5 Pump", "ohne"];
+    const SIZE_LABELS = { mini:"Mini", short:"Short", single:"Single", doppio:"Doppio", tall:"Tall", grande:"Grande", venti:"Venti", "1 Pump":"1 Pump", "2 Pump":"2 Pump", "3 Pump":"3 Pump", "4 Pump":"4 Pump", "5 Pump":"5 Pump", ohne:"Ohne" };
+
+    const NUTRIENT_MAPPING = [
+        { dbField: "groesse_kilojoules_einh_kj", label: "kJ", unit: "kJ", format: v => v ? Math.round(v) : "—" },
+        { dbField: "kalorien_einh_kcal", label: "kcal", unit: "kcal", format: v => v ? Math.round(v) : "—" },
+        { dbField: "fett_total_einh_g", label: "Fett", unit: "g", format: v => v ? v.toFixed(1) : "—" },
+        { dbField: "davon_gesaettigte_fettsaeuren_einh_g", label: "ges.Fetts.", unit: "g", format: v => v ? v.toFixed(1) : "—" },
+        { dbField: "kohlenhydrate_total_einh_g", label: "Kohlenhydr.", unit: "g", format: v => v ? v.toFixed(1) : "—" },
+        { dbField: "davon_zucker_einh_g", label: "Zucker", unit: "g", format: v => v ? v.toFixed(1) : "—" },
+        { dbField: "ballaststoffe_einh_g", label: "Ballastst.", unit: "g", format: v => v ? v.toFixed(1) : "—" },
+        { dbField: "eiweiss_einh_g", label: "Eiweiß", unit: "g", format: v => v ? v.toFixed(1) : "—" },
+        { dbField: "salzgeh_alt_einh_g", label: "Salz", unit: "g", format: v => v ? v.toFixed(2) : "—" },
+        { dbField: "koffein_einh_mg", label: "Koffein", unit: "mg", format: v => v ? Math.round(v) : "—" }
+    ];
+
+    const META_COLUMNS = [
+        { id: "VEGAN", label: "🌱 Vegan" }, { id: "VEGETARISCH", label: "🥚 Vegetarisch" }, { id: "koffeinhinweis", label: "☕ Koff." },
+        { id: "flavoured_flag", label: "🍬 Flavoured" }, { id: "latte", label: "🥛 Latte" }, { id: "seasonal", label: "🎄 Seasonal" },
+        { id: "season", label: "📅 Season" }, { id: "sugar_free", label: "🚫 Sugar free" }, { id: "protein", label: "💪 Protein" }, { id: "sahne", label: "🍦 Sahne" }
+    ];
+    const ALLERGEN_FIELDS = [
+        { key: "ALLERGENE_Glutenhaltige_Getreide", label: "Glutenhaltig", icon: "🌾" }, { key: "ALLERGENE_Milch_Laktose", label: "Milch_Laktos", icon: "🥛" },
+        { key: "ALLERGENE_Ei", label: "Ei", icon: "🥚" }, { key: "ALLERGENE_Soja", label: "Soja", icon: "🫘" }, { key: "ALLERGENE_Schalenfrüchte", label: "Schalenfrüch", icon: "🌰" },
+        { key: "ALLERGENE_SO2_und_Sulphite", label: "SO2_und_Sulp", icon: "⚗️" }, { key: "ALLERGENE_Sesam", label: "Sesam", icon: "🌿" }, { key: "ALLERGENE_Erdnuesse", label: "Erdnuesse", icon: "🥜" },
+        { key: "ALLERGENE_Senf", label: "Senf", icon: "🌱" }, { key: "ALLERGENE_Sellerie", label: "Sellerie", icon: "🥬" }, { key: "ALLERGENE_Lupinen", label: "Lupinen", icon: "🌼" },
+        { key: "ALLERGENE_Krebs", label: "Krebs", icon: "🦀" }, { key: "ALLERGENE_Weichtiere", label: "Weichtiere", icon: "🐚" }, { key: "ALLERGENE_Fisch", label: "Fisch", icon: "🐟" }
+    ];
+    const ZUSATZSTOFF_FIELDS = [
+        { key: "ZUSATZSTOFFE_Konservierungsmittel", label: "Konservi", icon: "🧪" }, { key: "ZUSATZSTOFFE_geschwaerzt", label: "geschwae", icon: "⚫" },
+        { key: "ZUSATZSTOFFE_Geschmacksverstaerker", label: "Geschmac", icon: "👅" }, { key: "ZUSATZSTOFFE_Antioxidationsmittel", label: "Antioxid", icon: "🛡️" },
+        { key: "ZUSATZSTOFFE_Farbstoffe", label: "Farbstof", icon: "🎨" }, { key: "ZUSATZSTOFFE_geschwefelt", label: "geschwef", icon: "💨" },
+        { key: "ZUSATZSTOFFE_Phosphat", label: "Phosphat", icon: "🧂" }, { key: "ZUSATZSTOFFE_mit_Suessungsmitteln", label: "mit_Sues", icon: "🍬" }
+    ];
+
+    function escapeHtml(s) { return s ? String(s).replace(/[&<>]/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[m])) : ''; }
+    function parseNumber(val) { if (val === undefined || val === null) return null; let num = parseFloat(String(val).trim().replace(',','.')); return isNaN(num) ? null : num; }
+    function formatBooleanFlag(val) {
+        if (val === undefined || val === null || val === '') return '—';
+        const str = String(val).toLowerCase();
+        if (str === 'ja' || str === 'true' || str === '1' || str === '3' || str === '4' ||str === '✅') return '✅';
+        if (str === 'nein' || str === 'false' || str === '2' || str === '0' || str === '❌') return '❌';
+        return String(val);
+    }
+
+    function extractSizeKey(sizeRaw) {
+        if (!sizeRaw) return null;
+        const raw = String(sizeRaw).trim().toLowerCase();
+        if (raw.includes('mini')) return 'mini'; if (raw.includes('short')) return 'short'; if (raw.includes('single')) return 'single';
+        if (raw.includes('doppio')) return 'doppio'; if (raw.includes('tall')) return 'tall'; if (raw.includes('grande')) return 'grande';
+        if (raw.includes('venti')) return 'venti'; if (raw.includes('ohne')) return 'ohne';
+        const pumpMatch = raw.match(/(\d+)\s*pump/i);
+        if (pumpMatch) { let num = pumpMatch[1]; if (num >= 1 && num <= 5) return `${num} Pump`; return '1 Pump'; }
+        if (raw.includes('pump')) return '1 Pump';
+        return null;
+    }
+
+    function extractAllAttributes(row) {
+        let attrs = {};
+        for (let m of META_COLUMNS) attrs[m.id] = (row[m.id] !== undefined && row[m.id] !== null && row[m.id] !== '') ? formatBooleanFlag(row[m.id]) : '—';
+        attrs.temperatur = (row.temperature || row.Temperature || row.temperatur) ? formatBooleanFlag(row.temperature || row.Temperatur) : '—';
+        attrs.sort_db = (row.sort_db !== undefined && row.sort_db !== null && row.sort_db !== '') ? String(row.sort_db) : '—';
+        for (let a of ALLERGEN_FIELDS) attrs[a.key] = (row[a.key] !== undefined && row[a.key] !== null && row[a.key] !== '') ? formatBooleanFlag(row[a.key]) : '—';
+        for (let z of ZUSATZSTOFF_FIELDS) attrs[z.key] = (row[z.key] !== undefined && row[z.key] !== null && row[z.key] !== '') ? formatBooleanFlag(row[z.key]) : '—';
+        let combined = [];
+        if (row.Merkmale && row.Merkmale !== '') combined.push(row.Merkmale);
+        if (row.Allergene && row.Allergene !== '') combined.push(row.Allergene);
+        attrs.freitext = combined.join(' · ') || '—';
+        return attrs;
+    }
+
+    function buildDataStructures(items) {
+        structuredData.clear(); drinkToVariants.clear(); milkNutritionMap.clear(); extraAttributesMap.clear();
+        const tempDrinkSet = new Set();
+        for (let row of items) {
+            const pk = row.PK_STAR_STARBUCKS_GETRAENKE_SIMPLE || row.pk;
+            if (!pk) continue;
+            const getraenk = (row.GETRAENK || row.getraenk || 'Unbekannt').trim();
+            let mainGroup = row.MAIN_GETRAENK || row.main_getraenk || 'Andere';
+            let milk = row.MILCHART || row.milchart || '--- (keine Milchart)';
+            let flavouredRaw = (row.flavoured !== undefined && row.flavoured !== null) ? String(row.flavoured) : '';
+            let sizeRaw = (row.getraenk_groesse || row.groesse || '').trim();
+            let sizeKey = extractSizeKey(sizeRaw);
+            if (!sizeKey) continue;
+            tempDrinkSet.add(getraenk);
+            let nutrition = {};
+            for (let n of NUTRIENT_MAPPING) { let val = parseNumber(row[n.dbField]); nutrition[n.dbField] = (val !== null && !isNaN(val)) ? val : null; }
+            const mapKey = `${pk}|${milk}|${sizeKey}`;
+            milkNutritionMap.set(mapKey, nutrition);
+            const extraKey = `${pk}|${milk}|${sizeKey}|${flavouredRaw}`;
+            extraAttributesMap.set(extraKey, extractAllAttributes(row));
+            if (!structuredData.has(mainGroup)) structuredData.set(mainGroup, new Map());
+            const getraenkMap = structuredData.get(mainGroup);
+            if (!getraenkMap.has(getraenk)) getraenkMap.set(getraenk, new Map());
+            const milkMap = getraenkMap.get(getraenk);
+            if (!milkMap.has(milk)) milkMap.set(milk, new Set());
+            milkMap.get(milk).add(flavouredRaw);
+            if (!drinkToVariants.has(getraenk)) drinkToVariants.set(getraenk, new Map());
+            const variantMap = drinkToVariants.get(getraenk);
+            if (!variantMap.has(milk)) variantMap.set(milk, new Map());
+            const flavMap = variantMap.get(milk);
+            if (!flavMap.has(flavouredRaw)) flavMap.set(flavouredRaw, { pk, sizes: new Set(), extraBySize: new Map() });
+            const info = flavMap.get(flavouredRaw);
+            info.sizes.add(sizeKey);
+            info.extraBySize.set(sizeKey, extraKey);
+        }
+        for (let [getraenk, milkMap] of drinkToVariants.entries()) {
+            for (let [milk, flavMap] of milkMap.entries()) {
+                for (let [flav, info] of flavMap.entries()) info.sizesArray = Array.from(info.sizes).sort((a,b) => SIZE_ORDER.indexOf(a) - SIZE_ORDER.indexOf(b));
+            }
+        }
+        allGetraenkNames = Array.from(tempDrinkSet).sort((a,b) => a.localeCompare(b, 'de'));
+    }
+
+    // === Tabelle für ein einzelnes Getränk mit gruppeninterner Sortierung nach sort_db ===
+    function renderSingleGetraenkTable(getraenkName) {
+        const variantMap = drinkToVariants.get(getraenkName);
+        if (!variantMap || variantMap.size === 0) return `<div class="empty-message">⚠️ Keine Daten für ${escapeHtml(getraenkName)}</div>`;
+        let allSizesSet = new Set();
+        for (let [milk, flavMap] of variantMap.entries()) for (let [flav, info] of flavMap.entries()) info.sizesArray.forEach(s => allSizesSet.add(s));
+        const availableSizes = SIZE_ORDER.filter(s => allSizesSet.has(s));
+        if (availableSizes.length === 0) return `<div class="empty-message">Keine Größeninformationen (inkl. Pump-Sizes 1-5 Pump)</div>`;
+        
+        let rows = [];
+        for (let [milk, flavMap] of variantMap.entries()) {
+            for (let [flavouredRaw, { pk, sizesArray, extraBySize }] of flavMap.entries()) {
+                const firstSize = sizesArray[0];
+                let extra = (firstSize && extraBySize.has(firstSize)) ? extraAttributesMap.get(extraBySize.get(firstSize)) || {} : {};
+                rows.push({ milk, flavouredRaw, pk, sizesArray, extraBySize, extra });
+            }
+        }
+        
+        // Default-Sortierung: Milch, dann flavoured
+        const defaultSort = (a,b) => {
+            if (a.milk !== b.milk) return a.milk.localeCompare(b.milk);
+            return a.flavouredRaw.localeCompare(b.flavouredRaw);
+        };
+        
+        // Angewandte Sortierung: wenn sort_db aktiv
+        const sortOrder = drinkSortMap.get(getraenkName);
+        if (sortOrder === 'asc' || sortOrder === 'desc') {
+            rows.sort((a,b) => {
+                let valA = a.extra.sort_db || '—';
+                let valB = b.extra.sort_db || '—';
+                // Versuche numerisch zu parsen
+                let numA = parseFloat(String(valA).replace(',','.'));
+                let numB = parseFloat(String(valB).replace(',','.'));
+                let aIsNum = !isNaN(numA) && valA !== '—';
+                let bIsNum = !isNaN(numB) && valB !== '—';
+                if (aIsNum && bIsNum) {
+                    return sortOrder === 'asc' ? numA - numB : numB - numA;
+                } else if (aIsNum) return sortOrder === 'asc' ? -1 : 1;
+                else if (bIsNum) return sortOrder === 'asc' ? 1 : -1;
+                else return sortOrder === 'asc' ? String(valA).localeCompare(String(valB)) : String(valB).localeCompare(String(valA));
+            });
+        } else {
+            rows.sort(defaultSort);
+        }
+        
+        // Header mit klickbarer sort_db Spalte
+        const indicator = sortOrder ? (sortOrder === 'asc' ? '▲' : '▼') : '⚬';
+        const sortDbHeader = `<th rowspan="3" class="sortable-db" onclick="window.toggleSortForDrink('${escapeHtml(getraenkName)}')">⚙️ sort_db <span class="sort-indicator">${indicator}</span></th>`;
+        
+        let header = `<thead><tr><th rowspan="3">🔑 PK</th><th rowspan="3">🥛 MILCHART</th><th rowspan="3">🍬 flavoured</th><th rowspan="3">📏 Verfügbare Größen</th><th rowspan="3">🌡️ TEMPERATUR</th>${sortDbHeader}`;
+        for (let sz of availableSizes) header += `<th colspan="${NUTRIENT_MAPPING.length}" rowspan="2" class="size-group-header">${SIZE_LABELS[sz] || sz}</th>`;
+        for (let m of META_COLUMNS) header += `<th rowspan="3">${m.label}</th>`;
+        header += `<th colspan="${ALLERGEN_FIELDS.length}" rowspan="2" class="allergen-group">🌿 Allergene</th><th colspan="${ZUSATZSTOFF_FIELDS.length}" rowspan="2" class="zusatz-group">🧪 Zusatzstoffe</th><th rowspan="3">📝 Merkmale+Allergene</th></tr><tr>`;
+        for (let sz of availableSizes) for (let nut of NUTRIENT_MAPPING) header += `<th>${nut.label}<span class="subnutrient">${nut.unit}</span></th>`;
+        header += `</tr><tr>`;
+        for (let i=0;i<availableSizes.length*NUTRIENT_MAPPING.length;i++) header += `<th></th>`;
+        for(let a of ALLERGEN_FIELDS) header += `<th class="allergen-group">${a.icon} ${a.label}</th>`;
+        for(let z of ZUSATZSTOFF_FIELDS) header += `<th class="zusatz-group">${z.icon} ${z.label}</th>`;
+        header += `</tr></thead>`;
+        
+        let body = '';
+        for (let row of rows) {
+            let cells = `<td class="text-left"><span class="pk-badge">🔑 ${escapeHtml(row.pk)}</span></td><td class="text-left"><strong>${escapeHtml(row.milk)}</strong></td><td>${row.flavouredRaw ? escapeHtml(row.flavouredRaw) : '❌'}</td><td class="text-left">${row.sizesArray.map(s=>SIZE_LABELS[s]||s).join(', ')}`;
+            cells += `</td><td>${escapeHtml(row.extra.temperatur || '—')}</td><td class="text-left">${escapeHtml(row.extra.sort_db || '—')}</td>`;
+            for (let sz of availableSizes) {
+                if (!row.sizesArray.includes(sz)) { for(let n of NUTRIENT_MAPPING) cells += `<td>—</td>`; continue; }
+                const mapKey = `${row.pk}|${row.milk}|${sz}`;
+                const nutrition = milkNutritionMap.get(mapKey) || {};
+                for (let n of NUTRIENT_MAPPING) cells += `<td>${n.format(nutrition[n.dbField])}</td>`;
+            }
+            for(let m of META_COLUMNS) cells += `<td>${escapeHtml(row.extra[m.id] || '—')}</td>`;
+            for(let a of ALLERGEN_FIELDS) cells += `<td class="allergen-group">${escapeHtml(row.extra[a.key] || '—')}</td>`;
+            for(let z of ZUSATZSTOFF_FIELDS) cells += `<td class="zusatz-group">${escapeHtml(row.extra[z.key] || '—')}</td>`;
+            cells += `<td class="text-left">${escapeHtml(row.extra.freitext || '—')}</td>`;
+            body += `<tr>${cells}</tr>`;
+        }
+        const resetButton = (sortOrder ? `<span class="sort-reset" onclick="window.resetSortForDrink('${escapeHtml(getraenkName)}')">↺ Sortierung zurücksetzen</span>` : '');
+        return `<div class="drink-card"><h2>🍹 ${escapeHtml(getraenkName)} <span style="font-size:0.8rem;">${rows.length} Varianten</span>${resetButton}</h2><div class="table-wrapper"><table class="nutrition-master-table">${header}<tbody>${body}</tbody></table></div></div>`;
+    }
+    
+    // === Zeige alle ausgewählten Getränke gruppiert ===
+    function renderSelectedGroupedTables() {
+        const container = document.getElementById('detailContent');
+        if (!container) return;
+        if (selectedGetraenke.size === 0) {
+            container.innerHTML = `<div class="empty-message">✨ Keine Getränke ausgewählt. Bitte wählen Sie über die Checkboxen im Baum oder die Suche ein oder mehrere Getränke aus. Klicken Sie dann auf die "sort_db"-Spalte, um die Varianten zu sortieren.</div>`;
+            return;
+        }
+        let html = `<div class="grouped-drinks-container">`;
+        const sortedSelected = Array.from(selectedGetraenke).sort((a,b)=>a.localeCompare(b));
+        for (let drink of sortedSelected) {
+            if (drinkToVariants.has(drink)) {
+                html += renderSingleGetraenkTable(drink);
+            } else {
+                html += `<div class="empty-message">⚠️ ${escapeHtml(drink)} – Daten nicht verfügbar.</div>`;
+            }
+        }
+        html += `</div>`;
+        container.innerHTML = html;
+        document.getElementById('selectedCountBadge').innerText = `${selectedGetraenke.size} ausgewählt`;
+    }
+    
+    // Globale Funktionen für Sortierung (werden im Render inline aufgerufen)
+    window.toggleSortForDrink = function(drinkName) {
+        const current = drinkSortMap.get(drinkName);
+        if (current === 'asc') drinkSortMap.set(drinkName, 'desc');
+        else if (current === 'desc') drinkSortMap.set(drinkName, 'asc');
+        else drinkSortMap.set(drinkName, 'asc');
+        renderSelectedGroupedTables();
+    };
+    window.resetSortForDrink = function(drinkName) {
+        drinkSortMap.delete(drinkName);
+        renderSelectedGroupedTables();
+    };
+    
+    // === Baum mit Filter (zeigt nur Getränke, die Filter enthalten) ===
+    function buildFilteredTreeHtml() {
+        let html = '<ul class="tree">';
+        for (let main of Array.from(structuredData.keys()).sort()) {
+            let getraenkeMap = structuredData.get(main);
+            // Getränke filtern
+            let filteredGetraenke = Array.from(getraenkeMap.keys()).filter(name => 
+                currentTreeFilter === "" || name.toLowerCase().includes(currentTreeFilter.toLowerCase())
+            ).sort();
+            if (filteredGetraenke.length === 0) continue;
+            
+            html += `<li><div class="node" data-type="main"><span class="toggle-icon">▼</span><span class="node-content">📂 ${escapeHtml(main)}<span class="node-badge">${filteredGetraenke.length}</span></span></div><ul class="children">`;
+            for (let getraenk of filteredGetraenke) {
+                const isChecked = selectedGetraenke.has(getraenk) ? 'checked' : '';
+                const milchCount = getraenkeMap.get(getraenk).size;
+                html += `<li><div class="node" data-type="getraenk" data-name="${escapeHtml(getraenk)}"><span class="toggle-icon">▼</span><input type="checkbox" class="getraenk-checkbox" value="${escapeHtml(getraenk)}" ${isChecked}><span class="node-content">🍹 ${escapeHtml(getraenk)}<span class="node-badge">${milchCount}</span></span></div><ul class="children">`;
+                for (let milk of Array.from(getraenkeMap.get(getraenk).keys()).sort()) {
+                    html += `<li><div class="node" data-type="milch"><span class="toggle-icon" style="visibility:hidden;">&nbsp;</span><span class="node-content">🥛 ${escapeHtml(milk)}<span class="node-badge">${getraenkeMap.get(getraenk).get(milk).size}</span></span></div></li>`;
+                }
+                html += `</ul></li>`;
+            }
+            html += `</ul></li>`;
+        }
+        html += '</ul>';
+        return html;
+    }
+    
+    function refreshTreeWithFilter() {
+        const treeContainer = document.getElementById('treeContainer');
+        if (!treeContainer) return;
+        treeContainer.innerHTML = buildFilteredTreeHtml();
+        document.querySelectorAll('.node .toggle-icon').forEach(icon => {
+            icon.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const li = icon.closest('li');
+                const childUl = li?.querySelector(':scope > .children');
+                if (childUl) {
+                    const isVisible = childUl.style.display !== 'none';
+                    childUl.style.display = isVisible ? 'none' : 'block';
+                    icon.textContent = isVisible ? '▶' : '▼';
+                }
+            });
+        });
+        document.querySelectorAll('.getraenk-checkbox').forEach(cb => {
+            cb.addEventListener('change', (e) => {
+                e.stopPropagation();
+                const drinkName = cb.value;
+                if (cb.checked) selectedGetraenke.add(drinkName);
+                else selectedGetraenke.delete(drinkName);
+                renderSelectedGroupedTables();
+                document.querySelectorAll(`.getraenk-checkbox[value="${escapeHtml(drinkName)}"]`).forEach(other => other.checked = selectedGetraenke.has(drinkName));
+                document.getElementById('selectedCountBadge').innerText = `${selectedGetraenke.size} ausgewählt`;
+            });
+        });
+        document.querySelectorAll('.children').forEach(ul => ul.style.display = 'block');
+    }
+    
+    function selectAllFiltered() {
+        const visibleGetraenke = new Set();
+        for (let main of structuredData.keys()) {
+            let getraenkeMap = structuredData.get(main);
+            for (let name of getraenkeMap.keys()) {
+                if (currentTreeFilter === "" || name.toLowerCase().includes(currentTreeFilter.toLowerCase())) {
+                    visibleGetraenke.add(name);
+                }
+            }
+        }
+        visibleGetraenke.forEach(name => selectedGetraenke.add(name));
+        refreshTreeWithFilter();
+        renderSelectedGroupedTables();
+    }
+    
+    function clearAllGetraenke() {
+        selectedGetraenke.clear();
+        refreshTreeWithFilter();
+        renderSelectedGroupedTables();
+    }
+    
+    function syncSelectedFromOutside() {
+        refreshTreeWithFilter();
+        renderSelectedGroupedTables();
+    }
+    
+    function setupDirectSelection() {
+        const searchInput = document.getElementById('getraenkSearchInput');
+        const datalist = document.getElementById('getraenkList');
+        if (searchInput) {
+            searchInput.addEventListener('change', () => {
+                let val = searchInput.value.trim();
+                let match = allGetraenkNames.find(n => n.toLowerCase() === val.toLowerCase());
+                if (match) {
+                    if (!selectedGetraenke.has(match)) selectedGetraenke.add(match);
+                    syncSelectedFromOutside();
+                    searchInput.value = '';
+                }
+            });
+        }
+        if (datalist) datalist.innerHTML = allGetraenkNames.map(n => `<option value="${escapeHtml(n)}">`).join('');
+        document.getElementById('drinkCountBadge').innerText = allGetraenkNames.length;
+    }
+    
+    // ================= TAB 2: FLAT TABLE =================
+    function buildFlatTableHeaders() {
+        if(!flatRawData.length) return [];
+        const allKeys = new Set();
+        flatRawData.forEach(item => { Object.keys(item).forEach(k => allKeys.add(k)); });
+        const priority = ["PK_STAR_STARBUCKS_GETRAENKE_SIMPLE","MAIN_GETRAENK","GETRAENK","MILCHART","flavoured","getraenk_groesse","kalorien_einh_kcal"];
+        let ordered = Array.from(allKeys);
+        ordered.sort((a,b)=>{ let ia=priority.indexOf(a), ib=priority.indexOf(b); if(ia!==-1 && ib!==-1) return ia-ib; if(ia!==-1) return -1; if(ib!==-1) return 1; return a.localeCompare(b); });
+        return ordered;
+    }
+    function renderFlatTable(searchTerm="") {
+        if(!flatRawData.length) { document.getElementById("flatTableWrapper").innerHTML='<div class="empty-message">📭 Keine Daten vom Webservice.</div>'; return; }
+        let filtered = flatRawData.filter(row => Object.values(row).map(v=>String(v??"")).join(" ").toLowerCase().includes(searchTerm.toLowerCase()));
+        filtered.sort((a,b)=>{ let va=a[flatSortField]??"", vb=b[flatSortField]??""; let na=parseFloat(String(va).replace(",",".")), nb=parseFloat(String(vb).replace(",",".")); if(!isNaN(na) && !isNaN(nb)) return flatSortDirection==="asc"?na-nb:nb-na; return flatSortDirection==="asc"?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va)); });
+        const headers = buildFlatTableHeaders();
+        const thHtml = headers.map(h => `<th data-field="${escapeHtml(h)}">${escapeHtml(h)} ${flatSortField===h ? (flatSortDirection==="asc"?"▲":"▼") : "↕️"}</th>`).join('');
+        let tbody = filtered.map(row => `<tr>${headers.map(h => `<td style="white-space: nowrap;">${escapeHtml(String(row[h] ?? "—"))}</td>`).join('')}</tr>`).join('');
+        document.getElementById("flatTableWrapper").innerHTML = `<div style="overflow-x:auto;"><table class="flat-data-table"><thead><tr>${thHtml}</tr></thead><tbody>${tbody||'<tr><td colspan="100" class="empty-message">Keine Einträge</td></tr>'}</tbody></table></div>`;
+        document.getElementById("flatRecordCount").innerText = `${filtered.length} / ${flatRawData.length} Einträge`;
+        document.querySelectorAll(".flat-data-table th").forEach(th => { th.addEventListener("click",()=>{ let field=th.dataset.field; if(field===flatSortField) flatSortDirection=flatSortDirection==="asc"?"desc":"asc"; else { flatSortField=field; flatSortDirection="asc"; } renderFlatTable(document.getElementById("flatSearchInput").value); }); });
+    }
+    
+    // ========== INIT & API ==========
+    async function init() {
+        const statusBadge = document.getElementById('apiStatusBadge');
+        const treeContainer = document.getElementById('treeContainer');
+        try {
+            const controller = new AbortController(); setTimeout(()=>controller.abort(),10000);
+            const res = await fetch(API_URL, { signal: controller.signal });
+            if(!res.ok) throw new Error(`HTTP ${res.status}`);
+            let data = await res.json();
+            if(data && Array.isArray(data.data)) allItems = data.data;
+            else if(Array.isArray(data)) allItems = data;
+            else throw new Error('API-Format ungültig');
+            flatRawData = [...allItems];
+            buildDataStructures(allItems);
+            currentTreeFilter = "";
+            refreshTreeWithFilter();
+            setupDirectSelection();
+            renderSelectedGroupedTables();
+            renderFlatTable("");
+            statusBadge.innerHTML = '✅ Live verbunden';
+            statusBadge.style.background = '#c8e6d9';
+            const treeFilterInput = document.getElementById('treeFilterInput');
+            if (treeFilterInput) {
+                treeFilterInput.addEventListener('input', (e) => {
+                    currentTreeFilter = e.target.value;
+                    refreshTreeWithFilter();
+                });
+            }
+            document.getElementById('selectAllBtn')?.addEventListener('click', selectAllFiltered);
+            document.getElementById('clearAllBtn')?.addEventListener('click', clearAllGetraenke);
+        } catch(err) {
+            if(treeContainer) treeContainer.innerHTML = `<div class="error-message">❌ Webservice nicht erreichbar.<br>${err.message}</div>`;
+            document.getElementById('detailContent').innerHTML = `<div class="error-message">Daten konnten nicht geladen werden.</div>`;
+            document.getElementById("flatTableWrapper").innerHTML = `<div class="error-message">❌ Fehler: ${err.message}</div>`;
+            if(statusBadge) statusBadge.innerHTML = '❌ API offline';
+        }
+    }
+    
+    // Tab-Wechsel
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-button').forEach(b=>b.classList.remove('active'));
+            btn.classList.add('active');
+            const tabId = btn.dataset.tab;
+            document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
+            if(tabId === 'tab1') document.getElementById('paneExplorer').classList.add('active');
+            else document.getElementById('paneAllData').classList.add('active');
+        });
+    });
+    document.getElementById('flatSearchInput')?.addEventListener('input', (e) => renderFlatTable(e.target.value));
+    init();
+</script>
+</body>
+</html>
