@@ -456,12 +456,12 @@
         { dbField: "eiweiss_einh_g", label: "Eiweiß", unit: "g", format: v => v ? v.toFixed(1) : "—" },
         { dbField: "koffein_einh_mg", label: "Koffein", unit: "mg", format: v => v ? Math.round(v) : "—" }
     ];
-    const SIZE_ORDER = ["mini","short","single","tall","grande","doppio","venti","ohne"];
-    const SIZE_LABELS = { mini:"Mini", short:"Short", tall:"Tall", grande:"Grande", venti:"Venti", ohne:"Ohne", single:"Single", doppio:"Doppio" };
+    const SIZE_ORDER = ["mini","short","single","tall","grande","doppio","venti","ohne","pump"];
+    const SIZE_LABELS = { mini:"Mini", short:"Short", tall:"Tall", grande:"Grande", venti:"Venti", ohne:"Ohne", single:"Single", doppio:"Doppio", pump:"Pump"};
 
     function escapeHtml(str) { return str ? String(str).replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '&gt;':'&gt;' }[m])) : ''; }
     function parseNumber(v) { if(v===undefined||v===null) return null; let n=parseFloat(String(v).trim().replace(',','.')); return isNaN(n)?null:n; }
-    function extractSizeKey(sizeRaw) { if(!sizeRaw) return null; let raw=String(sizeRaw).trim().toLowerCase(); if(raw.includes('mini')) return 'mini'; if(raw.includes('short')) return 'short'; if(raw.includes('tall')) return 'tall';if(raw.includes('single')) return 'single'; if(raw.includes('mini')) return 'mini'; if(raw.includes('grande')) return 'grande'; if(raw.includes('venti')) return 'venti';if(raw.includes('doppio')) return 'doppio'; if(raw.includes('ohne')) return 'ohne'; return null; }
+    function extractSizeKey(sizeRaw) { if(!sizeRaw) return null; let raw=String(sizeRaw).trim().toLowerCase(); if(raw.includes('mini')) return 'mini'; if(raw.includes('short')) return 'short'; if(raw.includes('tall')) return 'tall';if(raw.includes('single')) return 'single'; if(raw.includes('mini')) return 'mini'; if(raw.includes('grande')) return 'grande'; if(raw.includes('venti')) return 'venti';if(raw.includes('doppio')) return 'doppio';if(raw.includes('pump')) return 'pump';  if(raw.includes('ohne')) return 'ohne'; return null; }
 
     function rebuildGlobalNutrientRanges(items) {
         globalNutrientValues = {};
@@ -748,17 +748,22 @@
 
     function buildSplitTypeListHtml(typeSet) {
         const sortedTypes = Array.from(typeSet).sort();
-        const bestandteile = [], sized = [], seasonal = [], andere = [];
+        const bestandteile = [], sized = [], seasonal = [], topping = [],temperature = [],andere = [];
         for(let t of sortedTypes) {
             if(t.startsWith('Bestandteile') || ['Halbfettmilch','Vollmilch','Magermilch'].some(m => t.includes(m))) bestandteile.push(t);
-            else if(['Short','Tall','Grande','Venti','Size Ohne','Single','Doppio','Mini'].some(m => t.includes(m))) sized.push(t);
+            else if(['Short','Tall','Grande','Venti','Size Ohne','Single','Doppio','Mini','Pump'].some(m => t.includes(m))) sized.push(t);
+            else if(t.includes('Topping')) topping.push(t);
+else if(t.includes('Temperature')) temperature.push(t);
             else if(t.includes('Seasonal')) seasonal.push(t);
             else andere.push(t);
         }
         let subgroupsHtml = '';
+ if(topping.length) { let itemsHtml = topping.map(bt => `<li class="tree-node type-leaf"><div class="node-row"><span class="toggle-btn" style="visibility:hidden;">•</span><span class="node-icon">🍂</span><span class="node-label">${escapeHtml(bt)}</span></div></li>`).join(''); subgroupsHtml += `<li class="tree-node"><div class="node-row"><span class="toggle-btn" data-toggle="subgroup-topping">▼</span><span class="node-icon">🍂</span><span class="node-label">Topping (${topping.length})</span></div><ul class="children">${itemsHtml}</ul></li>`; }
         if(bestandteile.length) { let itemsHtml = bestandteile.map(bt => `<li class="tree-node type-leaf"><div class="node-row"><span class="toggle-btn" style="visibility:hidden;">•</span><span class="node-icon">🌾</span><span class="node-label">${escapeHtml(bt)}</span></div></li>`).join(''); subgroupsHtml += `<li class="tree-node"><div class="node-row"><span class="toggle-btn" data-toggle="subgroup-best">▼</span><span class="node-icon">🌾</span><span class="node-label">Milcharten (${bestandteile.length})</span></div><ul class="children">${itemsHtml}</ul></li>`; }
         if(sized.length) { let itemsHtml = sized.map(bt => `<li class="tree-node type-leaf"><div class="node-row"><span class="toggle-btn" style="visibility:hidden;">•</span><span class="node-icon">📏</span><span class="node-label">${escapeHtml(bt)}</span></div></li>`).join(''); subgroupsHtml += `<li class="tree-node"><div class="node-row"><span class="toggle-btn" data-toggle="subgroup-size">▼</span><span class="node-icon">📏</span><span class="node-label">Größen (${sized.length})</span></div><ul class="children">${itemsHtml}</ul></li>`; }
-        if(seasonal.length) { let itemsHtml = seasonal.map(bt => `<li class="tree-node type-leaf"><div class="node-row"><span class="toggle-btn" style="visibility:hidden;">•</span><span class="node-icon">🍂</span><span class="node-label">${escapeHtml(bt)}</span></div></li>`).join(''); subgroupsHtml += `<li class="tree-node"><div class="node-row"><span class="toggle-btn" data-toggle="subgroup-seasonal">▼</span><span class="node-icon">🍂</span><span class="node-label">Saisonale (${seasonal.length})</span></div><ul class="children">${itemsHtml}</ul></li>`; }
+
+ if(temperature.length) { let itemsHtml = temperature.map(bt => `<li class="tree-node type-leaf"><div class="node-row"><span class="toggle-btn" style="visibility:hidden;">•</span><span class="node-icon">📏</span><span class="node-label">${escapeHtml(bt)}</span></div></li>`).join(''); subgroupsHtml += `<li class="tree-node"><div class="node-row"><span class="toggle-btn" data-toggle="subgroup-temperature">▼</span><span class="node-icon">📏</span><span class="node-label">Temperature (${temperature.length})</span></div><ul class="children">${itemsHtml}</ul></li>`; }
+        if(seasonal.length) { let itemsHtml = seasonal.map(bt => `<li class="tree-node type-leaf"><div class="node-row"><span class="toggle-btn" style="visibility:hidden;">•</span><span class="node-icon">🍂</span><span class="node-label">${escapeHtml(bt)}</span></div></li>`).join(''); subgroupsHtml += `<li class="tree-node"><div class="node-row"><span class="toggle-btn" data-toggle="subgroup-seasonal">▼</span><span class="node-icon">🍂</span><span class="node-label">Saisonal (${seasonal.length})</span></div><ul class="children">${itemsHtml}</ul></li>`; }
         if(andere.length) { let itemsHtml = andere.map(other => `<li class="tree-node type-leaf"><div class="node-row"><span class="toggle-btn" style="visibility:hidden;">•</span><span class="node-icon">⚙️</span><span class="node-label">${escapeHtml(other)}</span></div></li>`).join(''); subgroupsHtml += `<li class="tree-node"><div class="node-row"><span class="toggle-btn" data-toggle="subgroup-other">▼</span><span class="node-icon">📌</span><span class="node-label">Weitere Merkmale (${andere.length})</span></div><ul class="children">${itemsHtml}</ul></li>`; }
         return subgroupsHtml;
     }
