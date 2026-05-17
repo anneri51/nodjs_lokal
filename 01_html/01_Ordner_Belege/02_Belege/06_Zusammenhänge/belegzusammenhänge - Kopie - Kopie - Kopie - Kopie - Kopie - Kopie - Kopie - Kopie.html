@@ -1,0 +1,1516 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Belege FK Beziehungen - Detailansicht</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2rem;
+            color: #3498db;
+        }
+
+        .loading i {
+            margin-right: 10px;
+        }
+
+        .error {
+            text-align: center;
+            padding: 40px;
+            background: #ffeaea;
+            border-radius: 10px;
+            color: #e74c3c;
+            margin: 20px 0;
+        }
+
+        .data-summary {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .summary-card {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 3px 5px rgba(0, 0, 0, 0.08);
+            flex: 1;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .summary-card h3 {
+            color: #7f8c8d;
+            font-size: 1rem;
+            margin-bottom: 8px;
+        }
+
+        .summary-card .value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex: 1;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 20px 12px 45px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .search-box input:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #95a5a6;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        .toggle-btn {
+            padding: 10px 20px;
+            background: white;
+            border: 2px solid #3498db;
+            border-radius: 6px;
+            color: #3498db;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .toggle-btn.active {
+            background: #3498db;
+            color: white;
+        }
+
+        .toggle-btn:hover:not(.active) {
+            background: #f0f7ff;
+        }
+
+        .sort-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .sort-btn {
+            padding: 10px 20px;
+            background: white;
+            border: 2px solid #3498db;
+            border-radius: 6px;
+            color: #3498db;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .sort-btn:hover {
+            background: #3498db;
+            color: white;
+        }
+
+        .sort-btn.active {
+            background: #3498db;
+            color: white;
+        }
+
+        .values-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .values-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .values-header h2 {
+            color: #2c3e50;
+            font-size: 1.5rem;
+        }
+
+        .values-count {
+            background: #3498db;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        /* Grid View Styles */
+        .values-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            max-height: 600px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .value-card {
+            background: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .value-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .value-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .value-text {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 1.1rem;
+            word-break: break-all;
+        }
+
+        .value-type {
+            font-size: 0.8rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .type-fk1 {
+            background: #ffeaa7;
+            color: #d35400;
+        }
+
+        .type-fk2 {
+            background: #a29bfe;
+            color: #6c5ce7;
+        }
+
+        .type-both {
+            background: linear-gradient(135deg, #ffeaa7 0%, #a29bfe 100%);
+            color: #2d3436;
+        }
+
+        .value-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            margin-top: auto;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+        }
+
+        /* List View Styles */
+        .values-list {
+            max-height: 800px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .list-item {
+            background: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            margin-bottom: 15px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .list-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Center-aligned main value with statistics */
+        .list-main-value-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: linear-gradient(135deg, #3498db15 0%, #2ecc7115 100%);
+            border-radius: 10px;
+            position: relative;
+        }
+
+        .list-main-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 10px 0;
+            padding: 10px 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+            border: 3px solid #3498db;
+            min-width: 120px;
+            text-align: center;
+            display: inline-block;
+        }
+
+        .list-type-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .list-stats-horizontal {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .list-stat-horizontal {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            min-width: 80px;
+        }
+
+        .stat-value-horizontal {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .stat-label-horizontal {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            font-weight: 600;
+        }
+
+        .fk1-stat {
+            border-top: 4px solid #e74c3c;
+        }
+
+        .fk2-stat {
+            border-top: 4px solid #2ecc71;
+        }
+
+        .total-stat {
+            border-top: 4px solid #3498db;
+        }
+
+        .brutto-stat {
+            border-top: 4px solid #9b59b6;
+        }
+
+        .list-columns {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .list-column {
+            flex: 1;
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .column-header {
+            font-weight: bold;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 0.9rem;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .fk1-header {
+            background: #e74c3c;
+        }
+
+        .fk2-header {
+            background: #2ecc71;
+        }
+
+        .belege-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .beleg-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 3px solid #3498db;
+            margin-bottom: 8px;
+        }
+
+        .beleg-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .beleg-id {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .beleg-brutto {
+            font-weight: bold;
+            color: #27ae60;
+        }
+
+        .beleg-bezeichnung {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            margin-bottom: 5px;
+        }
+
+        .beleg-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #95a5a6;
+        }
+
+        .beleg-date {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .beleg-kategorie {
+            background: #e0e0e0;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .column-summary {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            margin-top: 20px;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #95a5a6;
+            font-style: italic;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 3px 5px rgba(0, 0, 0, 0.08);
+            grid-column: 1 / -1;
+        }
+
+        .highlight {
+            background-color: #ffeb3b !important;
+            color: #333 !important;
+            box-shadow: 0 0 10px rgba(255, 235, 59, 0.5) !important;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 4px;
+            padding: 5px;
+            cursor: pointer;
+            color: #7f8c8d;
+            transition: all 0.2s;
+        }
+
+        .value-card:hover .copy-btn {
+            display: block;
+        }
+
+        .list-main-value-container .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 50px;
+            background: transparent;
+            font-size: 1.2rem;
+            padding: 8px;
+        }
+
+        .copy-btn:hover {
+            color: #3498db;
+            background: white;
+        }
+
+        .empty-column {
+            text-align: center;
+            color: #95a5a6;
+            font-style: italic;
+            padding: 20px;
+        }
+
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        /* Modal for detailed view */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 1200px;
+            max-height: 90vh;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            background: #3498db;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-size: 1.5rem;
+        }
+
+        .close-modal {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(90vh - 80px);
+        }
+
+        .modal-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .modal-stat {
+            text-align: center;
+        }
+
+        .modal-stat .value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .modal-stat .label {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-list-alt"></i> Belege FK Beziehungen - Detailansicht</h1>
+            <p class="subtitle">Alle eindeutigen FK_INP_BELEGE_ALL Werte mit Belege-Details und BRUTTO_BETRAG-Summen</p>
+        </header>
+
+        <div class="controls">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Nach FK-Werten, Bezeichnungen oder Beträgen suchen...">
+            </div>
+        </div>
+
+        <div class="view-toggle">
+            <button class="toggle-btn active" data-view="grid">
+                <i class="fas fa-th-large"></i> Grid Ansicht
+            </button>
+            <button class="toggle-btn" data-view="list">
+                <i class="fas fa-list"></i> Listenansicht mit Details
+            </button>
+        </div>
+
+        <div class="sort-controls">
+            <button class="sort-btn active" data-sort="value-asc">Wert ↑</button>
+            <button class="sort-btn" data-sort="value-desc">Wert ↓</button>
+            <button class="sort-btn" data-sort="type">Typ</button>
+            <button class="sort-btn" data-sort="brutto-asc">Brutto ↑</button>
+            <button class="sort-btn" data-sort="brutto-desc">Brutto ↓</button>
+        </div>
+
+        <div class="data-summary">
+            <div class="summary-card">
+                <h3>Total Distinct FK Werte</h3>
+                <div class="value" id="totalDistinct">0</div>
+            </div>
+            <div class="summary-card">
+                <h3>Nur in FK_INP_BELEGE_ALL1</h3>
+                <div class="value" id="onlyInFK1">0</div>
+            </div>
+            <div class="summary-card">
+                <h3>Nur in FK_INP_BELEGE_ALL2</h3>
+                <div class="value" id="onlyInFK2">0</div>
+            </div>
+            <div class="summary-card">
+                <h3>In Beiden FK Spalten</h3>
+                <div class="value" id="inBoth">0</div>
+            </div>
+        </div>
+
+        <div class="loading" id="loadingIndicator">
+            <i class="fas fa-spinner fa-spin"></i> Lade Daten von http://localhost:5000/rel_inp_belege_all_detail...
+        </div>
+
+        <div class="error" id="errorContainer" style="display: none;">
+            <i class="fas fa-exclamation-triangle"></i> <span id="errorMessage"></span>
+        </div>
+
+        <div class="values-container" id="valuesContainer" style="display: none;">
+            <div class="values-header">
+                <h2 id="viewTitle">Alle Distinct FK Werte mit Belege-Details</h2>
+                <div class="values-count" id="displayCount">0</div>
+            </div>
+            <div class="values-grid" id="valuesGrid">
+                <!-- Grid view cards will be inserted here -->
+            </div>
+            <div class="values-list" id="valuesList" style="display: none;">
+                <!-- List view items will be inserted here -->
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Daten abgerufen von: http://localhost:5000/rel_inp_belege_all_detail | Angezeigt werden distinct FK-Werte mit Belege-Details und BRUTTO_BETRAG-Summen</p>
+        </div>
+    </div>
+
+    <!-- Modal for detailed view -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Beleg Details</h3>
+                <button class="close-modal" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Modal content will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_URL = 'http://localhost:5000/rel_inp_belege_all1';
+
+        // State
+        let allData = [];
+        let distinctValues = new Map(); // Map of value -> {type, fk1Count, fk2Count, bruttoSumFK1, bruttoSumFK2, relatedFK1Details, relatedFK2Details}
+        let filteredValues = [];
+        let currentSearch = '';
+        let currentSort = 'value-asc';
+        let currentView = 'grid';
+
+        // DOM Elements
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const errorContainer = document.getElementById('errorContainer');
+        const errorMessage = document.getElementById('errorMessage');
+        const valuesContainer = document.getElementById('valuesContainer');
+        const valuesGrid = document.getElementById('valuesGrid');
+        const valuesList = document.getElementById('valuesList');
+        const searchInput = document.getElementById('searchInput');
+        const totalDistinctEl = document.getElementById('totalDistinct');
+        const onlyInFK1El = document.getElementById('onlyInFK1');
+        const onlyInFK2El = document.getElementById('onlyInFK2');
+        const inBothEl = document.getElementById('inBoth');
+        const displayCountEl = document.getElementById('displayCount');
+        const viewTitle = document.getElementById('viewTitle');
+        const sortButtons = document.querySelectorAll('.sort-btn');
+        const toggleButtons = document.querySelectorAll('.toggle-btn');
+        const modalOverlay = document.getElementById('modalOverlay');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalBody = document.getElementById('modalBody');
+        const closeModal = document.getElementById('closeModal');
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchData();
+            
+            // Set up event listeners
+            searchInput.addEventListener('input', handleSearch);
+            
+            // Sort buttons
+            sortButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    sortButtons.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentSort = this.dataset.sort;
+                    displayValues();
+                });
+            });
+            
+            // View toggle buttons
+            toggleButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    toggleButtons.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentView = this.dataset.view;
+                    updateView();
+                });
+            });
+            
+            // Modal close button
+            closeModal.addEventListener('click', () => {
+                modalOverlay.style.display = 'none';
+            });
+            
+            // Close modal when clicking outside
+            modalOverlay.addEventListener('click', (e) => {
+                if (e.target === modalOverlay) {
+                    modalOverlay.style.display = 'none';
+                }
+            });
+        });
+
+        // Fetch data from API
+        async function fetchData() {
+            try {
+                const response = await fetch(API_URL);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP-Fehler! Status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                processData(data);
+            } catch (error) {
+                showError(`Daten konnten nicht abgerufen werden: ${error.message}`);
+            }
+        }
+
+        // Process the fetched data
+        function processData(data) {
+            // Hide loading indicator
+            loadingIndicator.style.display = 'none';
+            
+            if (!Array.isArray(data) || data.length === 0) {
+                showError('Keine Daten verfügbar oder Datenformat ist falsch');
+                return;
+            }
+            
+            allData = data;
+            
+            // Analyze data to get distinct values
+            analyzeDistinctValues();
+            
+            // Display data
+            displayValues();
+            
+            // Show content
+            valuesContainer.style.display = 'block';
+        }
+
+        // Analyze data to get distinct values and their details
+        function analyzeDistinctValues() {
+            distinctValues.clear();
+            
+            // First pass: collect all distinct values and their details
+            allData.forEach(item => {
+                const fk1 = item.FK_INP_BELEGE_ALL1;
+                const fk2 = item.FK_INP_BELEGE_ALL2;
+                
+                // Process FK1 value
+                if (fk1 !== null && fk1 !== undefined) {
+                    const key = String(fk1);
+                    if (!distinctValues.has(key)) {
+                        distinctValues.set(key, {
+                            value: fk1,
+                            type: 'only-fk1',
+                            fk1Count: 0,
+                            fk2Count: 0,
+                            bruttoSumFK1: 0,
+                            bruttoSumFK2: 0,
+                            relatedFK1Details: new Map(), // Map of fk -> {bezeichnung, brutto, belegdatum, etc.}
+                            relatedFK2Details: new Map()  // Map of fk -> {bezeichnung, brutto, belegdatum, etc.}
+                        });
+                    }
+                    const entry = distinctValues.get(key);
+                    entry.fk1Count++;
+                    
+                    // Add FK1 beleg details
+                    if (!entry.relatedFK1Details.has(fk1)) {
+                        entry.relatedFK1Details.set(fk1, {
+                            bezeichnung: item.BEL1_BEZEICHNUNG || item.BEZEICHNUNG || 'Keine Bezeichnung',
+                            bruttoBetrag: item.BEL1_BRUTTO_BETRAG || item.BRUTTO_BETRAG || 0,
+                            belegdatum: item.BEL1_BELEGDATUM || item.BELEGDATUM,
+                            belegnummer: item.BEL1_BELEGNUMMER || item.BELEGNUMMER,
+                            kategorie: item.KTOKAT_KATEGORIE || 'Keine Kategorie'
+                        });
+                    }
+                    
+                    // Add brutto sum for FK1 side - SUM UP ALL BEL1_BRUTTO_BETRAG
+                    const bruttoFK1 = parseFloat(item.BEL1_BRUTTO_BETRAG) || parseFloat(item.BRUTTO_BETRAG) || 0;
+                    entry.bruttoSumFK1 += bruttoFK1;
+                    
+                    // Process FK2 relationship
+                    if (fk2 !== null && fk2 !== undefined) {
+                        if (!entry.relatedFK2Details.has(fk2)) {
+                            entry.relatedFK2Details.set(fk2, {
+                                bezeichnung: item.BEL2_BEZEICHNUNG || 'Keine Bezeichnung',
+                                bruttoBetrag: item.BEL2_BRUTTO_BETRAG || 0,
+                                belegdatum: item.BEL2_BELEGDATUM,
+                                belegnummer: item.BEL2_BELEGNUMMER,
+                                kategorie: item.BEL2_KTOKAT_KATEGORIE || 'Keine Kategorie'
+                            });
+                        }
+                        
+                        // Add brutto sum for FK2 side - SUM UP ALL BEL2_BRUTTO_BETRAG
+                        const bruttoFK2 = parseFloat(item.BEL2_BRUTTO_BETRAG) || 0;
+                        entry.bruttoSumFK2 += bruttoFK2;
+                    }
+                }
+                
+                // Process FK2 value
+                if (fk2 !== null && fk2 !== undefined) {
+                    const key = String(fk2);
+                    if (!distinctValues.has(key)) {
+                        distinctValues.set(key, {
+                            value: fk2,
+                            type: 'only-fk2',
+                            fk1Count: 0,
+                            fk2Count: 0,
+                            bruttoSumFK1: 0,
+                            bruttoSumFK2: 0,
+                            relatedFK1Details: new Map(),
+                            relatedFK2Details: new Map()
+                        });
+                    }
+                    const entry = distinctValues.get(key);
+                    entry.fk2Count++;
+                    
+                    // Add FK2 beleg details
+                    if (!entry.relatedFK2Details.has(fk2)) {
+                        entry.relatedFK2Details.set(fk2, {
+                            bezeichnung: item.BEL2_BEZEICHNUNG || 'Keine Bezeichnung',
+                            bruttoBetrag: item.BEL2_BRUTTO_BETRAG || 0,
+                            belegdatum: item.BEL2_BELEGDATUM,
+                            belegnummer: item.BEL2_BELEGNUMMER,
+                            kategorie: item.BEL2_KTOKAT_KATEGORIE || 'Keine Kategorie'
+                        });
+                    }
+                    
+                    // Add brutto sum for FK2 side
+                    const bruttoFK2 = parseFloat(item.BEL2_BRUTTO_BETRAG) || 0;
+                    entry.bruttoSumFK2 += bruttoFK2;
+                    
+                    // Process FK1 relationship
+                    if (fk1 !== null && fk1 !== undefined) {
+                        if (!entry.relatedFK1Details.has(fk1)) {
+                            entry.relatedFK1Details.set(fk1, {
+                                bezeichnung: item.BEL1_BEZEICHNUNG || item.BEZEICHNUNG || 'Keine Bezeichnung',
+                                bruttoBetrag: item.BEL1_BRUTTO_BETRAG || item.BRUTTO_BETRAG || 0,
+                                belegdatum: item.BEL1_BELEGDATUM || item.BELEGDATUM,
+                                belegnummer: item.BEL1_BELEGNUMMER || item.BELEGNUMMER,
+                                kategorie: item.KTOKAT_KATEGORIE || 'Keine Kategorie'
+                            });
+                        }
+                        
+                        // Add brutto sum for FK1 side
+                        const bruttoFK1 = parseFloat(item.BEL1_BRUTTO_BETRAG) || parseFloat(item.BRUTTO_BETRAG) || 0;
+                        entry.bruttoSumFK1 += bruttoFK1;
+                    }
+                }
+            });
+            
+            // Update types based on counts
+            distinctValues.forEach(entry => {
+                if (entry.fk1Count > 0 && entry.fk2Count > 0) {
+                    entry.type = 'both';
+                } else if (entry.fk1Count > 0) {
+                    entry.type = 'only-fk1';
+                } else {
+                    entry.type = 'only-fk2';
+                }
+            });
+            
+            updateSummary();
+            applyFilters();
+        }
+
+        // Update the summary cards
+        function updateSummary() {
+            let onlyFK1 = 0;
+            let onlyFK2 = 0;
+            let both = 0;
+            
+            distinctValues.forEach(entry => {
+                if (entry.type === 'only-fk1') onlyFK1++;
+                else if (entry.type === 'only-fk2') onlyFK2++;
+                else if (entry.type === 'both') both++;
+            });
+            
+            totalDistinctEl.textContent = distinctValues.size;
+            onlyInFK1El.textContent = onlyFK1;
+            onlyInFK2El.textContent = onlyFK2;
+            inBothEl.textContent = both;
+        }
+
+        // Apply search filter
+        function applyFilters() {
+            if (!currentSearch) {
+                filteredValues = Array.from(distinctValues.values());
+            } else {
+                const searchLower = currentSearch.toLowerCase();
+                filteredValues = Array.from(distinctValues.values()).filter(entry => {
+                    // Search in FK value
+                    const valueStr = String(entry.value).toLowerCase();
+                    if (valueStr.includes(searchLower)) return true;
+                    
+                    // Search in bezeichnungen of related belege
+                    for (let [fk, detail] of entry.relatedFK1Details) {
+                        if (detail.bezeichnung && detail.bezeichnung.toLowerCase().includes(searchLower)) return true;
+                    }
+                    
+                    for (let [fk, detail] of entry.relatedFK2Details) {
+                        if (detail.bezeichnung && detail.bezeichnung.toLowerCase().includes(searchLower)) return true;
+                    }
+                    
+                    // Search in brutto sums
+                    const totalBrutto = entry.bruttoSumFK1 + entry.bruttoSumFK2;
+                    if (totalBrutto.toString().includes(searchLower)) return true;
+                    
+                    return false;
+                });
+            }
+            
+            sortValues();
+            displayValues();
+        }
+
+        // Sort values based on current sort setting
+        function sortValues() {
+            filteredValues.sort((a, b) => {
+                const totalBruttoA = a.bruttoSumFK1 + a.bruttoSumFK2;
+                const totalBruttoB = b.bruttoSumFK1 + b.bruttoSumFK2;
+                
+                switch(currentSort) {
+                    case 'value-asc':
+                        if (typeof a.value === 'number' && typeof b.value === 'number') {
+                            return a.value - b.value;
+                        }
+                        return String(a.value).localeCompare(String(b.value));
+                    case 'value-desc':
+                        if (typeof a.value === 'number' && typeof b.value === 'number') {
+                            return b.value - a.value;
+                        }
+                        return String(b.value).localeCompare(String(a.value));
+                    case 'type':
+                        return a.type.localeCompare(b.type);
+                    case 'brutto-asc':
+                        return totalBruttoA - totalBruttoB;
+                    case 'brutto-desc':
+                        return totalBruttoB - totalBruttoA;
+                    default:
+                        return 0;
+                }
+            });
+        }
+
+        // Display the values
+        function displayValues() {
+            if (currentView === 'grid') {
+                displayGridView();
+            } else {
+                displayListView();
+            }
+        }
+
+        // Display grid view
+        function displayGridView() {
+            // Clear grid
+            valuesGrid.innerHTML = '';
+            
+            if (filteredValues.length === 0) {
+                valuesGrid.innerHTML = '<div class="no-data">Keine passenden Werte gefunden</div>';
+                displayCountEl.textContent = '0';
+                return;
+            }
+            
+            displayCountEl.textContent = filteredValues.length;
+            viewTitle.textContent = 'Alle Distinct FK Werte';
+            
+            // Create cards for each value
+            filteredValues.forEach(entry => {
+                const card = createGridCard(entry);
+                valuesGrid.appendChild(card);
+            });
+        }
+
+        // Display list view
+        function displayListView() {
+            // Clear list
+            valuesList.innerHTML = '';
+            
+            if (filteredValues.length === 0) {
+                valuesList.innerHTML = '<div class="no-data">Keine passenden Werte gefunden</div>';
+                displayCountEl.textContent = '0';
+                return;
+            }
+            
+            displayCountEl.textContent = filteredValues.length;
+            viewTitle.textContent = 'FK Werte mit Belege-Details';
+            
+            // Create list items for each value
+            filteredValues.forEach(entry => {
+                const listItem = createListItem(entry);
+                valuesList.appendChild(listItem);
+            });
+        }
+
+        // Create a grid card element
+        function createGridCard(entry) {
+            const card = document.createElement('div');
+            card.className = 'value-card';
+            
+            // Determine type display
+            let typeText = '';
+            let typeClass = '';
+            
+            switch(entry.type) {
+                case 'only-fk1':
+                    typeText = 'Nur in FK1';
+                    typeClass = 'type-fk1';
+                    break;
+                case 'only-fk2':
+                    typeText = 'Nur in FK2';
+                    typeClass = 'type-fk2';
+                    break;
+                case 'both':
+                    typeText = 'In Beiden';
+                    typeClass = 'type-both';
+                    break;
+            }
+            
+            // Calculate total brutto sum
+            const totalBrutto = entry.bruttoSumFK1 + entry.bruttoSumFK2;
+            
+            // Highlight if matches search
+            const valueStr = String(entry.value);
+            let displayValue = valueStr;
+            if (currentSearch && valueStr.toLowerCase().includes(currentSearch.toLowerCase())) {
+                const startIndex = valueStr.toLowerCase().indexOf(currentSearch.toLowerCase());
+                const endIndex = startIndex + currentSearch.length;
+                displayValue = 
+                    valueStr.substring(0, startIndex) +
+                    '<span class="highlight">' + valueStr.substring(startIndex, endIndex) + '</span>' +
+                    valueStr.substring(endIndex);
+            }
+            
+            card.innerHTML = `
+                <button class="copy-btn" title="Wert kopieren">
+                    <i class="fas fa-copy"></i>
+                </button>
+                <div class="value-content">
+                    <div class="value-text">${displayValue}</div>
+                    <div class="value-type ${typeClass}">${typeText}</div>
+                </div>
+                <div style="font-size: 0.9rem; color: #7f8c8d; margin: 8px 0;">
+                    Belege: ${entry.relatedFK1Details.size} links, ${entry.relatedFK2Details.size} rechts
+                </div>
+                <div class="value-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">${formatCurrency(entry.bruttoSumFK1)}</div>
+                        <div class="stat-label">FK1 Brutto</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${formatCurrency(entry.bruttoSumFK2)}</div>
+                        <div class="stat-label">FK2 Brutto</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${formatCurrency(totalBrutto)}</div>
+                        <div class="stat-label">Total Brutto</div>
+                    </div>
+                </div>
+            `;
+            
+            // Add click handler for copy button
+            const copyBtn = card.querySelector('.copy-btn');
+            copyBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(valueStr).then(() => {
+                    copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+                    setTimeout(() => {
+                        copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
+                    }, 2000);
+                });
+            });
+            
+            // Add click handler to open modal with details
+            card.addEventListener('click', () => {
+                openModal(entry);
+            });
+            
+            card.style.cursor = 'pointer';
+            
+            return card;
+        }
+
+        // Create a list item element
+        function createListItem(entry) {
+            const listItem = document.createElement('div');
+            listItem.className = 'list-item';
+            
+            // Determine type display
+            let typeText = '';
+            let typeClass = '';
+            
+            switch(entry.type) {
+                case 'only-fk1':
+                    typeText = 'Nur in FK1';
+                    typeClass = 'type-fk1';
+                    break;
+                case 'only-fk2':
+                    typeText = 'Nur in FK2';
+                    typeClass = 'type-fk2';
+                    break;
+                case 'both':
+                    typeText = 'In Beiden';
+                    typeClass = 'type-both';
+                    break;
+            }
+            
+            // Convert maps to arrays and sort by brutto desc
+            const relatedFK1Array = Array.from(entry.relatedFK1Details.entries())
+                .sort((a, b) => b[1].bruttoBetrag - a[1].bruttoBetrag);
+            
+            const relatedFK2Array = Array.from(entry.relatedFK2Details.entries())
+                .sort((a, b) => b[1].bruttoBetrag - a[1].bruttoBetrag);
+            
+            // Calculate total brutto
+            const totalBrutto = entry.bruttoSumFK1 + entry.bruttoSumFK2;
+            
+            // Highlight if matches search
+            const valueStr = String(entry.value);
+            let displayValue = valueStr;
+            if (currentSearch && valueStr.toLowerCase().includes(currentSearch.toLowerCase())) {
+                const startIndex = valueStr.toLowerCase().indexOf(currentSearch.toLowerCase());
+                const endIndex = startIndex + currentSearch.length;
+                displayValue = 
+                    valueStr.substring(0, startIndex) +
+                    '<span class="highlight">' + valueStr.substring(startIndex, endIndex) + '</span>' +
+                    valueStr.substring(endIndex);
+            }
+
+            const diff = entry.bruttoSumFK2-entry.bruttoSumFK1;
+            
+            listItem.innerHTML = `
+                <!-- Center-aligned main value with statistics -->
+                <div class="list-main-value-container">
+                    <div class="list-type-badge ${typeClass}">${typeText}</div>
+                    <div class="list-main-value">${displayValue}</div>
+                    <div class="list-stats-horizontal">
+                        <div class="list-stat-horizontal fk2-stat">
+                            <div class="stat-value-horizontal">${formatCurrency(entry.bruttoSumFK1)}</div>
+                            <div class="stat-label-horizontal">Summe FK1 Brutto</div>
+                        </div>
+                        <div class="list-stat-horizontal fk2-stat">
+                            <div class="stat-value-horizontal">${formatCurrency(entry.bruttoSumFK2)}</div>
+                            <div class="stat-label-horizontal">Summe FK2 Brutto</div>
+                        </div>
+<div class="list-stat-horizontal fk1-stat">
+                            <div class="stat-value-horizontal">${formatCurrency(diff)}</div>
+                            <div class="stat-label-horizontal">Differenz FK2-FK1 Brutto</div>
+                        </div>
+                        <div class="list-stat-horizontal brutto-stat">
+                            <div class="stat-value-horizontal">${formatCurrency(totalBrutto)}</div>
+                            <div class="stat-label-horizontal">Total Brutto</div>
+                        </div>
+                    </div>
+                    <button class="copy-btn" title="Wert kopieren">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+                
+                <div class="list-columns">
+                    <div class="list-column">
+                        <div class="column-header fk1-header">
+                            <i class="fas fa-arrow-left"></i> Verknüpfte FK_INP_BELEGE_ALL1 Belege (${entry.relatedFK1Details.size})
+                        </div>
+                        <div class="belege-container">
+                            ${relatedFK1Array.length > 0 ? 
+                                relatedFK1Array.map(([fk, detail]) => 
+                                    createBelegItem(fk, detail, 'fk1')
+                                ).join('') : 
+                                '<div class="empty-column">Keine verknüpften FK1 Belege</div>'
+                            }
+                        </div>
+                        ${entry.relatedFK1Details.size > 0 ? 
+                            `<div class="column-summary">
+                                <span>Summe Brutto (${formatCurrency(entry.bruttoSumFK1)}):</span>
+                                <span>${entry.relatedFK1Details.size} Belege</span>
+                            </div>` : ''
+                        }
+                    </div>
+                    <div class="list-column">
+                        <div class="column-header fk2-header">
+                            <i class="fas fa-arrow-right"></i> Verknüpfte FK_INP_BELEGE_ALL2 Belege (${entry.relatedFK2Details.size})
+                        </div>
+                        <div class="belege-container">
+                            ${relatedFK2Array.length > 0 ? 
+                                relatedFK2Array.map(([fk, detail]) => 
+                                    createBelegItem(fk, detail, 'fk2')
+                                ).join('') : 
+                                '<div class="empty-column">Keine verknüpften FK2 Belege</div>'
+                            }
+                        </div>
+                        ${entry.relatedFK2Details.size > 0 ? 
+                            `<div class="column-summary">
+                                <span>Summe Brutto (${formatCurrency(entry.bruttoSumFK2)}):</span>
+                                <span>${entry.relatedFK2Details.size} Belege</span>
+                            </div>` : ''
+                        }
+                    </div>
+                </div>
+            `;
+            
+            // Add click handler for copy button
+            const copyBtn = listItem.querySelector('.copy-btn');
+            copyBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(valueStr).then(() => {
+                    copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+                    setTimeout(() => {
+                        copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
+                    }, 2000);
+                });
+            });
+            
+            return listItem;
+        }
+
+        // Create a beleg item for list view
+        function createBelegItem(fk, detail, type) {
+            const bezeichnung = detail.bezeichnung || 'Keine Bezeichnung';
+            const belegnummer = detail.belegnummer || 'Keine Belegnummer';
+
+            const truncatedBezeichnung = bezeichnung.length > 200 ? bezeichnung.substring(0, 200) + '...' : bezeichnung;
+            const brutto = parseFloat(detail.bruttoBetrag) || 0;
+           const belegdatum = detail.belegdatum ? new Date(detail.belegdatum).toLocaleDateString('de-DE') : 'N/A';
+
+            const kategorie = detail.kategorie || 'N/A';
+            
+            return `
+                <div class="beleg-item" data-fk="${fk}" data-type="${type}">
+                    <div class="beleg-header">
+                        <span class="beleg-id">${fk} (${belegnummer})</span>
+                        <span class="beleg-brutto">${formatCurrency(brutto)}</span>
+                    </div>
+		   <div class="beleg-bezeichnung" >${belegdatum}</div>
+                    <div class="beleg-bezeichnung" title="${bezeichnung}">${truncatedBezeichnung}</div>
+                    <div class="beleg-details">
+                        <div class="beleg-date">
+                            <i class="far fa-calendar"></i> ${belegdatum}
+                        </div>
+                        <div class="beleg-kategorie">${kategorie}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Open modal with detailed view
+        function openModal(entry) {
+            modalTitle.textContent = `Details für FK-Wert: ${entry.value}`;
+            
+            // Calculate stats
+            const totalBrutto = entry.bruttoSumFK1 + entry.bruttoSumFK2;
+            const avgBruttoPerBeleg = (entry.relatedFK1Details.size + entry.relatedFK2Details.size) > 0 
+                ? totalBrutto / (entry.relatedFK1Details.size + entry.relatedFK2Details.size) 
+                : 0;
+            
+            // Convert maps to arrays and sort by brutto desc
+            const relatedFK1Array = Array.from(entry.relatedFK1Details.entries())
+                .sort((a, b) => b[1].bruttoBetrag - a[1].bruttoBetrag);
+            
+            const relatedFK2Array = Array.from(entry.relatedFK2Details.entries())
+                .sort((a, b) => b[1].bruttoBetrag - a[1].bruttoBetrag);
+            
+            // Create modal content
+            modalBody.innerHTML = `
+                <div class="modal-stats">
+                    <div class="modal-stat">
+                        <div class="value">${entry.relatedFK1Details.size}</div>
+                        <div class="label">FK1 Belege</div>
+                    </div>
+                    <div class="modal-stat">
+                        <div class="value">${entry.relatedFK2Details.size}</div>
+                        <div class="label">FK2 Belege</div>
+                    </div>
+                    <div class="modal-stat">
+                        <div class="value">${formatCurrency(entry.bruttoSumFK1)}</div>
+                        <div class="label">Summe FK1 Brutto</div>
+                    </div>
+                    <div class="modal-stat">
+                        <div class="value">${formatCurrency(entry.bruttoSumFK2)}</div>
+                        <div class="label">Summe FK2 Brutto</div>
+                    </div>
+                    <div class="modal-stat">
+                        <div class="value">${formatCurrency(totalBrutto)}</div>
+                        <div class="label">Total Brutto</div>
+                    </div>
+                </div>
+                
+                <div class="list-columns" style="margin-top: 20px;">
+                    <div class="list-column">
+                        <div class="column-header fk1-header">
+                            <i class="fas fa-arrow-left"></i> FK_INP_BELEGE_ALL1 Belege (${entry.relatedFK1Details.size})
+                        </div>
+                        <div class="belege-container">
+                            ${relatedFK1Array.length > 0 ? 
+                                relatedFK1Array.map(([fk, detail]) => 
+                                    createModalBelegItem(fk, detail, 'fk1')
+                                ).join('') : 
+                                '<div class="empty-column">Keine verknüpften FK1 Belege</div>'
+                            }
+                        </div>
+                    </div>
+                    <div class="list-column">
+                        <div class="column-header fk2-header">
+                            <i class="fas fa-arrow-right"></i> FK_INP_BELEGE_ALL2 Belege (${entry.relatedFK2Details.size})
+                        </div>
+                        <div class="belege-container">
+                            ${relatedFK2Array.length > 0 ? 
+                                relatedFK2Array.map(([fk, detail]) => 
+                                    createModalBelegItem(fk, detail, 'fk2')
+                                ).join('') : 
+                                '<div class="empty-column">Keine verknüpften FK2 Belege</div>'
+                            }
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            modalOverlay.style.display = 'flex';
+        }
+
+        // Create a beleg item for modal view
+        function createModalBelegItem(fk, detail, type) {
+            const bezeichnung = detail.bezeichnung || 'Keine Bezeichnung';
+            const brutto = parseFloat(detail.bruttoBetrag) || 0;
+            const belegdatum = detail.belegdatum ? new Date(detail.belegdatum).toLocaleDateString('de-DE') : 'N/A';
+            const belegnummer = detail.belegnummer || 'N/A';
+            const kategorie = detail.kategorie || 'N/A';
+            
+            return `
+                <div class="beleg-item" data-fk="${fk}" data-type="${type}">
+                    <div class="beleg-header">
+                        <span class="beleg-id">${fk} (${belegnummer})</span>
+                        <span class="beleg-brutto">${formatCurrency(brutto)}</span>
+                    </div>
+                    <div class="beleg-bezeichnung" title="${bezeichnung}">${bezeichnung}</div>
+                    <div class="beleg-details">
+                        <div class="beleg-date">
+                            <i class="far fa-calendar"></i> ${belegdatum}
+                        </div>
+                        <div class="beleg-kategorie">${kategorie}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Update view based on selected view type
+        function updateView() {
+            if (currentView === 'grid') {
+                valuesGrid.style.display = 'grid';
+                valuesList.style.display = 'none';
+            } else {
+                valuesGrid.style.display = 'none';
+                valuesList.style.display = 'block';
+            }
+            displayValues();
+        }
+
+        // Handle search input
+        function handleSearch(e) {
+            currentSearch = e.target.value.trim();
+            applyFilters();
+        }
+
+        // Format currency value
+        function formatCurrency(value) {
+            const num = parseFloat(value);
+            if (isNaN(num)) return '0,00 €';
+            
+            return num.toLocaleString('de-DE', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }) + ' €';
+        }
+
+        // Show error message
+        function showError(message) {
+            loadingIndicator.style.display = 'none';
+            errorContainer.style.display = 'block';
+            errorMessage.textContent = message;
+        }
+    </script>
+</body>
+</html>

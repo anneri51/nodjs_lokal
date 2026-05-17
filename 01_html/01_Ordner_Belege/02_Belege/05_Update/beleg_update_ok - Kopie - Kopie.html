@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beleg Validation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .section {
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .section-header {
+            background: #f5f5f5;
+            padding: 10px 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+        }
+        .section-header:hover {
+            background: #e9e9e9;
+        }
+        .section-header::after {
+            content: "−";
+            font-size: 18px;
+        }
+        .section-header.collapsed::after {
+            content: "+";
+        }
+        .section-content {
+            padding: 15px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        .section-content.collapsed {
+            display: none;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            padding: 5px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        .checkbox-item input {
+            margin-right: 8px;
+        }
+        .date-value {
+            font-size: 0.8em;
+            color: #666;
+            margin-left: 8px;
+            font-style: italic;
+        }
+        .number-inputs {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .number-input {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 15px;
+        }
+        .number-input input {
+            padding: 8px;
+            width: 200px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        #status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background: #dff0d8;
+            color: #3c763d;
+        }
+        .error {
+            background: #f2dede;
+            color: #a94442;
+        }
+        .beleg-id-input {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Beleg Validation</h1>
+        
+        <div class="number-input beleg-id-input">
+            <label for="PK_INP_BELEGE_ALL">BELEG ID:</label>
+            <input type="text" id="PK_INP_BELEGE_ALL" placeholder="Enter Beleg ID">
+            <button id="load-btn">Load Data</button>
+        </div>
+
+        <div class="number-inputs">
+            <div class="number-input">
+                <label for="final-cnt-trans">FINAL_CNT_ZUGEORD_TRANS</label>
+                <input type="number" id="final-cnt-trans" min="0">
+            </div>
+            <div class="number-input">
+                <label for="final-cnt-bilder">FINAL_CNT_ZUGEORD_BILDER</label>
+                <input type="number" id="final-cnt-bilder" min="0">
+            </div>
+        </div>
+        
+        <div id="sections-container"></div>
+        
+        <button id="save-btn">Save Changes</button>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        // Configuration
+        const fieldGroups = [
+            {
+                name: "Basic Information",
+                pattern: /DATUM_(ALL)_OK/
+            },
+            {
+                name: "Attachments",
+                pattern: /DATUM_(ZUGEORD_BILDER|ZUGEORD_TRANS)_OK/
+            },
+            {
+                name: "Adressdaten",
+                pattern: /DATUM_(ORT|ADDRESSE|BUSSGELD|BELEG_POS|BUCHUNG|VERPFL_BEL|DUPL)_OK/
+            },
+            {
+                name: "Status Information",
+                pattern: /DATUM_(STATUS_VERW|STATUS_KAT|BASISDATEN|CITY_LAND|BELEGSTATUS|BELEGART|ZEITRAEUME)_OK/
+            },
+            {
+                name: "Financial Information",
+                pattern: /DATUM_(BETRAG|BETRAG_FRMDW|BETRAG_EUR)_OK/
+            },
+            {
+                name: "Document Details",
+                pattern: /DATUM_(BELEGPOSITION|ZUORDNUNG|RUECKSEITE|KOMMENTARE|TANKEN|VERGEHEN|ZAHLUNGSSTATUS|SONSTIGES)_OK/
+            },
+            {
+                name: "Tax & Accounting",
+                pattern: /DATUM_(STUNDENZETTEL|RECHNUNG|STEUER|LOHNSTEUER|DOCUMENT_LIST|ALLG_ZUORDNUNG)_OK/
+            },
+            {
+                name: "Dates",
+                pattern: /DATUM_(ANTRAGSTELLUNG|EINGANGSDATUM)/
+            },
+            {
+                name: "Relations",
+                pattern: /DATUM_(ZUORD_VERTRAEGE|ZUORD_BELEGE|ZUORD_GESCHAEFTSPARTNER|ZUORD_TERMINE|ZUORD_TODO|ZUORD_POST|RELATION)_OK/
+            }
+        ];
+
+        const allFields = [
+            "DATUM_ORT_OK", "DATUM_ADDRESSE_OK", "DATUM_BUSSGELD_OK", "DATUM_BELEG_POS_OK", 
+            "DATUM_BUCHUNG_OK", "DATUM_VERPFL_BEL_OK", "DATUM_DUPL_OK", "DATUM_STATUS_VERW", 
+            "DATUM_STATUS_KAT", "DATUM_BASISDATEN_OK", "DATUM_CITY_LAND_OK", "DATUM_BELEGSTATUS_OK", 
+            "DATUM_BELEGART_OK", "DATUM_ZEITRAEUME_OK", "DATUM_BETRAG_OK", "DATUM_BETRAG_FRMDW_OK", 
+            "DATUM_BETRAG_EUR_OK", "DATUM_BELEGPOSITION_OK", "DATUM_ZUORDNUNG_OK", "DATUM_RUECKSEITE_OK", 
+            "DATUM_KOMMENTARE_OK", "DATUM_TANKEN_OK", "DATUM_VERGEHEN_OK", "DATUM_ZAHLUNGSSTATUS_OK", 
+            "DATUM_SONSTIGES_OK", "DATUM_STUNDENZETTEL_OK", "DATUM_RECHNUNG_OK", "DATUM_STEUER_OK", 
+            "DATUM_LOHNSTEUER_OK", "DATUM_DOCUMENT_LIST_OK", "DATUM_ALLG_ZUORDNUNG_OK", "DATUM_ANTRAGSTELLUNG", 
+            "DATUM_EINGANGSDATUM", "DATUM_ZUORD_VERTRAEGE_OK", "DATUM_ZUORD_BELEGE_OK", 
+            "DATUM_ZUORD_GESCHAEFTSPARTNER_OK", "DATUM_ZUORD_TERMINE_OK", "DATUM_ZUORD_TODO_OK", 
+            "DATUM_ZUORD_POST_OK", "DATUM_RELATION_OK", "DATUM_ALL_OK", "DATUM_ZUGEORD_BILDER_OK", 
+            "DATUM_ZUGEORD_TRANS_OK"
+        ];
+
+        // Format date for display
+        function formatDate(dateString) {
+            if (!dateString) return 'never';
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleString();
+            } catch (e) {
+                return dateString;
+            }
+        }
+
+        // Get ID from URL or input field
+        function getBelegId() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const inputId = document.getElementById('PK_INP_BELEGE_ALL').value;
+            return inputId || urlParams.get('id') || 'PK_INP_BELEGE_ALL';
+        }
+
+        // Load data from API
+        async function loadData() {
+            const belegId =  document.getElementById('PK_INP_BELEGE_ALL').value;
+            showStatus('Loading data...', '');
+            
+            try {
+                const response = await fetch(`http://localhost:5000/beleg/${belegId}`);
+                if (!response.ok) throw new Error('Network response was not ok');
+              
+                return await response.json();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showStatus('Error loading data: ' + error.message, 'error');
+                return null;
+            }
+        }
+
+    function displayDatesList(data) {
+            const datesContainer = document.getElementById('dates-container');
+            const datesList = document.getElementById('dates-list');
+            datesList.innerHTML = '';
+               
+            // Filter fields that have date values (not null/undefined and not 1/0)
+            const dateFields = allFields.filter(field => {
+                return data[field] && data[field] !== 1 && data[field] !== 0;
+            });
+            
+            if (dateFields.length === 0) {
+                datesContainer.style.display = 'none';
+                return;
+            }
+            
+            datesContainer.style.display = 'block';
+            
+            dateFields.forEach(field => {
+                const li = document.createElement('li');
+                const fieldSpan = document.createElement('span');
+                fieldSpan.className = 'date-field';
+                fieldSpan.textContent = field.replace(/_/g, ' ') + ': ';
+                
+                const dateSpan = document.createElement('span');
+                dateSpan.textContent = formatDate(data[field]);
+                
+                li.appendChild(fieldSpan);
+                li.appendChild(dateSpan);
+                datesList.appendChild(li);
+            });
+        }
+
+
+        // Initialize checkboxes with date values
+        async function initializeCheckboxes() {
+            const data = await loadData();
+            const container = document.getElementById('sections-container');
+            container.innerHTML = '';
+            
+            if (!data) return;
+
+            // Create sections for each group
+            fieldGroups.forEach(group => {
+                const matchingFields = allFields.filter(field => group.pattern.test(field));
+                if (matchingFields.length === 0) return;
+                
+                const section = document.createElement('div');
+                section.className = 'section';
+                
+                const header = document.createElement('div');
+                header.className = 'section-header';
+                header.textContent = group.name;
+                header.addEventListener('click', function() {
+                    this.classList.toggle('collapsed');
+                    const content = this.nextElementSibling;
+                    content.classList.toggle('collapsed');
+                });
+                
+                const content = document.createElement('div');
+                content.className = 'section-content';
+                
+                matchingFields.forEach(field => {
+                    const div = document.createElement('div');
+                    div.className = 'checkbox-item';
+                    
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = field;
+                    checkbox.dataset.field = field;
+                    checkbox.checked = data[field] === 1;
+                    
+                    const label = document.createElement('label');
+                    label.htmlFor = field;
+                    label.textContent = field.replace(/_/g, ' ');
+
+                    const label1 = document.createElement('label');
+                    label1.htmlFor = field ;
+                    label1.id = field || '_l' ;
+                    label1.textContent = ' (test)';                    
+
+                    // Add date value if it exists
+                    if (data[field] && data[field] !== 1) { // If it's a date string
+                        const dateSpan = document.createElement('span');
+                        dateSpan.className = 'date-value';
+                        dateSpan.textContent = formatDate(data[field]);
+                        label.appendChild(dateSpan);
+                      
+                    }
+                    
+                    div.appendChild(checkbox);
+                    div.appendChild(label);
+                    div.appendChild(label1);
+                    content.appendChild(div);
+                });
+                
+                section.appendChild(header);
+                section.appendChild(content);
+                container.appendChild(section);
+            });
+
+      
+
+            // Set number fields
+            document.getElementById('final-cnt-trans').value = data.FINAL_CNT_ZUGEORD_TRANS || 0;
+            document.getElementById('final-cnt-bilder').value = data.FINAL_CNT_ZUGEORD_BILDER || 0;
+
+             
+             // Display dates list
+            displayDatesList(data);
+            showStatus('Data loaded successfully', 'success');
+        }
+
+        // Save data to API
+        async function saveData() {
+            const belegId = getBelegId();
+            const payload = {
+                PK_INP_BELEGE_ALL: belegId
+            };
+
+            // Add checkbox values (1 if checked, 0 if not)
+            allFields.forEach(field => {
+                const checkbox = document.getElementById(field);
+                if (checkbox) {
+                    payload[field] = checkbox.checked ? 1 : 0;
+                }
+            });
+
+            // Add number fields
+            payload.FINAL_CNT_ZUGEORD_TRANS = parseInt(document.getElementById('final-cnt-trans').value) || 0;
+            payload.FINAL_CNT_ZUGEORD_BILDER = parseInt(document.getElementById('final-cnt-bilder').value) || 0;
+
+            showStatus('Saving data...', '');
+            
+            try {
+                const response = await fetch('http://localhost:5000/update-beleg-ok', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Network response was not ok');
+                }
+                
+                const result = await response.json();
+                showStatus('Data saved successfully!', 'success');
+                console.log('Save result:', result);
+                
+                // Reload data to show updated timestamps
+                initializeCheckboxes();
+            } catch (error) {
+                console.error('Error saving data:', error);
+                showStatus('Error saving data: ' + error.message, 'error');
+            }
+        }
+
+        // Show status message
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = type;
+            if (!type) statusDiv.className = '';
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set up load button
+            document.getElementById('load-btn').addEventListener('click', initializeCheckboxes);
+            
+            // Set up save button
+            document.getElementById('save-btn').addEventListener('click', saveData);
+            
+            // Load data if ID is in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('id')) {
+                document.getElementById('PK_INP_BELEGE_ALL').value = urlParams.get('id');
+                initializeCheckboxes();
+            }
+        });
+    </script>
+</body>
+</html>

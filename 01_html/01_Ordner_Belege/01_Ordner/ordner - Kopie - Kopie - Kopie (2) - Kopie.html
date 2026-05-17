@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Complete Document Management | Advanced Yearly Analytics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --light-color: #ecf0f1;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            min-height: 90vh;
+        }
+        .badge-green { background-color: #28a745; padding: 3px 8px; border-radius: 20px; font-size: 0.75rem; color: white; }
+        .badge-red { background-color: #dc3545; padding: 3px 8px; border-radius: 20px; font-size: 0.75rem; color: white; }
+        .sidebar { background: var(--primary-color); color: white; padding: 25px 0; overflow-y: auto; border-right: 3px solid var(--secondary-color); }
+        .sidebar-header { padding: 0 20px 20px; border-bottom: 2px solid rgba(255,255,255,0.1); }
+        .refresh-btn { background: var(--secondary-color); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 10px; }
+        .treeview-enhanced { padding: 15px; }
+        .jahr-group { margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px; padding: 5px; background-color: rgba(249,249,249,0.1); }
+        .jahr-title { font-size: 18px; color: var(--warning-color); cursor: pointer; padding: 8px; display: flex; align-items: center; font-weight: bold; }
+        .jahr-title::before { content: "▼"; margin-right: 10px; }
+        .jahr-title.collapsed::before { content: "▶"; }
+        .jahr-content { margin-left: 15px; }
+        .ordner-group { margin: 10px 0 10px 15px; border: 1px solid rgba(214,233,255,0.3); border-radius: 4px; padding: 5px; }
+        .ordner-title { font-size: 16px; color: #bdc3c7; cursor: pointer; padding: 6px; display: flex; align-items: center; }
+        .ordner-title::before { content: "▼"; margin-right: 8px; }
+        .ordner-title.collapsed::before { content: "▶"; }
+        .page-items { margin-left: 15px; }
+        .page-item { padding: 8px 10px; margin: 3px 0; background-color: rgba(255,255,255,0.05); border-radius: 3px; cursor: pointer; display: flex; justify-content: space-between; border-left: 3px solid transparent; }
+        .page-item:hover { background-color: rgba(240,247,255,0.2); border-left-color: var(--secondary-color); }
+        .belege-count { background-color: var(--success-color); border-radius: 10px; padding: 2px 8px; font-size: 11px; }
+        .main-content { display: flex; flex-direction: column; overflow: hidden; }
+        .tabs { display: flex; background: var(--primary-color); border-bottom: 3px solid var(--secondary-color); flex-wrap: wrap; }
+        .tab-btn { flex: 1; background: transparent; color: #bdc3c7; border: none; padding: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 600; transition: 0.2s; }
+        .tab-btn.active { background: rgba(52,152,219,0.2); color: white; border-bottom-color: var(--secondary-color); }
+        .tab-content { flex: 1; padding: 30px; overflow-y: auto; overflow-x: hidden; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .section { background: var(--light-color); padding: 25px; border-radius: 10px; margin-bottom: 25px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .section h2 { color: var(--primary-color); margin-bottom: 20px; border-bottom: 2px solid var(--secondary-color); display: flex; align-items: center; gap: 10px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary { background: var(--secondary-color); color: white; }
+        .btn-success { background: var(--success-color); color: white; }
+        .result { margin-top: 20px; padding: 20px; border-radius: 10px; background: white; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 25px; margin-bottom: 30px; }
+        .stat-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 5px 12px rgba(0,0,0,0.08); border-top: 4px solid var(--secondary-color); }
+        .stat-number { font-size: 2.5rem; font-weight: bold; color: var(--primary-color); margin: 15px 0; }
+        
+        /* HORIZONTAL SCROLLABLE CONTAINERS FOR CHARTS AND TABLES */
+        .scrollable-x {
+            overflow-x: auto;
+            overflow-y: visible;
+            margin-bottom: 25px;
+            border-radius: 16px;
+            scrollbar-width: thin;
+        }
+        .scrollable-x::-webkit-scrollbar {
+            height: 8px;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+        }
+        .scrollable-x::-webkit-scrollbar-thumb {
+            background-color: var(--secondary-color);
+            border-radius: 10px;
+        }
+        .chart-container {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 5px 12px rgba(0,0,0,0.08);
+            min-width: 500px;  /* Ensures charts have minimum width for readability */
+        }
+        .flex-charts {
+            display: flex;
+            flex-wrap: nowrap;  /* No wrapping -> forces horizontal scroll on parent */
+            gap: 30px;
+        }
+        .flex-charts > div {
+            flex: 0 0 auto;    /* Prevent shrinking, keep original width */
+            min-width: 480px;
+        }
+        canvas { 
+            max-height: 380px; 
+            width: 100%;
+            min-width: 400px;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 12px;
+            margin-top: 15px;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            min-width: 1300px;  /* Wider table forces horizontal scroll for better readability */
+        }
+        .data-table th {
+            background: var(--primary-color);
+            color: white;
+            padding: 14px;
+            text-align: left;
+            position: sticky;
+            top: 0;
+            white-space: nowrap;
+        }
+        .data-table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            white-space: nowrap;
+        }
+
+.badge-green {
+  background-color: #28a745; /* green */
+padding: 3px 8px; border-radius: 20px; font-size: 0.75rem;
+}
+
+.badge-red {
+  background-color: #dc3545; /* red */
+padding: 3px 8px; border-radius: 20px; font-size: 0.75rem;
+}
+        .badge-ok { background: #27ae60; color: white; padding: 3px 8px; border-radius: 20px; font-size: 0.75rem; }
+        .badge-missing { background: #e74c3c; color: white; padding: 3px 8px; border-radius: 20px; font-size: 0.75rem; }
+        .sub-row { background-color: #f8f9fc; cursor: pointer; transition: 0.1s; }
+        .sub-row:hover { background-color: #eef2f7; }
+        .sub-detail { background-color: #fef9e6; border-left: 4px solid var(--warning-color); }
+        .sub-detail td { padding: 10px 20px; white-space: normal; word-break: break-word; }
+        .sub-detail .inner-page-table { min-width: 800px; }
+        .toggle-icon { font-size: 14px; margin-right: 8px; display: inline-block; width: 18px; }
+        .page-list { margin: 5px 0 5px 25px; border-left: 2px solid #ddd; padding-left: 15px; }
+        .page-item-detail { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #eee; font-size: 0.85rem; }
+        .sort-btn { background: none; border: none; color: white; margin-left: 8px; cursor: pointer; font-size: 12px; }
+        .scroll-hint {
+            font-size: 0.75rem;
+            color: #6c757d;
+            margin-top: 8px;
+            text-align: right;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 6px;
+        }
+        .scroll-hint i {
+            font-size: 0.9rem;
+        }
+        @media (max-width: 992px) { 
+            .container { grid-template-columns: 1fr; } 
+            .sidebar { display: none; }
+            .tab-content { padding: 15px; }
+        }
+        @media (max-width: 768px) {
+            .flex-charts > div { min-width: 380px; }
+            .chart-container { min-width: 360px; }
+            canvas { min-width: 320px; }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<div class="container">
+    <div class="sidebar">
+        <div class="sidebar-header"><h2><i class="fas fa-folder-tree"></i> Ordner Structure</h2><button class="refresh-btn" onclick="loadFullData()"><i class="fas fa-sync-alt"></i> Refresh</button></div>
+        <div class="treeview-enhanced" id="treeviewContainer"><div style="padding:20px;text-align:center;"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
+    </div>
+    <div class="main-content">
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="statistics"><i class="fas fa-chart-line"></i> Advanced Analytics</button>
+            <button class="tab-btn" data-tab="belege"><i class="fas fa-file-invoice"></i> Belege</button>
+            <button class="tab-btn" data-tab="document"><i class="fas fa-file-upload"></i> Add Document</button>
+        </div>
+        <div class="tab-content">
+            <!-- STATISTICS TAB with horizontal scroll for all content -->
+            <div id="statistics" class="tab-pane active">
+                <div class="section">
+                    <h2><i class="fas fa-chart-pie"></i> Folder & Document Analytics (Grouped by Year)</h2>
+                    <div class="stats-grid" id="statsCards">
+                        <div class="stat-card"><i class="fas fa-folder-open fa-2x"></i><div class="stat-number" id="totalFolders">-</div><div>Total Ordner</div></div>
+                        <div class="stat-card"><i class="fas fa-check-circle fa-2x"></i><div class="stat-number" id="foldersAllOk">-</div><div>Folders 100% OK (all pages have Datum)</div></div>
+                        <div class="stat-card"><i class="fas fa-chart-line fa-2x"></i><div class="stat-number" id="totalPages">-</div><div>Total Pages</div></div>
+  <div class="stat-card"><i class="fas fa-chart-line fa-2x"></i><div class="stat-number" id="totalPages_ok">-</div><div>Total Pages</div></div>
+                    </div>
+                </div>
+                
+                <!-- Horizontally scrollable charts row -->
+                <div class="scrollable-x">
+                    <div class="flex-charts">
+                        <div class="chart-container">
+                            <h3><i class="fas fa-chart-bar"></i> Pages per Folder (High to Low)</h3>
+                            <canvas id="pagesPerFolderSortedChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3><i class="fas fa-calendar-alt"></i> Pages per Folder (Grouped by Year)</h3>
+                            <canvas id="pagesPerYearChart"></canvas>
+                        </div>
+                        <div class="chart-container" style="min-width:550px;">
+                            <h3><i class="fas fa-receipt"></i> Belege per Page & OK Validation (Top 15)</h3>
+                            <canvas id="belegePerPageOkChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="scroll-hint"><i class="fas fa-arrows-alt-h"></i> Horizontal scroll for more charts →</div>
+                </div>
+                
+                <!-- DETAILED FOLDER OVERVIEW with horizontal scrollable table -->
+                <div class="section">
+                    <h2><i class="fas fa-table"></i> Detailed Folder Overview <span style="font-size:0.8rem;">(click on row to expand/collapse pages per folder)</span></h2>
+                    <div class="scrollable-x">
+                        <div class="table-wrapper">
+                            <table class="data-table" id="folderDetailTable">
+                                <thead>
+                                    <tr><th>Year</th><th>Ordner ID</th><th>Ordner Name</th><th>Total Pages</th><th>Pages with DATUM_OK</th><th>Pages Missing OK</th><th>Total Belege</th><th>Belege with DATUM_ALL_OK</th><th>Belege Missing OK</th><th>OK% (Pages)</th></tr>
+                                </thead>
+                                <tbody id="folderDetailBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="scroll-hint"><i class="fas fa-arrows-alt-h"></i> Scroll table horizontally →</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="belege" class="tab-pane"><div class="section"><h2><i class="fas fa-file-invoice"></i> Belege Details</h2><div id="belegeOutput" class="result">Select a page from the left tree to view belege.</div></div></div>
+            <div id="document" class="tab-pane"><div class="section"><h2><i class="fas fa-file-upload"></i> Add Document to Selected Page</h2><form id="docForm"><input type="text" id="docDatum" placeholder="DD.MM.YYYY" style="width:100%;padding:10px;margin-bottom:10px"><input type="text" id="docDesc" placeholder="Description" style="width:100%;padding:10px;margin-bottom:10px"><input type="number" id="docAmount" placeholder="Gross Amount" step="0.01" style="width:100%;padding:10px;margin-bottom:10px"><input type="text" id="docNumber" placeholder="Document Number" style="width:100%;padding:10px;margin-bottom:10px"><button type="submit" class="btn btn-primary">Insert Document</button></form><div id="docResult"></div></div></div>
+        </div>
+    </div>
+</div>
+<script>
+    const BASE_URL = 'http://localhost:5000';
+    let globalFolders = []; 
+    
+    async function loadFullData() {
+    try {
+        const resp = await fetch(`${BASE_URL}/ordner_pages`);
+        if (!resp.ok) throw new Error('Failed fetch');
+        const rows = await resp.json();
+        const folderMap = new Map();
+        for (const row of rows) {
+            const ordnerId = row.PK_ABL_ORDNER;
+            const year = row.JAHR || (row.CREATED_AT ? new Date(row.CREATED_AT).getFullYear() : 2024);
+            if (!folderMap.has(ordnerId)) {
+                folderMap.set(ordnerId, {
+                    id: ordnerId,
+                    name: row.ORDNER_NAME || `Ordner ${ordnerId}`,
+                    year: year,
+                    pages: [],
+                    totalPages: 0,
+                    pagesWithOk: 0,
+                    pagesMissing: 0,
+                    totalBelege: 0,
+                    belegeOk: 0,
+                    belegeMissing: 0
+                });
+            }
+            const folder = folderMap.get(ordnerId);
+            const hasOk = !!row.p_datum_belege_all_ok;  // This checks if DATUM_BELEGE_ALL_OK is filled
+            const pageBelegeCount = row.FINAL_CNT_BELEGE || row.cnt || 0;
+            const pageIdValue = row.PK_ABL_ORDNER_PAGE;
+            folder.pages.push({
+                pageId: pageIdValue,
+                pageNumber: row.PAGE_NUMBER,
+                descr: row.DESCR || '',
+                hasOkDate: hasOk,
+                belegeCount: pageBelegeCount,
+                pk_abl_ordner_page: pageIdValue
+            });
+            folder.totalPages++;
+            if (hasOk) folder.pagesWithOk++; else folder.pagesMissing++;
+            folder.totalBelege += pageBelegeCount;
+            if (hasOk) folder.belegeOk += pageBelegeCount; else folder.belegeMissing += pageBelegeCount;
+        }
+        globalFolders = Array.from(folderMap.values());
+        const totalFolders = globalFolders.length;
+        const foldersAllOk = globalFolders.filter(f => f.totalPages > 0 && f.pagesWithOk === f.totalPages).length;
+        const totalPagesSum = globalFolders.reduce((sum, f) => sum + f.totalPages, 0);
+        const totalPagesOk = globalFolders.reduce((sum, f) => sum + f.pagesWithOk, 0);  // NEW LINE
+        
+        document.getElementById('totalFolders').innerText = totalFolders;
+        document.getElementById('foldersAllOk').innerText = foldersAllOk;
+        document.getElementById('totalPages').innerText = totalPagesSum;
+        document.getElementById('totalPages_ok').innerText = totalPagesOk;  // NEW LINE
+        
+        renderSortedPagesPerFolder(globalFolders);
+        renderPagesGroupedByYear(globalFolders);
+        renderBelegePerPageChart(globalFolders);
+        renderDetailedFolderTable(globalFolders);
+        buildTreeviewWithYears(rows);
+    } catch (err) {
+        console.error(err);
+        document.getElementById('totalFolders').innerHTML = 'Error loading';
+    }
+}
+    
+    let chartSorted = null;
+    function renderSortedPagesPerFolder(folders) {
+        const sorted = [...folders].sort((a,b) => b.totalPages - a.totalPages).slice(0, 20);
+        const ctx = document.getElementById('pagesPerFolderSortedChart').getContext('2d');
+        if (chartSorted) chartSorted.destroy();
+        chartSorted = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: sorted.map(f => f.name.length > 18 ? f.name.slice(0,15)+'..' : f.name), datasets: [{ label: 'Pages Count', data: sorted.map(f => f.totalPages), backgroundColor: '#3498db', borderRadius: 6 }] },
+            options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top' } } }
+        });
+    }
+    
+    let chartYear = null;
+    function renderPagesGroupedByYear(folders) {
+        const yearMap = new Map();
+        folders.forEach(f => { const y = f.year; yearMap.set(y, (yearMap.get(y) || 0) + f.totalPages); });
+        const sortedYears = Array.from(yearMap.keys()).sort((a,b)=>a-b);
+        const ctx = document.getElementById('pagesPerYearChart').getContext('2d');
+        if (chartYear) chartYear.destroy();
+        chartYear = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: sortedYears, datasets: [{ label: 'Total Pages per Year (sum over folders)', data: sortedYears.map(y => yearMap.get(y)), backgroundColor: '#f39c12' }] },
+            options: { responsive: true, plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.raw} pages` } } } }
+        });
+    }
+    
+    let belegeChart = null;
+    function renderBelegePerPageChart(folders) {
+        let allPages = [];
+        folders.forEach(folder => {
+            folder.pages.forEach(page => {
+                allPages.push({
+                    label: `${folder.name} / Seite ${page.pageNumber}`,
+                    total: page.belegeCount,
+                    ok: page.hasOkDate ? page.belegeCount : 0,
+                    missing: page.hasOkDate ? 0 : page.belegeCount
+                });
+            });
+        });
+        allPages.sort((a,b) => b.total - a.total);
+        const top = allPages.slice(0, 15);
+        const ctx = document.getElementById('belegePerPageOkChart').getContext('2d');
+        if (belegeChart) belegeChart.destroy();
+        belegeChart = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: top.map(p => p.label.length > 22 ? p.label.slice(0,20)+'..' : p.label), datasets: [
+                { label: 'Belege mit DATUM_ALL_OK', data: top.map(p => p.ok), backgroundColor: '#27ae60' },
+                { label: 'Belege ohne OK', data: top.map(p => p.missing), backgroundColor: '#e74c3c' }
+            ] },
+            options: { responsive: true, maintainAspectRatio: true, scales: { x: { stacked: true }, y: { stacked: true, title: { display: true, text: 'Anzahl Belege' } } } }
+        });
+    }
+    
+    function renderDetailedFolderTable(folders) {
+        const tbody = document.getElementById('folderDetailBody');
+        tbody.innerHTML = '';
+        const groupedByYear = new Map();
+        folders.forEach(f => { const y = f.year; if (!groupedByYear.has(y)) groupedByYear.set(y, []); groupedByYear.get(y).push(f); });
+        const sortedYears = Array.from(groupedByYear.keys()).sort((a,b)=>b-a);
+        for (const year of sortedYears) {
+            const foldersInYear = groupedByYear.get(year);
+
+            foldersInYear.forEach((folder) => {
+                const row = tbody.insertRow();
+const badgeClass = folder.pagesMissing === 0 ? 'badge-green' : 'badge-red';
+                const okPercent = folder.totalPages ? ((folder.pagesWithOk / folder.totalPages)*100).toFixed(1) : '0';
+                row.insertCell(0).innerText = year;
+                row.insertCell(1).innerText = folder.id;
+                row.insertCell(2).innerHTML = `<strong>${folder.name}</strong>`;
+                row.insertCell(3).innerText = folder.totalPages;
+                row.insertCell(4).innerHTML = `<span class="badge-ok">${folder.pagesWithOk}</span>`;
+                row.insertCell(5).innerHTML = `<span class="badge-missing">${folder.pagesMissing}</span>`;
+
+row.insertCell(6).innerHTML = `
+  <span class="badge ${badgeClass}">
+    ${folder.pagesMissing}
+  </span>
+`;
+                row.insertCell(7).innerText = folder.totalBelege;
+                row.insertCell(8).innerHTML = `<span class="badge-ok">${folder.belegeOk}</span>`;
+                row.insertCell(9).innerHTML = `<span class="badge-missing">${folder.belegeMissing}</span>`;
+                row.insertCell(10).innerHTML = `${okPercent}%`;
+                row.classList.add('sub-row');
+                row.style.cursor = 'pointer';
+                
+                const detailRow = tbody.insertRow();
+                detailRow.classList.add('sub-detail');
+                detailRow.style.display = 'none';
+                const detailCell = detailRow.insertCell(0);
+                detailCell.colSpan = 10;
+                
+                let pagesHtml = `<div style="padding: 12px;"><strong><i class="fas fa-folder-open"></i> Seiten in Ordner "${folder.name}" (${folder.pages.length} Seiten):</strong>
+                                <div class="scrollable-x" style="margin-top: 12px; max-height: 350px;">
+                                <table style="width:100%; min-width: 700px; border-collapse:collapse; background:white; border-radius:8px;">
+                                <thead><tr style="background:#e9ecef;"><th>Seite #</th><th>Page ID (PK)</th><th>Beschreibung</th><th>Belege gesamt</th><th>Belege mit DATUM_ALL_OK</th><th>Belege fehlend OK</th><th>Status</th></tr></thead><tbody>`;
+                let sumBelegeOkSub = 0, sumBelegeMissingSub = 0;
+                folder.pages.forEach(page => {
+                    const pageOkBelege = page.hasOkDate ? page.belegeCount : 0;
+                    const pageMissingBelege = page.hasOkDate ? 0 : page.belegeCount;
+                    sumBelegeOkSub += pageOkBelege;
+                    sumBelegeMissingSub += pageMissingBelege;
+                    const statusBadge = page.hasOkDate ? '<span class="badge-ok">✅ OK complete</span>' : '<span class="badge-missing">⚠️ Missing OK date</span>';
+                    const pageIdentifier = page.pageId !== undefined ? page.pageId : (page.pk_abl_ordner_page || 'N/A');
+                    pagesHtml += `<tr>
+                        <td>${page.pageNumber}</td>
+                        <td><code>${pageIdentifier}</code></td>
+                        <td>${page.descr || '-'}</td>
+                        <td>${page.belegeCount}</td>
+                        <td>${pageOkBelege}</td>
+                        <td>${pageMissingBelege}</td>
+                        <td>${statusBadge}</td>
+                    </tr>`;
+                });
+                pagesHtml += `<tr style="background:#f1f3f5; font-weight:bold;"><td colspan="3"><strong>SUMME pro Ordner</strong></td><td>${folder.totalBelege}</td><td>${sumBelegeOkSub}</td><td>${sumBelegeMissingSub}</td><td></td></tr>`;
+                pagesHtml += `</tbody></table></div></div>`;
+                detailCell.innerHTML = pagesHtml;
+                
+                row.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const isHidden = detailRow.style.display === 'none';
+                    detailRow.style.display = isHidden ? 'table-row' : 'none';
+                });
+            });
+        }
+    }
+    
+    function buildTreeviewWithYears(rawRows) {
+        const container = document.getElementById('treeviewContainer');
+        const yearMap = new Map();
+        rawRows.forEach(row => {
+            const year = row.JAHR || 'Unbekannt';
+            if (!yearMap.has(year)) yearMap.set(year, []);
+            yearMap.get(year).push(row);
+        });
+        let html = '';
+        const sortedYears = Array.from(yearMap.keys()).sort((a,b)=>b-a);
+        for (let year of sortedYears) {
+            html += `<div class="jahr-group"><div class="jahr-title">📅 Jahr: ${year}</div><div class="jahr-content">`;
+            const rowsInYear = yearMap.get(year);
+            const ordnerGroup = new Map();
+            rowsInYear.forEach(r => { const key = r.ORDNER_NAME || `Ordner ${r.PK_ABL_ORDNER}`; if(!ordnerGroup.has(key)) ordnerGroup.set(key, []); ordnerGroup.get(key).push(r); });
+            for (let [ordnerName, pages] of ordnerGroup.entries()) {
+                html += `<div class="ordner-group"><div class="ordner-title">📁 ${ordnerName} (${pages.length})</div><div class="page-items" style="display:none;">`;
+                pages.forEach(page => {
+                    const okIcon = page.p_datum_belege_all_ok ? '✅' : '⏳';
+                    html += `<div class="page-item" onclick="selectPage(${page.PK_ABL_ORDNER_PAGE}, '${(page.DESCR || '').replace(/'/g, "\\'")}')">
+                        <span>${okIcon} Seite ${page.PAGE_NUMBER}: ${page.DESCR || 'keine Beschreibung'} (Belege: ${page.cnt || 0})</span>
+                        <span class="belege-count">${page.cnt || 0}</span>
+                    </div>`;
+                });
+                html += `</div></div>`;
+            }
+            html += `</div></div>`;
+        }
+        container.innerHTML = html;
+        attachTreeEvents();
+    }
+    
+    function attachTreeEvents() {
+        document.querySelectorAll('.jahr-title').forEach(el => {
+            el.addEventListener('click', (e) => { e.stopPropagation(); el.classList.toggle('collapsed'); const next = el.nextElementSibling; if(next) next.style.display = next.style.display === 'none' ? 'block' : 'none'; });
+        });
+        document.querySelectorAll('.ordner-title').forEach(el => {
+            el.addEventListener('click', (e) => { e.stopPropagation(); el.classList.toggle('collapsed'); const next = el.nextElementSibling; if(next) next.style.display = next.style.display === 'none' ? 'block' : 'none'; });
+        });
+        document.querySelectorAll('.jahr-content').forEach(c => c.style.display = 'block');
+        document.querySelectorAll('.page-items').forEach(c => c.style.display = 'none');
+    }
+    
+    window.selectPage = async function(pageId, descr) {
+        const outputDiv = document.getElementById('belegeOutput');
+        outputDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading belege...';
+        try {
+            const resp = await fetch(`${BASE_URL}/belege/${pageId}`);
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const belege = await resp.json();
+            if (!belege.length) outputDiv.innerHTML = `<div class="result info">Keine Belege für Seite ${pageId} (${descr})</div>`;
+            else {
+                let html = `<h4>Belege für Seite ${pageId} (${descr})</h4><div class="scrollable-x"><table class="data-table"><thead><tr><th>ID</th><th>Bezeichnung</th><th>Belegdatum</th><th>Brutto</th><th>DATUM_ALL_OK</th></tr></thead><tbody>`;
+                belege.forEach(b => {
+                    const okDate = b.DATUM_ALL_OK ? new Date(b.DATUM_ALL_OK).toLocaleDateString() : '❌ nicht gesetzt';
+                    html += `<tr><td>${b.PK_INP_BELEGE_ALL}</td><td>${b.BEZEICHNUNG || b.TITEL || ''}</td><td>${b.BELEGDATUM ? new Date(b.BELEGDATUM).toLocaleDateString() : '-'}</td><td>${b.BRUTTO_BETRAG || 0} €</td><td>${okDate}</td></tr>`;
+                });
+                html += `</tbody></table></div>`;
+                outputDiv.innerHTML = html;
+            }
+            window.currentPageId = pageId;
+            document.getElementById('docResult').innerHTML = `✅ Bereit, Dokument für Seite ${pageId} hinzuzufügen.`;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            document.getElementById('belege').classList.add('active');
+            document.querySelector('.tab-btn[data-tab="belege"]').classList.add('active');
+        } catch(err) { outputDiv.innerHTML = `<div class="result error">Fehler: ${err.message}</div>`; }
+    };
+    
+    const docForm = document.getElementById('docForm');
+    if (docForm) {
+        docForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!window.currentPageId) { document.getElementById('docResult').innerHTML = '<div class="result error">Bitte zuerst eine Seite im Baum auswählen.</div>'; return; }
+            const datum = document.getElementById('docDatum').value;
+            const bezeichnung = document.getElementById('docDesc').value;
+            const brutto = document.getElementById('docAmount').value;
+            const belegnummer = document.getElementById('docNumber').value;
+            if (!datum.match(/^\d{2}\.\d{2}\.\d{4}$/)) { document.getElementById('docResult').innerHTML = '<div class="result error">Datum Format DD.MM.YYYY</div>'; return; }
+            try {
+                const resp = await fetch(`${BASE_URL}/document/insert1`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ belegdatum: datum, bezeichnung, brutto_betrag: brutto, belegnummer, fk_abl_ordner_page: window.currentPageId })
+                });
+                const data = await resp.json();
+                if (data.success) { 
+                    document.getElementById('docResult').innerHTML = `<div class="result success">✅ Dokument erfolgreich eingefügt. Seite wird aktualisiert.</div>`;
+                    document.getElementById('docDatum').value = '';
+                    document.getElementById('docDesc').value = '';
+                    document.getElementById('docAmount').value = '';
+                    document.getElementById('docNumber').value = '';
+                    loadFullData(); 
+                } else document.getElementById('docResult').innerHTML = `<div class="result error">Fehler: ${data.error}</div>`;
+            } catch(err) { document.getElementById('docResult').innerHTML = `<div class="result error">${err.message}</div>`; }
+        });
+    }
+    
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(btn.getAttribute('data-tab')).classList.add('active');
+        });
+    });
+    
+    loadFullData();
+    window.loadFullData = loadFullData;
+</script>
+</body>
+</html>

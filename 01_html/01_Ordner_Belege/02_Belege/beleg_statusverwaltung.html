@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dokumenten Verwaltung</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            padding: 20px;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .belege-section, .status-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .belege-section {
+            flex: 1;
+            min-height: 600px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .status-section {
+            flex: 2;
+            min-height: 600px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-title {
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eaeaea;
+            color: #2c3e50;
+        }
+
+        .filter-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .filter-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            background: white;
+        }
+
+        .status-container {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+        }
+
+        .status-column {
+            flex: 1;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .status-column h3 {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+            color: #2c3e50;
+        }
+
+        .status-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .belege-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-height: 500px;
+            overflow-y: auto;
+            padding-right: 10px;
+            flex: 1;
+        }
+
+        .beleg-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            cursor: grab;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .beleg-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .beleg-card:active {
+            cursor: grabbing;
+        }
+
+        .beleg-card h3 {
+            font-size: 1rem;
+            margin-bottom: 5px;
+            color: #2c3e50;
+        }
+
+        .beleg-card p {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+        }
+
+        .beleg-card .date {
+            font-size: 0.8rem;
+            color: #95a5a6;
+            margin-top: 5px;
+        }
+
+        .beleg-card .current-assignment {
+            font-size: 0.7rem;
+            color: #e74c3c;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        .beleg-id {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            background: #3498db;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #7f8c8d;
+        }
+
+        .empty-state p {
+            margin-top: 10px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+        }
+
+        .assignment-info {
+            font-size: 0.75rem;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        /* Status column specific styles */
+        .status-column .beleg-card {
+            border-left-color: #9b59b6;
+        }
+
+        .status-column .beleg-card.drag-over {
+            background: #e1f5fe;
+            border-color: #3498db;
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .status-container {
+                flex-direction: column;
+            }
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 5px;
+            color: white;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .notification.success {
+            background: #2ecc71;
+            opacity: 1;
+        }
+
+        .notification.error {
+            background: #e74c3c;
+            opacity: 1;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #219a52;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal h3 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .btn-cancel {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-cancel:hover {
+            background: #7f8c8d;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            flex: 1;
+            min-width: 120px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #3498db;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        .status-ok {
+            background-color: #2ecc71;
+        }
+
+        .status-pending {
+            background-color: #f39c12;
+        }
+
+        .status-not-ok {
+            background-color: #e74c3c;
+        }
+
+        .status-unknown {
+            background-color: #95a5a6;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Dokumenten Verwaltung</h1>
+        <p>Belegstatus Verwaltung - Ziehen Sie Belege zwischen den Status-Spalten</p>
+    </div>
+
+    <div id="notification" class="notification" style="display: none;"></div>
+
+    <!-- Add Beleg Modal -->
+    <div id="addBelegModal" class="modal">
+        <div class="modal-content">
+            <h3>Neuen Beleg hinzufügen</h3>
+            <form id="addBelegForm">
+                <div class="form-group">
+                    <label for="belegName">Beleg Name</label>
+                    <input type="text" id="belegName" required>
+                </div>
+                <div class="form-group">
+                    <label for="belegType">Typ</label>
+                    <select id="belegType" required>
+                        <option value="">Bitte wählen</option>
+                        <option value="Rechnung">Rechnung</option>
+                        <option value="Quittung">Quittung</option>
+                        <option value="Lohn">Lohn</option>
+                        <option value="Reisekosten">Reisekosten</option>
+                        <option value="Einkauf">Einkauf</option>
+                        <option value="Vertrag">Vertrag</option>
+                        <option value="Lizenz">Lizenz</option>
+                        <option value="Honorar">Honorar</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="belegDate">Datum</label>
+                    <input type="date" id="belegDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="belegAmount">Betrag (€)</label>
+                    <input type="number" id="belegAmount" step="0.01" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-cancel" onclick="closeModal('addBelegModal')">Abbrechen</button>
+                    <button type="submit" class="btn btn-success">Beleg hinzufügen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Left Side - Belege Section -->
+        <div class="belege-section">
+            <div class="controls">
+                <button class="btn btn-primary" onclick="openModal('addBelegModal')">+ Neuer Beleg</button>
+            </div>
+            
+            <div class="search-box">
+                <input type="text" id="searchBelege" placeholder="Belege durchsuchen...">
+            </div>
+
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalBelege">0</div>
+                    <div class="stat-label">Gesamt Belege</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="assignedBelege">0</div>
+                    <div class="stat-label">Zugeordnet</div>
+                </div>
+            </div>
+
+            <!-- Left Side Filter -->
+            <div class="filter-section">
+                <h3 class="section-title">Belege Filter</h3>
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="jahrSelectLeft">Jahr auswählen</label>
+                        <select id="jahrSelectLeft">
+                            <option value="">Bitte Jahr wählen...</option>
+                            <option value="2018">2018</option>
+                            <option value="2019">2019</option>
+                            <option value="2020">2020</option>
+                            <option value="2021">2021</option>
+                            <option value="2022">2022</option>
+                            <option value="2023">2023</option>
+                            <option value="2024">2024</option>
+                            <option value="2025">2025</option>
+                            <option value="2026">2026</option>
+                            <option value="2027">2027</option>
+                            <option value="2028">2028</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="ordnerSelectLeft">Ordner auswählen</label>
+                        <select id="ordnerSelectLeft">
+                            <option value="">Bitte Ordner wählen...</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="pageSelectLeft">Seite auswählen</label>
+                        <select id="pageSelectLeft">
+                            <option value="">Bitte Seite wählen...</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <h2 class="section-title">Belege</h2>
+            <div class="belege-list" id="belegeList">
+                <div class="loading">Wählen Sie eine Seite aus</div>
+            </div>
+        </div>
+
+        <!-- Right Side - Status Section -->
+        <div class="status-section">
+            <h2 class="section-title">Belegstatus Verwaltung</h2>
+            
+            <!-- Right Side Filter -->
+            <div class="filter-section">
+                <h3 class="section-title">Status Filter</h3>
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="jahrSelectRight">Jahr auswählen</label>
+                        <select id="jahrSelectRight">
+                            <option value="">Bitte Jahr wählen...</option>
+                            <option value="2018">2018</option>
+                            <option value="2019">2019</option>
+                            <option value="2020">2020</option>
+                            <option value="2021">2021</option>
+                            <option value="2022">2022</option>
+                            <option value="2023">2023</option>
+                            <option value="2024">2024</option>
+                            <option value="2025">2025</option>
+                            <option value="2026">2026</option>
+                            <option value="2027">2027</option>
+                            <option value="2028">2028</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="ordnerSelectRight">Ordner auswählen</label>
+                        <select id="ordnerSelectRight">
+                            <option value="">Bitte Ordner wählen...</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="pageSelectRight">Seite auswählen</label>
+                        <select id="pageSelectRight">
+                            <option value="">Bitte Seite wählen...</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="status-container">
+                <!-- Status Column 1: DATUM_ORT_OK -->
+                <div class="status-column">
+                    <h3>DATUM_ORT_OK</h3>
+                    <div class="status-list" id="statusOrtOk">
+                        <div class="empty-state">
+                            <p>Ziehen Sie Belege hierher</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Column 2: DATUM_ADDRESSE_OK -->
+                <div class="status-column">
+                    <h3>DATUM_ADDRESSE_OK</h3>
+                    <div class="status-list" id="statusAdresseOk">
+                        <div class="empty-state">
+                            <p>Ziehen Sie Belege hierher</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Column 3: DATUM_BUSSGELD_OK -->
+                <div class="status-column">
+                    <h3>DATUM_BUSSGELD_OK</h3>
+                    <div class="status-list" id="statusBussgeldOk">
+                        <div class="empty-state">
+                            <p>Ziehen Sie Belege hierher</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Column 4: DATUM_BELEG_POS_OK -->
+                <div class="status-column">
+                    <h3>DATUM_BELEG_POS_OK</h3>
+                    <div class="status-list" id="statusBelegPosOk">
+                        <div class="empty-state">
+                            <p>Ziehen Sie Belege hierher</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Column 5: DATUM_BUCHUNG_OK -->
+                <div class="status-column">
+                    <h3>DATUM_BUCHUNG_OK</h3>
+                    <div class="status-list" id="statusBuchungOk">
+                        <div class="empty-state">
+                            <p>Ziehen Sie Belege hierher</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Column 6: DATUM_VERPFL_BEL_OK -->
+                <div class="status-column">
+                    <h3>DATUM_VERPFL_BEL_OK</h3>
+                    <div class="status-list" id="statusVerpflBelOk">
+                        <div class="empty-state">
+                            <p>Ziehen Sie Belege hierher</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State variables
+        let currentJahrLeft = '';
+        let currentOrdnerLeft = null;
+        let currentPageLeft = null;
+        let currentJahrRight = '';
+        let currentOrdnerRight = null;
+        let currentPageRight = null;
+        let draggedBeleg = null;
+        let allOrdnerData = [];
+        let belegeData = [];
+        let filteredOrdnerDataLeft = [];
+        let filteredOrdnerDataRight = [];
+
+        // DOM elements
+        const belegeList = document.getElementById('belegeList');
+        
+        // Status columns
+        const statusOrtOk = document.getElementById('statusOrtOk');
+        const statusAdresseOk = document.getElementById('statusAdresseOk');
+        const statusBussgeldOk = document.getElementById('statusBussgeldOk');
+        const statusBelegPosOk = document.getElementById('statusBelegPosOk');
+        const statusBuchungOk = document.getElementById('statusBuchungOk');
+        const statusVerpflBelOk = document.getElementById('statusVerpflBelOk');
+        
+        // Left side filters
+        const jahrSelectLeft = document.getElementById('jahrSelectLeft');
+        const ordnerSelectLeft = document.getElementById('ordnerSelectLeft');
+        const pageSelectLeft = document.getElementById('pageSelectLeft');
+        
+        // Right side filters
+        const jahrSelectRight = document.getElementById('jahrSelectRight');
+        const ordnerSelectRight = document.getElementById('ordnerSelectRight');
+        const pageSelectRight = document.getElementById('pageSelectRight');
+        
+        const notification = document.getElementById('notification');
+        const searchBelege = document.getElementById('searchBelege');
+        const totalBelege = document.getElementById('totalBelege');
+        const assignedBelege = document.getElementById('assignedBelege');
+
+        // API Base URL
+        const API_BASE = 'http://localhost:5000';
+
+        // Initialize the application
+        async function init() {
+            setupEventListeners();
+            updateStats();
+            setupStatusColumns();
+        }
+
+        // Setup drag and drop for status columns
+        function setupStatusColumns() {
+            const statusColumns = [
+                statusOrtOk, statusAdresseOk, statusBussgeldOk, 
+                statusBelegPosOk, statusBuchungOk, statusVerpflBelOk
+            ];
+            
+            statusColumns.forEach(column => {
+                column.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    this.classList.add('drag-over');
+                });
+                
+                column.addEventListener('dragleave', function() {
+                    this.classList.remove('drag-over');
+                });
+                
+                column.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    this.classList.remove('drag-over');
+                    
+                    if (draggedBeleg) {
+                        const statusField = getStatusFieldForColumn(this.id);
+                        updateBelegStatus(draggedBeleg, statusField);
+                        draggedBeleg = null;
+                    }
+                });
+            });
+        }
+
+        // Map column IDs to status fields
+        function getStatusFieldForColumn(columnId) {
+            const columnMap = {
+                'statusOrtOk': 'DATUM_ORT_OK',
+                'statusAdresseOk': 'DATUM_ADDRESSE_OK',
+                'statusBussgeldOk': 'DATUM_BUSSGELD_OK',
+                'statusBelegPosOk': 'DATUM_BELEG_POS_OK',
+                'statusBuchungOk': 'DATUM_BUCHUNG_OK',
+                'statusVerpflBelOk': 'DATUM_VERPFL_BEL_OK'
+            };
+            
+            return columnMap[columnId] || null;
+        }
+
+        // Load data for selected year (for both sides)
+        async function loadDataForYear(year, side) {
+            try {
+                const response = await fetch(`${API_BASE}/ordner_pages/${year}`);
+                
+                if (!response.ok) throw new Error(`Server error: ${response.status}`);
+                
+                const result = await response.json();
+                
+                if (result.count === 0) {
+                    showNotification(`Keine Ordner für Jahr ${year} gefunden.`, 'error');
+                    if (side === 'left') {
+                        filteredOrdnerDataLeft = [];
+                    } else {
+                        filteredOrdnerDataRight = [];
+                    }
+                    return;
+                }
+                
+                if (side === 'left') {
+                    filteredOrdnerDataLeft = result.data;
+                    populateOrdnerFilter('left');
+                } else {
+                    filteredOrdnerDataRight = result.data;
+                    populateOrdnerFilter('right');
+                }
+                
+            } catch (error) {
+                console.error('Error loading year data:', error);
+                showNotification('Fehler beim Laden der Jahresdaten.', 'error');
+            }
+        }
+
+        // Populate ordner filter dropdown
+        function populateOrdnerFilter(side) {
+            const ordnerSelect = side === 'left' ? ordnerSelectLeft : ordnerSelectRight;
+            const pageSelect = side === 'left' ? pageSelectLeft : pageSelectRight;
+            const filteredData = side === 'left' ? filteredOrdnerDataLeft : filteredOrdnerDataRight;
+            
+            ordnerSelect.innerHTML = '<option value="">Bitte Ordner wählen...</option>';
+            pageSelect.innerHTML = '<option value="">Bitte Seite wählen...</option>';
+            
+            // Get unique ordner
+            const uniqueOrdner = [];
+            const ordnerIds = new Set();
+            
+            filteredData.forEach(item => {
+                if (!ordnerIds.has(item.PK_ABL_ORDNER)) {
+                    ordnerIds.add(item.PK_ABL_ORDNER);
+                    uniqueOrdner.push({
+                        id: item.PK_ABL_ORDNER,
+                        name: item.ORDNER_NAME || `Ordner ${item.PK_ABL_ORDNER}`
+                    });
+                }
+            });
+            
+            uniqueOrdner.forEach(ordner => {
+                const option = document.createElement('option');
+                option.value = ordner.id;
+                option.textContent = ordner.name;
+                ordnerSelect.appendChild(option);
+            });
+        }
+
+        // Populate page filter dropdown based on selected ordner
+        function populatePageFilter(ordnerId, side) {
+            const pageSelect = side === 'left' ? pageSelectLeft : pageSelectRight;
+            const filteredData = side === 'left' ? filteredOrdnerDataLeft : filteredOrdnerDataRight;
+            
+            pageSelect.innerHTML = '<option value="">Bitte Seite wählen...</option>';
+            
+            const pages = filteredData.filter(item => item.PK_ABL_ORDNER == ordnerId);
+            
+            pages.forEach(page => {
+                const option = document.createElement('option');
+                option.value = page.PK_ABL_ORDNER_PAGE;
+                
+                let pageName = '';
+                if (page.J_PAGE) {
+                    pageName = page.J_PAGE;
+                    pageName += ` - ${page.DESCR}`;
+                } else if (page.ORDNER_PAGE) {
+                    pageName = page.ORDNER_PAGE;
+                    pageName += ` - ${page.DESCR}`;
+                } else {
+                    pageName = `Seite ${page.PAGE_NUMBER}`;
+                    if (page.DESCR) {
+                        pageName += ` - ${page.DESCR}`;
+                    }
+                }
+                
+                option.textContent = pageName;
+                pageSelect.appendChild(option);
+            });
+        }
+
+        // Load belege for selected page (left side only)
+        async function loadBelegeForPage(pageId) {
+            try {
+                const response = await fetch(`${API_BASE}/belege/${pageId}`);
+                const result = await response.json();
+                
+                belegeData = result.belege || [];
+                renderBelege(belegeData);
+                updateStats();
+                
+                // Load status for belege
+                loadBelegStatus();
+                
+            } catch (error) {
+                console.error('Error loading receipts:', error);
+                showNotification('Fehler beim Laden der Belege.', 'error');
+                belegeData = [];
+                renderBelege();
+            }
+        }
+
+        // Load status for belege and populate status columns
+        async function loadBelegStatus() {
+            // Clear all status columns
+            const statusColumns = [
+                statusOrtOk, statusAdresseOk, statusBussgeldOk, 
+                statusBelegPosOk, statusBuchungOk, statusVerpflBelOk
+            ];
+            
+            statusColumns.forEach(column => {
+                column.innerHTML = '<div class="empty-state"><p>Ziehen Sie Belege hierher</p></div>';
+            });
+            
+            // For each beleg, check its status and add to appropriate column
+            for (const beleg of belegeData) {
+                try {
+                    // Fetch detailed beleg data to get status fields
+                    const response = await fetch(`${API_BASE}/beleg/${beleg.PK_INP_BELEGE_ALL}`);
+                    if (response.ok) {
+                        const belegDetails = await response.json();
+                        
+                        // Check each status field and add to appropriate column
+                        if (belegDetails.DATUM_ORT_OK) {
+                            addBelegToStatusColumn(beleg, 'DATUM_ORT_OK', statusOrtOk);
+                        }
+                        
+                        if (belegDetails.DATUM_ADDRESSE_OK) {
+                            addBelegToStatusColumn(beleg, 'DATUM_ADDRESSE_OK', statusAdresseOk);
+                        }
+                        
+                        if (belegDetails.DATUM_BUSSGELD_OK) {
+                            addBelegToStatusColumn(beleg, 'DATUM_BUSSGELD_OK', statusBussgeldOk);
+                        }
+                        
+                        if (belegDetails.DATUM_BELEG_POS_OK) {
+                            addBelegToStatusColumn(beleg, 'DATUM_BELEG_POS_OK', statusBelegPosOk);
+                        }
+                        
+                        if (belegDetails.DATUM_BUCHUNG_OK) {
+                            addBelegToStatusColumn(beleg, 'DATUM_BUCHUNG_OK', statusBuchungOk);
+                        }
+                        
+                        if (belegDetails.DATUM_VERPFL_BEL_OK) {
+                            addBelegToStatusColumn(beleg, 'DATUM_VERPFL_BEL_OK', statusVerpflBelOk);
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Error loading details for beleg ${beleg.PK_INP_BELEGE_ALL}:`, error);
+                }
+            }
+        }
+
+        // Add beleg to status column
+        function addBelegToStatusColumn(beleg, statusField, column) {
+            // Remove empty state if present
+            if (column.querySelector('.empty-state')) {
+                column.innerHTML = '';
+            }
+            
+            const belegCard = createBelegCard(beleg, statusField);
+            column.appendChild(belegCard);
+        }
+
+        // Create beleg card for status column
+        function createBelegCard(beleg, statusField) {
+            const belegCard = document.createElement('div');
+            belegCard.className = 'beleg-card';
+            belegCard.draggable = true;
+            belegCard.dataset.id = beleg.PK_INP_BELEGE_ALL;
+            
+            let statusIndicator = '';
+            if (statusField) {
+                statusIndicator = `<span class="status-indicator status-ok"></span>`;
+            }
+            
+            belegCard.innerHTML = `
+                <div class="beleg-id">ID: ${beleg.PK_INP_BELEGE_ALL}</div>
+                <h3>${beleg.BELEGNUMMER || 'Keine Belegnummer'}</h3>
+                <p><strong>${beleg.BEZEICHNUNG || 'Keine Bezeichnung'}</strong></p>
+                <div class="date">${beleg.BELEGDATUM || 'Kein Datum'} • ${beleg.BRUTTO_BETRAG || 'Kein Betrag'}</div>
+                <div class="assignment-info">
+                    ${statusIndicator} ${statusField || 'Kein Status'}
+                </div>
+            `;
+            
+            // Drag event listeners
+            belegCard.addEventListener('dragstart', function(e) {
+                draggedBeleg = {
+                    id: beleg.PK_INP_BELEGE_ALL,
+                    currentStatus: statusField
+                };
+                e.target.style.opacity = '0.4';
+            });
+            
+            belegCard.addEventListener('dragend', function(e) {
+                e.target.style.opacity = '1';
+            });
+            
+            return belegCard;
+        }
+
+        // Render belege list (left side only)
+        function renderBelege(filteredData = null) {
+            const dataToRender = filteredData || belegeData;
+            belegeList.innerHTML = '';
+            
+            if (dataToRender.length === 0) {
+                const emptyState = document.createElement('div');
+                emptyState.className = 'empty-state';
+                emptyState.innerHTML = `
+                    <h3>Keine Belege vorhanden</h3>
+                    <p>Wählen Sie eine Seite aus oder fügen Sie neue Belege hinzu</p>
+                `;
+                belegeList.appendChild(emptyState);
+                return;
+            }
+            
+            dataToRender.forEach(beleg => {
+                const belegCard = document.createElement('div');
+                belegCard.className = 'beleg-card';
+                belegCard.draggable = true;
+                belegCard.dataset.id = beleg.PK_INP_BELEGE_ALL;
+                
+                let assignmentInfo = '';
+                if (beleg.FK_ABL_ORDNER_PAGE) {
+                    assignmentInfo = `<div class="current-assignment">Aktuell zugeordnet zu Seite: ${beleg.FK_ABL_ORDNER_PAGE}</div>`;
+                }
+                
+                belegCard.innerHTML = `
+                    <div class="beleg-id">ID: ${beleg.PK_INP_BELEGE_ALL}</div>
+                    <h3>${beleg.BELEGNUMMER || 'Keine Belegnummer'}</h3>
+                    <p><strong>${beleg.BEZEICHNUNG || 'Keine Bezeichnung'}</strong></p>
+                    <div class="date">${beleg.BELEGDATUM || 'Kein Datum'} • ${beleg.BRUTTO_BETRAG || 'Kein Betrag'}</div>
+                    ${assignmentInfo}
+                `;
+                
+                // Drag event listeners
+                belegCard.addEventListener('dragstart', function(e) {
+                    draggedBeleg = {
+                        id: beleg.PK_INP_BELEGE_ALL,
+                        currentStatus: null
+                    };
+                    e.target.style.opacity = '0.4';
+                });
+                
+                belegCard.addEventListener('dragend', function(e) {
+                    e.target.style.opacity = '1';
+                });
+                
+                belegeList.appendChild(belegCard);
+            });
+        }
+
+        // Update beleg status
+        async function updateBelegStatus(belegInfo, statusField) {
+            try {
+                const response = await fetch(`${API_BASE}/update-belege-all/${belegInfo.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        [statusField]: new Date().toISOString().split('T')[0] // Current date in YYYY-MM-DD format
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Reload belege and status
+                    if (currentPageLeft) {
+                        await loadBelegeForPage(currentPageLeft);
+                    }
+                    
+                    showNotification(`Belegstatus erfolgreich aktualisiert.`, 'success');
+                } else {
+                    showNotification(result.error || 'Fehler beim Aktualisieren des Belegstatus.', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating receipt status:', error);
+                showNotification('Fehler beim Aktualisieren des Belegstatus. Bitte versuchen Sie es erneut.', 'error');
+            }
+        }
+
+        // Add new beleg
+        async function addNewBeleg(belegData) {
+            try {
+                // Generate new ID
+                const newId = Math.max(...belegeData.map(b => b.PK_INP_BELEGE_ALL)) + 1;
+                
+                const newBeleg = {
+                    PK_INP_BELEGE_ALL: newId,
+                    name: belegData.name,
+                    type: belegData.type,
+                    date: formatDate(belegData.date),
+                    amount: `${parseFloat(belegData.amount).toFixed(2).replace('.', ',')} €`,
+                    FK_ABL_ORDNER_PAGE: null
+                };
+                
+                // In a real application, you would send this to your backend
+                // For now, we'll add it to the local array
+                belegeData.push(newBeleg);
+                
+                // Update UI
+                renderBelege();
+                updateStats();
+                closeModal('addBelegModal');
+                showNotification('Beleg erfolgreich hinzugefügt.', 'success');
+                
+            } catch (error) {
+                console.error('Error adding receipt:', error);
+                showNotification('Fehler beim Hinzufügen des Belegs.', 'error');
+            }
+        }
+
+        // Search belege
+        function searchBelegeHandler() {
+            const searchTerm = searchBelege.value.toLowerCase();
+            
+            if (searchTerm === '') {
+                renderBelege();
+                return;
+            }
+            
+            const filteredBelege = belegeData.filter(beleg => 
+                (beleg.BELEGNUMMER && beleg.BELEGNUMMER.toLowerCase().includes(searchTerm)) ||
+                (beleg.BEZEICHNUNG && beleg.BEZEICHNUNG.toLowerCase().includes(searchTerm)) ||
+                (beleg.BELEGDATUM && beleg.BELEGDATUM.includes(searchTerm)) ||
+                (beleg.BRUTTO_BETRAG && beleg.BRUTTO_BETRAG.toString().includes(searchTerm))
+            );
+            
+            renderBelege(filteredBelege);
+        }
+
+        // Update statistics
+        function updateStats() {
+            totalBelege.textContent = belegeData.length;
+            const assignedCount = belegeData.filter(b => b.FK_ABL_ORDNER_PAGE !== null).length;
+            assignedBelege.textContent = assignedCount;
+        }
+
+        // Utility functions
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('de-DE');
+        }
+
+        function showNotification(message, type) {
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'flex';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+            document.getElementById('addBelegForm').reset();
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Left side year selection
+            jahrSelectLeft.addEventListener('change', function() {
+                currentJahrLeft = this.value;
+                if (currentJahrLeft) {
+                    loadDataForYear(currentJahrLeft, 'left');
+                } else {
+                    filteredOrdnerDataLeft = [];
+                    ordnerSelectLeft.innerHTML = '<option value="">Bitte Ordner wählen...</option>';
+                    pageSelectLeft.innerHTML = '<option value="">Bitte Seite wählen...</option>';
+                }
+            });
+
+            // Left side ordner selection
+            ordnerSelectLeft.addEventListener('change', function() {
+                const ordnerId = this.value;
+                if (ordnerId) {
+                    currentOrdnerLeft = { id: ordnerId };
+                    populatePageFilter(ordnerId, 'left');
+                }
+            });
+
+            // Left side page selection
+            pageSelectLeft.addEventListener('change', function() {
+                currentPageLeft = this.value;
+                if (currentPageLeft) {
+                    loadBelegeForPage(currentPageLeft);
+                } else {
+                    belegeData = [];
+                    renderBelege();
+                    updateStats();
+                }
+            });
+
+            // Right side year selection
+            jahrSelectRight.addEventListener('change', function() {
+                currentJahrRight = this.value;
+                if (currentJahrRight) {
+                    loadDataForYear(currentJahrRight, 'right');
+                } else {
+                    filteredOrdnerDataRight = [];
+                    ordnerSelectRight.innerHTML = '<option value="">Bitte Ordner wählen...</option>';
+                    pageSelectRight.innerHTML = '<option value="">Bitte Seite wählen...</option>';
+                }
+            });
+
+            // Right side ordner selection
+            ordnerSelectRight.addEventListener('change', function() {
+                const ordnerId = this.value;
+                if (ordnerId) {
+                    currentOrdnerRight = { id: ordnerId };
+                    populatePageFilter(ordnerId, 'right');
+                }
+            });
+
+            // Right side page selection
+            pageSelectRight.addEventListener('change', function() {
+                currentPageRight = this.value;
+                // For status management, we don't need to load specific pages
+            });
+
+            // Search functionality
+            searchBelege.addEventListener('input', searchBelegeHandler);
+            
+            // Add beleg form
+            document.getElementById('addBelegForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = {
+                    name: document.getElementById('belegName').value,
+                    type: document.getElementById('belegType').value,
+                    date: document.getElementById('belegDate').value,
+                    amount: document.getElementById('belegAmount').value
+                };
+                
+                addNewBeleg(formData);
+            });
+            
+            // Close modal when clicking outside
+            window.addEventListener('click', function(e) {
+                if (e.target.classList.contains('modal')) {
+                    e.target.style.display = 'none';
+                }
+            });
+        }
+
+        // Initialize the application when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

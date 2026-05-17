@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Document Manager | Insert & Image Hub</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #f1f5f9;
+            padding: 24px;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+        /* main grid: flexible, responsive */
+        .dashboard {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+        }
+        .card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.03), 0 2px 6px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+            overflow: hidden;
+            backdrop-filter: blur(0px);
+        }
+        .main-panel {
+            flex: 2;
+            min-width: 280px;
+        }
+        .side-panel {
+            flex: 1.2;
+            min-width: 320px;
+            position: sticky;
+            top: 24px;
+            align-self: flex-start;
+            max-height: calc(100vh - 48px);
+            overflow-y: auto;
+        }
+        .card-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid #eef2f6;
+            font-weight: 600;
+            font-size: 1.25rem;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-header i {
+            color: #3b82f6;
+        }
+        .card-body {
+            padding: 1.5rem;
+        }
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        label {
+            font-weight: 500;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 6px;
+            color: #1e293b;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            font-size: 0.9rem;
+            transition: 0.2s;
+            background: #fff;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        button:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+        button:active {
+            transform: translateY(1px);
+        }
+        button.secondary {
+            background: #f1f5f9;
+            color: #1e293b;
+            border: 1px solid #e2e8f0;
+        }
+        button.secondary:hover {
+            background: #e6edf5;
+        }
+        .folder-info {
+            background: #f8fafc;
+            border-radius: 20px;
+            padding: 12px 16px;
+            margin-top: 12px;
+            font-size: 0.8rem;
+            border-left: 3px solid #3b82f6;
+        }
+        .response-box {
+            margin-top: 20px;
+            padding: 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+        .success {
+            background: #e6f7e6;
+            color: #0f5c2e;
+            border-left: 4px solid #22c55e;
+        }
+        .error {
+            background: #fee9e6;
+            color: #b91c1c;
+            border-left: 4px solid #ef4444;
+        }
+        .loading {
+            background: #eef2ff;
+            color: #1e40af;
+        }
+        .image-stats {
+            display: flex;
+            gap: 18px;
+            background: #f8fafc;
+            padding: 12px 16px;
+            border-radius: 28px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+        }
+        .stat-item {
+            font-size: 0.8rem;
+            display: flex;
+            gap: 6px;
+            align-items: baseline;
+        }
+        .stat-count {
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: #0f172a;
+        }
+        .search-filter {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .search-filter input, .search-filter select {
+            flex: 1;
+            min-width: 120px;
+            border-radius: 40px;
+        }
+        .nav-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .nav-buttons input {
+            width: 100px;
+            text-align: center;
+        }
+        .image-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 14px;
+            margin-top: 6px;
+        }
+        .image-card {
+            background: #ffffff;
+            border-radius: 20px;
+            border: 1px solid #ecf3f9;
+            overflow: hidden;
+            transition: 0.2s;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+        }
+        .image-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 20px -12px rgba(0,0,0,0.1);
+            border-color: #cbdff2;
+        }
+        .preview-area {
+            height: 140px;
+            background: #f9fcff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .preview-area img {
+            max-width: 100%;
+            max-height: 130px;
+            object-fit: contain;
+        }
+        .pdf-preview {
+            width: 100%;
+            height: 140px;
+            background: #f1f5f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #e53e3e;
+        }
+        .image-meta {
+            padding: 10px;
+            font-size: 0.7rem;
+            background: white;
+            border-top: 1px solid #f0f4f9;
+        }
+        .badge {
+            display: inline-block;
+            background: #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 30px;
+            font-size: 0.65rem;
+            font-weight: 500;
+        }
+        .badge.valid {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        .badge.pending {
+            background: #fff3e3;
+            color: #b45309;
+        }
+        .relation-panel {
+            margin-top: 20px;
+            padding-top: 12px;
+            border-top: 1px solid #eef2f6;
+        }
+        .inline-flex {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 32px;
+            max-width: 90vw;
+            width: 1200px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 20px;
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            top: 18px;
+            right: 22px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #64748b;
+        }
+        @media (max-width: 780px) {
+            body { padding: 16px; }
+            .side-panel { position: static; max-height: none; }
+        }
+        hr { margin: 12px 0; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; }
+        button:disabled { opacity: 0.6; transform: none; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <!-- MAIN INSERT PANEL -->
+    <div class="main-panel card">
+        <div class="card-header">
+            <i class="fas fa-file-alt"></i> Insert new document
+        </div>
+        <div class="card-body">
+            <div class="form-group">
+                <label><i class="far fa-calendar-alt"></i> Year</label>
+                <select id="yearSelect"><option value="">-- Select Year --</option></select>
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-folder-open"></i> Folder</label>
+                <select id="folderSelect" disabled><option>-- First select year --</option></select>
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-layer-group"></i> Folder Page</label>
+                <select id="folderPageSelect" disabled><option>-- Select folder first --</option></select>
+            </div>
+            <div id="folderInfo" class="folder-info" style="display:none;">
+                <div><strong>📁 Folder:</strong> <span id="folderNameDisplay">-</span> (ID: <span id="folderIdSpan">-</span>)</div>
+                <div><strong>📄 Page:</strong> #<span id="pageNumberSpan">-</span> (ID: <span id="pageIdSpan">-</span>)</div>
+                <div><i class="fas fa-info-circle"></i> <span id="folderDescSpan">-</span></div>
+            </div>
+
+            <form id="documentForm">
+                <div class="form-group"><label><i class="fas fa-calendar-day"></i> Document Date (DD.MM.YYYY)</label><input type="text" id="belegdatum" placeholder="31.12.2024" required></div>
+                <div class="form-group"><label><i class="fas fa-heading"></i> Title</label><input type="text" id="titel" placeholder="Invoice / Contract title" required></div>
+                <div class="form-group"><label><i class="fas fa-paragraph"></i> Description</label><input type="text" id="bezeichnung" placeholder="Short description" required></div>
+                <div class="form-group"><label><i class="fas fa-euro-sign"></i> Gross Amount (€)</label><input type="number" id="brutto_betrag" step="0.01" placeholder="0.00" required></div>
+                <div class="form-group"><label><i class="fas fa-hashtag"></i> Document Number</label><input type="text" id="belegnummer" placeholder="INV-2024-001" required></div>
+                <div class="form-group"><label><i class="fas fa-link"></i> Folder Page ID (auto)</label><input type="text" id="fk_abl_ordner_page" readonly placeholder="Auto from selection"></div>
+                <button type="submit"><i class="fas fa-save"></i> Create Document</button>
+            </form>
+            <div id="response"></div>
+
+            <div id="relationBlock" style="display:none; margin-top: 24px;" class="relation-panel">
+                <hr>
+                <h4><i class="fas fa-link"></i> Link Image to Document</h4>
+                <div class="inline-flex">
+                    <input type="number" id="relationDocId" placeholder="Document ID" style="flex:1">
+                    <input type="number" id="imageIdForRelation" placeholder="Image ID" style="flex:1">
+                    <input type="number" id="mainBildVal" value="1" style="width:80px">
+                    <button id="createRelationBtn" class="secondary"><i class="fas fa-chain"></i> Link</button>
+                </div>
+                <small class="text-muted">MAIN_BILD = 1 (primary) / higher numbers = secondary</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT SIDEBAR: IMAGE HUB -->
+    <div class="side-panel card">
+        <div class="card-header">
+            <i class="fas fa-images"></i> Image Hub
+            <button id="refreshImagesBtn" class="secondary" style="margin-left: auto; padding: 6px 12px;" disabled><i class="fas fa-sync-alt"></i></button>
+        </div>
+        <div class="card-body">
+            <div id="imageStatsPanel" class="image-stats" style="display:none;">
+                <div class="stat-item"><i class="fas fa-image"></i> <span class="stat-count" id="totalImgCount">0</span> images</div>
+                <div class="stat-item"><i class="fas fa-file-pdf"></i> <span class="stat-count" id="totalPdfCount">0</span> PDFs</div>
+                <div class="stat-item"><i class="fas fa-check-circle"></i> <span class="stat-count" id="validatedCount">0</span> validated</div>
+            </div>
+
+            <div class="search-filter">
+                <input type="text" id="imageSearchInput" placeholder="🔍 Search by name / ID">
+                <select id="filterSelect">
+                    <option value="all">All media</option>
+                    <option value="images">Images only</option>
+                    <option value="pdfs">PDFs only</option>
+                    <option value="validated">Validated</option>
+                    <option value="pending">Pending</option>
+                </select>
+            </div>
+
+            <div class="nav-buttons">
+                <button id="prevImgBtn" class="secondary"><i class="fas fa-chevron-left"></i> Prev</button>
+                <input type="number" id="quickImageId" placeholder="ID">
+                <button id="nextImgBtn" class="secondary">Next <i class="fas fa-chevron-right"></i></button>
+                <button id="loadIdBtn" class="secondary"><i class="fas fa-eye"></i> Load</button>
+            </div>
+
+            <div id="galleryStatus"></div>
+            <div id="imageGalleryContainer" class="image-gallery">
+                <div style="text-align:center; padding:30px;"><i class="fas fa-cloud-upload-alt fa-2x" style="color:#cbd5e1;"></i><p>Insert a document to see images</p></div>
+            </div>
+            <div id="imageInfoNote" style="font-size:12px; margin-top:12px; color:#475569;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DETAIL -->
+<div id="detailModal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeModal()">✕</button>
+        <div id="modalBody"></div>
+    </div>
+</div>
+
+<script>
+    // ----- STATE -----
+    let state = {
+        years: [],
+        folderPagesData: [],
+        currentFolders: [],
+        lastDocId: null,
+        allImages: [],
+        filteredImages: [],
+        pdfBlobUrl: null,
+        activeImageDetailId: null
+    };
+    let blobStore = [];
+
+    // DOM shortcuts
+    const yearSel = document.getElementById('yearSelect');
+    const folderSel = document.getElementById('folderSelect');
+    const pageSel = document.getElementById('folderPageSelect');
+    const folderInfoDiv = document.getElementById('folderInfo');
+    const fkPageInput = document.getElementById('fk_abl_ordner_page');
+    const docForm = document.getElementById('documentForm');
+    const responseDiv = document.getElementById('response');
+    const refreshBtn = document.getElementById('refreshImagesBtn');
+    const galleryDiv = document.getElementById('imageGalleryContainer');
+    const imageStatsDiv = document.getElementById('imageStatsPanel');
+    const totalImgSpan = document.getElementById('totalImgCount');
+    const totalPdfSpan = document.getElementById('totalPdfCount');
+    const validatedSpan = document.getElementById('validatedCount');
+    const searchInput = document.getElementById('imageSearchInput');
+    const filterSelect = document.getElementById('filterSelect');
+    const prevBtn = document.getElementById('prevImgBtn');
+    const nextBtn = document.getElementById('nextImgBtn');
+    const quickIdInput = document.getElementById('quickImageId');
+    const loadIdBtn = document.getElementById('loadIdBtn');
+    const relationBlock = document.getElementById('relationBlock');
+    const relationDocId = document.getElementById('relationDocId');
+    const imageIdRelation = document.getElementById('imageIdForRelation');
+    const mainBildVal = document.getElementById('mainBildVal');
+    const createRelBtn = document.getElementById('createRelationBtn');
+    
+    // helpers
+    function cleanBlobs() { blobStore.forEach(u => URL.revokeObjectURL(u)); blobStore = []; if(state.pdfBlobUrl) URL.revokeObjectURL(state.pdfBlobUrl); state.pdfBlobUrl = null; }
+    function isPDF(img) { return (img.MIMETYPE && img.MIMETYPE.toLowerCase() === 'application/pdf') || (img.FILENAME && img.FILENAME.split('.').pop().toLowerCase() === 'pdf'); }
+    function formatDateSql(d) { if(!d || d === '0000-00-00') return '—'; try { return new Date(d).toLocaleDateString('de-DE'); } catch(e){ return d; } }
+    function trunc(str, len=20) { if(!str) return '—'; str = String(str); return str.length>len? str.slice(0,len)+'…':str; }
+    
+    // populate years with 2026 as default and 2025 as second priority
+    function initYears() {
+        const currentYear = new Date().getFullYear();
+        // Generate years from currentYear+5 down to 1980 to ensure 2026 is included even if current year is earlier
+        const startYear = Math.max(currentYear + 2, 2026);
+        const endYear = 1980;
+        let yearsList = [];
+        for(let y = startYear; y >= endYear; y--) {
+            yearsList.push(y);
+        }
+        
+        let options = '<option value="">-- Select Year --</option>';
+        // Add years with priority: 2026 first, then 2025, then descending from current+2 down
+        // To ensure 2026 and 2025 appear at top in correct order
+        const priorityYears = [2026, 2025];
+        const addedYears = new Set();
+        
+        // Add priority years first
+        priorityYears.forEach(year => {
+            if(!addedYears.has(year) && yearsList.includes(year)) {
+                const selectedAttr = (year === 2026) ? 'selected' : '';
+                options += `<option value="${year}" ${selectedAttr}>${year}</option>`;
+                addedYears.add(year);
+            }
+        });
+        
+        // Add remaining years in descending order
+        yearsList.forEach(year => {
+            if(!addedYears.has(year)) {
+                options += `<option value="${year}">${year}</option>`;
+                addedYears.add(year);
+            }
+        });
+        
+        yearSel.innerHTML = options;
+        
+        // Auto-trigger load for default year (2026) if selected
+        if(yearSel.value) {
+            loadFolders(yearSel.value);
+        }
+    }
+    
+    async function loadFolders(year) {
+        folderSel.innerHTML = '<option>Loading...</option>';
+        folderSel.disabled = true;
+        pageSel.innerHTML = '<option>-- First select folder --</option>';
+        pageSel.disabled = true;
+        folderInfoDiv.style.display = 'none';
+        fkPageInput.value = '';
+        if(!year) return;
+        try {
+            const res = await fetch(`http://localhost:5000/ordner_pages/${year}`);
+            const data = await res.json();
+            if(!data.data || data.count===0) { folderSel.innerHTML='<option>No folders</option>'; return; }
+            state.folderPagesData = data.data;
+            const unique = new Map();
+            data.data.forEach(f => { if(!unique.has(f.PK_ABL_ORDNER)) unique.set(f.PK_ABL_ORDNER, {id:f.PK_ABL_ORDNER, name:f.ORDNER_NAME, descr:f.DESCR||''}); });
+            state.currentFolders = Array.from(unique.values());
+            folderSel.innerHTML = '<option value="">-- Select Folder --</option>';
+            state.currentFolders.forEach(f => { folderSel.innerHTML += `<option value="${f.id}" data-name="${f.name}" data-descr="${f.descr}">${f.name} ${f.descr?`(${f.descr})`:''}</option>`; });
+            folderSel.disabled = false;
+        } catch(e) { folderSel.innerHTML='<option>Error loading</option>'; console.error(e); }
+    }
+    function onFolderChange() {
+        const folderId = folderSel.value;
+        pageSel.innerHTML = '<option>Loading pages...</option>';
+        pageSel.disabled = true;
+        folderInfoDiv.style.display = 'none';
+        if(!folderId) return;
+        const selectedOpt = folderSel.options[folderSel.selectedIndex];
+        const folderName = selectedOpt?.dataset?.name || '';
+        const folderDesc = selectedOpt?.dataset?.descr || '';
+        const pages = state.folderPagesData.filter(p => p.PK_ABL_ORDNER == folderId);
+        if(pages.length) {
+            pageSel.innerHTML = '<option value="">-- Select Page --</option>';
+            pages.forEach(p => { pageSel.innerHTML += `<option value="${p.PK_ABL_ORDNER_PAGE}" data-pagenum="${p.PAGE_NUMBER}">Page ${p.PAGE_NUMBER} ${p.DESCR?`- ${p.DESCR}`:''}</option>`; });
+            pageSel.disabled = false;
+        } else { pageSel.innerHTML='<option>No pages</option>'; }
+        document.getElementById('folderNameDisplay').innerText = folderName;
+        document.getElementById('folderIdSpan').innerText = folderId;
+        document.getElementById('folderDescSpan').innerText = folderDesc || '—';
+        folderInfoDiv.style.display = pages.length ? 'block' : 'none';
+    }
+    function onPageChange() {
+        const pageId = pageSel.value;
+        if(!pageId) { fkPageInput.value = ''; return; }
+        const selected = pageSel.options[pageSel.selectedIndex];
+        const pageNum = selected?.dataset?.pagenum || '?';
+        document.getElementById('pageNumberSpan').innerText = pageNum;
+        document.getElementById('pageIdSpan').innerText = pageId;
+        fkPageInput.value = pageId;
+    }
+    // document submission
+    docForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if(!yearSel.value || !folderSel.value || !pageSel.value) { showMsg("Please select year, folder and page.", true); return; }
+        const payload = {
+            belegdatum: document.getElementById('belegdatum').value,
+            bezeichnung: document.getElementById('bezeichnung').value,
+            fk_abl_ordner_page: fkPageInput.value,
+            brutto_betrag: document.getElementById('brutto_betrag').value,
+            belegnummer: document.getElementById('belegnummer').value,
+            titel: document.getElementById('titel').value
+        };
+        if(!/^\d{2}\.\d{2}\.\d{4}$/.test(payload.belegdatum)) { showMsg("Date format DD.MM.YYYY required", true); return; }
+        try {
+            const resp = await fetch('http://localhost:5000/document/insert1', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+            const data = await resp.json();
+            if(data.success) {
+                showMsg(`✅ Document created! ID: ${data.documentId}`, false);
+                state.lastDocId = data.documentId;
+                relationDocId.value = data.documentId;
+                relationBlock.style.display = 'block';
+                refreshBtn.disabled = false;
+                fetchImagesForDocument();
+                docForm.reset(); document.getElementById('belegdatum').value='';
+            } else { showMsg(`Error: ${data.error}`, true); }
+        } catch(err) { showMsg(`Request failed: ${err.message}`, true); }
+    });
+    
+    async function fetchImagesForDocument() {
+        if(!state.lastDocId) return;
+        try {
+            galleryDiv.innerHTML = '<div style="text-align:center; padding:20px;"><div class="spinner" style="width:30px;height:30px;border:3px solid #e2e8f0;border-top-color:#3b82f6;border-radius:50%;animation:spin 0.6s linear infinite;margin:auto;"></div><p>Loading images...</p></div>';
+            const resp = await fetch(`http://localhost:5000/beleg/bild/1/?pk_inp=${state.lastDocId}`);
+            if(resp.status===404) { galleryDiv.innerHTML='<div class="image-card" style="padding:20px;text-align:center;">📭 No images linked yet</div>'; imageStatsDiv.style.display='none'; return; }
+            const result = await resp.json();
+            let images = result.success && result.data ? result.data : (Array.isArray(result) ? result : []);
+            state.allImages = images;
+            updateStatsAndRender();
+        } catch(e) { galleryDiv.innerHTML=`<div class="error" style="padding:12px;">⚠️ Error: ${e.message}</div>`; }
+    }
+    function updateStatsAndRender() {
+        const images = state.allImages;
+        const imgCount = images.length;
+        const pdfCnt = images.filter(i=>isPDF(i)).length;
+        const validCnt = images.filter(i=> i.DATUM_ZUORD_OK && i.DATUM_ZUORD_OK !== '0000-00-00').length;
+        totalImgSpan.innerText = imgCount;
+        totalPdfSpan.innerText = pdfCnt;
+        validatedSpan.innerText = validCnt;
+        imageStatsDiv.style.display = imgCount ? 'flex' : 'none';
+        filterAndRenderGallery();
+    }
+    function filterAndRenderGallery() {
+        let filtered = [...state.allImages];
+        const search = searchInput.value.toLowerCase();
+        if(search) filtered = filtered.filter(i=> (i.FILENAME||'').toLowerCase().includes(search) || String(i.PK_BILD_BILDER).includes(search));
+        const filterVal = filterSelect.value;
+        if(filterVal !== 'all') {
+            filtered = filtered.filter(i => {
+                const isPdf = isPDF(i);
+                const isValid = i.DATUM_ZUORD_OK && i.DATUM_ZUORD_OK !== '0000-00-00';
+                if(filterVal === 'images') return !isPdf;
+                if(filterVal === 'pdfs') return isPdf;
+                if(filterVal === 'validated') return isValid;
+                if(filterVal === 'pending') return !isValid;
+                return true;
+            });
+        }
+        state.filteredImages = filtered;
+        renderGalleryCards(filtered);
+    }
+    function renderGalleryCards(images) {
+        if(!images.length) { galleryDiv.innerHTML = '<div class="image-card" style="padding:20px;text-align:center;">🔍 No matching media</div>'; return; }
+        let html = '';
+        for(let img of images) {
+            const id = img.PK_BILD_BILDER;
+            const isPdf = isPDF(img);
+            const validated = img.DATUM_ZUORD_OK && img.DATUM_ZUORD_OK !== '0000-00-00';
+            const hasContent = img.FILECONTENT && img.FILECONTENT.data;
+            let previewHtml = '';
+            if(hasContent) {
+                const byteArr = new Uint8Array(img.FILECONTENT.data);
+                const blob = new Blob([byteArr], { type: img.MIMETYPE || (isPdf ? 'application/pdf':'image/jpeg') });
+                const url = URL.createObjectURL(blob);
+                blobStore.push(url);
+                if(isPdf) {
+                    previewHtml = `<div class="pdf-preview"><i class="fas fa-file-pdf fa-3x"></i><span>PDF</span></div>`;
+                } else {
+                    previewHtml = `<img src="${url}" alt="preview" loading="lazy">`;
+                }
+            } else { previewHtml = `<div class="pdf-preview"><i class="fas fa-image"></i><span>No preview</span></div>`; }
+            html += `
+                <div class="image-card" onclick="showDetailModal(${id})">
+                    <div class="preview-area">${previewHtml}</div>
+                    <div class="image-meta">
+                        <div><strong>ID ${id}</strong> <span class="badge ${validated?'valid':'pending'}">${validated?'✓ validated':'⏳ pending'}</span></div>
+                        <div>${trunc(img.FILENAME||'untitled', 18)}</div>
+                        <div><i class="far fa-file"></i> ${isPdf ? 'PDF' : (img.MIMETYPE||'image')}</div>
+                    </div>
+                </div>`;
+        }
+        galleryDiv.innerHTML = html;
+    }
+    
+    // quick image loader by ID (preview)
+    async function loadImageById(imgId) {
+        if(!imgId) return;
+        try {
+            const res = await fetch(`http://localhost:5000/accounts/bild/1/1/1/${imgId}`);
+            if(!res.ok) throw new Error('Not found');
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            blobStore.push(url);
+            const isPdf = blob.type === 'application/pdf';
+            let modalHtml = `<div style="text-align:center;"><button class="secondary" onclick="window.open('${url}','_blank')"><i class="fas fa-external-link-alt"></i> Fullscreen</button><br><br>`;
+            if(isPdf) modalHtml += `<iframe src="${url}#toolbar=1" width="100%" height="600px" style="border:none;border-radius:20px;"></iframe>`;
+            else modalHtml += `<img src="${url}" style="max-width:100%; max-height:70vh; border-radius:20px;">`;
+            modalHtml += `<div style="margin-top:15px;"><strong>ID: ${imgId}</strong> | Type: ${blob.type} | Size: ${(blob.size/1024).toFixed(1)} KB</div></div>`;
+            document.getElementById('modalBody').innerHTML = modalHtml;
+            document.getElementById('detailModal').style.display = 'flex';
+        } catch(e) { alert("Cannot load image: "+e.message); }
+    }
+    window.showDetailModal = async function(imgId) {
+        try {
+            const imgMeta = state.allImages.find(i=>i.PK_BILD_BILDER == imgId);
+            const res = await fetch(`http://localhost:5000/accounts/bild/1/1/1/${imgId}`);
+            if(!res.ok) throw new Error();
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob); blobStore.push(url);
+            const isPdf = blob.type === 'application/pdf';
+            let metaHtml = `<div style="margin-bottom:15px;"><strong>ID:</strong> ${imgId} &nbsp;| <strong>File:</strong> ${imgMeta?.FILENAME||'—'} &nbsp;| <strong>Validated:</strong> ${imgMeta?.DATUM_ZUORD_OK && imgMeta.DATUM_ZUORD_OK!=='0000-00-00' ? '✅ Yes' : '⏳ Pending'}</div>`;
+            if(isPdf) metaHtml += `<iframe src="${url}#toolbar=1" width="100%" height="650px" style="border:none;border-radius:12px;"></iframe>`;
+            else metaHtml += `<img src="${url}" style="max-width:100%; max-height:65vh; border-radius:20px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">`;
+            document.getElementById('modalBody').innerHTML = metaHtml + `<div style="margin-top:16px;"><button class="secondary" onclick="window.open('${url}','_blank')"><i class="fas fa-expand"></i> Open in new tab</button></div>`;
+            document.getElementById('detailModal').style.display = 'flex';
+        } catch(e) { alert("Could not load detail"); }
+    };
+    window.closeModal = function() { document.getElementById('detailModal').style.display = 'none'; };
+    
+    async function createRelation() {
+        const docId = relationDocId.value.trim();
+        const imgId = imageIdRelation.value.trim();
+        const main = mainBildVal.value.trim();
+        if(!docId || !imgId || !main) { alert("Document ID, Image ID and MAIN_BILD required"); return; }
+        try {
+            const res = await fetch('http://localhost:5000/add_belege_bild', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ FK_INP_BELEGE_ALL: docId, FK_BILD_BILDER: imgId, MAIN_BILD: main })
+            });
+            const data = await res.json();
+            if(data.success) { showMsg(`✅ Linked image ${imgId} to document ${docId}`, false); fetchImagesForDocument(); }
+            else alert("Relation failed: "+data.error);
+        } catch(e) { alert("Error: "+e.message); }
+    }
+    
+    function showMsg(msg, isError) { responseDiv.className = isError ? 'error response-box' : 'success response-box'; responseDiv.innerHTML = msg; setTimeout(()=>{if(responseDiv) responseDiv.innerHTML='';}, 4000); }
+    function navigateQuick(step) { let val = parseInt(quickIdInput.value); if(isNaN(val)) val=1; let newVal = val+step; if(newVal>0) { quickIdInput.value = newVal; loadImageById(newVal); } }
+    
+    // event binding
+    yearSel.addEventListener('change', (e)=> loadFolders(e.target.value));
+    folderSel.addEventListener('change', onFolderChange);
+    pageSel.addEventListener('change', onPageChange);
+    refreshBtn.addEventListener('click', fetchImagesForDocument);
+    searchInput.addEventListener('input', filterAndRenderGallery);
+    filterSelect.addEventListener('change', filterAndRenderGallery);
+    prevBtn.addEventListener('click', ()=> navigateQuick(-1));
+    nextBtn.addEventListener('click', ()=> navigateQuick(1));
+    loadIdBtn.addEventListener('click', ()=> loadImageById(quickIdInput.value));
+    createRelBtn.addEventListener('click', createRelation);
+    
+    initYears();
+    // optionally prefill relation image id from quick search
+    window.addEventListener('click', (e) => { if(e.target.classList?.contains('modal-close')) closeModal(); });
+    document.getElementById('detailModal')?.addEventListener('click', (e) => { if(e.target.classList.contains('modal')) closeModal(); });
+    setInterval(()=>{ cleanBlobs(); }, 30000);
+    // css spinner animation
+    const styleSheet = document.createElement("style");
+    styleSheet.textContent = `@keyframes spin { to { transform: rotate(360deg); } } .spinner { animation: spin 0.8s linear infinite; }`;
+    document.head.appendChild(styleSheet);
+</script>
+</body>
+</html>

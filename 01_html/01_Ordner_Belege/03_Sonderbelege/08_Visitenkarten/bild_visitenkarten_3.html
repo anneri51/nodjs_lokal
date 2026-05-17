@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Bildergalerie - Paginierung (100 pro Seite)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #1e2a3e;
+            padding: 2rem 1.5rem;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .filter-header {
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #1f5e3a, #2c7a4b);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        .sub {
+            color: #4a627a;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid #2c7a4b;
+            padding-left: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .filter-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.8rem;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .filter-group label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #2c5a2e;
+            margin-bottom: 0.5rem;
+        }
+
+        .filter-select {
+            width: 100%;
+            padding: 0.7rem 1rem;
+            border-radius: 40px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #0f2b3d;
+            cursor: pointer;
+            transition: 0.2s;
+            outline: none;
+        }
+
+        .multi-select-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .multi-select-btn {
+            width: 100%;
+            padding: 0.7rem 1rem;
+            border-radius: 40px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #0f2b3d;
+            cursor: pointer;
+            transition: 0.2s;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .multi-select-btn:hover {
+            border-color: #2c7a4b;
+            transform: translateY(-1px);
+        }
+
+        .multi-select-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 20px;
+            margin-top: 5px;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .multi-select-dropdown.show {
+            display: block;
+        }
+
+        .multi-select-option {
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .multi-select-option:hover {
+            background: #f0f2f5;
+        }
+
+        .multi-select-option input {
+            cursor: pointer;
+        }
+
+        .multi-select-option label {
+            cursor: pointer;
+            margin: 0;
+            font-weight: normal;
+            text-transform: none;
+            font-size: 0.9rem;
+            color: #0f2b3d;
+        }
+
+        .selected-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 8px;
+        }
+
+        .selected-badge {
+            background: #2c7a4b;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .selected-badge-remove {
+            cursor: pointer;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+
+        .selected-badge-remove:hover {
+            opacity: 0.8;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+
+        .btn {
+            padding: 0.7rem 1.5rem;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: 0.2s;
+            border: none;
+            margin-top: 1.2rem;
+        }
+
+        .btn-filter {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+        }
+
+        .btn-filter:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(243, 156, 18, 0.3);
+        }
+
+        .btn-load {
+            background: linear-gradient(135deg, #3498db, #2c3e50);
+            color: white;
+        }
+
+        .btn-load:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+        }
+
+        .btn-reset {
+            background: #eef2f5;
+            color: #1e4663;
+        }
+
+        .btn-reset:hover {
+            background: #dce5ec;
+            transform: translateY(-1px);
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(4px);
+            border-radius: 60px;
+            padding: 0.5rem 1.2rem;
+        }
+
+        .counter {
+            font-weight: 500;
+            background: #e9f3ef;
+            padding: 0.3rem 1rem;
+            border-radius: 30px;
+            font-size: 0.85rem;
+        }
+
+        .error-banner {
+            background: #fff0f0;
+            border-left: 6px solid #d9534f;
+            padding: 0.8rem 1.2rem;
+            border-radius: 18px;
+            margin-bottom: 1rem;
+            color: #a94442;
+            font-size: 0.85rem;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.8rem;
+        }
+
+        .image-card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .image-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .preview-wrapper {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 260px;
+            padding: 1.5rem;
+            border-bottom: 1px solid #e0e6ed;
+        }
+
+        .preview-wrapper img {
+            max-width: 100%;
+            max-height: 220px;
+            object-fit: contain;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .file-info-preview {
+            padding: 1.2rem;
+            background: white;
+        }
+
+        .file-id-badge {
+            background: linear-gradient(135deg, #3498db, #2c3e50);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+
+        .media-buch-badge {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-left: 8px;
+        }
+
+        .klassifikation-section {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #edf2f7;
+        }
+
+        .klass-item {
+            margin-bottom: 8px;
+        }
+
+        .klass-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #5a6e8a;
+            margin-bottom: 3px;
+        }
+
+        .klass-value {
+            font-size: 0.8rem;
+            background: #f8fafc;
+            padding: 4px 8px;
+            border-radius: 8px;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .loading-placeholder {
+            text-align: center;
+            padding: 3rem;
+            color: white;
+            font-weight: 500;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .filter-status {
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            background: #e8f5e9;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            color: #2e7d32;
+        }
+
+        .filter-status.active {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        /* Pagination Styles */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .pagination button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 40px;
+            background: white;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: #2c7a4b;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .pagination button.active {
+            background: linear-gradient(135deg, #2c7a4b, #1f5e3a);
+            color: white;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .page-info {
+            padding: 0.5rem 1rem;
+            background: white;
+            border-radius: 40px;
+            font-weight: 600;
+        }
+
+        .lightbox {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .lightbox.active {
+            display: flex;
+        }
+
+        .lightbox-content {
+            max-width: 90%;
+            max-height: 90%;
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            position: relative;
+        }
+
+        .lightbox img {
+            max-width: 100%;
+            max-height: 80vh;
+            object-fit: contain;
+            border-radius: 12px;
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+
+        @media (max-width: 900px) {
+            .gallery {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .gallery {
+                grid-template-columns: 1fr;
+            }
+            .filter-panel {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            .filter-group {
+                width: 100%;
+            }
+            .button-group {
+                width: 100%;
+                flex-direction: column;
+            }
+            .btn {
+                width: 100%;
+                text-align: center;
+            }
+            .pagination button {
+                padding: 0.3rem 0.6rem;
+                font-size: 0.8rem;
+            }
+        }
+
+        footer {
+            margin-top: 2rem;
+            text-align: center;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="filter-header">
+        <h1>📸 Bildergalerie - 100 Bilder pro Seite</h1>
+        <div class="sub">1. Filter auswählen → 2. Filter setzen → 3. Bilder laden (100 pro Seite)</div>
+
+        <div class="filter-panel">
+            <div class="filter-group">
+                <label>🏷️ KLASSIFIKATION_1</label>
+                <select id="filterKlass1" class="filter-select">
+                    <option value="all">Alle Kategorien</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>🔖 KLASSIFIKATION_2</label>
+                <select id="filterKlass2" class="filter-select">
+                    <option value="all">Alle Kategorien</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>📌 KLASSIFIKATION_3 (Multi-Select)</label>
+                <div class="multi-select-container">
+                    <div id="multiSelectBtn" class="multi-select-btn">
+                        <span>Kategorien auswählen...</span>
+                        <span>▼</span>
+                    </div>
+                    <div id="multiSelectDropdown" class="multi-select-dropdown">
+                        <div class="multi-select-option">
+                            <input type="checkbox" id="selectAllKlass3" value="all">
+                            <label for="selectAllKlass3">Alle auswählen</label>
+                        </div>
+                        <div id="klass3Options"></div>
+                    </div>
+                </div>
+                <div id="selectedKlass3Badges" class="selected-badges"></div>
+            </div>
+            <div class="filter-group">
+                <label>📚 FK_MEDIA_MEDIA_BUCH</label>
+                <select id="filterMediaBuch" class="filter-select">
+                    <option value="all">Alle Medienbücher</option>
+                </select>
+            </div>
+            <div class="button-group">
+                <button id="filterBtn" class="btn btn-filter">
+                    🎯 1. FILTER SETZEN
+                </button>
+                <button id="loadBtn" class="btn btn-load">
+                    📥 2. BILDER LADEN
+                </button>
+                <button id="resetBtn" class="btn btn-reset">
+                    🔄 Zurücksetzen
+                </button>
+            </div>
+        </div>
+        
+        <div id="filterStatus" class="filter-status">
+            ⚡ Filter-Status: Keine Filter aktiv
+        </div>
+    </div>
+
+    <div class="stats">
+        <span>📊 <span id="resultCount">0</span> Bilder insgesamt</span>
+        <span class="counter" id="pageInfo">Seite 1 von 1</span>
+    </div>
+
+    <div id="errorMessage" class="error-banner" style="display: none;"></div>
+
+    <div id="galleryContainer" class="gallery">
+        <div class="loading-placeholder">⏳ Lade Bilddaten von localhost:5000 ...</div>
+    </div>
+
+    <!-- Pagination Controls -->
+    <div id="paginationControls" class="pagination" style="display: none;"></div>
+
+    <footer>
+        ⚡ Datenquelle: /bild/basisdaten & /accounts/bild/1/1/1/:id (FILECONTENT) | 100 Bilder pro Seite
+    </footer>
+</div>
+
+<div id="lightbox" class="lightbox" onclick="closeLightbox()">
+    <div class="lightbox-content" onclick="event.stopPropagation()">
+        <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+        <div id="lightbox-media"></div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // API Endpoints
+        const BASEDATA_URL = 'http://localhost:5000/bild/basisdaten';
+        const FILECONTENT_URL = 'http://localhost:5000/accounts/bild/1/1/1/';
+        const ITEMS_PER_PAGE = 100; // 100 Bilder pro Seite
+        
+        // Globale Daten
+        let allImages = [];
+        let filteredImages = [];
+        let currentPageImages = [];
+        let imageBlobCache = new Map();
+        let currentPage = 1;
+        let totalPages = 1;
+        
+        // Filter
+        let activeFilters = {
+            klass1: 'all',
+            klass2: 'all',
+            klass3: [],
+            mediaBuch: 'all'
+        };
+        
+        let selectedKlass3Values = new Set();
+
+        // Eindeutige Kategorien
+        let uniqueKlass1 = new Set();
+        let uniqueKlass2 = new Set();
+        let uniqueKlass3 = new Set();
+        let uniqueMediaBuch = new Set();
+
+        // DOM-Elemente
+        const filterSelect1 = document.getElementById('filterKlass1');
+        const filterSelect2 = document.getElementById('filterKlass2');
+        const filterMediaBuch = document.getElementById('filterMediaBuch');
+        const filterBtn = document.getElementById('filterBtn');
+        const loadBtn = document.getElementById('loadBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const galleryContainer = document.getElementById('galleryContainer');
+        const resultCountSpan = document.getElementById('resultCount');
+        const errorDiv = document.getElementById('errorMessage');
+        const filterStatusSpan = document.getElementById('filterStatus');
+        const paginationControls = document.getElementById('paginationControls');
+        const pageInfoSpan = document.getElementById('pageInfo');
+        
+        // Multi-Select Elemente
+        const multiSelectBtn = document.getElementById('multiSelectBtn');
+        const multiSelectDropdown = document.getElementById('multiSelectDropdown');
+        const klass3Options = document.getElementById('klass3Options');
+        const selectedBadgesContainer = document.getElementById('selectedKlass3Badges');
+
+        // Pagination Funktionen
+        function updatePagination() {
+            totalPages = Math.ceil(filteredImages.length / ITEMS_PER_PAGE);
+            if (totalPages === 0) totalPages = 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+            
+            pageInfoSpan.innerHTML = `Seite ${currentPage} von ${totalPages} | ${filteredImages.length} Bilder insgesamt`;
+            
+            if (totalPages <= 1) {
+                paginationControls.style.display = 'none';
+                return;
+            }
+            
+            paginationControls.style.display = 'flex';
+            
+            let paginationHtml = '';
+            
+            // First Page Button
+            paginationHtml += `<button onclick="goToPage(1)" ${currentPage === 1 ? 'disabled' : ''}>⏮ Erste</button>`;
+            
+            // Previous Page Button
+            paginationHtml += `<button onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>◀ Zurück</button>`;
+            
+            // Page Numbers
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, currentPage + 2);
+            
+            if (startPage > 1) {
+                paginationHtml += `<button onclick="goToPage(1)">1</button>`;
+                if (startPage > 2) paginationHtml += `<span class="page-info">...</span>`;
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                paginationHtml += `<button onclick="goToPage(${i})" class="${i === currentPage ? 'active' : ''}">${i}</button>`;
+            }
+            
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) paginationHtml += `<span class="page-info">...</span>`;
+                paginationHtml += `<button onclick="goToPage(${totalPages})">${totalPages}</button>`;
+            }
+            
+            // Next Page Button
+            paginationHtml += `<button onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Weiter ▶</button>`;
+            
+            // Last Page Button
+            paginationHtml += `<button onclick="goToPage(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''}>Letzte ⏭</button>`;
+            
+            paginationControls.innerHTML = paginationHtml;
+        }
+        
+        function goToPage(page) {
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            loadCurrentPageImages();
+            updatePagination();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        function loadCurrentPageImages() {
+            const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+            const endIndex = startIndex + ITEMS_PER_PAGE;
+            currentPageImages = filteredImages.slice(startIndex, endIndex);
+            renderGallery();
+        }
+        
+        // Multi-Select Funktionen
+        function toggleMultiSelectDropdown() {
+            multiSelectDropdown.classList.toggle('show');
+        }
+
+        function closeMultiSelectDropdown(e) {
+            if (!multiSelectBtn.contains(e.target) && !multiSelectDropdown.contains(e.target)) {
+                multiSelectDropdown.classList.remove('show');
+            }
+        }
+
+        function updateSelectedBadges() {
+            selectedBadgesContainer.innerHTML = '';
+            const sortedValues = Array.from(selectedKlass3Values).sort();
+            sortedValues.forEach(value => {
+                const badge = document.createElement('span');
+                badge.className = 'selected-badge';
+                badge.innerHTML = `${escapeHtml(value)} <span class="selected-badge-remove" data-value="${escapeHtml(value)}">×</span>`;
+                selectedBadgesContainer.appendChild(badge);
+            });
+            
+            if (selectedKlass3Values.size === 0) {
+                multiSelectBtn.querySelector('span:first-child').textContent = 'Kategorien auswählen...';
+            } else if (selectedKlass3Values.size === 1) {
+                multiSelectBtn.querySelector('span:first-child').textContent = `${selectedKlass3Values.size} Kategorie ausgewählt`;
+            } else {
+                multiSelectBtn.querySelector('span:first-child').textContent = `${selectedKlass3Values.size} Kategorien ausgewählt`;
+            }
+            
+            document.querySelectorAll('.selected-badge-remove').forEach(el => {
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const value = el.getAttribute('data-value');
+                    selectedKlass3Values.delete(value);
+                    const checkbox = document.querySelector(`#klass3Checkbox_${value.replace(/[^a-zA-Z0-9]/g, '_')}`);
+                    if (checkbox) checkbox.checked = false;
+                    updateSelectedBadges();
+                    updateSelectAllCheckbox();
+                });
+            });
+        }
+
+        function updateSelectAllCheckbox() {
+            const selectAllCheckbox = document.getElementById('selectAllKlass3');
+            const allOptions = document.querySelectorAll('#klass3Options .multi-select-option input');
+            const allChecked = Array.from(allOptions).every(cb => cb.checked);
+            selectAllCheckbox.checked = allChecked;
+            selectAllCheckbox.indeterminate = !allChecked && Array.from(allOptions).some(cb => cb.checked);
+        }
+
+        function populateKlass3MultiSelect() {
+            const sorted3 = Array.from(uniqueKlass3).sort((a, b) => String(a).localeCompare(String(b)));
+            klass3Options.innerHTML = '';
+            
+            sorted3.forEach(val => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'multi-select-option';
+                const checkboxId = `klass3Checkbox_${val.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                optionDiv.innerHTML = `
+                    <input type="checkbox" id="${checkboxId}" value="${escapeHtml(val)}">
+                    <label for="${checkboxId}">${escapeHtml(val)}</label>
+                `;
+                const checkbox = optionDiv.querySelector('input');
+                checkbox.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        selectedKlass3Values.add(val);
+                    } else {
+                        selectedKlass3Values.delete(val);
+                    }
+                    updateSelectedBadges();
+                    updateSelectAllCheckbox();
+                });
+                klass3Options.appendChild(optionDiv);
+            });
+        }
+
+        function selectAllKlass3() {
+            const selectAllCheckbox = document.getElementById('selectAllKlass3');
+            const allCheckboxes = document.querySelectorAll('#klass3Options .multi-select-option input');
+            const isChecked = selectAllCheckbox.checked;
+            
+            allCheckboxes.forEach(cb => {
+                cb.checked = isChecked;
+                const value = cb.value;
+                if (isChecked) {
+                    selectedKlass3Values.add(value);
+                } else {
+                    selectedKlass3Values.delete(value);
+                }
+            });
+            
+            updateSelectedBadges();
+        }
+
+        function resetKlass3MultiSelect() {
+            selectedKlass3Values.clear();
+            const allCheckboxes = document.querySelectorAll('#klass3Options .multi-select-option input');
+            allCheckboxes.forEach(cb => cb.checked = false);
+            const selectAllCheckbox = document.getElementById('selectAllKlass3');
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+            updateSelectedBadges();
+        }
+
+        function showError(msg) {
+            errorDiv.style.display = 'block';
+            errorDiv.textContent = `⚠️ Fehler: ${msg}`;
+            setTimeout(() => {
+                if (errorDiv.style.display === 'block') errorDiv.style.display = 'none';
+            }, 6000);
+        }
+
+        function hideError() {
+            errorDiv.style.display = 'none';
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        async function loadImageFromFilecontent(imageId) {
+            if (imageBlobCache.has(imageId)) {
+                return imageBlobCache.get(imageId);
+            }
+            
+            try {
+                const response = await fetch(`${FILECONTENT_URL}${imageId}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const blob = await response.blob();
+                imageBlobCache.set(imageId, blob);
+                return blob;
+            } catch (error) {
+                console.error(`Fehler beim Laden von Bild ${imageId}:`, error);
+                return null;
+            }
+        }
+
+        function updateFilterStatus() {
+            let activeFiltersList = [];
+            if (activeFilters.klass1 !== 'all') activeFiltersList.push(`KL1: ${activeFilters.klass1}`);
+            if (activeFilters.klass2 !== 'all') activeFiltersList.push(`KL2: ${activeFilters.klass2}`);
+            if (activeFilters.klass3.length > 0) activeFiltersList.push(`KL3: ${activeFilters.klass3.join(', ')}`);
+            if (activeFilters.mediaBuch !== 'all') activeFiltersList.push(`MediaBuch: ${activeFilters.mediaBuch}`);
+            
+            if (activeFiltersList.length === 0) {
+                filterStatusSpan.innerHTML = '⚡ Filter-Status: <strong>Keine Filter aktiv (Alle Bilder)</strong>';
+                filterStatusSpan.className = 'filter-status';
+            } else {
+                filterStatusSpan.innerHTML = `🎯 Filter-Status: <strong>${activeFiltersList.join(' · ')}</strong> (Klicken Sie auf "Bilder laden")`;
+                filterStatusSpan.className = 'filter-status active';
+            }
+        }
+
+        // FILTER SETZEN
+        function setFilters() {
+            activeFilters.klass1 = filterSelect1.value;
+            activeFilters.klass2 = filterSelect2.value;
+            activeFilters.klass3 = Array.from(selectedKlass3Values);
+            activeFilters.mediaBuch = filterMediaBuch.value;
+            
+            updateFilterStatus();
+            
+            const filterButton = document.getElementById('filterBtn');
+            const originalText = filterButton.innerHTML;
+            filterButton.innerHTML = '✅ Filter gesetzt!';
+            setTimeout(() => {
+                filterButton.innerHTML = originalText;
+            }, 1500);
+        }
+
+        // BILDER LADEN
+        async function loadImages() {
+            if (!allImages.length) {
+                showError('Keine Bilddaten geladen. Bitte warten Sie oder laden Sie die Seite neu.');
+                return;
+            }
+
+            galleryContainer.innerHTML = '<div class="loading-placeholder">🔄 Lade Bilder aus FILECONTENT...</div>';
+            
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
+            // Bilder filtern
+            filteredImages = allImages.filter(img => {
+                let val1 = img.KLASSIFIKATION_1 !== undefined ? img.KLASSIFIKATION_1 : '';
+                if (activeFilters.klass1 !== 'all' && String(val1) !== String(activeFilters.klass1)) return false;
+                
+                let val2 = img.KLASSIFIKATION_2 !== undefined ? img.KLASSIFIKATION_2 : '';
+                if (activeFilters.klass2 !== 'all' && String(val2) !== String(activeFilters.klass2)) return false;
+                
+                let val3 = img.KLASSIFIKATION_3 !== undefined && img.KLASSIFIKATION_3 !== null ? String(img.KLASSIFIKATION_3) : '';
+                if (activeFilters.klass3.length > 0 && !activeFilters.klass3.includes(val3)) return false;
+                
+                let mediaBuch = img.FK_MEDIA_BUCH_BUCH !== undefined && img.FK_MEDIA_BUCH_BUCH !== null ? String(img.FK_MEDIA_BUCH_BUCH) : '';
+                if (activeFilters.mediaBuch !== 'all' && mediaBuch !== String(activeFilters.mediaBuch)) return false;
+                
+                return true;
+            });
+            
+            resultCountSpan.innerText = filteredImages.length;
+            
+            // Pagination zurücksetzen
+            currentPage = 1;
+            updatePagination();
+            loadCurrentPageImages();
+            
+            const loadButton = document.getElementById('loadBtn');
+            const originalText = loadButton.innerHTML;
+            loadButton.innerHTML = `✅ ${filteredImages.length} Bilder gefunden!`;
+            setTimeout(() => {
+                loadButton.innerHTML = originalText;
+            }, 1500);
+        }
+
+        // Galerie rendern
+        async function renderGallery() {
+            if (!galleryContainer) return;
+
+            if (!allImages.length) {
+                galleryContainer.innerHTML = `<div class="loading-placeholder">📭 Keine Bilddaten geladen. Stelle sicher, dass der Server läuft.<br>Endpoint: ${BASEDATA_URL}</div>`;
+                return;
+            }
+
+            if (currentPageImages.length === 0) {
+                galleryContainer.innerHTML = `<div class="loading-placeholder">🔍 Keine Bilder entsprechen den aktiven Filtern.<br>Klicken Sie auf "Zurücksetzen" oder wählen Sie andere Filter.</div>`;
+                return;
+            }
+
+            let cardsHtml = '';
+            let loadedCount = 0;
+            
+            for (let img of currentPageImages) {
+                const imageId = img.id;
+                const klas1 = (img.KLASSIFIKATION_1 && img.KLASSIFIKATION_1 !== '') ? img.KLASSIFIKATION_1 : '—';
+                const klas2 = (img.KLASSIFIKATION_2 && img.KLASSIFIKATION_2 !== '') ? img.KLASSIFIKATION_2 : '—';
+                const klas3 = (img.KLASSIFIKATION_3 && img.KLASSIFIKATION_3 !== '') ? img.KLASSIFIKATION_3 : '—';
+                const mediaBuch = (img.FK_MEDIA_BUCH_BUCH !== undefined && img.FK_MEDIA_BUCH_BUCH !== null && img.FK_MEDIA_BUCH_BUCH !== '') ? img.FK_MEDIA_BUCH_BUCH : '—';
+                
+                const blob = await loadImageFromFilecontent(imageId);
+                let imageUrl = null;
+                
+                if (blob && blob.type.startsWith('image/')) {
+                    imageUrl = URL.createObjectURL(blob);
+                    loadedCount++;
+                }
+                
+                cardsHtml += `
+                    <div class="image-card" data-id="${escapeHtml(imageId)}" onclick="openLightboxWithFilecontent(${imageId})">
+                        <div class="preview-wrapper">
+                            ${imageUrl ? 
+                                `<img src="${imageUrl}" alt="Bild ID: ${escapeHtml(imageId)}" loading="lazy">` : 
+                                `<div style="text-align: center; color: #999;">
+                                    <i class="fas fa-image" style="font-size: 3rem;"></i>
+                                    <p>Kein Bild verfügbar</p>
+                                    <small>ID: ${escapeHtml(imageId)}</small>
+                                </div>`
+                            }
+                        </div>
+                        <div class="file-info-preview">
+                            <div>
+                                <span class="file-id-badge">ID: ${escapeHtml(imageId)}</span>
+                                ${mediaBuch !== '—' ? `<span class="media-buch-badge">📚 MediaBuch: ${escapeHtml(mediaBuch)}</span>` : ''}
+                            </div>
+                            <div class="klassifikation-section">
+                                <div class="klass-item">
+                                    <div class="klass-label">📂 KLASSIFIKATION_1</div>
+                                    <div class="klass-value">${escapeHtml(klas1)}</div>
+                                </div>
+                                <div class="klass-item">
+                                    <div class="klass-label">📂 KLASSIFIKATION_2</div>
+                                    <div class="klass-value">${escapeHtml(klas2)}</div>
+                                </div>
+                                <div class="klass-item">
+                                    <div class="klass-label">📂 KLASSIFIKATION_3</div>
+                                    <div class="klass-value">${escapeHtml(klas3)}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            galleryContainer.innerHTML = cardsHtml;
+        }
+
+        async function openLightboxWithFilecontent(imageId) {
+            const lightboxMedia = document.getElementById('lightbox-media');
+            lightboxMedia.innerHTML = '<div class="loading-placeholder" style="background: none; color: #666;">Lade Vorschau aus FILECONTENT...</div>';
+            
+            try {
+                const blob = await loadImageFromFilecontent(imageId);
+                
+                if (blob && blob.type.startsWith('image/')) {
+                    const objectUrl = URL.createObjectURL(blob);
+                    lightboxMedia.innerHTML = `<img src="${objectUrl}" alt="Bild ${imageId}">`;
+                } else if (blob && blob.type === 'application/pdf') {
+                    const objectUrl = URL.createObjectURL(blob);
+                    lightboxMedia.innerHTML = `<iframe src="${objectUrl}" width="100%" height="600px"></iframe>`;
+                } else {
+                    lightboxMedia.innerHTML = `<div style="text-align: center;">
+                        <i class="fas fa-file" style="font-size: 4rem; color: #999;"></i>
+                        <p>Datei kann nicht angezeigt werden</p>
+                        <p>ID: ${imageId}</p>
+                        <p>Typ: ${blob?.type || 'Unbekannt'}</p>
+                    </div>`;
+                }
+                
+                document.getElementById('lightbox').classList.add('active');
+            } catch (error) {
+                lightboxMedia.innerHTML = `<div style="color: red; text-align: center;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 3rem;"></i>
+                    <p>Fehler beim Laden: ${error.message}</p>
+                </div>`;
+            }
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox').classList.remove('active');
+        }
+
+        function resetAll() {
+            filterSelect1.value = 'all';
+            filterSelect2.value = 'all';
+            filterMediaBuch.value = 'all';
+            resetKlass3MultiSelect();
+            
+            activeFilters = { klass1: 'all', klass2: 'all', klass3: [], mediaBuch: 'all' };
+            
+            updateFilterStatus();
+            
+            if (allImages.length) {
+                filteredImages = [...allImages];
+                resultCountSpan.innerText = filteredImages.length;
+                currentPage = 1;
+                updatePagination();
+                loadCurrentPageImages();
+            }
+            
+            const resetButton = document.getElementById('resetBtn');
+            const originalText = resetButton.innerHTML;
+            resetButton.innerHTML = '🔄 Zurückgesetzt!';
+            setTimeout(() => {
+                resetButton.innerHTML = originalText;
+            }, 1500);
+        }
+
+        function populateDropdowns() {
+            const sorted1 = Array.from(uniqueKlass1).sort((a, b) => String(a).localeCompare(String(b)));
+            const sorted2 = Array.from(uniqueKlass2).sort((a, b) => String(a).localeCompare(String(b)));
+            const sortedMediaBuch = Array.from(uniqueMediaBuch).sort((a, b) => {
+                const numA = parseInt(a);
+                const numB = parseInt(b);
+                if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+                return String(a).localeCompare(String(b));
+            });
+
+            function fillSelect(selectElement, values) {
+                let html = '<option value="all">📋 Alle Kategorien</option>';
+                values.forEach(val => {
+                    if (val && val.trim() !== "") {
+                        html += `<option value="${escapeHtml(val)}">${escapeHtml(val)}</option>`;
+                    }
+                });
+                selectElement.innerHTML = html;
+            }
+
+            fillSelect(filterSelect1, sorted1);
+            fillSelect(filterSelect2, sorted2);
+            fillSelect(filterMediaBuch, sortedMediaBuch);
+            
+            populateKlass3MultiSelect();
+        }
+
+        function collectUniqueCategories(imagesArray) {
+            uniqueKlass1.clear();
+            uniqueKlass2.clear();
+            uniqueKlass3.clear();
+            uniqueMediaBuch.clear();
+
+            for (let img of imagesArray) {
+                let k1 = img.KLASSIFIKATION_1;
+                if (k1 !== undefined && k1 !== null && k1 !== '') uniqueKlass1.add(String(k1));
+                
+                let k2 = img.KLASSIFIKATION_2;
+                if (k2 !== undefined && k2 !== null && k2 !== '') uniqueKlass2.add(String(k2));
+                
+                let k3 = img.KLASSIFIKATION_3;
+                if (k3 !== undefined && k3 !== null && k3 !== '') uniqueKlass3.add(String(k3));
+                
+                let mediaBuch = img.FK_MEDIA_BUCH_BUCH;
+                if (mediaBuch !== undefined && mediaBuch !== null && mediaBuch !== '') uniqueMediaBuch.add(String(mediaBuch));
+            }
+        }
+
+        async function fetchBaseData() {
+            try {
+                hideError();
+                galleryContainer.innerHTML = `<div class="loading-placeholder">🔄 Lade Metadaten von ${BASEDATA_URL} ...</div>`;
+                
+                const response = await fetch(BASEDATA_URL);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status} - ${response.statusText}`);
+                }
+                const data = await response.json();
+                
+                let imagesArray = Array.isArray(data) ? data : (data.data && Array.isArray(data.data) ? data.data : []);
+                
+                if (!imagesArray.length) {
+                    allImages = [];
+                } else {
+                    allImages = imagesArray.map(item => ({
+                        id: item.PK_BILD_BILDER !== undefined ? item.PK_BILD_BILDER : (item.id !== undefined ? item.id : null),
+                        KLASSIFIKATION_1: item.KLASSIFIKATION_1 !== undefined ? item.KLASSIFIKATION_1 : (item.klassifikation_1 || ''),
+                        KLASSIFIKATION_2: item.KLASSIFIKATION_2 !== undefined ? item.KLASSIFIKATION_2 : (item.klassifikation_2 || ''),
+                        KLASSIFIKATION_3: item.KLASSIFIKATION_3 !== undefined ? item.KLASSIFIKATION_3 : (item.klassifikation_3 || ''),
+                        FK_MEDIA_BUCH_BUCH: item.FK_MEDIA_BUCH_BUCH !== undefined ? item.FK_MEDIA_BUCH_BUCH : (item.fk_media_media_buch || '')
+                    })).filter(img => img.id !== null && img.id !== undefined);
+                }
+                
+                if (allImages.length === 0) {
+                    throw new Error('Keine gültigen Bilder mit ID empfangen.');
+                }
+                
+                collectUniqueCategories(allImages);
+                populateDropdowns();
+                
+                filteredImages = [...allImages];
+                resultCountSpan.innerText = filteredImages.length;
+                currentPage = 1;
+                updatePagination();
+                loadCurrentPageImages();
+                updateFilterStatus();
+                
+            } catch (err) {
+                console.error('Fehler:', err);
+                showError(`Konnte Basisdaten nicht laden: ${err.message}`);
+                galleryContainer.innerHTML = `<div class="loading-placeholder" style="background:#ffe6e6; color:#a94442;">❌ Fehler: ${err.message}<br>Versuche: ${BASEDATA_URL}</div>`;
+                allImages = [];
+                filteredImages = [];
+                resultCountSpan.innerText = '0';
+            }
+        }
+
+        function bindEvents() {
+            filterBtn.addEventListener('click', setFilters);
+            loadBtn.addEventListener('click', loadImages);
+            resetBtn.addEventListener('click', resetAll);
+            multiSelectBtn.addEventListener('click', toggleMultiSelectDropdown);
+            document.addEventListener('click', closeMultiSelectDropdown);
+            document.getElementById('selectAllKlass3').addEventListener('change', selectAllKlass3);
+        }
+        
+        window.goToPage = goToPage;
+        window.openLightboxWithFilecontent = openLightboxWithFilecontent;
+        window.closeLightbox = closeLightbox;
+        
+        function init() {
+            bindEvents();
+            fetchBaseData();
+        }
+        
+        init();
+    })();
+</script>
+</body>
+</html>

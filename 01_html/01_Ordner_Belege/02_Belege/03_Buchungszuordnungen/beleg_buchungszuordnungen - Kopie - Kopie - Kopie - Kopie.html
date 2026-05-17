@@ -1,0 +1,2688 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buchungssystem - Belege, Konten und Matrix</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #2c3e50, #4a6491);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .subtitle {
+            font-size: 17px;
+            opacity: 0.9;
+            margin-bottom: 15px;
+        }
+        
+        .main-content {
+            display: flex;
+            gap: 25px;
+            flex-wrap: wrap;
+        }
+        
+        .panel {
+            background-color: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            margin-bottom: 25px;
+            border: 1px solid #eaeaea;
+        }
+        
+        .panel-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #3498db;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .panel-title i {
+            font-size: 22px;
+        }
+        
+        #ordner-list {
+            flex: 1;
+            min-width: 320px;
+        }
+        
+        #beleg-details {
+            flex: 2;
+            min-width: 450px;
+        }
+        
+        #buchungen-list {
+            flex: 3;
+            min-width: 650px;
+        }
+        
+        #matrix-view {
+            flex: 1 100%;
+            min-width: 300px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .ordner-item {
+            padding: 15px 18px;
+            border-left: 5px solid #3498db;
+            background-color: #f8f9fa;
+            margin-bottom: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid #eaeaea;
+        }
+        
+        .ordner-item:hover {
+            background-color: #e9f5ff;
+            transform: translateX(8px);
+            box-shadow: 0 4px 8px rgba(52, 152, 219, 0.15);
+        }
+        
+        .ordner-item.active {
+            border-left-color: #2ecc71;
+            background-color: #eafaf1;
+            border-color: #d4edda;
+        }
+        
+        .ordner-name {
+            font-weight: 700;
+            color: #2c3e50;
+            font-size: 17px;
+            margin-bottom: 5px;
+        }
+        
+        .ordner-info {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-top: 5px;
+            display: flex;
+            gap: 15px;
+        }
+        
+        .beleg-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 18px;
+            border-bottom: 2px solid #eaeaea;
+        }
+        
+        .beleg-title {
+            font-size: 22px;
+            color: #2c3e50;
+            font-weight: 700;
+        }
+        
+        .beleg-id {
+            background-color: #3498db;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 16px;
+        }
+        
+        .beleg-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 18px;
+            margin-bottom: 25px;
+        }
+        
+        .info-item {
+            margin-bottom: 12px;
+            background-color: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid #9b59b6;
+        }
+        
+        .info-label {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
+        .info-value {
+            font-weight: 600;
+            color: #2c3e50;
+            padding: 5px 0;
+            font-size: 15px;
+        }
+        
+        .relations-section {
+            margin-top: 30px;
+        }
+        
+        .relations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .relation-item {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #9b59b6;
+            border: 1px solid #eaeaea;
+        }
+        
+        .buchungen-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        }
+        
+        .buchungen-table th {
+            background-color: #2c3e50;
+            color: white;
+            text-align: left;
+            padding: 15px 18px;
+            font-weight: 600;
+            font-size: 15px;
+        }
+        
+        .buchungen-table td {
+            padding: 15px 18px;
+            border-bottom: 1px solid #eaeaea;
+            font-size: 15px;
+        }
+        
+        .buchungen-table tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .buchung-datum {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .buchung-konto {
+            color: #27ae60;
+            font-weight: 600;
+        }
+        
+        .buchung-betrag {
+            text-align: right;
+            font-weight: 700;
+            font-size: 16px;
+        }
+        
+        .betrag-pos {
+            color: #27ae60;
+        }
+        
+        .betrag-neg {
+            color: #e74c3c;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+            font-size: 16px;
+        }
+        
+        .loading:after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-left: 10px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 18px;
+            border-radius: 6px;
+            margin: 18px 0;
+            border-left: 5px solid #c62828;
+            font-weight: 500;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+            font-style: italic;
+            font-size: 16px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            border: 1px dashed #ddd;
+        }
+        
+        @media (max-width: 1200px) {
+            .main-content {
+                flex-direction: column;
+            }
+        }
+        
+        .filter-section {
+            margin-bottom: 25px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .filter-input {
+            padding: 12px 18px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            width: 100%;
+            max-width: 350px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        .filter-input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+        
+        .refresh-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 16px;
+        }
+        
+        .refresh-btn:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+        }
+        
+        .api-status {
+            padding: 12px 18px;
+            border-radius: 6px;
+            font-size: 15px;
+            margin-top: 15px;
+            display: inline-block;
+            font-weight: 500;
+        }
+        
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+            border-left: 5px solid #28a745;
+        }
+        
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-left: 5px solid #dc3545;
+        }
+        
+        .beleg-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .action-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 15px;
+        }
+        
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+        }
+        
+        .btn-secondary {
+            background-color: #95a5a6;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #7f8c8d;
+            transform: translateY(-2px);
+        }
+        
+        /* Neue Stile für erweiterte Buchungsdetails */
+        .buchung-detail-card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border-left: 6px solid #3498db;
+            border: 1px solid #eaeaea;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        .buchung-detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 18px;
+            border-bottom: 2px solid #eaeaea;
+        }
+        
+        .buchung-detail-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        
+        .buchung-detail-id {
+            background-color: #9b59b6;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 16px;
+        }
+        
+        .buchung-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 18px;
+            margin-bottom: 20px;
+        }
+        
+        .detail-item {
+            margin-bottom: 12px;
+            background-color: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid #e74c3c;
+        }
+        
+        .detail-label {
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        
+        .detail-value {
+            font-weight: 600;
+            color: #2c3e50;
+            padding: 5px 0;
+            font-size: 15px;
+            word-break: break-word;
+        }
+        
+        .buchungstext-container {
+            background-color: white;
+            border: 2px solid #eaeaea;
+            border-radius: 6px;
+            padding: 18px;
+            margin-top: 20px;
+            max-height: 350px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            background-color: #f8f9fa;
+        }
+        
+        .buchungstext-label {
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .back-btn {
+            background-color: #95a5a6;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 20px;
+            font-size: 15px;
+            transition: all 0.3s;
+        }
+        
+        .back-btn:hover {
+            background-color: #7f8c8d;
+            transform: translateY(-2px);
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .status-active {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-inactive {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .total-summary {
+            background: linear-gradient(135deg, #2c3e50, #4a6491);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .total-label {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+        
+        .total-value {
+            font-size: 28px;
+            font-weight: 700;
+        }
+        
+        .icon {
+            margin-right: 8px;
+            font-size: 18px;
+        }
+        
+        .header-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .toggle-mock {
+            background-color: #f39c12;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .toggle-mock:hover {
+            background-color: #d68910;
+        }
+        
+        .beleg-counter {
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+        
+        .highlight {
+            background-color: #fff9e6;
+            border-color: #f39c12;
+        }
+        
+        .separator {
+            height: 1px;
+            background-color: #eaeaea;
+            margin: 25px 0;
+        }
+        
+        /* Neue Stile für Gruppierung */
+        .date-group {
+            margin-bottom: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .date-group:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .date-group-header {
+            background: linear-gradient(135deg, #4a6fa5, #2c3e50);
+            color: white;
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        .date-group-header:hover {
+            background: linear-gradient(135deg, #5a7fb5, #3c4e60) !important;
+        }
+        
+        .group-toggle-icon {
+            transition: transform 0.3s ease;
+        }
+        
+        .group-toggle-icon.rotated {
+            transform: rotate(90deg);
+        }
+        
+        .date-group-content {
+            background-color: white;
+        }
+        
+        /* Enhanced table styling for grouped view */
+        .buchungen-group-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #dee2e6;
+        }
+        
+        .buchungen-group-table th {
+            background-color: #f8f9fa !important;
+            color: #495057 !important;
+            font-weight: 600;
+            border-bottom: 2px solid #dee2e6;
+            padding: 12px 15px;
+        }
+        
+        .buchungen-group-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eaeaea;
+            vertical-align: middle;
+        }
+        
+        .buchungen-group-table tr:hover {
+            background-color: #f0f7ff !important;
+        }
+        
+        /* Matrix-Styles */
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 13px;
+        }
+        
+        .matrix-table th, .matrix-table td {
+            border: 1px solid #ccc;
+            padding: 8px 10px;
+            text-align: left;
+            vertical-align: top;
+        }
+        
+        .matrix-table th {
+            background: #e8e8e8;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .headline1 {
+            background: #d0e0ff;
+            font-size: 1.1rem;
+        }
+        
+        .headline2 {
+            background: #f0f0f0;
+            font-size: 0.95rem;
+        }
+        
+        .headline3 {
+            background: #fff3b0;
+            font-size: 0.85rem;
+        }
+        
+        .date-col {
+            background: #ffe58a;
+            font-weight: bold;
+            text-align: center;
+            width: 140px;
+        }
+        
+        .buchung-item {
+            background: #c8f7c5;
+            padding: 4px 6px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            font-size: 12px;
+        }
+        
+        /* BOLD FRAMES AROUND KTO GROUPS */
+        .kto-giro {
+            border: 4px solid #4a90e2 !important;
+        }
+        
+        .kto-paypal {
+            border: 4px solid #50c878 !important;
+        }
+        
+        .kto-kredit {
+            border: 4px solid #e26a6a !important;
+        }
+        
+        .matrix-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .matrix-controls {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border-left: 5px solid #3498db;
+        }
+        
+        .matrix-summary {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        
+        .matrix-summary-item {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            border: 1px solid #eaeaea;
+            min-width: 120px;
+        }
+        
+        .matrix-summary-label {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+        
+        .matrix-summary-value {
+            font-weight: bold;
+            font-size: 16px;
+            color: #2c3e50;
+        }
+        
+        .matrix-container {
+            overflow-x: auto;
+            margin-top: 15px;
+        }
+        
+        .toggle-matrix-btn {
+            background-color: #9b59b6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .toggle-matrix-btn:hover {
+            background-color: #8e44ad;
+            transform: translateY(-2px);
+        }
+        
+        .matrix-status {
+            padding: 8px 15px;
+            border-radius: 6px;
+            background-color: #e8f4fc;
+            border-left: 4px solid #3498db;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        
+        .matrix-legend {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        
+        .legend-giro {
+            background-color: #4a90e2;
+            border: 2px solid #4a90e2;
+        }
+        
+        .legend-paypal {
+            background-color: #50c878;
+            border: 2px solid #50c878;
+        }
+        
+        .legend-kredit {
+            background-color: #e26a6a;
+            border: 2px solid #e26a6a;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-book"></i> Buchungssystem</h1>
+            <div class="subtitle">Belege, Relationen, Buchungsinformationen und KTO/TBL Matrix</div>
+            <div class="header-controls">
+                <div id="api-status" class="api-status" style="display: none;"></div>
+                <button class="toggle-mock" onclick="toggleMockData()">
+                    <i class="fas fa-database"></i> Mock-Daten: <span id="mock-status">Aktiv</span>
+                </button>
+                <button class="toggle-matrix-btn" onclick="toggleMatrixView()">
+                    <i class="fas fa-table"></i> <span id="matrix-toggle-text">Matrix anzeigen</span>
+                </button>
+            </div>
+        </header>
+        
+        <div class="main-content">
+            <!-- Ordner Page Auswahl -->
+            <div class="panel" id="ordner-list">
+                <div class="panel-title"><i class="fas fa-folder"></i> Ordner Pages</div>
+                <div class="filter-section">
+                    <input type="text" class="filter-input" id="pageNumber" placeholder="Page Number eingeben...">
+                    <button class="refresh-btn" onclick="loadBelegeForOrdner(document.getElementById('pageNumber').value)">
+                        <i class="fas fa-search"></i> Get Page
+                    </button>
+                </div>
+                <div class="filter-section">
+                    <input type="text" class="filter-input" id="ordner-filter" placeholder="Ordner suchen...">
+                    <div class="beleg-counter" id="ordner-counter">0 Ordner</div>
+                </div>
+                <div id="ordner-container">
+                    <div class="loading">Lade Ordner...</div>
+                </div>
+            </div>
+            
+            <!-- Beleg Details -->
+            <div class="panel" id="beleg-details">
+                <div class="panel-title"><i class="fas fa-file-invoice"></i> Belegdetails</div>
+                <div id="beleg-container">
+                    <div class="no-data">Wählen Sie einen Ordner aus, um Belege anzuzeigen</div>
+                </div>
+            </div>
+            
+            <!-- Buchungen Liste -->
+            <div class="panel" id="buchungen-list">
+                <div class="panel-title"><i class="fas fa-euro-sign"></i> Buchungsinformationen</div>
+                <div id="buchungen-container">
+                    <div class="no-data">Wählen Sie einen Beleg aus, um Buchungen anzuzeigen</div>
+                </div>
+            </div>
+            
+            <!-- Matrix View (Initially hidden) -->
+            <div class="panel" id="matrix-view" style="display: none;">
+                <div class="panel-title"><i class="fas fa-th"></i> KTO-Typ / TBL / Buchungsdaten – Matrix</div>
+                <div class="matrix-controls">
+                    <div class="matrix-actions">
+                        <button class="action-btn btn-primary" onclick="loadMatrixData()">
+                            <i class="fas fa-sync-alt"></i> Matrix aktualisieren
+                        </button>
+                        <button class="action-btn btn-secondary" onclick="clearMatrixData()">
+                            <i class="fas fa-broom"></i> Matrix leeren
+                        </button>
+                        <select class="filter-input" id="matrix-timeframe" style="max-width: 200px;" onchange="filterMatrixByTimeframe()">
+                            <option value="all">Alle Daten</option>
+                            <option value="current_month">Aktueller Monat</option>
+                            <option value="last_month">Letzter Monat</option>
+                            <option value="current_year">Aktuelles Jahr</option>
+                            <option value="last_year">Letztes Jahr</option>
+                        </select>
+                        <button class="action-btn btn-secondary" onclick="loadMatrixForCurrentBeleg()" id="matrix-current-beleg-btn">
+                            <i class="fas fa-link"></i> Für aktuellen Beleg
+                        </button>
+                    </div>
+                    
+                    <div class="matrix-legend">
+                        <div class="legend-item">
+                            <div class="legend-color legend-giro"></div>
+                            <span>Giro-Konto</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color legend-paypal"></div>
+                            <span>PayPal</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color legend-kredit"></div>
+                            <span>Kreditkarte</span>
+                        </div>
+                    </div>
+                    
+                    <div class="matrix-summary" id="matrix-summary">
+                        <!-- Matrix summary will be populated here -->
+                    </div>
+                </div>
+                
+                <div class="matrix-status" id="matrix-status">
+                    Matrix-Daten werden geladen...
+                </div>
+                
+                <div class="matrix-container">
+                    <div id="matrix-table-container">
+                        <!-- Matrix table will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="separator"></div>
+        
+        <footer style="text-align: center; color: #7f8c8d; padding: 20px; font-size: 14px;">
+            <p>Buchungssystem v1.1 • © 2023 • Alle Buchungsdaten werden gemäß DSGVO verarbeitet</p>
+        </footer>
+    </div>
+
+    <script>
+        // API URLs entsprechend der vorherigen Struktur
+        const API_BASE_URL = 'http://localhost:5000';
+        
+        // API Endpoints aus vorheriger Implementierung
+        const API_URL_BELEGE = `${API_BASE_URL}/belege`; 
+        const API_URL_BELEG_DETAILS = `${API_BASE_URL}/beleg`;
+        const API_URL_BELEG_ZUORDNUNGEN = `${API_BASE_URL}/accounts/2`;
+        const API_URL_BUCHUNGEN = `${API_BASE_URL}/accounts`;
+
+        // Mock-Daten für die Demonstration (Fallback)
+        const mockOrdnerPages = [
+            {
+                id: 1,
+                ABL_ORD_PAGE_NUMBER: "001",
+                ABL_ORD_JAHR: "2023",
+                ABL_ORD_ORDNER_NAME: "Hauptordner Q1/2023",
+                ABL_ORD_PAGE_DESCR: "Quartal 1 Geschäftsbelege 2023"
+            },
+            {
+                id: 2,
+                ABL_ORD_PAGE_NUMBER: "002",
+                ABL_ORD_JAHR: "2023",
+                ABL_ORD_ORDNER_NAME: "Reisekosten 2023",
+                ABL_ORD_PAGE_DESCR: "Reisekostenabrechnungen"
+            },
+            {
+                id: 3,
+                ABL_ORD_PAGE_NUMBER: "003",
+                ABL_ORD_JAHR: "2023",
+                ABL_ORD_ORDNER_NAME: "Materialeinkäufe",
+                ABL_ORD_PAGE_DESCR: "Materialbeschaffung und Lieferanten"
+            },
+            {
+                id: 4,
+                ABL_ORD_PAGE_NUMBER: "004",
+                ABL_ORD_JAHR: "2024",
+                ABL_ORD_ORDNER_NAME: "Projekt Alpha",
+                ABL_ORD_PAGE_DESCR: "Belege für Projekt Alpha"
+            }
+        ];
+
+        // Statusvariablen
+        let currentOrdnerPageNumber = null;
+        let currentBelegId = null;
+        let useMockData = true; // Startet mit Mock-Daten
+        let currentBuchungsDetails = null;
+        let matrixData = [];
+        let isMatrixVisible = false;
+        let mockKtoDetails = {
+            Giro:   { kto_nr: "DE12345678", iban: "DE12 1111 2222 3333 4444 55" },
+            Kredit: { kto_nr: "KR99887766", iban: "DE98 2222 3333 4444 5555 66" },
+            Paypal: { kto_nr: "PP55667788", iban: "paypal@example.com" }
+        };
+
+        // DOM Elemente
+        const ordnerContainer = document.getElementById('ordner-container');
+        const pageNumberInput = document.getElementById('pageNumber');
+        const belegContainer = document.getElementById('beleg-container');
+        const buchungenContainer = document.getElementById('buchungen-container');
+        const ordnerFilter = document.getElementById('ordner-filter');
+        const apiStatus = document.getElementById('api-status');
+        const ordnerCounter = document.getElementById('ordner-counter');
+        const mockStatus = document.getElementById('mock-status');
+        const matrixView = document.getElementById('matrix-view');
+        const matrixTableContainer = document.getElementById('matrix-table-container');
+        const matrixStatus = document.getElementById('matrix-status');
+        const matrixSummary = document.getElementById('matrix-summary');
+        const matrixToggleText = document.getElementById('matrix-toggle-text');
+        const matrixCurrentBelegBtn = document.getElementById('matrix-current-beleg-btn');
+
+        // Initialisierung
+        document.addEventListener('DOMContentLoaded', function() {
+            // Teste API-Verbindung beim Start
+            testApiConnection();
+            
+            // Lade Ordner Pages
+            loadOrdnerPages();
+            
+            // Event Listener für Filter
+            ordnerFilter.addEventListener('input', function() {
+                filterOrdnerPages(this.value);
+            });
+            
+            // Enter-Taste für Page Number
+            pageNumberInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    loadBelegeForOrdner(this.value);
+                }
+            });
+            
+            // Update Mock-Status
+            updateMockStatus();
+        });
+
+        // API-Verbindung testen
+        async function testApiConnection() {
+            try {
+                showApiStatus('Teste API-Verbindung...', 'success');
+                const response = await fetch(`${API_BASE_URL}/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    showApiStatus('✓ API-Verbindung erfolgreich', 'success');
+                    useMockData = false;
+                    updateMockStatus();
+                } else {
+                    showApiStatus('⚠ API antwortet mit Fehler', 'error');
+                    useMockData = true;
+                    updateMockStatus();
+                }
+            } catch (error) {
+                console.warn('API nicht erreichbar:', error.message);
+                showApiStatus('✗ API nicht erreichbar - Verwende Mock-Daten', 'error');
+                useMockData = true;
+                updateMockStatus();
+            }
+        }
+
+        // Mock-Daten umschalten
+        function toggleMockData() {
+            useMockData = !useMockData;
+            updateMockStatus();
+            showApiStatus(`Mock-Daten ${useMockData ? 'aktiviert' : 'deaktiviert'}`, useMockData ? 'error' : 'success');
+            
+            // Aktuelle Ansicht neu laden
+            if (currentOrdnerPageNumber) {
+                loadBelegeForOrdner(currentOrdnerPageNumber);
+            } else {
+                loadOrdnerPages();
+            }
+            
+            // Matrix-Daten neu laden, wenn sichtbar
+            if (isMatrixVisible && matrixData.length > 0) {
+                loadMatrixData();
+            }
+        }
+
+        // Matrix-View ein-/ausblenden
+        function toggleMatrixView() {
+            isMatrixVisible = !isMatrixVisible;
+            matrixView.style.display = isMatrixVisible ? 'block' : 'none';
+            matrixToggleText.textContent = isMatrixVisible ? 'Matrix ausblenden' : 'Matrix anzeigen';
+            
+            if (isMatrixVisible && matrixData.length === 0) {
+                loadMatrixData();
+            }
+            
+            // "Für aktuellen Beleg" Button nur anzeigen, wenn ein Beleg ausgewählt ist
+            if (currentBelegId) {
+                matrixCurrentBelegBtn.style.display = 'inline-block';
+            } else {
+                matrixCurrentBelegBtn.style.display = 'none';
+            }
+        }
+
+        // Mock-Status aktualisieren
+        function updateMockStatus() {
+            mockStatus.textContent = useMockData ? 'Aktiv' : 'Inaktiv';
+            mockStatus.style.color = useMockData ? '#ffeb3b' : '#4caf50';
+            mockStatus.style.fontWeight = 'bold';
+        }
+
+        // API-Status anzeigen
+        function showApiStatus(message, type) {
+            apiStatus.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${message}`;
+            apiStatus.className = `api-status status-${type}`;
+            apiStatus.style.display = 'block';
+            
+            // Nach 5 Sekunden ausblenden
+            setTimeout(() => {
+                apiStatus.style.display = 'none';
+            }, 5000);
+        }
+
+        // Matrix-Daten laden (für alle oder spezifischen Beleg)
+        async function loadMatrixData(belegPk = null) {
+            matrixStatus.textContent = 'Matrix-Daten werden geladen...';
+            matrixStatus.style.backgroundColor = '#e8f4fc';
+            matrixStatus.style.borderLeftColor = '#3498db';
+            
+            try {
+              
+                        url = `${API_BASE_URL}/accounts/2/${belegPk}`;
+                    
+                    
+                    const response = await fetch(url);
+                    if (response.ok) {
+                        const apiData = await response.json();
+                        matrixData = transformMatrixData(apiData);
+                        renderMatrix();
+                        updateMatrixSummary();
+                        matrixStatus.textContent = `Matrix-Daten von API geladen (${matrixData.length} Buchungen)`;
+                        matrixStatus.style.backgroundColor = '#d4edda';
+                        matrixStatus.style.borderLeftColor = '#28a745';
+                    } else {
+                        throw new Error('API-Fehler');
+                    }
+              
+            } catch (error) {
+                console.error('Fehler beim Laden der Matrix-Daten:', error);
+                matrixData = getMockMatrixData();
+                renderMatrix();
+                updateMatrixSummary();
+                matrixStatus.textContent = 'Fehler beim Laden - Verwende Mock-Daten';
+                matrixStatus.style.backgroundColor = '#f8d7da';
+                matrixStatus.style.borderLeftColor = '#dc3545';
+                useMockData = true;
+                updateMockStatus();
+            }
+        }
+
+        // Matrix-Daten für aktuellen Beleg laden
+        function loadMatrixForCurrentBeleg() {
+            if (currentBelegId) {
+                loadMatrixData(currentBelegId);
+            } else {
+                showApiStatus('Kein Beleg ausgewählt', 'error');
+            }
+        }
+
+        // API-Daten für Matrix transformieren
+        function transformMatrixData(apiData) {
+            if (!apiData || !Array.isArray(apiData)) return [];
+            
+            return apiData.map(item => {
+                // Extrahiere KTO_TYP aus TBL oder anderen Feldern
+                let ktoTyp = 'Giro'; // Default
+                const tbl = item.TBL || '';
+                
+                if (tbl.includes('paypal')) {
+                    ktoTyp = 'Paypal';
+                } else if (tbl.includes('kredit') || tbl.includes('credit')) {
+                    ktoTyp = 'Kredit';
+                }
+                
+                // Extrahiere Datum
+                let datum = '';
+                if (item.BUCHUNGSDATUM) {
+                    const date = new Date(item.BUCHUNGSDATUM);
+                    datum = date.toLocaleDateString('de-DE');
+                } else if (item.BELEGDATUM) {
+                    const date = new Date(item.BELEGDATUM);
+                    datum = date.toLocaleDateString('de-DE');
+                }
+                
+                return {
+                    datum: datum,
+                    text: item.BUCHUNGSTEXT || 'Ohne Text',
+                    betrag: parseFloat(item.BETRAG) || 0,
+                    kto: ktoTyp,
+                    tbl: tbl,
+                    brutto: parseFloat(item.BRUTTO_BETRAG) || 0,
+                    pk: `${item.PK_REL_LEX_KTO_BEL} (${item.FK_MAIN_KEY})`,
+                    link: item.LINK_LEXOFFICE_BUCHUNG,
+                    iban: item.IBAN || '',
+                    kontoauszug: item.FK_KTO_KONTO_AUSZUG,
+                    buchungstag: item.BUCHUNGSTAG,
+                    fkKtoBankkonto: item.FK_KTO_BANKKONTO
+                };
+            });
+        }
+
+        // Mock-Matrix-Daten
+        function getMockMatrixData() {
+            return [
+                { datum: "01.03.2024", text: "Zahlung Kunde A", betrag: 120.50, kto: "Giro",   tbl: "BANK", brutto: 143.40, pk: "85001", iban: "DE12345678901234567890", fkKtoBankkonto: 2 },
+                { datum: "01.03.2024", text: "Paypal Eingang", betrag: 45.90,  kto: "Paypal", tbl: "PAYPAL", brutto: 54.62, pk: "85002", iban: "paypal@example.com", fkKtoBankkonto: 3 },
+                { datum: "05.03.2024", text: "Abschluss Paypal", betrag: -10.00, kto: "Paypal", tbl: "PAYPAL_ABSCHLUSS", brutto: -11.90, pk: "85003", iban: "paypal@example.com", fkKtoBankkonto: 3 },
+                { datum: "12.03.2024", text: "Paypal GR", betrag: 19.99, kto: "Paypal", tbl: "PAYPAL_GR", brutto: 23.79, pk: "85004", iban: "paypal@example.com", fkKtoBankkonto: 3 },
+                { datum: "20.03.2024", text: "Kreditkartenbelastung", betrag: -59.99, kto: "Kredit", tbl: "KREDITKARTE", brutto: -71.39, pk: "85005", iban: "DE98765432109876543210", fkKtoBankkonto: 4 },
+                { datum: "25.03.2024", text: "Gehaltseingang", betrag: 2500.00, kto: "Giro", tbl: "BANK", brutto: 2975.00, pk: "85006", iban: "DE12345678901234567890", fkKtoBankkonto: 2 },
+                { datum: "28.03.2024", text: "Mietzahlung", betrag: -850.00, kto: "Giro", tbl: "BANK", brutto: -1011.50, pk: "85007", iban: "DE12345678901234567890", fkKtoBankkonto: 2 },
+                { datum: "30.03.2024", text: "Amazon Einkauf", betrag: -89.99, kto: "Kredit", tbl: "KREDITKARTE", brutto: -107.09, pk: "85008", iban: "DE98765432109876543210", fkKtoBankkonto: 4 },
+                { datum: "01.04.2024", text: "PayPal Zahlung", betrag: 75.50, kto: "Paypal", tbl: "PAYPAL", brutto: 89.85, pk: "85009", iban: "paypal@example.com", fkKtoBankkonto: 3 },
+                { datum: "05.04.2024", text: "Überweisung", betrag: -200.00, kto: "Giro", tbl: "BANK", brutto: -238.00, pk: "85010", iban: "DE12345678901234567890", fkKtoBankkonto: 2 }
+            ];
+        }
+
+        // Matrix rendern
+        function renderMatrix() {
+            if (!matrixData || matrixData.length === 0) {
+                matrixTableContainer.innerHTML = '<div class="no-data"><i class="fas fa-table"></i> Keine Matrix-Daten verfügbar</div>';
+                return;
+            }
+            
+            // Distinct lists
+            const ktoList = [...new Set(matrixData.map(x => x.kto))];
+            const tblList = [...new Set(matrixData.map(x => x.tbl))];
+            const dateList = [...new Set(matrixData.map(x => x.datum))];
+            
+            let html = `<table class="matrix-table">`;
+            
+            // -------------------------------
+            // Headline 1: KTO_TYP
+            // -------------------------------
+            html += `<tr><th class="date-col">Buchungsdatum</th>`;
+            ktoList.forEach(kto => {
+                const span = tblList.filter(t => matrixData.some(x => x.kto === kto && x.tbl === t)).length;
+                html += `<th class="headline1 kto-${kto.toLowerCase()}" colspan="${span}">${kto}</th>`;
+            });
+            html += `</tr>`;
+            
+            // -------------------------------
+            // Headline 2: TBL
+            // -------------------------------
+            html += `<tr><th></th>`;
+            ktoList.forEach(kto => {
+                tblList.forEach(tbl => {
+                    if (matrixData.some(x => x.kto === kto && x.tbl === tbl)) {
+                        html += `<th class="headline2 kto-${kto.toLowerCase()}">${tbl}</th>`;
+                    }
+                });
+            });
+            html += `</tr>`;
+            
+            // -------------------------------
+            // Headline 3: KTO Details
+            // -------------------------------
+            html += `<tr><th></th>`;
+            ktoList.forEach(kto => {
+                tblList.forEach(tbl => {
+                    if (matrixData.some(x => x.kto === kto && x.tbl === tbl)) {
+                        const sampleItem = matrixData.find(x => x.kto === kto && x.tbl === tbl);
+                        const d = sampleItem ? {
+                            kto_nr: sampleItem.fkKtoBankkonto || 'N/A',
+                            iban: sampleItem.iban || 'N/A'
+                        } : { kto_nr: 'N/A', iban: 'N/A' };
+                        
+                        html += `<th class="headline3 kto-${kto.toLowerCase()}">
+                                    KTO: ${d.kto_nr}<br>
+                                    ${d.iban.length > 20 ? d.iban.substring(0, 20) + '...' : d.iban}
+                                 </th>`;
+                    }
+                });
+            });
+            html += `</tr>`;
+            
+            // -------------------------------
+            // Rows: Buchungsdatum
+            // -------------------------------
+            dateList.sort((a, b) => {
+                const dateA = parseGermanDate(a);
+                const dateB = parseGermanDate(b);
+                return dateA - dateB;
+            }).forEach(date => {
+                html += `<tr>`;
+                html += `<td class="date-col">${date}</td>`;
+                
+                ktoList.forEach(kto => {
+                    tblList.forEach(tbl => {
+                        if (matrixData.some(x => x.kto === kto && x.tbl === tbl)) {
+                            const matches = matrixData.filter(
+                                x => x.datum === date && x.kto === kto && x.tbl === tbl
+                            );
+                            
+                            if (matches.length === 0) {
+                                html += `<td class="kto-${kto.toLowerCase()}"></td>`;
+                            } else {
+                                html += `<td class="kto-${kto.toLowerCase()}">`;
+                                matches.forEach(m => {
+                                    const betragClass = m.betrag >= 0 ? 'betrag-pos' : 'betrag-neg';
+                                    html += `<div class="buchung-item">
+                                                <div><strong>${m.text.length > 30 ? m.text.substring(0, 30) + '...' : m.text}</strong></div>
+                                                <div class="${betragClass}">${m.betrag.toFixed(2)} €</div>                                
+                                                <div>${formatDate(m.buchungstag)}</div>
+                                                <div>${m.kontoauszug}</div>
+                                                <a href="${m.link}" target="_blank">${m.link}</a>
+                                                <div style="font-size: 10px; color: #666;">ID: ${m.pk}</div>
+                                             </div>`;
+                                });
+                                html += `</td>`;
+                            }
+                        }
+                    });
+                });
+                
+                html += `</tr>`;
+            });
+            
+            html += `</table>`;
+            matrixTableContainer.innerHTML = html;
+        }
+
+        // Matrix-Summary aktualisieren
+        function updateMatrixSummary() {
+            if (!matrixData || matrixData.length === 0) {
+                matrixSummary.innerHTML = '<div class="no-data">Keine Daten für Zusammenfassung</div>';
+                return;
+            }
+            
+            const totalBetrag = matrixData.reduce((sum, item) => sum + item.betrag, 0);
+            const totalBrutto = matrixData.reduce((sum, item) => sum + (item.brutto || item.betrag), 0);
+            const ktoCounts = {};
+            const tblCounts = {};
+            const dateCount = [...new Set(matrixData.map(x => x.datum))].length;
+            
+            matrixData.forEach(item => {
+                ktoCounts[item.kto] = (ktoCounts[item.kto] || 0) + 1;
+                tblCounts[item.tbl] = (tblCounts[item.tbl] || 0) + 1;
+            });
+            
+            let html = '';
+            
+            // Gesamtsumme
+            html += `
+                <div class="matrix-summary-item">
+                    <div class="matrix-summary-label">Gesamtsumme (Netto)</div>
+                    <div class="matrix-summary-value ${totalBetrag >= 0 ? 'betrag-pos' : 'betrag-neg'}">
+                        ${totalBetrag.toFixed(2)} €
+                    </div>
+                </div>
+            `;
+            
+            // Bruttosumme
+            html += `
+                <div class="matrix-summary-item">
+                    <div class="matrix-summary-label">Gesamtsumme (Brutto)</div>
+                    <div class="matrix-summary-value ${totalBrutto >= 0 ? 'betrag-pos' : 'betrag-neg'}">
+                        ${totalBrutto.toFixed(2)} €
+                    </div>
+                </div>
+            `;
+            
+            // Anzahl Buchungen
+            html += `
+                <div class="matrix-summary-item">
+                    <div class="matrix-summary-label">Buchungen</div>
+                    <div class="matrix-summary-value">
+                        ${matrixData.length}
+                    </div>
+                </div>
+            `;
+            
+            // Anzahl Datums
+            html += `
+                <div class="matrix-summary-item">
+                    <div class="matrix-summary-label">Tage</div>
+                    <div class="matrix-summary-value">
+                        ${dateCount}
+                    </div>
+                </div>
+            `;
+            
+            // KTO-Typen
+            html += `
+                <div class="matrix-summary-item">
+                    <div class="matrix-summary-label">Konto-Typen</div>
+                    <div class="matrix-summary-value">
+                        ${Object.keys(ktoCounts).length}
+                    </div>
+                </div>
+            `;
+            
+            // TBL-Typen
+            html += `
+                <div class="matrix-summary-item">
+                    <div class="matrix-summary-label">TBL-Typen</div>
+                    <div class="matrix-summary-value">
+                        ${Object.keys(tblCounts).length}
+                    </div>
+                </div>
+            `;
+            
+            matrixSummary.innerHTML = html;
+        }
+
+        // Matrix nach Zeitraum filtern
+        function filterMatrixByTimeframe() {
+            const timeframe = document.getElementById('matrix-timeframe').value;
+            let filteredData = [...matrixData];
+            
+            if (timeframe !== 'all') {
+                const now = new Date();
+                let startDate;
+                
+                switch(timeframe) {
+                    case 'current_month':
+                        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                        break;
+                    case 'last_month':
+                        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                        break;
+                    case 'current_year':
+                        startDate = new Date(now.getFullYear(), 0, 1);
+                        break;
+                    case 'last_year':
+                        startDate = new Date(now.getFullYear() - 1, 0, 1);
+                        break;
+                }
+                
+                filteredData = matrixData.filter(item => {
+                    const itemDate = parseGermanDate(item.datum);
+                    return itemDate >= startDate;
+                });
+            }
+            
+            // Temporär die gefilterten Daten anzeigen
+            const tempData = matrixData;
+            matrixData = filteredData;
+            renderMatrix();
+            updateMatrixSummary();
+            matrixData = tempData;
+            
+            matrixStatus.textContent = `Gefiltert nach: ${getTimeframeLabel(timeframe)} (${filteredData.length} Buchungen)`;
+            matrixStatus.style.backgroundColor = '#fff3cd';
+            matrixStatus.style.borderLeftColor = '#ffc107';
+        }
+
+        // Hilfsfunktion: Zeitraum-Label
+        function getTimeframeLabel(timeframe) {
+            const labels = {
+                'all': 'Alle Daten',
+                'current_month': 'Aktueller Monat',
+                'last_month': 'Letzter Monat',
+                'current_year': 'Aktuelles Jahr',
+                'last_year': 'Letztes Jahr'
+            };
+            return labels[timeframe] || timeframe;
+        }
+
+        // Matrix-Daten leeren
+        function clearMatrixData() {
+            matrixData = [];
+            renderMatrix();
+            updateMatrixSummary();
+            matrixStatus.textContent = 'Matrix-Daten wurden geleert';
+            matrixStatus.style.backgroundColor = '#f8d7da';
+            matrixStatus.style.borderLeftColor = '#dc3545';
+        }
+
+        // Hilfsfunktion: Deutsches Datum parsen
+        function parseGermanDate(dateStr) {
+            const parts = dateStr.split('.');
+            if (parts.length === 3) {
+                return new Date(parts[2], parts[1] - 1, parts[0]);
+            }
+            return new Date(dateStr);
+        }
+
+        // Ordner Pages laden
+        async function loadOrdnerPages() {
+            ordnerContainer.innerHTML = '<div class="loading">Lade Ordner...</div>';
+            
+            try {
+                if (!useMockData) {
+                    // API-Aufruf für Ordner
+                    const url = `${API_BASE_URL}/ordner`;
+                    const response = await fetch(url);
+                    
+                    if (response.ok) {
+                        const ordnerData = await response.json();
+                        renderOrdnerPages(ordnerData);
+                        updateOrdnerCounter(ordnerData.length);
+                    } else {
+                        throw new Error('API-Fehler');
+                    }
+                } else {
+                    // Mock-Daten verwenden
+                    renderOrdnerPages(mockOrdnerPages);
+                    updateOrdnerCounter(mockOrdnerPages.length);
+                }
+            } catch (error) {
+                console.error('Fehler beim Laden der Ordner:', error);
+                ordnerContainer.innerHTML = '<div class="error"><i class="fas fa-exclamation-triangle"></i> Fehler beim Laden der Ordner. Verwende Mock-Daten.</div>';
+                setTimeout(() => {
+                    renderOrdnerPages(mockOrdnerPages);
+                    updateOrdnerCounter(mockOrdnerPages.length);
+                }, 1000);
+                useMockData = true;
+                updateMockStatus();
+            }
+        }
+
+        // Ordner Pages rendern
+        function renderOrdnerPages(ordnerPages) {
+            if (!ordnerPages || ordnerPages.length === 0) {
+                ordnerContainer.innerHTML = '<div class="no-data"><i class="fas fa-folder-open"></i> Keine Ordner gefunden</div>';
+                updateOrdnerCounter(0);
+                return;
+            }
+            
+            let html = '';
+            ordnerPages.forEach(ordner => {
+                html += `
+                    <div class="ordner-item ${currentOrdnerPageNumber === ordner.ABL_ORD_PAGE_NUMBER ? 'active' : ''}" 
+                         data-page="${ordner.ABL_ORD_PAGE_NUMBER}" 
+                         onclick="selectOrdner('${ordner.ABL_ORD_PAGE_NUMBER}')">
+                        <div class="ordner-name"><i class="fas fa-folder${currentOrdnerPageNumber === ordner.ABL_ORD_PAGE_NUMBER ? '-open' : ''}"></i> ${ordner.ABL_ORD_ORDNER_NAME}</div>
+                        <div class="ordner-info">
+                            <span><i class="fas fa-calendar"></i> Jahr: ${ordner.ABL_ORD_JAHR}</span>
+                            <span><i class="fas fa-hashtag"></i> Page: ${ordner.ABL_ORD_PAGE_NUMBER}</span>
+                        </div>
+                        <div class="ordner-info"><i class="fas fa-info-circle"></i> ${ordner.ABL_ORD_PAGE_DESCR}</div>
+                    </div>
+                `;
+            });
+            
+            ordnerContainer.innerHTML = html;
+        }
+
+        // Ordner Zähler aktualisieren
+        function updateOrdnerCounter(count) {
+            ordnerCounter.textContent = `${count} Ordner`;
+        }
+
+        // Ordner filtern
+        function filterOrdnerPages(searchTerm) {
+            const filtered = mockOrdnerPages.filter(ordner => {
+                return ordner.ABL_ORD_ORDNER_NAME.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                       ordner.ABL_ORD_PAGE_DESCR.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                       ordner.ABL_ORD_JAHR.includes(searchTerm) ||
+                       ordner.ABL_ORD_PAGE_NUMBER.includes(searchTerm);
+            });
+            
+            renderOrdnerPages(filtered);
+            updateOrdnerCounter(filtered.length);
+        }
+
+        // Ordner auswählen
+        async function selectOrdner(pageNumber) {
+            currentOrdnerPageNumber = pageNumber;
+            pageNumberInput.value = pageNumber;
+            
+            // Aktive Klasse setzen
+            document.querySelectorAll('.ordner-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('data-page') === pageNumber) {
+                    item.classList.add('active');
+                }
+            });
+            
+            // Belege für ausgewählten Ordner laden
+            await loadBelegeForOrdner(pageNumber);
+            
+            // "Für aktuellen Beleg" Button aktualisieren
+            if (isMatrixVisible && currentBelegId) {
+                matrixCurrentBelegBtn.style.display = 'inline-block';
+            }
+        }
+
+        // Belege für ausgewählten Ordner laden
+        async function loadBelegeForOrdner(pageNumber) {
+            if (!pageNumber || pageNumber.trim() === '') {
+                showApiStatus('Bitte geben Sie eine Page Number ein', 'error');
+                return;
+            }
+            
+            belegContainer.innerHTML = '<div class="loading">Lade Belege...</div>';
+            currentOrdnerPageNumber = pageNumber;
+            
+            try {
+                const belege = await fetchBelegeByPageNumber(pageNumber);
+                
+                if (belege && belege.length > 0) {
+                    renderBelege(belege);
+                } else {
+                    belegContainer.innerHTML = '<div class="no-data"><i class="fas fa-file-alt"></i> Keine Belege für diesen Ordner gefunden</div>';
+                    buchungenContainer.innerHTML = '<div class="no-data">Wählen Sie einen Beleg aus, um Buchungen anzuzeigen</div>';
+                }
+            } catch (error) {
+                console.error('Fehler beim Laden der Belege:', error);
+                belegContainer.innerHTML = '<div class="error"><i class="fas fa-exclamation-triangle"></i> Fehler beim Laden der Belege. Verwende Mock-Daten.</div>';
+                setTimeout(() => {
+                    const belege = getMockBelegeForPage(pageNumber);
+                    renderBelege(belege);
+                }, 1000);
+                useMockData = true;
+                updateMockStatus();
+            }
+        }
+
+        // Belege von API abrufen
+        async function fetchBelegeByPageNumber(pageNumber) {
+        
+            
+            try {
+                const url = `${API_URL_BELEGE}/${pageNumber}`;
+                console.log('Fetching belege from:', url);
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API-Fehler: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Belege API response:', data);
+                
+                // Verarbeite API-Antwort entsprechend dem erwarteten Format
+                if (Array.isArray(data)) {
+                    return data.map(item => ({
+                        id: item.id || item.beleg_id || item.PK_INP_BELEGE_ALL || Math.floor(Math.random() * 1000),
+                        PK_INP_BELEGE_ALL: item.PK_INP_BELEGE_ALL || item.id,
+                        VBEL_VERWENDUNGSZWECK: item.verwendungszweck || item.VBEL_VERWENDUNGSZWECK || 'Ohne Zweck',
+                        VLOC_LOCATION: item.location || item.VLOC_LOCATION || 'N/A',
+                        INVENTAR: item.inventar || item.INVENTAR || 'N/A',
+                        VBEL_PROJEKT: item.projekt || item.VBEL_PROJEKT || 'N/A',
+                        VBEL_KATEGORIE: item.kategorie || item.VBEL_KATEGORIE || 'N/A',
+                        ADR_ADRESSE_SCHNELL: item.adresse || item.ADR_ADRESSE_SCHNELL || 'N/A',
+                        ORG_UNIT_NAME: item.org_unit || item.ORG_UNIT_NAME || 'N/A',
+                        GESCHAEFTSPARTNER: item.geschaeftspartner || item.GESCHAEFTSPARTNER || 'N/A',
+                        VER_BEZEICHNUNG: item.bezeichnung || item.VER_BEZEICHNUNG || 'Beleg',
+                        ADRESSE: item.strasse || item.ADRESSE || 'N/A',
+                        LAND: item.land || item.LAND || 'N/A',
+                        ORT: item.ort || item.ORT || 'N/A',
+                        CI_LAND: item.ci_land || item.CI_LAND || 'N/A',
+                        person: item.person || 'N/A',
+                        VERWENDUNGSZWECK: item.verwendungszweck_detail || item.VERWENDUNGSZWECK || item.verwendungszweck || 'N/A'
+                    }));
+                } else if (data.belege) {
+                    return data.belege;
+                } else {
+                    return [];
+                }
+            } catch (error) {
+                console.error('Fehler beim Abrufen der Belege:', error);
+                throw error;
+            }
+        }
+
+        // Mock-Belege für bestimmte Page Number
+        function getMockBelegeForPage(pageNumber) {
+            const mockBelegeData = {
+                "001": [
+                    {
+                        id: 101,
+                        PK_INP_BELEGE_ALL: 101,
+                        VBEL_VERWENDUNGSZWECK: "Büromaterial",
+                        VLOC_LOCATION: "Lager 1",
+                        INVENTAR: "Bürobedarf 2023",
+                        VBEL_PROJEKT: "Allgemein",
+                        VBEL_KATEGORIE: "Materialkosten",
+                        ADR_ADRESSE_SCHNELL: "Muster GmbH, Musterstraße 1, 12345 Musterstadt",
+                        ORG_UNIT_NAME: "Verwaltung",
+                        GESCHAEFTSPARTNER: "Muster GmbH",
+                        VER_BEZEICHNUNG: "Rechnung",
+                        ADRESSE: "Musterstraße 1",
+                        LAND: "Deutschland",
+                        ORT: "Musterstadt",
+                        CI_LAND: "DE",
+                        person: "Max Mustermann",
+                        VERWENDUNGSZWECK: "Büromaterial für Verwaltung"
+                    },
+                    {
+                        id: 102,
+                        PK_INP_BELEGE_ALL: 5139,
+                        VBEL_VERWENDUNGSZWECK: "DigitalOcean Rechnung",
+                        VLOC_LOCATION: "IT-Abteilung",
+                        INVENTAR: "Cloud-Services",
+                        VBEL_PROJEKT: "IT-Infrastruktur",
+                        VBEL_KATEGORIE: "Dienstleistungen",
+                        ADR_ADRESSE_SCHNELL: "DigitalOcean LLC, 101 Avenue of the Americas, New York, NY 10013",
+                        ORG_UNIT_NAME: "IT",
+                        GESCHAEFTSPARTNER: "DigitalOcean LLC",
+                        VER_BEZEICHNUNG: "Invoice",
+                        ADRESSE: "101 Avenue of the Americas",
+                        LAND: "USA",
+                        ORT: "New York",
+                        CI_LAND: "US",
+                        person: "RICHTER ANNE",
+                        VERWENDUNGSZWECK: "Cloud Hosting März 2023"
+                    },
+                    {
+                        id: 103,
+                        PK_INP_BELEGE_ALL: 6144,
+                        VBEL_VERWENDUNGSZWECK: "Serverwartung",
+                        VLOC_LOCATION: "IT-Abteilung",
+                        INVENTAR: "IT-Services",
+                        VBEL_PROJEKT: "IT-Infrastruktur",
+                        VBEL_KATEGORIE: "Dienstleistungen",
+                        ADR_ADRESSE_SCHNELL: "IT-Service GmbH, Musterstraße 5, 12345 Musterstadt",
+                        ORG_UNIT_NAME: "IT",
+                        GESCHAEFTSPARTNER: "IT-Service GmbH",
+                        VER_BEZEICHNUNG: "Rechnung",
+                        ADRESSE: "Musterstraße 5",
+                        LAND: "Deutschland",
+                        ORT: "Musterstadt",
+                        CI_LAND: "DE",
+                        person: "RICHTER ANNE",
+                        VERWENDUNGSZWECK: "Serverwartung Q2 2023"
+                    }
+                ],
+                "002": [
+                    {
+                        id: 201,
+                        PK_INP_BELEGE_ALL: 201,
+                        VBEL_VERWENDUNGSZWECK: "Hotelübernachtung",
+                        VLOC_LOCATION: "Berlin",
+                        INVENTAR: "Dienstreise",
+                        VBEL_PROJEKT: "Kundenbesuch",
+                        VBEL_KATEGORIE: "Reisekosten",
+                        ADR_ADRESSE_SCHNELL: "Hotel Berlin, Hauptstraße 10, 10115 Berlin",
+                        ORG_UNIT_NAME: "Vertrieb",
+                        GESCHAEFTSPARTNER: "Hotel Berlin",
+                        VER_BEZEICHNUNG: "Hotelrechnung",
+                        ADRESSE: "Hauptstraße 10",
+                        LAND: "Deutschland",
+                        ORT: "Berlin",
+                        CI_LAND: "DE",
+                        person: "Anna Vertrieb",
+                        VERWENDUNGSZWECK: "Hotel für Kundentermin"
+                    }
+                ]
+            };
+            
+            return mockBelegeData[pageNumber] || [];
+        }
+
+        // Belege rendern
+        function renderBelege(belege) {
+            if (!belege || belege.length === 0) {
+                belegContainer.innerHTML = '<div class="no-data"><i class="fas fa-file-alt"></i> Keine Belege für diesen Ordner gefunden</div>';
+                buchungenContainer.innerHTML = '<div class="no-data">Wählen Sie einen Beleg aus, um Buchungen anzuzeigen</div>';
+                return;
+            }
+            
+            let html = '';
+            belege.forEach((beleg, index) => {
+                html += `
+                    <div class="beleg-item" id="beleg-${beleg.id}" style="margin-bottom: ${index < belege.length - 1 ? '30px' : '0'}; padding-bottom: ${index < belege.length - 1 ? '30px' : '0'}; border-bottom: ${index < belege.length - 1 ? '2px solid #eaeaea' : 'none'}">
+                        <div class="beleg-header">
+                            <div class="beleg-title"><i class="fas fa-file-invoice-dollar"></i> ${beleg.VER_BEZEICHNUNG || 'Beleg'}: ${beleg.VBEL_VERWENDUNGSZWECK || 'Ohne Zweck'}</div>
+                            <div class="beleg-id"><i class="fas fa-hashtag"></i> ${beleg.PK_INP_BELEGE_ALL || beleg.id}</div>
+                        </div>
+                        
+                        <div class="beleg-info-grid">
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-project-diagram"></i> Projekt</div>
+                                <div class="info-value">${beleg.VBEL_PROJEKT || 'N/A'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-tags"></i> Kategorie</div>
+                                <div class="info-value">${beleg.VBEL_KATEGORIE || 'N/A'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-map-marker-alt"></i> Standort</div>
+                                <div class="info-value">${beleg.VLOC_LOCATION || 'N/A'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-box"></i> Inventar</div>
+                                <div class="info-value">${beleg.INVENTAR || 'N/A'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-handshake"></i> Geschäftspartner</div>
+                                <div class="info-value">${beleg.GESCHAEFTSPARTNER || 'N/A'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-building"></i> Organisationseinheit</div>
+                                <div class="info-value">${beleg.ORG_UNIT_NAME || 'N/A'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-user"></i> Person</div>
+                                <div class="info-value">${beleg.person || 'N/A'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-info-circle"></i> Verwendungszweck</div>
+                                <div class="info-value">${beleg.VERWENDUNGSZWECK || beleg.VBEL_VERWENDUNGSZWECK || 'N/A'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fas fa-address-card"></i> Adresse</div>
+                                <div class="info-value">${beleg.ADR_ADRESSE_SCHNELL || 'N/A'}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="beleg-actions">
+                            <button class="action-btn btn-primary" onclick="fetchKontobuchungenByBelegId(${beleg.PK_INP_BELEGE_ALL || beleg.id})">
+                                <i class="fas fa-euro-sign"></i> Buchungen anzeigen
+                            </button>
+                            <button class="action-btn btn-secondary" onclick="loadBelegDetails(${beleg.PK_INP_BELEGE_ALL || beleg.id})">
+                                <i class="fas fa-sync-alt"></i> Details aktualisieren
+                            </button>
+                            <button class="action-btn" style="background-color: #9b59b6; color: white;" onclick="loadMatrixData(${beleg.PK_INP_BELEGE_ALL || beleg.id})">
+                                <i class="fas fa-table"></i> Matrix für Beleg
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            belegContainer.innerHTML = html;
+        }
+
+        // Belegdetails laden
+        async function loadBelegDetails(belegPk) {
+            const belegElement = document.querySelector(`#beleg-${belegPk}`);
+            if (!belegElement) return;
+            
+            const actionsDiv = belegElement.querySelector('.beleg-actions');
+            if (actionsDiv) {
+                const originalHTML = actionsDiv.innerHTML;
+                actionsDiv.innerHTML = '<div class="loading" style="padding: 10px;">Lade aktuelle Details...</div>';
+                
+                try {
+                    const url = `${API_URL_BELEG_DETAILS}/${belegPk}`;
+                    const response = await fetch(url);
+                    
+                    if (response.ok) {
+                        const belegDetails = await response.json();
+                        // Hier könnten die Belegdetails aktualisiert werden
+                        showApiStatus(`Beleg #${belegPk} Details aktualisiert`, 'success');
+                    } else {
+                        showApiStatus('Fehler beim Aktualisieren der Belegdetails', 'error');
+                    }
+                } catch (error) {
+                    console.error('Fehler beim Laden der Belegdetails:', error);
+                    showApiStatus('Fehler beim Aktualisieren der Belegdetails', 'error');
+                } finally {
+                    actionsDiv.innerHTML = originalHTML;
+                }
+            }
+        }
+
+        // Buchungen für Beleg laden
+        async function fetchKontobuchungenByBelegId(belegPk) {
+            currentBelegId = belegPk;
+            
+            // Hervorhebung des ausgewählten Belegs
+            document.querySelectorAll('.beleg-item').forEach(item => {
+                item.classList.remove('highlight');
+            });
+            const selectedBeleg = document.querySelector(`#beleg-${belegPk}`);
+            if (selectedBeleg) {
+                selectedBeleg.classList.add('highlight');
+            }
+            
+            buchungenContainer.innerHTML = '<div class="loading">Lade Kontobuchungen...</div>';
+            
+            try {
+                const kontobuchungen = await fetchKontobuchungenFromAPI(belegPk);
+                
+                if (kontobuchungen && kontobuchungen.length > 0) {
+                    renderKontobuchungen(kontobuchungen);
+                } else {
+                    buchungenContainer.innerHTML = '<div class="no-data"><i class="fas fa-euro-sign"></i> Keine Kontobuchungen für diesen Beleg gefunden</div>';
+                }
+            } catch (error) {
+                console.error('Fehler beim Laden der Kontobuchungen:', error);
+                buchungenContainer.innerHTML = '<div class="error"><i class="fas fa-exclamation-triangle"></i> Fehler beim Laden der Kontobuchungen. Verwende Mock-Daten.</div>';
+                
+                setTimeout(() => {
+                    const kontobuchungen = getMockKontobuchungen(belegPk);
+                    renderKontobuchungen(kontobuchungen);
+                }, 1000);
+            }
+            
+            // "Für aktuellen Beleg" Button in Matrix anzeigen
+            if (isMatrixVisible) {
+                matrixCurrentBelegBtn.style.display = 'inline-block';
+            }
+        }
+
+        // Kontobuchungen von API abrufen
+        async function fetchKontobuchungenFromAPI(belegPk) {
+       
+            try {
+                const url = `${API_URL_BELEG_ZUORDNUNGEN}/${belegPk}`;
+                console.log('Fetching kontobuchungen from:', url);
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API-Fehler: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Kontobuchungen API response:', data);
+                
+                // Verarbeite API-Antwort entsprechend dem erwarteten Format
+                if (Array.isArray(data)) {
+                    return data.map(item => ({
+                        PK_REL_LEX_KTO_BEL: item.PK_REL_LEX_KTO_BEL || item.id,
+                        FK_MAIN_KEY: item.FK_MAIN_KEY,
+                        FK_INP_BELEGE_ALL: item.FK_INP_BELEGE_ALL || belegPk,
+                        BUCHUNGSTEXT: item.BUCHUNGSTEXT || "Dummy",
+                        BETRAG: parseFloat(item.BETRAG) || 0,
+                        BRUTTO_BETRAG: parseFloat(item.BRUTTO_BETRAG) || 0,
+                        BELEGDATUM: item.BELEGDATUM,
+                        BUCHUNGSDATUM: item.BUCHUNGSDATUM || item.BELEGDATUM,
+                        FK_ABL_ORDNER_PAGE: item.FK_ABL_ORDNER_PAGE,
+                        OWNER1: item.OWNER1 || "RICHTER ANNE",
+                        FLG_LEXOFFICE_BUCHUNG: item.FLG_LEXOFFICE_BUCHUNG || 1,
+                        FLG_LEXOFFICE_MIT_BILD: item.FLG_LEXOFFICE_MIT_BILD || 0,
+                        TBL: item.TBL,
+                        IBAN: item.IBAN,
+                        FK_KTO_BANKKONTO: item.FK_KTO_BANKKONTO,
+                        LINK: item.LINK_LEXOFFICE_BUCHUNG,
+                        KONTOAUSZUG: item.FK_KTO_KONTO_AUSZUG
+                       
+                    }));
+                } else if (data) {
+                    // Einzelnes Objekt
+                    return [{
+                        PK_REL_LEX_KTO_BEL: data.PK_REL_LEX_KTO_BEL || data.id,
+                        FK_MAIN_KEY: data.FK_MAIN_KEY,
+                        FK_INP_BELEGE_ALL: data.FK_INP_BELEGE_ALL || belegPk,
+                        BUCHUNGSTEXT: data.BUCHUNGSTEXT || "Dummy",
+                        BETRAG: parseFloat(data.BETRAG) || 0,
+                        BRUTTO_BETRAG: parseFloat(data.BRUTTO_BETRAG) || 0,
+                        BELEGDATUM: data.BELEGDATUM,
+                        BUCHUNGSDATUM: data.BUCHUNGSDATUM || data.BELEGDATUM,
+                        FK_ABL_ORDNER_PAGE: data.FK_ABL_ORDNER_PAGE,
+                        OWNER1: data.OWNER1 || "RICHTER ANNE",
+                        FLG_LEXOFFICE_BUCHUNG: data.FLG_LEXOFFICE_BUCHUNG || 1,
+                        FLG_LEXOFFICE_MIT_BILD: data.FLG_LEXOFFICE_MIT_BILD || 0
+                    }];
+                } else {
+                    return [];
+                }
+            } catch (error) {
+                console.error('Fehler beim Abrufen der Kontobuchungen:', error);
+                throw error;
+            }
+        }
+
+        // Mock-Kontobuchungen für Beleg
+        function getMockKontobuchungen(belegPk) {
+            // Für Beleg 6144 geben wir 15 Buchungen zurück, gruppiert nach Datum
+            if (belegPk === 6144) {
+                return [
+                    // 31.03.2023 - 5 Buchungen
+                    {
+                        PK_REL_LEX_KTO_BEL: "85001",
+                        FK_MAIN_KEY: 701,
+                        FK_INP_BELEGE_ALL: 6144,
+                        BUCHUNGSTEXT: "Serverwartung März - Grundgebühr",
+                        BETRAG: 150.00,
+                        BRUTTO_BETRAG: 178.50,
+                        BELEGDATUM: "2023-03-31T22:00:00.000Z",
+                        BUCHUNGSDATUM: "2023-03-31T22:00:00.000Z",
+                        FK_ABL_ORDNER_PAGE: 634,
+                        OWNER1: "RICHTER ANNE",
+                        FLG_LEXOFFICE_BUCHUNG: 1,
+                        FLG_LEXOFFICE_MIT_BILD: 1,
+                        FK_KTO_BANKKONTO: 2,
+                        TBL: "BANK",
+                        IBAN: "DE89370400440532013000"
+                    },
+                    {
+                        PK_REL_LEX_KTO_BEL: "85002",
+                        FK_MAIN_KEY: 702,
+                        FK_INP_BELEGE_ALL: 6144,
+                        BUCHUNGSTEXT: "Serverwartung März - Backup Service",
+                        BETRAG: 45.00,
+                        BRUTTO_BETRAG: 53.55,
+                        BELEGDATUM: "2023-03-31T22:00:00.000Z",
+                        BUCHUNGSDATUM: "2023-03-31T22:00:00.000Z",
+                        FK_ABL_ORDNER_PAGE: 634,
+                        OWNER1: "RICHTER ANNE",
+                        FLG_LEXOFFICE_BUCHUNG: 1,
+                        FLG_LEXOFFICE_MIT_BILD: 0,
+                        FK_KTO_BANKKONTO: 3,
+                        TBL: "BANK",
+                        IBAN: "DE89370400440532013001"
+                    },
+                    {
+                        PK_REL_LEX_KTO_BEL: "85003",
+                        FK_MAIN_KEY: 703,
+                        FK_INP_BELEGE_ALL: 6144,
+                        BUCHUNGSTEXT: "Serverwartung März - Monitoring",
+                        BETRAG: 25.00,
+                        BRUTTO_BETRAG: 29.75,
+                        BELEGDATUM: "2023-03-31T22:00:00.000Z",
+                        BUCHUNGSDATUM: "2023-03-31T22:00:00.000Z",
+                        FK_ABL_ORDNER_PAGE: 634,
+                        OWNER1: "RICHTER ANNE",
+                        FLG_LEXOFFICE_BUCHUNG: 0,
+                        FLG_LEXOFFICE_MIT_BILD: 0,
+                        FK_KTO_BANKKONTO: 2,
+                        TBL: "CASH",
+                        IBAN: "DE89370400440532013000"
+                    },
+                    {
+                        PK_REL_LEX_KTO_BEL: "85004",
+                        FK_MAIN_KEY: 704,
+                        FK_INP_BELEGE_ALL: 6144,
+                        BUCHUNGSTEXT: "Serverwartung März - Security Update",
+                        BETRAG: 35.00,
+                        BRUTTO_BETRAG: 41.65,
+                        BELEGDATUM: "2023-03-31T22:00:00.000Z",
+                        BUCHUNGSDATUM: "2023-03-31T22:00:00.000Z",
+                        FK_ABL_ORDNER_PAGE: 634,
+                        OWNER1: "RICHTER ANNE",
+                        FLG_LEXOFFICE_BUCHUNG: 1,
+                        FLG_LEXOFFICE_MIT_BILD: 1,
+                        FK_KTO_BANKKONTO: 4,
+                        TBL: "CREDIT",
+                        IBAN: "DE89370400440532013002"
+                    },
+                    {
+                        PK_REL_LEX_KTO_BEL: "85005",
+                        FK_MAIN_KEY: 705,
+                        FK_INP_BELEGE_ALL: 6144,
+                        BUCHUNGSTEXT: "Serverwartung März - Support",
+                        BETRAG: 20.00,
+                        BRUTTO_BETRAG: 23.80,
+                        BELEGDATUM: "2023-03-31T22:00:00.000Z",
+                        BUCHUNGSDATUM: "2023-03-31T22:00:00.000Z",
+                        FK_ABL_ORDNER_PAGE: 634,
+                        OWNER1: "RICHTER ANNE",
+                        FLG_LEXOFFICE_BUCHUNG: 1,
+                        FLG_LEXOFFICE_MIT_BILD: 0,
+                        FK_KTO_BANKKONTO: 2,
+                        TBL: "BANK",
+                        IBAN: "DE89370400440532013000"
+                    },
+                    // 15.04.2023 - 5 Buchungen
+                    {
+                        PK_REL_LEX_KTO_BEL: "85006",
+                        FK_MAIN_KEY: 706,
+                        FK_INP_BELEGE_ALL: 6144,
+                        BUCHUNGSTEXT: "Serverwartung April - Grundgebühr",
+                        BETRAG: 150.00,
+                        BRUTTO_BETRAG: 178.50,
+                        BELEGDATUM: "2023-04-15T22:00:00.000Z",
+                        BUCHUNGSDATUM: "2023-04-15T22:00:00.000Z",
+                        FK_ABL_ORDNER_PAGE: 634,
+                        OWNER1: "RICHTER ANNE",
+                        FLG_LEXOFFICE_BUCHUNG: 1,
+                        FLG_LEXOFFICE_MIT_BILD: 1,
+                        FK_KTO_BANKKONTO: 2,
+                        TBL: "BANK",
+                        IBAN: "DE89370400440532013000"
+                    },
+                    {
+                        PK_REL_LEX_KTO_BEL: "85007",
+                        FK_MAIN_KEY: 707,
+                        FK_INP_BELEGE_ALL: 6144,
+                        BUCHUNGSTEXT: "Serverwartung April - Backup Service",
+                        BETRAG: 45.00,
+                        BRUTTO_BETRAG: 53.55,
+                        BELEGDATUM: "2023-04-15T22:00:00.000Z",
+                        BUCHUNGSDATUM: "2023-04-15T22:00:00.000Z",
+                        FK_ABL_ORDNER_PAGE: 634,
+                        OWNER1: "RICHTER ANNE",
+                        FLG_LEXOFFICE_BUCHUNG: 1,
+                        FLG_LEXOFFICE_MIT_BILD: 0,
+                        FK_KTO_BANKKONTO: 3,
+                        TBL: "BANK",
+                        IBAN: "DE89370400440532013001"
+                    },
+                    {
+                        PK_REL_LEX_KTO_BEL: "85008",
+                        FK_MAIN_KEY: 708,
+                        FK_INP_BELEGE_ALL: 6144,
+                        BUCHUNGSTEXT: "Serverwartung April - Hardware Check",
+                        BETRAG: 60.00,
+                        BRUTTO_BETRAG: 71.40,
+                        BELEGDATUM: "2023-04-15T22:00:00.000Z",
+                        BUCHUNGSDATUM: "2023-04-15T22:00:00.000Z",
+                        FK_ABL_ORDNER_PAGE: 634,
+                        OWNER1: "RICHTER ANNE",
+                        FLG_LEXOFFICE_BUCHUNG: 0,
+                        FLG_LEXOFFICE_MIT_BILD: 0,
+                        FK_KTO_BANKKONTO: 5,
+                        TBL: "CASH",
+                        IBAN: "DE89370400440532013003"
+                    },
+                    {
+                        PK_REL_LEX_KTO_BEL: "85009",
+                        FK_MAIN_KEY: 709,
+                        FK_INP_BELEGE_ALL: 6144,
+                        BUCHUNGSTEXT: "Serverwartung April - Notfallservice",
+                        BETRAG: 85.00,
+                        BRUTTO_BETRAG: 101.15,
+                        BELEGDATUM: "2023-04-15T22:00:00.000Z",
+                        BUCHUNGSDATUM: "2023-04-15T22:00:00.000Z",
+                        FK_ABL_ORDNER_PAGE: 634,
+                        OWNER1: "RICHTER ANNE",
+                        FLG_LEXOFFICE_BUCHUNG: 1,
+                        FLG_LEXOFFICE_MIT_BILD: 1,
+                        FK_KTO_BANKKONTO: 2,
+                        TBL: "BANK",
+                        IBAN: "DE89370400440532013000"
+                    },
+                    {
+                        PK_REL_LEX_KTO_BEL: "85010",
+                        FK_MAIN_KEY: 710,
+                        FK_INP_BELEGE_ALL: 6144,
+                        BUCHUNGSTEXT: "Serverwartung April - Zusatzleistung",
+                        BETRAG: 30.00,
+                        BRUTTO_BETRAG: 35.70,
+                        BELEGDATUM: "2023-04-15T22:00:00.000Z",
+                        BUCHUNGSDATUM: "2023-04-15T22:00:00.000Z",
+                        FK_ABL_ORDNER_PAGE: 634,
+                        OWNER1: "RICHTER ANNE",
+                        FLG_LEXOFFICE_BUCHUNG: 1,
+                        FLG_LEXOFFICE_MIT_BILD: 0,
+                        FK_KTO_BANKKONTO: 4,
+                        TBL: "CREDIT",
+                        IBAN: "DE89370400440532013002"
+                    },
+                    // 10.05.2023 - 5 Buchungen
+                    {
+                        PK_REL_LEX_KTO_BEL: "85011",
+                        FK_MAIN_KEY: 711,
+                        FK_INP_BELEGE_ALL: 6144,
+                        BUCHUNGSTEXT: "Serverwartung Mai - Grundgebühr",
+                        BETRAG: 150.00,
+                        BRUTTO_BETRAG: 178.50,
+                        BELEGDATUM: "2023-05-10T22:00:00.000Z",
+                        BUCHUNGSDATUM: "2023-05-10T22:00:00.000Z",
+                        FK_ABL_ORDNER_PAGE: 634,
+                        OWNER1: "RICHTER ANNE",
+                        FLG_LEXOFFICE_BUCHUNG: 1,
+                        FLG_LEXOFFICE_MIT_BILD: 1,
+                        FK_KTO_BANKKONTO: 2,
+                        TBL: "BANK",
+                        IBAN: "DE89370400440532013000"
+                    },
+                    {
+                        PK_REL_LEX_KTO_BEL: "85012",
+                        FK_MAIN_KEY: 712,
+                        FK_INP_BELEGE_ALL: 6144,
+                        BUCHUNGSTEXT: "Serverwartung Mai - Backup Service",
+                        BETRAG: 45.00,
+                        BRUTTO_BETRAG: 53.55,
+                        BELEGDATUM: "2023-05-10T22:00:00.000Z",
+                        BUCHUNGSDATUM: "2023-05-10T22:00:00.000Z",
+                        FK_ABL_ORDNER_PAGE: 634,
+                        OWNER1: "RICHTER ANNE",
+                        FLG_LEXOFFICE_BUCHUNG: 1,
+                        FLG_LEXOFFICE_MIT_BILD: 0,
+                        FK_KTO_BANKKONTO: 3,
+                        TBL: "BANK",
+                        IBAN: "DE89370400440532013001"
+                    },
+                    {
+                        PK_REL_LEX_KTO_BEL: "85013",
+                        FK_MAIN_KEY: 713,
+                        FK_INP_BELEGE_ALL: 6144,
+                        BUCHUNGSTEXT: "Serverwartung Mai - Systemupdate",
+                        BETRAG: 40.00,
+                        BRUTTO_BETRAG: 47.60,
+                        BELEGDATUM: "2023-05-10T22:00:00.000Z",
+                        BUCHUNGSDATUM: "2023-05-10T22:00:00.000Z",
+                        FK_ABL_ORDNER_PAGE: 634,
+                        OWNER1: "RICHTER ANNE",
+                        FLG_LEXOFFICE_BUCHUNG: 0,
+                        FLG_LEXOFFICE_MIT_BILD: 0,
+                        FK_KTO_BANKKONTO: 6,
+                        TBL: "CASH",
+                        IBAN: "DE89370400440532013004"
+                    },
+                    {
+                        PK_REL_LEX_KTO_BEL: "85014",
+                        FK_MAIN_KEY: 714,
+                        FK_INP_BELEGE_ALL: 6144,
+                        BUCHUNGSTEXT: "Serverwartung Mai - Performance Optimierung",
+                        BETRAG: 75.00,
+                        BRUTTO_BETRAG: 89.25,
+                        BELEGDATUM: "2023-05-10T22:00:00.000Z",
+                        BUCHUNGSDATUM: "2023-05-10T22:00:00.000Z",
+                        FK_ABL_ORDNER_PAGE: 634,
+                        OWNER1: "RICHTER ANNE",
+                        FLG_LEXOFFICE_BUCHUNG: 1,
+                        FLG_LEXOFFICE_MIT_BILD: 1,
+                        FK_KTO_BANKKONTO: 2,
+                        TBL: "BANK",
+                        IBAN: "DE89370400440532013000"
+                    },
+                    {
+                        PK_REL_LEX_KTO_BEL: "85015",
+                        FK_MAIN_KEY: 715,
+                        FK_INP_BELEGE_ALL: 6144,
+                        BUCHUNGSTEXT: "Serverwartung Mai - Dokumentation",
+                        BETRAG: 25.00,
+                        BRUTTO_BETRAG: 29.75,
+                        BELEGDATUM: "2023-05-10T22:00:00.000Z",
+                        BUCHUNGSDATUM: "2023-05-10T22:00:00.000Z",
+                        FK_ABL_ORDNER_PAGE: 634,
+                        OWNER1: "RICHTER ANNE",
+                        FLG_LEXOFFICE_BUCHUNG: 1,
+                        FLG_LEXOFFICE_MIT_BILD: 0,
+                        FK_KTO_BANKKONTO: 4,
+                        TBL: "CREDIT",
+                        IBAN: "DE89370400440532013002"
+                    }
+                ];
+            } else if (belegPk === 5139) {
+                // Für Beleg 5139 geben wir 5 Buchungen zurück
+                return [
+                    {
+                        PK_REL_LEX_KTO_BEL: "84995",
+                        FK_MAIN_KEY: 663,
+                        FK_INP_BELEGE_ALL: 5139,
+                        BUCHUNGSTEXT: "Invoice - Page 1 of 2 Final invoice for the March 2023 billing period From DigitalOcean LLC 101 Avenue of the Americas, 2nd Floor New York, NY 10013 VAT ID: EU528002224 Invoice Details Invoice number: 455479790 Date of issue: April 1, 2023 Payment due on: April 1, 2023 Billing Details My Team Flurstraße 13 Aschheim, Deutschland, 85609 GERMANY Team ID do:team:435a798060a3bcb7ea0d86b1d5db3664a6842f Summary Total usage charges $50.01 Subtotal $50.01 VAT Germany (19.00%) $9.50 Total due $59.51",
+                        BETRAG: 0,
+                        BRUTTO_BETRAG: 59.51,
+                        BELEGDATUM: "2023-03-31T22:00:00.000Z",
+                        BUCHUNGSDATUM: "2023-03-31T22:00:00.000Z",
+                        FK_ABL_ORDNER_PAGE: 634,
+                        OWNER1: "RICHTER ANNE",
+                        FLG_LEXOFFICE_BUCHUNG: 1,
+                        FLG_LEXOFFICE_MIT_BILD: 0,
+                        FK_KTO_BANKKONTO: 2,
+                        TBL: "BANK",
+                        IBAN: "DE89370400440532013000"
+                    }
+                ];
+            } else {
+                // Generische Mock-Daten für andere Belege
+                const baseAmount = (belegPk % 100) * 50 + 100;
+                return [{
+                    PK_REL_LEX_KTO_BEL: `${belegPk}001`,
+                    FK_MAIN_KEY: belegPk * 10 + 1,
+                    FK_INP_BELEGE_ALL: belegPk,
+                    BUCHUNGSTEXT: "Beispielbuchung für Rechnung #" + belegPk,
+                    BETRAG: baseAmount,
+                    BRUTTO_BETRAG: baseAmount * 1.19,
+                    BELEGDATUM: "2023-03-15T00:00:00.000Z",
+                    BUCHUNGSDATUM: "2023-03-15T00:00:00.000Z",
+                    FK_ABL_ORDNER_PAGE: currentOrdnerPageNumber ? parseInt(currentOrdnerPageNumber) : 1,
+                    OWNER1: "MUSTERMANN MAX",
+                    FLG_LEXOFFICE_BUCHUNG: 1,
+                    FLG_LEXOFFICE_MIT_BILD: 1,
+                    FK_KTO_BANKKONTO: 1,
+                    TBL: "BANK",
+                    IBAN: "DE89370400440532013000"
+                }];
+            }
+        }
+
+        // Kontobuchungen rendern mit Gruppierung
+        function renderKontobuchungen(kontobuchungen) {
+            if (!kontobuchungen || kontobuchungen.length === 0) {
+                buchungenContainer.innerHTML = '<div class="no-data"><i class="fas fa-euro-sign"></i> Keine Kontobuchungen für diesen Beleg gefunden</div>';
+                return;
+            }
+            
+            // Gesamtbeträge berechnen
+            const gesamtNetto = kontobuchungen.reduce((sum, b) => sum + (b.BETRAG || 0), 0);
+            const gesamtBrutto = kontobuchungen.reduce((sum, b) => sum + (b.BRUTTO_BETRAG || 0), 0);
+            
+            let html = `
+                <div class="total-summary">
+                    <div>
+                        <div class="total-label">Beleg #${currentBelegId} - ${kontobuchungen.length} Buchung${kontobuchungen.length !== 1 ? 'en' : ''}</div>
+                        <div class="total-value">${gesamtBrutto.toFixed(2)} €</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="opacity: 0.8; font-size: 14px;">Netto: ${gesamtNetto.toFixed(2)} €</div>
+                        <div style="opacity: 0.8; font-size: 14px;">Brutto: ${gesamtBrutto.toFixed(2)} €</div>
+                    </div>
+                </div>
+                
+                <div style="margin: 20px 0;">
+                    <button class="action-btn btn-secondary" onclick="toggleAllDateGroups()" style="margin-right: 10px;">
+                        <i class="fas fa-expand"></i> Alle öffnen/schließen
+                    </button>
+                    <button class="action-btn" style="background-color: #9b59b6; color: white;" onclick="loadMatrixData(${currentBelegId})">
+                        <i class="fas fa-table"></i> Matrix für diesen Beleg
+                    </button>
+                    <span style="color: #666; font-size: 14px; margin-left: 15px;">
+                        <i class="fas fa-info-circle"></i> Buchungen sind nach Buchungsdatum gruppiert
+                    </span>
+                </div>
+                
+                <div id="buchungen-groups-container">
+            `;
+            
+            // Group by BUCHUNGSDATUM
+            const groupedByDate = {};
+            kontobuchungen.forEach(buchung => {
+                const belegdatum = formatDate(buchung.BUCHUNGSDATUM || buchung.BELEGDATUM);
+                const dateKey = belegdatum.split(' ')[0]; // Just the date part for grouping
+                
+                if (!groupedByDate[dateKey]) {
+                    groupedByDate[dateKey] = {
+                        date: dateKey,
+                        buchungen: [],
+                        totalNetto: 0,
+                        totalBrutto: 0
+                    };
+                }
+                
+                groupedByDate[dateKey].buchungen.push(buchung);
+                groupedByDate[dateKey].totalNetto += buchung.BETRAG || 0;
+                groupedByDate[dateKey].totalBrutto += buchung.BRUTTO_BETRAG || 0;
+            });
+            
+            // Sort dates descending (most recent first)
+            const sortedDates = Object.keys(groupedByDate).sort((a, b) => new Date(b) - new Date(a));
+            
+            // Generate HTML for each date group
+            sortedDates.forEach((dateKey, groupIndex) => {
+                const group = groupedByDate[dateKey];
+                const isFirstGroup = groupIndex === 0;
+                const groupId = `date-group-${groupIndex}`;
+                
+                html += `
+                    <div class="date-group" style="margin-bottom: 20px; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+                        <div class="date-group-header" 
+                             onclick="toggleDateGroup('${groupId}')"
+                             style="background: linear-gradient(135deg, #4a6fa5, #2c3e50); color: white; padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <i class="fas fa-calendar-alt" style="font-size: 18px;"></i>
+                                <div>
+                                    <strong style="font-size: 16px;">${group.date}</strong>
+                                    <div style="font-size: 13px; opacity: 0.9; margin-top: 5px;">
+                                        ${group.buchungen.length} Buchung${group.buchungen.length !== 1 ? 'en' : ''} • 
+                                        Netto: ${group.totalNetto.toFixed(2)} € • 
+                                        Brutto: ${group.totalBrutto.toFixed(2)} €
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span class="group-toggle-icon" id="toggle-icon-${groupId}">
+                                    <i class="fas fa-chevron-${isFirstGroup ? 'down' : 'right'}"></i>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="date-group-content" id="${groupId}" style="display: ${isFirstGroup ? 'block' : 'none'}; background-color: white;">
+                            <div style="padding: 20px;">
+                                <table class="buchungen-group-table" style="margin: 0; width: 100%;">
+                                    <thead>
+                                        <tr>
+                                            <th><i class="fas fa-key"></i> FK_MAIN_KEY</th>
+                                            <th><i class="fas fa-building"></i> Lexoffice</th>
+                                            <th><i class="fas fa-university"></i> Konto</th>
+                                            <th><i class="fas fa-table"></i> TBL</th>
+                                            <th><i class="fas fa-credit-card"></i> IBAN</th>
+                                            <th><i class="fas fa-money-bill-wave"></i> Betrag</th>
+                                            <th><i class="fas fa-money-check-alt"></i> Brutto</th>
+                                            <th><i class="fas fa-info-circle"></i> Status</th>
+                                            <th><i class="fas fa-cogs"></i> Aktionen</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                `;
+                
+                // Add each booking for this date
+                group.buchungen.forEach(buchung => {
+                    const betragClass = (buchung.BETRAG || 0) >= 0 ? 'betrag-pos' : 'betrag-neg';
+                    const bruttoClass = (buchung.BRUTTO_BETRAG || 0) >= 0 ? 'betrag-pos' : 'betrag-neg';
+                    const belegdatum = formatDate(buchung.BUCHUNGSDATUM || buchung.BELEGDATUM);
+                    
+                    // Status-Badge
+                    let statusBadge = '';
+                    if (buchung.FLG_LEXOFFICE_BUCHUNG === 1) {
+                        statusBadge = '<span class="status-badge status-active"><i class="fas fa-check"></i> Lexoffice</span>';
+                    } else {
+                        statusBadge = '<span class="status-badge status-inactive"><i class="fas fa-clock"></i> In Arbeit</span>';
+                    }
+                    
+                    html += `
+                        <tr>
+                            <td><strong>${buchung.FK_MAIN_KEY || 'N/A'}</strong></td>
+                            <td>
+                                <div style="display: flex; flex-direction: column; gap: 2px;">
+                                    <span><strong>${buchung.FLG_LEXOFFICE_BUCHUNG || 'N/A'}</strong></span>
+                                    <span style="font-size: 11px; color: #666;">FLG_LEXOFFICE_BUCHUNG</span>
+                                </div>
+                            </td>
+                            <td><strong>${buchung.FK_KTO_BANKKONTO || 'N/A'}</strong></td>
+ <td><strong>${formatDate(buchung.BUCHUNGSDATUM) || 'N/A'}</strong></td>
+                            <td><strong>${buchung.TBL || 'N/A'}</strong></td>
+                            <td>
+                                <div style="font-family: monospace; font-size: 13px;">
+                                    ${buchung.IBAN || 'N/A'}
+                                </div>
+                            </td>
+                            <td class="buchung-betrag ${betragClass}">${(buchung.BETRAG || 0).toFixed(2)} €</td>
+                            <td class="buchung-betrag ${bruttoClass}">${(buchung.BRUTTO_BETRAG || 0).toFixed(2)} €</td>
+<td> ${buchung.KONTOAUSZUG || 'N/A'}</td>
+<td><a href="${buchung.LINK}" target="_blank">${buchung.LINK}</a></td>
+                            <td>${statusBadge}</td>
+                            <td>
+                                <button class="action-btn btn-primary" style="padding: 6px 12px; font-size: 13px;" 
+                                        onclick="showBuchungsDetails(${JSON.stringify(buchung).replace(/"/g, '&quot;')})">
+                                    <i class="fas fa-eye"></i> Details
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                                    </tbody>
+                                </table>
+                                
+                                <!-- Account Information Summary -->
+                                <div style="margin-top: 15px; padding: 15px; background-color: #f8f9fa; border-radius: 6px; border-left: 4px solid #3498db;">
+                                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                                        <i class="fas fa-list-alt" style="color: #3498db;"></i>
+                                        <strong style="color: #2c3e50;">Kontoübersicht für ${group.date}:</strong>
+                                    </div>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+                                        <div style="display: flex; flex-direction: column; min-width: 150px;">
+                                            <span style="font-size: 12px; color: #666; margin-bottom: 3px;">Eindeutige Konten</span>
+                                            <span style="font-weight: bold; color: #2c3e50;">
+                                                ${[...new Set(group.buchungen.map(b => b.FK_KTO_BANKKONTO))].length}
+                                            </span>
+                                        </div>
+                                        <div style="display: flex; flex-direction: column; min-width: 150px;">
+                                            <span style="font-size: 12px; color: #666; margin-bottom: 3px;">Durchschn. Betrag</span>
+                                            <span style="font-weight: bold; color: #2c3e50;">
+                                                ${(group.totalNetto / group.buchungen.length).toFixed(2)} €
+                                            </span>
+                                        </div>
+                                        <div style="display: flex; flex-direction: column; min-width: 150px;">
+                                            <span style="font-size: 12px; color: #666; margin-bottom: 3px;">Buchungen mit IBAN</span>
+                                            <span style="font-weight: bold; color: #2c3e50;">
+                                                ${group.buchungen.filter(b => b.IBAN).length} von ${group.buchungen.length}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                </div>
+                
+                <div style="margin-top: 25px; padding: 20px; background-color: #f8f9fa; border-radius: 8px; border-left: 5px solid #3498db;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                        <i class="fas fa-info-circle" style="color: #3498db; font-size: 18px;"></i>
+                        <strong style="color: #2c3e50;">Buchungshinweis:</strong>
+                    </div>
+                    <p style="color: #555; margin: 0; line-height: 1.6;">
+                        Die Kontobuchungen sind für Beleg #${currentBelegId}. 
+                        Buchungen sind nach Buchungsdatum gruppiert. Klicken Sie auf die Datums-Header, um Gruppen ein-/auszuklappen.
+                        Klicken Sie auf "Details" für erweiterte Informationen zu einer spezifischen Buchung.
+                        ${useMockData ? '<br><em style="color: #f39c12;">(Mock-Daten werden verwendet)</em>' : ''}
+                    </p>
+                </div>
+                
+                <div style="margin-top: 20px; color: #666; font-size: 13px; text-align: center; padding: 10px; background-color: #f5f5f5; border-radius: 6px;">
+                    <i class="fas fa-chart-pie"></i> Insgesamt ${sortedDates.length} Datumsgruppen mit ${kontobuchungen.length} Buchungen
+                </div>
+            `;
+            
+            buchungenContainer.innerHTML = html;
+        }
+
+        // Toggle date group visibility
+        function toggleDateGroup(groupId) {
+            const groupContent = document.getElementById(groupId);
+            const toggleIcon = document.getElementById(`toggle-icon-${groupId}`);
+            
+            if (groupContent.style.display === 'none') {
+                groupContent.style.display = 'block';
+                toggleIcon.innerHTML = '<i class="fas fa-chevron-down"></i>';
+                toggleIcon.classList.remove('rotated');
+            } else {
+                groupContent.style.display = 'none';
+                toggleIcon.innerHTML = '<i class="fas fa-chevron-right"></i>';
+                toggleIcon.classList.add('rotated');
+            }
+        }
+
+        // Toggle all date groups
+        function toggleAllDateGroups() {
+            const groups = document.querySelectorAll('.date-group-content');
+            const allVisible = Array.from(groups).every(group => group.style.display === 'block');
+            const toggleIcons = document.querySelectorAll('.group-toggle-icon');
+            
+            groups.forEach(group => {
+                group.style.display = allVisible ? 'none' : 'block';
+            });
+            
+            toggleIcons.forEach(icon => {
+                icon.innerHTML = allVisible ? 
+                    '<i class="fas fa-chevron-right"></i>' : 
+                    '<i class="fas fa-chevron-down"></i>';
+                if (allVisible) {
+                    icon.classList.add('rotated');
+                } else {
+                    icon.classList.remove('rotated');
+                }
+            });
+        }
+
+        // Erweiterte Buchungsdetails anzeigen
+        function showBuchungsDetails(buchung) {
+            currentBuchungsDetails = buchung;
+            
+            const belegdatum = formatDate(buchung.BELEGDATUM);
+            const lexofficeStatus = buchung.FLG_LEXOFFICE_BUCHUNG === 1 ? 'Ja' : 'Nein';
+            const mitBildStatus = buchung.FLG_LEXOFFICE_MIT_BILD === 1 ? 'Ja' : 'Nein';
+            
+            let html = `
+                <div class="buchung-detail-card">
+                    <div class="buchung-detail-header">
+                        <div class="buchung-detail-title"><i class="fas fa-file-invoice"></i> Buchungsdetails</div>
+                        <div class="buchung-detail-id">ID: ${buchung.PK_REL_LEX_KTO_BEL || buchung.FK_MAIN_KEY || 'N/A'}</div>
+                    </div>
+                    
+                    <div class="buchung-detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label"><i class="fas fa-key"></i> PK_REL_LEX_KTO_BEL</div>
+                            <div class="detail-value">${buchung.PK_REL_LEX_KTO_BEL || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label"><i class="fas fa-key"></i> FK_MAIN_KEY</div>
+                            <div class="detail-value">${buchung.FK_MAIN_KEY || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label"><i class="fas fa-file-alt"></i> FK_INP_BELEGE_ALL</div>
+                            <div class="detail-value">${buchung.FK_INP_BELEGE_ALL || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label"><i class="fas fa-folder"></i> FK_ABL_ORDNER_PAGE</div>
+                            <div class="detail-value">${buchung.FK_ABL_ORDNER_PAGE || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label"><i class="fas fa-calendar"></i> Belegdatum</div>
+                            <div class="detail-value">${belegdatum}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label"><i class="fas fa-money-bill"></i> Betrag</div>
+                            <div class="detail-value ${(buchung.BETRAG || 0) >= 0 ? 'betrag-pos' : 'betrag-neg'}">${(buchung.BETRAG || 0).toFixed(2)} €</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label"><i class="fas fa-money-check-alt"></i> Bruttobetrag</div>
+                            <div class="detail-value ${(buchung.BRUTTO_BETRAG || 0) >= 0 ? 'betrag-pos' : 'betrag-neg'}">${(buchung.BRUTTO_BETRAG || 0).toFixed(2)} €</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label"><i class="fas fa-user"></i> Owner</div>
+                            <div class="detail-value">${buchung.OWNER1 || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label"><i class="fas fa-building"></i> Lexoffice Buchung</div>
+                            <div class="detail-value">${lexofficeStatus}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label"><i class="fas fa-image"></i> Lexoffice mit Bild</div>
+                            <div class="detail-value">${mitBildStatus}</div>
+                        </div>
+                        ${buchung.FK_KTO_BANKKONTO ? `
+                        <div class="detail-item">
+                            <div class="detail-label"><i class="fas fa-university"></i> FK_KTO_BANKKONTO</div>
+                            <div class="detail-value">${buchung.FK_KTO_BANKKONTO}</div>
+                        </div>
+                        ` : ''}
+                        ${buchung.FK_KON_OWNER1 ? `
+                        <div class="detail-item">
+                            <div class="detail-label"><i class="fas fa-id-card"></i> FK_KON_OWNER1</div>
+                            <div class="detail-value">${buchung.FK_KON_OWNER1}</div>
+                        </div>
+                        ` : ''}
+                        ${buchung.TBL ? `
+                        <div class="detail-item">
+                            <div class="detail-label"><i class="fas fa-table"></i> TBL</div>
+                            <div class="detail-value">${buchung.TBL}</div>
+                        </div>
+                        ` : ''}
+                        ${buchung.IBAN ? `
+                        <div class="detail-item">
+                            <div class="detail-label"><i class="fas fa-credit-card"></i> IBAN</div>
+                            <div class="detail-value" style="font-family: monospace;">${buchung.IBAN}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="buchungstext-label"><i class="fas fa-align-left"></i> Buchungstext:</div>
+                    <div class="buchungstext-container">
+                        ${buchung.BUCHUNGSTEXT || 'Kein Buchungstext verfügbar'}
+                    </div>
+                    
+                    <button class="back-btn" onclick="goBackToBuchungenList()">
+                        <i class="fas fa-arrow-left"></i> Zurück zur Buchungsliste
+                    </button>
+                </div>
+            `;
+            
+            buchungenContainer.innerHTML = html;
+        }
+
+        // Zurück zur Buchungsliste
+        function goBackToBuchungenList() {
+            if (currentBelegId) {
+                fetchKontobuchungenByBelegId(currentBelegId);
+            } else {
+                buchungenContainer.innerHTML = '<div class="no-data"><i class="fas fa-euro-sign"></i> Wählen Sie einen Beleg aus, um Buchungen anzuzeigen</div>';
+            }
+        }
+
+        // Hilfsfunktion: Datum formatieren
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            
+            try {
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) {
+                    return dateString;
+                }
+                return date.toLocaleDateString('de-DE', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (e) {
+                return dateString;
+            }
+        }
+    </script>
+</body>
+</html>

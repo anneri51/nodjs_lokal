@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Bildergalerie - Multi-Select mit Suchfunktion</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #1e2a3e;
+            padding: 2rem 1.5rem;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .main-layout {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .left-section {
+            flex: 2;
+            min-width: 0;
+        }
+
+        .right-section {
+            flex: 1;
+            min-width: 350px;
+            max-width: 450px;
+        }
+
+        .filter-header {
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #1f5e3a, #2c7a4b);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        .sub {
+            color: #4a627a;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid #2c7a4b;
+            padding-left: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .filter-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-group label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #2c5a2e;
+            margin-bottom: 0.5rem;
+        }
+
+        .filter-select {
+            width: 100%;
+            padding: 0.7rem 1rem;
+            border-radius: 40px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .multi-select-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .multi-select-btn {
+            width: 100%;
+            padding: 0.7rem 1rem;
+            border-radius: 40px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .multi-select-btn:hover, .filter-select:hover {
+            border-color: #2c7a4b;
+        }
+
+        .multi-select-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 20px;
+            margin-top: 5px;
+            max-height: 350px;
+            overflow: hidden;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .multi-select-dropdown.show {
+            display: block;
+        }
+
+        .multi-select-search {
+            padding: 10px;
+            border-bottom: 1px solid #e0e6ed;
+            position: sticky;
+            top: 0;
+            background: white;
+        }
+
+        .multi-select-search input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            outline: none;
+        }
+
+        .multi-select-search input:focus {
+            border-color: #2c7a4b;
+        }
+
+        .multi-select-options {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .multi-select-option {
+            padding: 10px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s;
+        }
+
+        .multi-select-option:hover {
+            background: #f0f2f5;
+        }
+
+        .multi-select-option.hidden {
+            display: none;
+        }
+
+        .selected-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 8px;
+        }
+
+        .selected-badge {
+            background: #2c7a4b;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .selected-badge-remove {
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+
+        .btn {
+            padding: 0.7rem 1.5rem;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: 0.2s;
+            border: none;
+            margin-top: 1.2rem;
+        }
+
+        .btn-filter {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+        }
+
+        .btn-load {
+            background: linear-gradient(135deg, #3498db, #2c3e50);
+            color: white;
+        }
+
+        .btn-reset {
+            background: #eef2f5;
+            color: #1e4663;
+        }
+
+        .btn-select {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            color: white;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 60px;
+            padding: 0.5rem 1.2rem;
+        }
+
+        .counter {
+            font-weight: 500;
+            background: #e9f3ef;
+            padding: 0.3rem 1rem;
+            border-radius: 30px;
+            font-size: 0.85rem;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+
+        .image-card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .image-card.selected {
+            border: 3px solid #27ae60;
+            box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.3);
+        }
+
+        .image-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .preview-wrapper {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+            padding: 1rem;
+        }
+
+        .preview-wrapper img {
+            max-width: 100%;
+            max-height: 180px;
+            object-fit: contain;
+            border-radius: 12px;
+        }
+
+        .file-info-preview {
+            padding: 1rem;
+        }
+
+        .file-id-badge {
+            background: linear-gradient(135deg, #3498db, #2c3e50);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .klassifikation-section {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #edf2f7;
+        }
+
+        .klass-item {
+            margin-bottom: 6px;
+        }
+
+        .klass-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #5a6e8a;
+        }
+
+        .klass-value {
+            font-size: 0.8rem;
+            background: #f8fafc;
+            padding: 4px 8px;
+            border-radius: 8px;
+        }
+
+        .info-panel {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            position: sticky;
+            top: 20px;
+        }
+
+        .info-header {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            color: white;
+            padding: 1rem 1.5rem;
+        }
+
+        .info-content {
+            padding: 1.5rem;
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+        }
+
+        .parameter-card {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 12px;
+            border-left: 4px solid #3498db;
+        }
+
+        .parameter-card h4 {
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .parameter-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        .parameter-table td {
+            padding: 6px 4px;
+            border-bottom: 1px solid #e0e6ed;
+        }
+
+        .parameter-table td:first-child {
+            font-weight: 600;
+            color: #2c5e3a;
+            width: 40%;
+        }
+
+        .no-selection {
+            text-align: center;
+            padding: 2rem;
+            color: #95a5a6;
+        }
+
+        .loading-info {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .selection-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .btn-sm {
+            padding: 8px 12px;
+            font-size: 0.75rem;
+            margin-top: 0;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .pagination button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 40px;
+            background: white;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .pagination button.active {
+            background: linear-gradient(135deg, #2c7a4b, #1f5e3a);
+            color: white;
+        }
+
+        .filter-status {
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            background: #e8f5e9;
+            border-radius: 40px;
+            font-size: 0.8rem;
+        }
+
+        .loading-placeholder {
+            text-align: center;
+            padding: 3rem;
+            color: white;
+            font-weight: 500;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+        }
+
+        @media (max-width: 1200px) {
+            .main-layout { flex-direction: column; }
+            .right-section { max-width: 100%; }
+            .gallery { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 768px) {
+            .gallery { grid-template-columns: 1fr; }
+            .filter-panel { flex-direction: column; }
+            .button-group { width: 100%; flex-direction: column; }
+            .btn { width: 100%; text-align: center; }
+        }
+
+        footer {
+            margin-top: 2rem;
+            text-align: center;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="filter-header">
+        <h1>📸 Bildergalerie - Multi-Select mit Suchfunktion</h1>
+        <div class="sub">Filter nach Klassifikationen UND/ODER nach Bild-ID (Multi-Select mit Suche) | Rechte Seite zeigt Parameter-Info</div>
+
+        <div class="filter-panel">
+            <div class="filter-group">
+                <label>🏷️ KLASSIFIKATION_1</label>
+                <select id="filterKlass1" class="filter-select">
+                    <option value="all">Alle Kategorien</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>🔖 KLASSIFIKATION_2</label>
+                <select id="filterKlass2" class="filter-select">
+                    <option value="all">Alle Kategorien</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>📌 KLASSIFIKATION_3 (Multi-Select)</label>
+                <div class="multi-select-container">
+                    <div id="multiSelectKlass3Btn" class="multi-select-btn">
+                        <span>Kategorien auswählen...</span>
+                        <span>▼</span>
+                    </div>
+                    <div id="multiSelectKlass3Dropdown" class="multi-select-dropdown">
+                        <div class="multi-select-search">
+                            <input type="text" id="searchKlass3" placeholder="🔍 Kategorie suchen...">
+                        </div>
+                        <div class="multi-select-options" id="klass3Options"></div>
+                    </div>
+                </div>
+                <div id="selectedKlass3Badges" class="selected-badges"></div>
+            </div>
+            <div class="filter-group">
+                <label>📚 FK_MEDIA_MEDIA_BUCH</label>
+                <select id="filterMediaBuch" class="filter-select">
+                    <option value="all">Alle Medienbücher</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>🆔 BILD-ID (Multi-Select)</label>
+                <div class="multi-select-container">
+                    <div id="multiSelectBildIdBtn" class="multi-select-btn">
+                        <span>Bild-IDs auswählen...</span>
+                        <span>▼</span>
+                    </div>
+                    <div id="multiSelectBildIdDropdown" class="multi-select-dropdown">
+                        <div class="multi-select-search">
+                            <input type="text" id="searchBildId" placeholder="🔍 Bild-ID suchen...">
+                        </div>
+                        <div class="multi-select-options" id="bildIdOptions"></div>
+                    </div>
+                </div>
+                <div id="selectedBildIdBadges" class="selected-badges"></div>
+            </div>
+            <div class="button-group">
+                <button id="filterBtn" class="btn btn-filter">🎯 FILTER SETZEN</button>
+                <button id="loadBtn" class="btn btn-load">📥 BILDER LADEN</button>
+                <button id="resetBtn" class="btn btn-reset">🔄 Zurücksetzen</button>
+            </div>
+        </div>
+        
+        <div id="filterStatus" class="filter-status">⚡ Filter-Status: Keine Filter aktiv</div>
+    </div>
+
+    <div class="main-layout">
+        <div class="left-section">
+            <div class="stats">
+                <span>📊 <span id="resultCount">0</span> Bilder insgesamt</span>
+                <span class="counter" id="pageInfo">Seite 1 von 1</span>
+            </div>
+            <div id="galleryContainer" class="gallery">
+                <div class="loading-placeholder">⏳ Lade Bilddaten...</div>
+            </div>
+            <div id="paginationControls" class="pagination" style="display: none;"></div>
+        </div>
+
+        <div class="right-section">
+            <div class="info-panel">
+                <div class="info-header">
+                    <h3><i class="fas fa-info-circle"></i> Parameter-Informationen</h3>
+                </div>
+                <div class="info-content">
+                    <div class="selection-controls">
+                        <button id="selectCurrentImageBtn" class="btn btn-select btn-sm" style="flex:1">
+                            <i class="fas fa-check-circle"></i> Aktuelles Bild auswählen
+                        </button>
+                        <button id="filterBySelectedBtn" class="btn btn-filter btn-sm" style="flex:1">
+                            <i class="fas fa-filter"></i> Nach ausgewähltem Bild filtern
+                        </button>
+                    </div>
+                    <div id="parameterInfo">
+                        <div class="no-selection">
+                            <i class="fas fa-hand-pointer" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                            Wählen Sie Bild-IDs im Multi-Select oder klicken Sie auf ein Bild
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <footer>Datenquelle: /bild/basisdaten & /rel_bild_parameter?FK_BILD_BILDER=ID | 100 Bilder pro Seite</footer>
+</div>
+
+<script>
+    (function() {
+        // API Endpoints
+        const BASEDATA_URL = 'http://localhost:5000/bild/basisdaten';
+        const PARAMETER_URL = 'http://localhost:5000/rel_bild_parameter';
+        const FILECONTENT_URL = 'http://localhost:5000/accounts/bild/1/1/1/';
+        const ITEMS_PER_PAGE = 100;
+        
+        // Globale Daten
+        let allImages = [];
+        let filteredImages = [];
+        let currentPageImages = [];
+        let imageBlobCache = new Map();
+        let currentPage = 1;
+        let totalPages = 1;
+        let selectedImageId = null;
+        let selectedImageData = null;
+        
+        // Filter
+        let activeFilters = {
+            klass1: 'all',
+            klass2: 'all',
+            klass3: [],
+            mediaBuch: 'all',
+            bildIds: []
+        };
+        
+        let selectedKlass3Values = new Set();
+        let selectedBildIds = new Set();
+
+        // Eindeutige Kategorien (als Sets)
+        let uniqueKlass1 = new Set();
+        let uniqueKlass2 = new Set();
+        let uniqueKlass3 = new Set();
+        let uniqueMediaBuch = new Set();
+        let allBildIds = [];
+
+        // DOM-Elemente
+        const filterSelect1 = document.getElementById('filterKlass1');
+        const filterSelect2 = document.getElementById('filterKlass2');
+        const filterMediaBuch = document.getElementById('filterMediaBuch');
+        const filterBtn = document.getElementById('filterBtn');
+        const loadBtn = document.getElementById('loadBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const selectCurrentImageBtn = document.getElementById('selectCurrentImageBtn');
+        const filterBySelectedBtn = document.getElementById('filterBySelectedBtn');
+        const galleryContainer = document.getElementById('galleryContainer');
+        const resultCountSpan = document.getElementById('resultCount');
+        const filterStatusSpan = document.getElementById('filterStatus');
+        const paginationControls = document.getElementById('paginationControls');
+        const pageInfoSpan = document.getElementById('pageInfo');
+        const parameterInfoDiv = document.getElementById('parameterInfo');
+        
+        // Multi-Select für Klass3
+        const multiSelectKlass3Btn = document.getElementById('multiSelectKlass3Btn');
+        const multiSelectKlass3Dropdown = document.getElementById('multiSelectKlass3Dropdown');
+        const klass3Options = document.getElementById('klass3Options');
+        const searchKlass3 = document.getElementById('searchKlass3');
+        const selectedKlass3Badges = document.getElementById('selectedKlass3Badges');
+        
+        // Multi-Select für Bild-IDs
+        const multiSelectBildIdBtn = document.getElementById('multiSelectBildIdBtn');
+        const multiSelectBildIdDropdown = document.getElementById('multiSelectBildIdDropdown');
+        const bildIdOptions = document.getElementById('bildIdOptions');
+        const searchBildId = document.getElementById('searchBildId');
+        const selectedBildIdBadges = document.getElementById('selectedBildIdBadges');
+
+        // ========== Helper Funktionen ==========
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // ========== Parameter-Informationen für ausgewählte Bilder laden ==========
+        async function loadParametersForSelectedBildIds() {
+            const bildIds = Array.from(selectedBildIds);
+            
+            if (bildIds.length === 0) {
+                parameterInfoDiv.innerHTML = `
+                    <div class="no-selection">
+                        <i class="fas fa-hand-pointer" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                        Keine Bild-IDs ausgewählt<br>
+                        Wählen Sie IDs im Multi-Select-Filter oder klicken Sie auf ein Bild
+                    </div>`;
+                return;
+            }
+            
+            parameterInfoDiv.innerHTML = `
+                <div class="loading-info">
+                    <div class="spinner"></div>
+                    Lade Parameter für ${bildIds.length} Bild(er)...
+                </div>`;
+            
+            let allParametersHtml = '';
+            
+            for (const bildId of bildIds) {
+                try {
+                    const response = await fetch(`${PARAMETER_URL}?FK_BILD_BILDER=${bildId}`);
+                    if (!response.ok) {
+                        console.warn(`Keine Parameter für Bild ${bildId}`);
+                        continue;
+                    }
+                    const data = await response.json();
+                    
+                    const imageMeta = allImages.find(img => img.id == bildId);
+                    
+                    allParametersHtml += `
+                        <div class="parameter-card">
+                            <h4><span class="file-id-badge" style="background: #27ae60;">Bild ID: ${bildId}</span></h4>
+                            ${imageMeta ? `
+                                <div style="background: #e8f5e9; padding: 8px; border-radius: 8px; margin-bottom: 10px; font-size: 0.8rem;">
+                                    <div><strong>KL1:</strong> ${escapeHtml(imageMeta.KLASSIFIKATION_1 || '—')}</div>
+                                    <div><strong>KL2:</strong> ${escapeHtml(imageMeta.KLASSIFIKATION_2 || '—')}</div>
+                                    <div><strong>KL3:</strong> ${escapeHtml(imageMeta.KLASSIFIKATION_3 || '—')}</div>
+                                    <div><strong>MediaBuch:</strong> ${escapeHtml(imageMeta.FK_MEDIA_BUCH_BUCH || '—')}</div>
+                                </div>
+                            ` : ''}
+                            <table class="parameter-table">
+                    `;
+                    
+                    if (data && data.length > 0) {
+                        data.forEach(param => {
+                            const paramName = param.PARAMETER_NAME || param.PARAMETER || '—';
+                            const paramValue = param.PARAMETER_VALUE || param.WERT || param.VALUE || '—';
+                            allParametersHtml += `
+                                <tr>
+                                    <td>${escapeHtml(paramName)}</td>
+                                    <td>${escapeHtml(paramValue)}</td>
+                                </tr>
+                            `;
+                        });
+                    } else {
+                        allParametersHtml += `<tr><td colspan="2">Keine Parameter gefunden</td></tr>`;
+                    }
+                    
+                    allParametersHtml += `</table></div>`;
+                } catch (error) {
+                    console.error(`Fehler beim Laden für Bild ${bildId}:`, error);
+                    allParametersHtml += `
+                        <div class="parameter-card">
+                            <h4><span class="file-id-badge">Bild ID: ${bildId}</span></h4>
+                            <div style="color: #e74c3c;">Fehler beim Laden: ${error.message}</div>
+                        </div>`;
+                }
+            }
+            
+            if (allParametersHtml === '') {
+                parameterInfoDiv.innerHTML = `
+                    <div class="no-selection" style="color: #e74c3c;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                        Keine Parameter für die ausgewählten Bilder gefunden
+                    </div>`;
+            } else {
+                parameterInfoDiv.innerHTML = `<div style="margin-bottom: 10px;"><strong>${selectedBildIds.size} Bild(er) ausgewählt:</strong> ${Array.from(selectedBildIds).sort((a,b)=>Number(a)-Number(b)).join(', ')}</div>${allParametersHtml}`;
+            }
+        }
+
+        // ========== Bild auswählen ==========
+        function selectImage(imageId, imageData) {
+            selectedImageId = imageId;
+            selectedImageData = imageData;
+            
+            document.querySelectorAll('.image-card').forEach(card => {
+                if (card.getAttribute('data-id') == imageId) {
+                    card.classList.add('selected');
+                } else {
+                    card.classList.remove('selected');
+                }
+            });
+            
+            if (!selectedBildIds.has(String(imageId))) {
+                selectedBildIds.add(String(imageId));
+                updateBildIdBadges();
+                const checkbox = document.querySelector(`#bildIdOptions input[value="${imageId}"]`);
+                if (checkbox) checkbox.checked = true;
+                updateSelectAllBildIdsCheckbox();
+            }
+            
+            loadParametersForSelectedBildIds();
+            selectCurrentImageBtn.innerHTML = `<i class="fas fa-check-circle"></i> Bild ${imageId} ausgewählt`;
+        }
+
+        // ========== Nach ausgewähltem Bild filtern ==========
+        function filterBySelectedImage() {
+            if (!selectedImageId) {
+                alert('Bitte wählen Sie zuerst ein Bild aus!');
+                return;
+            }
+            
+            if (!selectedImageData) {
+                alert('Keine Bilddaten verfügbar!');
+                return;
+            }
+            
+            if (selectedImageData.KLASSIFIKATION_1 && selectedImageData.KLASSIFIKATION_1 !== '') {
+                activeFilters.klass1 = selectedImageData.KLASSIFIKATION_1;
+                filterSelect1.value = selectedImageData.KLASSIFIKATION_1;
+            } else {
+                activeFilters.klass1 = 'all';
+                filterSelect1.value = 'all';
+            }
+            
+            if (selectedImageData.KLASSIFIKATION_2 && selectedImageData.KLASSIFIKATION_2 !== '') {
+                activeFilters.klass2 = selectedImageData.KLASSIFIKATION_2;
+                filterSelect2.value = selectedImageData.KLASSIFIKATION_2;
+            } else {
+                activeFilters.klass2 = 'all';
+                filterSelect2.value = 'all';
+            }
+            
+            if (selectedImageData.KLASSIFIKATION_3 && selectedImageData.KLASSIFIKATION_3 !== '') {
+                activeFilters.klass3 = [selectedImageData.KLASSIFIKATION_3];
+                resetKlass3MultiSelect();
+                selectedKlass3Values.add(selectedImageData.KLASSIFIKATION_3);
+                const checkbox = document.querySelector(`#klass3Options input[value="${selectedImageData.KLASSIFIKATION_3}"]`);
+                if (checkbox) checkbox.checked = true;
+                updateKlass3Badges();
+                filterKlass3Options();
+            } else {
+                activeFilters.klass3 = [];
+                resetKlass3MultiSelect();
+            }
+            
+            if (selectedImageData.FK_MEDIA_BUCH_BUCH && selectedImageData.FK_MEDIA_BUCH_BUCH !== '') {
+                activeFilters.mediaBuch = String(selectedImageData.FK_MEDIA_BUCH_BUCH);
+                filterMediaBuch.value = String(selectedImageData.FK_MEDIA_BUCH_BUCH);
+            } else {
+                activeFilters.mediaBuch = 'all';
+                filterMediaBuch.value = 'all';
+            }
+            
+            activeFilters.bildIds = [];
+            selectedBildIds.clear();
+            updateBildIdBadges();
+            resetBildIdMultiSelect();
+            
+            updateFilterStatus();
+            loadImages();
+            
+            filterBySelectedBtn.innerHTML = `<i class="fas fa-check"></i> Gefiltert nach Bild ${selectedImageId}`;
+            setTimeout(() => {
+                filterBySelectedBtn.innerHTML = `<i class="fas fa-filter"></i> Nach ausgewähltem Bild filtern`;
+            }, 2000);
+        }
+
+        // ========== Pagination ==========
+        function updatePagination() {
+            totalPages = Math.ceil(filteredImages.length / ITEMS_PER_PAGE);
+            if (totalPages === 0) totalPages = 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+            
+            pageInfoSpan.innerHTML = `Seite ${currentPage} von ${totalPages} | ${filteredImages.length} Bilder`;
+            
+            if (totalPages <= 1) {
+                paginationControls.style.display = 'none';
+                return;
+            }
+            
+            paginationControls.style.display = 'flex';
+            let html = '';
+            html += `<button onclick="goToPage(1)" ${currentPage === 1 ? 'disabled' : ''}>⏮ Erste</button>`;
+            html += `<button onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>◀ Zurück</button>`;
+            
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, currentPage + 2);
+            
+            if (startPage > 1) {
+                html += `<button onclick="goToPage(1)">1</button>`;
+                if (startPage > 2) html += `<span class="counter">...</span>`;
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<button onclick="goToPage(${i})" class="${i === currentPage ? 'active' : ''}">${i}</button>`;
+            }
+            
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) html += `<span class="counter">...</span>`;
+                html += `<button onclick="goToPage(${totalPages})">${totalPages}</button>`;
+            }
+            
+            html += `<button onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Weiter ▶</button>`;
+            html += `<button onclick="goToPage(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''}>Letzte ⏭</button>`;
+            
+            paginationControls.innerHTML = html;
+        }
+        
+        function goToPage(page) {
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            loadCurrentPageImages();
+            updatePagination();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        function loadCurrentPageImages() {
+            const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+            const endIndex = startIndex + ITEMS_PER_PAGE;
+            currentPageImages = filteredImages.slice(startIndex, endIndex);
+            renderGallery();
+        }
+
+        // ========== Multi-Select für Klass3 mit Suche ==========
+        function toggleKlass3Dropdown() { 
+            multiSelectKlass3Dropdown.classList.toggle('show'); 
+            if (multiSelectKlass3Dropdown.classList.contains('show')) {
+                setTimeout(() => searchKlass3?.focus(), 100);
+            }
+        }
+        
+        function closeKlass3Dropdown(e) {
+            if (!multiSelectKlass3Btn.contains(e.target) && !multiSelectKlass3Dropdown.contains(e.target)) {
+                multiSelectKlass3Dropdown.classList.remove('show');
+            }
+        }
+
+        function filterKlass3Options() {
+            const searchTerm = searchKlass3.value.toLowerCase();
+            const options = klass3Options.querySelectorAll('.multi-select-option:not(.select-all-option)');
+            options.forEach(opt => {
+                const text = opt.textContent.toLowerCase();
+                if (searchTerm === '' || text.includes(searchTerm)) {
+                    opt.classList.remove('hidden');
+                } else {
+                    opt.classList.add('hidden');
+                }
+            });
+        }
+
+        function updateKlass3Badges() {
+            selectedKlass3Badges.innerHTML = '';
+            Array.from(selectedKlass3Values).sort().forEach(value => {
+                const badge = document.createElement('span');
+                badge.className = 'selected-badge';
+                badge.innerHTML = `${escapeHtml(value)} <span class="selected-badge-remove" data-value="${escapeHtml(value)}">×</span>`;
+                selectedKlass3Badges.appendChild(badge);
+            });
+            
+            const btnText = multiSelectKlass3Btn.querySelector('span:first-child');
+            if (btnText) {
+                btnText.textContent = selectedKlass3Values.size > 0 ? `${selectedKlass3Values.size} ausgewählt` : 'Kategorien auswählen...';
+            }
+            
+            document.querySelectorAll('#selectedKlass3Badges .selected-badge-remove').forEach(el => {
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const value = el.getAttribute('data-value');
+                    selectedKlass3Values.delete(value);
+                    const checkbox = document.querySelector(`#klass3Options input[value="${value}"]`);
+                    if (checkbox) checkbox.checked = false;
+                    updateKlass3Badges();
+                    updateSelectAllKlass3Checkbox();
+                });
+            });
+        }
+
+        function updateSelectAllKlass3Checkbox() {
+            const selectAll = document.getElementById('selectAllKlass3');
+            if (!selectAll) return;
+            const visibleOptions = Array.from(klass3Options.querySelectorAll('.multi-select-option:not(.select-all-option):not(.hidden) input'));
+            const allChecked = visibleOptions.length > 0 && visibleOptions.every(cb => cb.checked);
+            selectAll.checked = allChecked;
+        }
+
+        function populateKlass3MultiSelect() {
+            const sorted3 = Array.from(uniqueKlass3).sort();
+            klass3Options.innerHTML = `
+                <div class="multi-select-option select-all-option">
+                    <input type="checkbox" id="selectAllKlass3">
+                    <label>Alle auswählen</label>
+                </div>
+            `;
+            sorted3.forEach(val => {
+                const div = document.createElement('div');
+                div.className = 'multi-select-option';
+                div.innerHTML = `<input type="checkbox" value="${escapeHtml(val)}"><label>${escapeHtml(val)}</label>`;
+                const cb = div.querySelector('input');
+                cb.addEventListener('change', (e) => {
+                    if (e.target.checked) selectedKlass3Values.add(val);
+                    else selectedKlass3Values.delete(val);
+                    updateKlass3Badges();
+                    updateSelectAllKlass3Checkbox();
+                });
+                klass3Options.appendChild(div);
+            });
+            
+            const selectAllCheckbox = document.getElementById('selectAllKlass3');
+            if (selectAllCheckbox) {
+                selectAllCheckbox.addEventListener('change', selectAllKlass3);
+            }
+            if (searchKlass3) {
+                searchKlass3.addEventListener('input', filterKlass3Options);
+            }
+        }
+
+        function selectAllKlass3() {
+            const selectAll = document.getElementById('selectAllKlass3');
+            if (!selectAll) return;
+            const visibleOptions = klass3Options.querySelectorAll('.multi-select-option:not(.select-all-option):not(.hidden) input');
+            visibleOptions.forEach(cb => {
+                cb.checked = selectAll.checked;
+                const val = cb.value;
+                if (selectAll.checked) selectedKlass3Values.add(val);
+                else selectedKlass3Values.delete(val);
+            });
+            updateKlass3Badges();
+        }
+
+        function resetKlass3MultiSelect() {
+            selectedKlass3Values.clear();
+            const allCheckboxes = document.querySelectorAll('#klass3Options .multi-select-option:not(.select-all-option) input');
+            allCheckboxes.forEach(cb => cb.checked = false);
+            const selectAll = document.getElementById('selectAllKlass3');
+            if (selectAll) selectAll.checked = false;
+            updateKlass3Badges();
+            if (searchKlass3) {
+                searchKlass3.value = '';
+                filterKlass3Options();
+            }
+        }
+
+        // ========== Multi-Select für Bild-IDs mit Suche ==========
+        function toggleBildIdDropdown() { 
+            multiSelectBildIdDropdown.classList.toggle('show'); 
+            if (multiSelectBildIdDropdown.classList.contains('show')) {
+                setTimeout(() => searchBildId?.focus(), 100);
+            }
+        }
+        
+        function closeBildIdDropdown(e) {
+            if (!multiSelectBildIdBtn.contains(e.target) && !multiSelectBildIdDropdown.contains(e.target)) {
+                multiSelectBildIdDropdown.classList.remove('show');
+            }
+        }
+
+        function filterBildIdOptions() {
+            const searchTerm = searchBildId.value.toLowerCase();
+            const options = bildIdOptions.querySelectorAll('.multi-select-option:not(.select-all-option)');
+            options.forEach(opt => {
+                const text = opt.textContent.toLowerCase();
+                if (searchTerm === '' || text.includes(searchTerm)) {
+                    opt.classList.remove('hidden');
+                } else {
+                    opt.classList.add('hidden');
+                }
+            });
+        }
+
+        function updateBildIdBadges() {
+            selectedBildIdBadges.innerHTML = '';
+            Array.from(selectedBildIds).sort((a,b)=>Number(a)-Number(b)).forEach(id => {
+                const badge = document.createElement('span');
+                badge.className = 'selected-badge';
+                badge.innerHTML = `ID: ${escapeHtml(id)} <span class="selected-badge-remove" data-id="${escapeHtml(id)}">×</span>`;
+                selectedBildIdBadges.appendChild(badge);
+            });
+            
+            const btnText = multiSelectBildIdBtn.querySelector('span:first-child');
+            if (btnText) {
+                btnText.textContent = selectedBildIds.size > 0 ? `${selectedBildIds.size} Bild-IDs ausgewählt` : 'Bild-IDs auswählen...';
+            }
+            
+            document.querySelectorAll('#selectedBildIdBadges .selected-badge-remove').forEach(el => {
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = el.getAttribute('data-id');
+                    selectedBildIds.delete(id);
+                    const checkbox = document.querySelector(`#bildIdOptions input[value="${id}"]`);
+                    if (checkbox) checkbox.checked = false;
+                    updateBildIdBadges();
+                    updateSelectAllBildIdsCheckbox();
+                    loadParametersForSelectedBildIds();
+                    
+                    if (selectedImageId == id) {
+                        selectedImageId = null;
+                        selectedImageData = null;
+                        document.querySelectorAll('.image-card').forEach(card => card.classList.remove('selected'));
+                    }
+                });
+            });
+        }
+
+        function updateSelectAllBildIdsCheckbox() {
+            const selectAll = document.getElementById('selectAllBildIds');
+            if (!selectAll) return;
+            const visibleOptions = Array.from(bildIdOptions.querySelectorAll('.multi-select-option:not(.select-all-option):not(.hidden) input'));
+            const allChecked = visibleOptions.length > 0 && visibleOptions.every(cb => cb.checked);
+            selectAll.checked = allChecked;
+        }
+
+        function populateBildIdMultiSelect() {
+            allBildIds = allImages.map(img => img.id).sort((a,b)=>a-b);
+            bildIdOptions.innerHTML = `
+                <div class="multi-select-option select-all-option">
+                    <input type="checkbox" id="selectAllBildIds">
+                    <label>Alle auswählen</label>
+                </div>
+            `;
+            allBildIds.forEach(id => {
+                const div = document.createElement('div');
+                div.className = 'multi-select-option';
+                div.innerHTML = `<input type="checkbox" value="${id}"><label>Bild ID: ${id}</label>`;
+                const cb = div.querySelector('input');
+                cb.addEventListener('change', (e) => {
+                    if (e.target.checked) selectedBildIds.add(String(id));
+                    else selectedBildIds.delete(String(id));
+                    updateBildIdBadges();
+                    updateSelectAllBildIdsCheckbox();
+                    loadParametersForSelectedBildIds();
+                    
+                    if (selectedImageId == id && !e.target.checked) {
+                        selectedImageId = null;
+                        selectedImageData = null;
+                        document.querySelectorAll('.image-card').forEach(card => card.classList.remove('selected'));
+                    }
+                });
+                bildIdOptions.appendChild(div);
+            });
+            
+            const selectAllCheckbox = document.getElementById('selectAllBildIds');
+            if (selectAllCheckbox) {
+                selectAllCheckbox.addEventListener('change', selectAllBildIds);
+            }
+            if (searchBildId) {
+                searchBildId.addEventListener('input', filterBildIdOptions);
+            }
+        }
+
+        function selectAllBildIds() {
+            const selectAll = document.getElementById('selectAllBildIds');
+            if (!selectAll) return;
+            const visibleOptions = bildIdOptions.querySelectorAll('.multi-select-option:not(.select-all-option):not(.hidden) input');
+            visibleOptions.forEach(cb => {
+                cb.checked = selectAll.checked;
+                const id = cb.value;
+                if (selectAll.checked) selectedBildIds.add(String(id));
+                else selectedBildIds.delete(String(id));
+            });
+            updateBildIdBadges();
+            loadParametersForSelectedBildIds();
+        }
+
+        function resetBildIdMultiSelect() {
+            selectedBildIds.clear();
+            const allCheckboxes = document.querySelectorAll('#bildIdOptions .multi-select-option:not(.select-all-option) input');
+            allCheckboxes.forEach(cb => cb.checked = false);
+            const selectAll = document.getElementById('selectAllBildIds');
+            if (selectAll) selectAll.checked = false;
+            updateBildIdBadges();
+            if (searchBildId) {
+                searchBildId.value = '';
+                filterBildIdOptions();
+            }
+            loadParametersForSelectedBildIds();
+        }
+
+        // ========== Bild laden und anzeigen ==========
+        async function loadImageFromFilecontent(imageId) {
+            if (imageBlobCache.has(imageId)) return imageBlobCache.get(imageId);
+            try {
+                const response = await fetch(`${FILECONTENT_URL}${imageId}`);
+                if (!response.ok) return null;
+                const blob = await response.blob();
+                imageBlobCache.set(imageId, blob);
+                return blob;
+            } catch (error) {
+                return null;
+            }
+        }
+
+        function updateFilterStatus() {
+            let list = [];
+            if (activeFilters.klass1 !== 'all') list.push(`KL1: ${activeFilters.klass1}`);
+            if (activeFilters.klass2 !== 'all') list.push(`KL2: ${activeFilters.klass2}`);
+            if (activeFilters.klass3.length > 0) list.push(`KL3: ${activeFilters.klass3.join(', ')}`);
+            if (activeFilters.mediaBuch !== 'all') list.push(`MediaBuch: ${activeFilters.mediaBuch}`);
+            if (activeFilters.bildIds.length > 0) list.push(`Bild-IDs: ${activeFilters.bildIds.join(', ')}`);
+            
+            if (list.length === 0) {
+                filterStatusSpan.innerHTML = '⚡ Keine Filter aktiv (Alle Bilder)';
+                filterStatusSpan.className = 'filter-status';
+            } else {
+                filterStatusSpan.innerHTML = `🎯 ${list.join(' · ')}`;
+                filterStatusSpan.className = 'filter-status active';
+            }
+        }
+
+        function setFilters() {
+            activeFilters.klass1 = filterSelect1.value;
+            activeFilters.klass2 = filterSelect2.value;
+            activeFilters.klass3 = Array.from(selectedKlass3Values);
+            activeFilters.mediaBuch = filterMediaBuch.value;
+            activeFilters.bildIds = Array.from(selectedBildIds);
+            updateFilterStatus();
+            
+            const btn = document.getElementById('filterBtn');
+            const original = btn.innerHTML;
+            btn.innerHTML = '✅ Filter gesetzt!';
+            setTimeout(() => btn.innerHTML = original, 1500);
+        }
+
+        async function loadImages() {
+            if (!allImages.length) {
+                alert('Keine Bilddaten geladen.');
+                return;
+            }
+            
+            galleryContainer.innerHTML = '<div class="loading-placeholder">🔄 Lade Bilder...</div>';
+            await new Promise(r => setTimeout(r, 200));
+            
+            filteredImages = allImages.filter(img => {
+                let v1 = img.KLASSIFIKATION_1 || '';
+                if (activeFilters.klass1 !== 'all' && v1 !== activeFilters.klass1) return false;
+                let v2 = img.KLASSIFIKATION_2 || '';
+                if (activeFilters.klass2 !== 'all' && v2 !== activeFilters.klass2) return false;
+                let v3 = img.KLASSIFIKATION_3 || '';
+                if (activeFilters.klass3.length > 0 && !activeFilters.klass3.includes(v3)) return false;
+                let mb = img.FK_MEDIA_BUCH_BUCH || '';
+                if (activeFilters.mediaBuch !== 'all' && mb !== activeFilters.mediaBuch) return false;
+                let bid = String(img.id);
+                if (activeFilters.bildIds.length > 0 && !activeFilters.bildIds.includes(bid)) return false;
+                return true;
+            });
+            
+            resultCountSpan.innerText = filteredImages.length;
+            currentPage = 1;
+            updatePagination();
+            loadCurrentPageImages();
+            
+            const loadButton = document.getElementById('loadBtn');
+            const original = loadButton.innerHTML;
+            loadButton.innerHTML = `✅ ${filteredImages.length} Bilder geladen!`;
+            setTimeout(() => loadButton.innerHTML = original, 1500);
+        }
+
+        async function renderGallery() {
+            if (currentPageImages.length === 0) {
+                galleryContainer.innerHTML = '<div class="loading-placeholder">🔍 Keine Bilder gefunden</div>';
+                return;
+            }
+            
+            let html = '';
+            for (let img of currentPageImages) {
+                const blob = await loadImageFromFilecontent(img.id);
+                let imgUrl = null;
+                if (blob && blob.type.startsWith('image/')) imgUrl = URL.createObjectURL(blob);
+                
+                html += `
+                    <div class="image-card ${selectedImageId == img.id ? 'selected' : ''}" data-id="${img.id}" onclick="onImageClick(${img.id})">
+                        <div class="preview-wrapper">
+                            ${imgUrl ? `<img src="${imgUrl}" loading="lazy">` : 
+                                `<div style="text-align:center; color:#999;"><i class="fas fa-image" style="font-size:2rem;"></i><br>ID: ${img.id}</div>`}
+                        </div>
+                        <div class="file-info-preview">
+                            <span class="file-id-badge">ID: ${img.id}</span>
+                            <div class="klassifikation-section">
+                                <div class="klass-item"><div class="klass-label">KL1</div><div class="klass-value">${escapeHtml(img.KLASSIFIKATION_1 || '—')}</div></div>
+                                <div class="klass-item"><div class="klass-label">KL2</div><div class="klass-value">${escapeHtml(img.KLASSIFIKATION_2 || '—')}</div></div>
+                                <div class="klass-item"><div class="klass-label">KL3</div><div class="klass-value">${escapeHtml(img.KLASSIFIKATION_3 || '—')}</div></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            galleryContainer.innerHTML = html;
+        }
+
+        function onImageClick(imageId) {
+            const imageData = allImages.find(img => img.id == imageId);
+            selectImage(imageId, imageData);
+        }
+
+        function resetAll() {
+            filterSelect1.value = 'all';
+            filterSelect2.value = 'all';
+            filterMediaBuch.value = 'all';
+            resetKlass3MultiSelect();
+            resetBildIdMultiSelect();
+            activeFilters = { klass1: 'all', klass2: 'all', klass3: [], mediaBuch: 'all', bildIds: [] };
+            selectedImageId = null;
+            selectedImageData = null;
+            updateFilterStatus();
+            if (allImages.length) {
+                filteredImages = [...allImages];
+                resultCountSpan.innerText = filteredImages.length;
+                currentPage = 1;
+                updatePagination();
+                loadCurrentPageImages();
+            }
+            loadParametersForSelectedBildIds();
+            const btn = document.getElementById('resetBtn');
+            const original = btn.innerHTML;
+            btn.innerHTML = '🔄 Zurückgesetzt!';
+            setTimeout(() => btn.innerHTML = original, 1500);
+        }
+
+        function populateDropdowns() {
+            const fill = (select, values) => {
+                let html = '<option value="all">📋 Alle</option>';
+                Array.from(values).sort().forEach(v => html += `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`);
+                select.innerHTML = html;
+            };
+            fill(filterSelect1, uniqueKlass1);
+            fill(filterSelect2, uniqueKlass2);
+            fill(filterMediaBuch, uniqueMediaBuch);
+            populateKlass3MultiSelect();
+            populateBildIdMultiSelect();
+        }
+
+        function collectUniqueCategories(images) {
+            uniqueKlass1.clear();
+            uniqueKlass2.clear();
+            uniqueKlass3.clear();
+            uniqueMediaBuch.clear();
+            
+            images.forEach(img => {
+                if (img.KLASSIFIKATION_1 && img.KLASSIFIKATION_1 !== '') uniqueKlass1.add(img.KLASSIFIKATION_1);
+                if (img.KLASSIFIKATION_2 && img.KLASSIFIKATION_2 !== '') uniqueKlass2.add(img.KLASSIFIKATION_2);
+                if (img.KLASSIFIKATION_3 && img.KLASSIFIKATION_3 !== '') uniqueKlass3.add(img.KLASSIFIKATION_3);
+                if (img.FK_MEDIA_BUCH_BUCH && img.FK_MEDIA_BUCH_BUCH !== '') uniqueMediaBuch.add(String(img.FK_MEDIA_BUCH_BUCH));
+            });
+        }
+
+        async function fetchBaseData() {
+            try {
+                const response = await fetch(BASEDATA_URL);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                let imagesArray = Array.isArray(data) ? data : (data.data || []);
+                allImages = imagesArray.map(item => ({
+                    id: item.PK_BILD_BILDER || item.id,
+                    KLASSIFIKATION_1: item.KLASSIFIKATION_1 || item.klassifikation_1 || '',
+                    KLASSIFIKATION_2: item.KLASSIFIKATION_2 || item.klassifikation_2 || '',
+                    KLASSIFIKATION_3: item.KLASSIFIKATION_3 || item.klassifikation_3 || '',
+                    FK_MEDIA_BUCH_BUCH: item.FK_MEDIA_BUCH_BUCH || item.fk_media_media_buch || ''
+                })).filter(img => img.id);
+                
+                collectUniqueCategories(allImages);
+                populateDropdowns();
+                filteredImages = [...allImages];
+                resultCountSpan.innerText = filteredImages.length;
+                currentPage = 1;
+                updatePagination();
+                loadCurrentPageImages();
+            } catch (err) {
+                console.error(err);
+                galleryContainer.innerHTML = `<div class="loading-placeholder">❌ Fehler: ${err.message}</div>`;
+            }
+        }
+
+        function bindEvents() {
+            filterBtn.addEventListener('click', setFilters);
+            loadBtn.addEventListener('click', loadImages);
+            resetBtn.addEventListener('click', resetAll);
+            selectCurrentImageBtn.addEventListener('click', () => {
+                if (selectedImageId) selectImage(selectedImageId, selectedImageData);
+                else alert('Bitte klicken Sie zuerst auf ein Bild in der Galerie!');
+            });
+            filterBySelectedBtn.addEventListener('click', filterBySelectedImage);
+            multiSelectKlass3Btn.addEventListener('click', toggleKlass3Dropdown);
+            multiSelectBildIdBtn.addEventListener('click', toggleBildIdDropdown);
+            document.addEventListener('click', closeKlass3Dropdown);
+            document.addEventListener('click', closeBildIdDropdown);
+        }
+        
+        window.goToPage = goToPage;
+        window.onImageClick = onImageClick;
+        
+        function init() {
+            bindEvents();
+            fetchBaseData();
+        }
+        
+        init();
+    })();
+</script>
+</body>
+</html>

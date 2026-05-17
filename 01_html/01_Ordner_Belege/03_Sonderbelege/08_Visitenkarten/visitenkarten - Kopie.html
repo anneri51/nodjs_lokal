@@ -1,0 +1,2140 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visitenkarten Browser</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+            padding: 20px;
+            gap: 20px;
+        }
+        
+        .sidebar {
+            width: 350px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .sidebar-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .content-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow: hidden;
+        }
+        
+        .image-container {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        .image-info {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 70vh;
+        }
+        
+        .card-preview {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            text-align: center;
+            color: white;
+            flex-shrink: 0;
+            max-height: 250px;
+            overflow: hidden;
+        }
+        
+        .card-preview img {
+            max-width: 300px;
+            max-height: 200px;
+            border: 2px solid white;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .card-preview .no-image {
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        
+        h2 {
+            color: #3498db;
+            margin: 0;
+            padding: 15px 20px;
+            background: linear-gradient(90deg, #3498db, #2c3e50);
+            color: white;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* NEW BUTTON-BASED NAVIGATION STYLES */
+        .level-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .level-button {
+            padding: 10px 15px;
+            background: white;
+            border: 2px solid #3498db;
+            border-radius: 6px;
+            color: #3498db;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            min-width: 120px;
+            justify-content: center;
+        }
+        
+        .level-button:hover {
+            background: #3498db;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+        }
+        
+        .level-button.active {
+            background: #3498db;
+            color: white;
+            border-color: #2980b9;
+        }
+        
+        .level-button .count {
+            background: #e74c3c;
+            color: white;
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 0.8em;
+            margin-left: auto;
+        }
+        
+        .tree-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .tree-level {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            background-color: #fafafa;
+            margin-bottom: 10px;
+        }
+        
+        .tree-level:last-child {
+            margin-bottom: 0;
+        }
+        
+        .tree-level-header {
+            padding: 10px 15px;
+            background-color: #f0f0f0;
+            border-bottom: 1px solid #e0e0e0;
+            font-weight: bold;
+            color: #2c3e50;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .tree-level-content {
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .tree-item {
+            margin: 6px 0;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        
+        .tree-item:hover {
+            background-color: #eef5ff;
+        }
+        
+        .tree-item.selected {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .tree-item.level-2 {
+            font-weight: normal;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border-left: 3px solid #95a5a6;
+        }
+        
+        .tree-item.level-3 {
+            margin-left: 10px;
+            font-size: 14px;
+            color: #7f8c8d;
+            padding: 6px 12px;
+            border-radius: 4px;
+            border-left: 2px solid #bdc3c7;
+        }
+        
+        .tree-item.level-3:hover {
+            background-color: #eef5ff;
+            color: #2c3e50;
+        }
+        
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            font-size: 18px;
+            color: #7f8c8d;
+            gap: 10px;
+        }
+        
+        .error {
+            color: #e74c3c;
+            padding: 10px;
+            background-color: #fadbd8;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        
+        .no-image {
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 18px;
+        }
+        
+        .image-details {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+            height: 100%;
+        }
+        
+        .business-card {
+            background: white;
+            border-radius: 8px;
+            padding: 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            height: 100%;
+            overflow-y: auto;
+        }
+        
+        .card-section {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .card-section:last-child {
+            border-bottom: none;
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .card-header i {
+            color: #3498db;
+        }
+        
+        .person-info {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        
+        .person-main {
+            flex: 1;
+        }
+        
+        .person-name {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .person-title {
+            color: #7f8c8d;
+            font-size: 1.1em;
+            margin-bottom: 8px;
+        }
+        
+        .person-position {
+            color: #3498db;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .person-profession {
+            color: #555;
+            font-style: italic;
+        }
+        
+        .company-info {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+        
+        .company-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .logo-placeholder {
+            width: 80px;
+            height: 80px;
+            background: #f8f9fa;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #95a5a6;
+        }
+        
+        .company-details {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .company-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .company-type {
+            color: #7f8c8d;
+        }
+        
+        .industries {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 5px;
+        }
+        
+        .industry-tag {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            border: 1px solid #bbdefb;
+        }
+        
+        .contact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+        
+        .contact-item i {
+            color: #3498db;
+            width: 20px;
+        }
+        
+        .address-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .address-item {
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .address-type {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .additional-text {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            border-radius: 6px;
+            font-style: italic;
+            color: #555;
+        }
+        
+        .search-box {
+            margin-bottom: 20px;
+        }
+        
+        .search-box input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        .file-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .file-info-item {
+            margin-bottom: 5px;
+        }
+        
+        .file-info-label {
+            font-weight: bold;
+            color: #555;
+            display: block;
+            margin-bottom: 3px;
+        }
+        
+        .file-info-value {
+            padding: 5px;
+            background-color: #f1f5f9;
+            border-radius: 4px;
+            word-break: break-word;
+        }
+
+        .bold-green {
+            font-weight: bold;
+            color: #27ae60;
+        }
+
+        .image-actions {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-top: 1px solid #eee;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db, #2c3e50);
+            color: white;
+            text-decoration: none;
+            display: inline-block;
+            padding: 10px 20px;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #2980b9, #1a252f);
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: linear-gradient(135deg, #c0392b, #a52714);
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .spinner {
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid #3498db;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 6px;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .success {
+            background-color: #e8f5e9;
+            color: #388e3c;
+        }
+        
+        .group-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .group-count {
+            background: #3498db;
+            color: white;
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 0.8em;
+            font-weight: normal;
+        }
+        
+        /* Input Belege Table Styles */
+        .input-belege-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .input-belege-header {
+            padding: 15px 20px;
+            background: linear-gradient(90deg, #e74c3c, #c0392b);
+            color: white;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .input-belege-table-container {
+            min-height:1000px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        
+        .input-belege-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        
+        .input-belege-table th {
+            background-color: #f8f9fa;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #2c3e50;
+            border-bottom: 2px solid #e9ecef;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .input-belege-table td {
+            padding: 10px 15px;
+            border-bottom: 1px solid #e9ecef;
+            vertical-align: top;
+        }
+        
+        .input-belege-table tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .input-belege-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .no-belege {
+            padding: 40px 20px;
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        
+        .belege-count {
+            background: white;
+            color: #e74c3c;
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+        
+        /* Status tags for belege */
+        .status-tag {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+        
+        .status-completed {
+            background-color: #e8f5e9;
+            color: #388e3c;
+        }
+        
+        .status-in-progress {
+            background-color: #fff3e0;
+            color: #ff9800;
+        }
+        
+        .status-open {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .status-cancelled {
+            background-color: #ffebee;
+            color: #e53935;
+        }
+        
+        .status-unknown {
+            background-color: #f5f5f5;
+            color: #757575;
+        }
+        
+        /* Detail panels */
+        .detail-panel {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .detail-header {
+            padding: 15px 20px;
+            background: linear-gradient(90deg, #2ecc71, #27ae60);
+            color: white;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        
+        .detail-content {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .detail-item {
+            margin-bottom: 10px;
+        }
+        
+        .detail-label {
+            font-weight: bold;
+            color: #555;
+            display: block;
+            margin-bottom: 3px;
+        }
+        
+        .detail-value {
+            padding: 8px;
+            background-color: #f1f5f9;
+            border-radius: 4px;
+            word-break: break-word;
+        }
+        
+        .toggle-detail {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        /* Tabs for different data views */
+        .data-tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            background: #f8f9fa;
+            flex-shrink: 0;
+        }
+        
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        
+        .tab.active {
+            border-bottom: 3px solid #3498db;
+            color: #3498db;
+            background: white;
+        }
+        
+        .tab-content {
+            display: none;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Person and company details */
+        .person-details, .company-details-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .detail-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .detail-card h4 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .detail-card h4 i {
+            color: #3498db;
+        }
+        
+        /* Scrollable content areas */
+        .scrollable-content {
+            overflow-y: auto;
+            flex: 1;
+            padding: 0;
+        }
+        
+        .tab-content-inner {
+            height: 100%;
+            overflow-y: auto;
+        }
+        
+        /* NEW STYLES FOR TALLER, SCROLLABLE TABS */
+        .tab-content-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .tab-content {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .tab-content.active {
+            display: flex;
+        }
+        
+        /* Ensure all tab content areas are scrollable */
+        #business-card-tab .scrollable-content,
+        #belege-tab .input-belege-container,
+        #person-tab .detail-panel,
+        #company-tab .detail-panel {
+            height: 100%;
+            overflow-y: auto;
+        }
+        
+        /* Make the belege table container scrollable */
+        .input-belege-table-container {
+            flex: 1;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-content">
+                <h1>Visitenkarten Browser</h1>
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Suche nach Visitenkarten...">
+                </div>
+                
+                <!-- NEW BUTTON-BASED NAVIGATION -->
+                <div class="level-buttons" id="levelButtons">
+                    <!-- Buttons will be populated here -->
+                </div>
+                
+                <!-- SCROLLABLE TREE CONTAINER -->
+                <div class="tree-container" id="treeContainer">
+                    <div class="tree-level">
+                        <div class="tree-level-header">
+                            <span>Klassifikation Level 2</span>
+                            <span class="group-count" id="level2Count">0</span>
+                        </div>
+                        <div class="tree-level-content" id="level2Content">
+                            <div class="no-image">Wählen Sie eine Kategorie aus den Buttons oben</div>
+                        </div>
+                    </div>
+                    
+                    <div class="tree-level">
+                        <div class="tree-level-header">
+                            <span>Visitenkarten</span>
+                            <span class="group-count" id="level3Count">0</span>
+                        </div>
+                        <div class="tree-level-content" id="level3Content">
+                            <div class="no-image">Wählen Sie eine Kategorie aus Level 2</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="content-area" id="contentArea">
+
+            
+            <div class="image-info">
+                <!-- Bild-Vorschau oberhalb der Visitenkarten-Informationen -->
+                <div class="card-preview" id="cardPreview">
+                    <div class="no-image">
+                        <i class="fas fa-id-card" style="font-size: 48px; margin-bottom: 10px;"></i>
+                        <div>Wählen Sie eine Visitenkarte aus</div>
+                    </div>
+                </div>
+                
+                <!-- Tabs for different data views -->
+                <div class="data-tabs" id="dataTabs">
+                    <div class="tab active" data-tab="business-card">Visitenkarte</div>
+                    <div class="tab" data-tab="belege">Belege</div>
+                    <div class="tab" data-tab="person">Person</div>
+                    <div class="tab" data-tab="company">Unternehmen</div>
+                </div>
+                
+                <!-- Tab Contents -->
+                <div class="tab-content-container">
+                    <!-- Business Card Tab -->
+                    <div id="business-card-tab" class="tab-content active">
+                        <div class="scrollable-content">
+                            <h2><i class="fas fa-info-circle"></i> Visitenkarten Informationen</h2>
+                            <div id="imageDetails" class="image-details">
+                                <div class="no-image">Keine Visitenkarte ausgewählt</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Belege Tab -->
+                    <div id="belege-tab" class="tab-content">
+                        <div class="input-belege-container" id="inputBelegeContainer">
+                            <div class="input-belege-header">
+                                <i class="fas fa-file-invoice"></i>
+                                <span>Zugeordnete Input-Belege</span>
+                                <span class="belege-count" id="belegeCount">0</span>
+                            </div>
+                            <div class="input-belege-table-container">
+                                <table class="input-belege-table" id="inputBelegeTable">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Belegnummer</th>
+                                            <th>Datum</th>
+                                            <th>Betrag</th>
+                                            <th>Status</th>
+                                            <th>Zuordnungsdatum</th>
+                                            <th>Aktionen</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="inputBelegeTableBody">
+                                        <!-- Data will be populated here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Person Tab -->
+                    <div id="person-tab" class="tab-content">
+                        <!-- Person Details Panel -->
+                        <div class="detail-panel" id="personDetailPanel">
+                            <div class="detail-header">
+                                <div>
+                                    <i class="fas fa-user"></i>
+                                    <span>Persönliche Daten</span>
+                                </div>
+                            </div>
+                            <div class="detail-content" id="personDetailContent">
+                                <div class="no-image">Keine Personendaten verfügbar</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Company Tab -->
+                    <div id="company-tab" class="tab-content">
+                        <!-- Company Details Panel -->
+                        <div class="detail-panel" id="companyDetailPanel">
+                            <div class="detail-header">
+                                <div>
+                                    <i class="fas fa-building"></i>
+                                    <span>Unternehmensdaten</span>
+                                </div>
+                            </div>
+                            <div class="detail-content" id="companyDetailContent">
+                                <div class="no-image">Keine Unternehmensdaten verfügbar</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bild info Tab -->
+<div id="bildinfo-tab" class="tab-content">
+                                <div class="image-container">
+                <!-- File info section -->
+                <div class="file-info">
+                    <div class="file-info-grid" id="file-meta-content">
+                        <div class="file-info-item">
+                            <span class="file-info-label">Datei-ID</span>
+                            <div class="file-info-value">-</div>
+                        </div>
+                        <div class="file-info-item">
+                            <span class="file-info-label">Dateityp</span>
+                            <div class="file-info-value">-</div>
+                        </div>
+                        <div class="file-info-item">
+                            <span class="file-info-label">Dateigröße</span>
+                            <div class="file-info-value">-</div>
+                        </div>
+                        <div class="file-info-item">
+                            <span class="file-info-label">Filename</span>
+                            <div class="file-info-value">-</div>
+                        </div>
+                        <div class="file-info-item">
+                            <span class="file-info-label">Klassifikation</span>
+                            <div class="file-info-value">-</div>
+                        </div>
+                        <div class="file-info-item">
+                            <span class="file-info-label">Ladezeit</span>
+                            <div class="file-info-value">-</div>
+                        </div>
+                        <div class="file-info-item">
+                            <span class="file-info-label">Datum Zuord OK</span>
+                            <div class="file-info-value bold-green">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="image-actions">
+                    <button id="delete-image-btn" class="btn-danger" onclick="deleteImage()" disabled>
+                        <i class="fas fa-trash-alt"></i> Visitenkarte löschen
+                    </button>
+                </div>
+            </div>
+                </div>
+                
+                <div id="status" class="status" style="display: none; margin: 20px;"></div>
+            </div>
+</div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const levelButtons = document.getElementById('levelButtons');
+        const level2Content = document.getElementById('level2Content');
+        const level3Content = document.getElementById('level3Content');
+        const level2Count = document.getElementById('level2Count');
+        const level3Count = document.getElementById('level3Count');
+        const fileMetaContent = document.getElementById('file-meta-content');
+        const imageDetails = document.getElementById('imageDetails');
+        const cardPreview = document.getElementById('cardPreview');
+        const searchInput = document.getElementById('searchInput');
+        const deleteImageBtn = document.getElementById('delete-image-btn');
+        const statusDiv = document.getElementById('status');
+        const inputBelegeContainer = document.getElementById('inputBelegeContainer');
+        const inputBelegeTableBody = document.getElementById('inputBelegeTableBody');
+        const belegeCount = document.getElementById('belegeCount');
+        const personDetailContent = document.getElementById('personDetailContent');
+        const companyDetailContent = document.getElementById('companyDetailContent');
+        const dataTabs = document.getElementById('dataTabs');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        // Global variables
+        let allImages = [];
+        let filteredImages = [];
+        let currentFileId = '';
+        let currentFileType = '';
+        let currentImageUrl = '';
+        let currentBelegeData = [];
+        let currentPersonData = null;
+        let currentCompanyData = null;
+        let selectedLevel1 = null;
+        let selectedLevel2 = null;
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            loadImageData();
+            
+            // Add event listener for search
+            searchInput.addEventListener('input', function() {
+                filterImages(this.value);
+            });
+            
+            // Add event listeners for tabs
+            dataTabs.addEventListener('click', function(e) {
+                if (e.target.classList.contains('tab')) {
+                    const tabId = e.target.getAttribute('data-tab');
+                    switchTab(tabId);
+                }
+            });
+        });
+
+        // Switch between tabs
+        function switchTab(tabId) {
+            // Update active tab
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`.tab[data-tab="${tabId}"]`).classList.add('active');
+            
+            // Update active tab content
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${tabId}-tab`).classList.add('active');
+        }
+
+        // Load image data from the web service
+        async function loadImageData() {
+            try {
+                levelButtons.innerHTML = '<div class="loading"><div class="spinner"></div> Lade Visitenkarten...</div>';
+                
+                const response = await fetch('http://localhost:5000/bild/basisdaten');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Filter for "Visitenkarte" classification
+                allImages = data.filter(item => item.KLASSIFIKATION_1 === 'Visitenkarten' || item.KLASSIFIKATION_1 === 'Visitenkarte' || item.KLASSIFIKATION_1 === 'Visitenkarte - Symbole');
+                
+                // Store filtered images for search functionality
+                filteredImages = [...allImages];
+                
+                renderClassificationTree();
+                
+            } catch (error) {
+                console.error('Error loading image data:', error);
+                levelButtons.innerHTML = `<div class="error">Fehler beim Laden der Visitenkarten: ${error.message}</div>`;
+            }
+        }
+
+        // Render the classification tree with button-based navigation
+        function renderClassificationTree() {
+            if (filteredImages.length === 0) {
+                levelButtons.innerHTML = '<div class="no-image">Keine Visitenkarten gefunden</div>';
+                level2Content.innerHTML = '<div class="no-image">Keine Visitenkarten gefunden</div>';
+                level2Count.textContent = '0';
+                level3Content.innerHTML = '<div class="no-image">Keine Visitenkarten gefunden</div>';
+                level3Count.textContent = '0';
+                return;
+            }
+            
+            // Group by KLASSIFIKATION_1 and KLASSIFIKATION_2
+            const groupedData = {};
+            
+            filteredImages.forEach(image => {
+                const klass1 = image.KLASSIFIKATION_1 || 'Unbekannt';
+                const klass2 = image.KLASSIFIKATION_2 || 'Unbekannt';
+                
+                if (!groupedData[klass1]) {
+                    groupedData[klass1] = {};
+                }
+                
+                if (!groupedData[klass1][klass2]) {
+                    groupedData[klass1][klass2] = [];
+                }
+                
+                groupedData[klass1][klass2].push(image);
+            });
+            
+            // Build Level 1 Buttons (KLASSIFIKATION_1)
+            let buttonsHTML = '';
+            const klass1Keys = Object.keys(groupedData);
+            
+            klass1Keys.forEach(klass1 => {
+                const klass1Count = Object.values(groupedData[klass1]).reduce((sum, arr) => sum + arr.length, 0);
+                
+                buttonsHTML += `
+                    <button class="level-button ${selectedLevel1 === klass1 ? 'active' : ''}" 
+                            onclick="selectLevel1('${klass1}')">
+                        <i class="fas fa-folder"></i>
+                        <span>${klass1}</span>
+                        <span class="count">${klass1Count}</span>
+                    </button>
+                `;
+            });
+            
+            levelButtons.innerHTML = buttonsHTML;
+            
+            // Build Level 2 (KLASSIFIKATION_2) based on selected Level 1
+            if (selectedLevel1) {
+                let level2HTML = '';
+                const klass2Keys = Object.keys(groupedData[selectedLevel1] || {});
+                
+                klass2Keys.forEach(klass2 => {
+                    const klass2Count = groupedData[selectedLevel1][klass2].length;
+                    
+                    level2HTML += `
+                        <div class="tree-item level-2 ${selectedLevel2 === klass2 ? 'selected' : ''}" 
+                             data-klass2="${klass2}" onclick="selectLevel2('${klass2}')">
+                            <div class="group-header">
+                                <span>${klass2}</span>
+                                <span class="group-count">${klass2Count}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                level2Content.innerHTML = level2HTML;
+                level2Count.textContent = klass2Keys.length;
+                
+                // Build Level 3 (Images) based on selected Level 2
+                if (selectedLevel2) {
+                    let level3HTML = '';
+                    const images = groupedData[selectedLevel1][selectedLevel2] || [];
+                    
+                    images.forEach(image => {
+                        level3HTML += `
+                            <div class="tree-item level-3" data-id="${image.PK_BILD_BILDER}" 
+                                 onclick="loadImage(${image.PK_BILD_BILDER})">
+                                ${image.FILENAME} (${image.PK_BILD_BILDER})
+                            </div>
+                        `;
+                    });
+                    
+                    level3Content.innerHTML = level3HTML;
+                    level3Count.textContent = images.length;
+                } else {
+                    level3Content.innerHTML = '<div class="no-image">Wählen Sie eine Kategorie aus Level 2</div>';
+                    level3Count.textContent = '0';
+                }
+            } else {
+                level2Content.innerHTML = '<div class="no-image">Wählen Sie eine Kategorie aus den Buttons oben</div>';
+                level2Count.textContent = '0';
+                level3Content.innerHTML = '<div class="no-image">Wählen Sie eine Kategorie aus Level 2</div>';
+                level3Count.textContent = '0';
+            }
+        }
+
+        // Select Level 1 category
+        function selectLevel1(klass1) {
+            selectedLevel1 = klass1;
+            selectedLevel2 = null;
+            renderClassificationTree();
+            
+            // Clear any selected image
+            clearImageSelection();
+        }
+
+        // Select Level 2 category
+        function selectLevel2(klass2) {
+            selectedLevel2 = klass2;
+            renderClassificationTree();
+            
+            // Clear any selected image
+            clearImageSelection();
+        }
+
+        // Clear image selection
+        function clearImageSelection() {
+            currentFileId = '';
+            currentFileType = '';
+            if (currentImageUrl) {
+                URL.revokeObjectURL(currentImageUrl);
+                currentImageUrl = null;
+            }
+            
+            fileMetaContent.innerHTML = `
+                <div class="file-info-item">
+                    <span class="file-info-label">Datei-ID</span>
+                    <div class="file-info-value">-</div>
+                </div>
+                <div class="file-info-item">
+                    <span class="file-info-label">Dateityp</span>
+                    <div class="file-info-value">-</div>
+                </div>
+                <div class="file-info-item">
+                    <span class="file-info-label">Dateigröße</span>
+                    <div class="file-info-value">-</div>
+                </div>
+                <div class="file-info-item">
+                    <span class="file-info-label">Filename</span>
+                    <div class="file-info-value">-</div>
+                </div>
+                <div class="file-info-item">
+                    <span class="file-info-label">Klassifikation</span>
+                    <div class="file-info-value">-</div>
+                </div>
+                <div class="file-info-item">
+                    <span class="file-info-label">Ladezeit</span>
+                    <div class="file-info-value">-</div>
+                </div>
+                <div class="file-info-item">
+                    <span class="file-info-label">Datum Zuord OK</span>
+                    <div class="file-info-value bold-green">-</div>
+                </div>
+            `;
+            imageDetails.innerHTML = '<div class="no-image">Keine Visitenkarte ausgewählt</div>';
+            cardPreview.innerHTML = `
+                <div class="no-image">
+                    <i class="fas fa-id-card" style="font-size: 48px; margin-bottom: 10px;"></i>
+                    <div>Wählen Sie eine Visitenkarte aus</div>
+                </div>
+            `;
+            deleteImageBtn.disabled = true;
+        }
+
+        // Load and display the selected image
+        async function loadImage(imageId) {
+            try {
+                statusDiv.style.display = 'block';
+                statusDiv.innerHTML = '<div class="loading"><div class="spinner"></div> Visitenkarte wird geladen...</div>';
+                deleteImageBtn.disabled = true;
+
+                const startTime = performance.now();
+
+                // Find the image data
+                const imageData = filteredImages.find(img => img.PK_BILD_BILDER == imageId);
+                
+                if (!imageData) {
+                    throw new Error('Visitenkarte nicht gefunden');
+                }
+
+                // Load the image file data from the API
+                const fileResponse = await fetch(`http://localhost:5000/bild/1/${imageId}`);
+                
+                if (!fileResponse.ok) {
+                    throw new Error(`Serverfehler: ${fileResponse.status}`);
+                }
+                
+                const image = await fileResponse.json();
+                
+                if (!image[0].FILECONTENT || !image[0].FILECONTENT.data) {
+                    throw new Error('Bilddaten nicht verfügbar');
+                }
+
+                // Convert byte array to blob
+                let byteArray = new Uint8Array(image[0].FILECONTENT.data);
+                
+                // Determine MIME type
+                const isPDF = image[0].FILENAME && image[0].FILENAME.toLowerCase().endsWith('.pdf');
+                const mimeType = image[0].MIMETYPE || (isPDF ? 'application/pdf' : 'image/jpeg');
+                
+                // Create blob with proper MIME type
+                const blob = new Blob([byteArray], { type: mimeType });
+                
+                currentFileType = mimeType;
+                currentFileId = imageId;
+                
+                // Create object URL and store it
+                currentImageUrl = URL.createObjectURL(blob);
+                const fileSize = formatFileSize(blob.size);
+                const loadTime = ((performance.now() - startTime)/1000).toFixed(2);
+
+                // Display the image in the preview
+                const fileExtension = getFileExtension(mimeType);
+                
+                // Preview display
+                cardPreview.innerHTML = `
+                    <img src="${currentImageUrl}" alt="Visitenkarten Vorschau" style="max-width: 300px; max-height: 200px;">
+                    <div style="text-align: center; margin-top: 10px;">
+                        <a href="${currentImageUrl}" target="_blank" download="visitenkarte-${imageId}.${fileExtension}" class="btn-primary" style="display: inline-block; text-decoration: none; padding: 10px 20px;">
+                            <i class="fas fa-download"></i> Visitenkarte herunterladen
+                        </a>
+                    </div>
+                `;
+
+                // Update file metadata
+                fileMetaContent.innerHTML = `
+                    <div class="file-info-item">
+                        <span class="file-info-label">Datei-ID</span>
+                        <div class="file-info-value">${imageData.PK_BILD_BILDER}</div>
+                    </div>
+                    <div class="file-info-item">
+                        <span class="file-info-label">Dateityp</span>
+                        <div class="file-info-value">${mimeType}</div>
+                    </div>
+                    <div class="file-info-item">
+                        <span class="file-info-label">Dateigröße</span>
+                        <div class="file-info-value">${fileSize}</div>
+                    </div>
+                    <div class="file-info-item">
+                        <span class="file-info-label">Filename</span>
+                        <div class="file-info-value">${imageData.FILENAME}</div>
+                    </div>
+                    <div class="file-info-item">
+                        <span class="file-info-label">Klassifikation</span>
+                        <div class="file-info-value">${imageData.KLASSIFIKATION_1} ${imageData.KLASSIFIKATION_2 || ''}</div>
+                    </div>
+                    <div class="file-info-item">
+                        <span class="file-info-label">Ladezeit</span>
+                        <div class="file-info-value">${loadTime} Sekunden</div>
+                    </div>
+                    <div class="file-info-item">
+                        <span class="file-info-label">Datum Zuord OK</span>
+                        <div class="file-info-value bold-green">${formatDate(imageData.DATUM_ZUORD_OK)}</div>
+                    </div>
+                `;
+
+                // Extract information from filename and create business card view
+                const businessCardInfo = extractBusinessCardInfo(imageData.FILENAME);
+                
+                // Update image details with business card layout
+                imageDetails.innerHTML = `
+                    <div class="business-card">
+                        <!-- Person Information -->
+                        <div class="card-section">
+                            <div class="card-header">
+                                <i class="fas fa-user"></i>
+                                <h3>Person</h3>
+                            </div>
+                            <div class="person-info">
+                                <div class="person-main">
+                                    <div class="person-name">${businessCardInfo.person.name}</div>
+                                    <div class="person-title">${businessCardInfo.person.title}</div>
+                                    <div class="person-position">${businessCardInfo.person.position}</div>
+                                    <div class="person-profession">${businessCardInfo.person.profession}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Company Information -->
+                        <div class="card-section">
+                            <div class="card-header">
+                                <i class="fas fa-building"></i>
+                                <h3>Unternehmen</h3>
+                            </div>
+                            <div class="company-info">
+                                <div class="company-logo">
+                                    <div class="logo-placeholder">
+                                        <i class="fas fa-image"></i>
+                                    </div>
+                                </div>
+                                <div class="company-details">
+                                    <div class="company-name">${businessCardInfo.company.name}</div>
+                                    <div class="company-type">${businessCardInfo.company.type}</div>
+                                    <div class="industries">
+                                        ${businessCardInfo.company.industries.map(industry => 
+                                            `<span class="industry-tag">${industry}</span>`
+                                        ).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Contact Information -->
+                        <div class="card-section">
+                            <div class="card-header">
+                                <i class="fas fa-address-book"></i>
+                                <h3>Kontaktdaten</h3>
+                            </div>
+                            <div class="contact-grid">
+                                ${businessCardInfo.contacts.email ? `
+                                    <div class="contact-item">
+                                        <i class="fas fa-envelope"></i>
+                                        <span>${businessCardInfo.contacts.email}</span>
+                                    </div>
+                                ` : ''}
+                                ${businessCardInfo.contacts.phone ? `
+                                    <div class="contact-item">
+                                        <i class="fas fa-phone"></i>
+                                        <span>${businessCardInfo.contacts.phone}</span>
+                                    </div>
+                                ` : ''}
+                                ${businessCardInfo.contacts.mobile ? `
+                                    <div class="contact-item">
+                                        <i class="fas fa-mobile-alt"></i>
+                                        <span>${businessCardInfo.contacts.mobile}</span>
+                                    </div>
+                                ` : ''}
+                                ${businessCardInfo.contacts.website ? `
+                                    <div class="contact-item">
+                                        <i class="fas fa-globe"></i>
+                                        <span>${businessCardInfo.contacts.website}</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                        
+                        <!-- Address Information -->
+                        <div class="card-section">
+                            <div class="card-header">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <h3>Adresse(n)</h3>
+                            </div>
+                            <div class="address-grid">
+                                ${businessCardInfo.addresses.map(address => `
+                                    <div class="address-item">
+                                        <div class="address-type">${address.type}</div>
+                                        <div>${address.street}</div>
+                                        <div>${address.city}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        
+                        <!-- Additional Text -->
+                        ${businessCardInfo.additionalText ? `
+                            <div class="card-section">
+                                <div class="card-header">
+                                    <i class="fas fa-sticky-note"></i>
+                                    <h3>Zusatzinformationen</h3>
+                                </div>
+                                <div class="additional-text">
+                                    ${businessCardInfo.additionalText}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                // Load additional data
+                await loadInputBelege(imageId);
+                await loadPersonData(imageId);
+                await loadCompanyData(imageId);
+
+                // Enable delete button
+                deleteImageBtn.disabled = false;
+                
+                statusDiv.innerHTML = `<div class="success"><i class="fas fa-check-circle"></i> Visitenkarte erfolgreich geladen!</div>`;
+                
+            } catch (error) {
+                console.error('Error loading image:', error);
+                statusDiv.innerHTML = `<div class="error">Fehler beim Laden der Visitenkarte: ${error.message}</div>`;
+                imageDetails.innerHTML = `<div class="error">Fehler beim Laden der Visitenkarte: ${error.message}</div>`;
+                cardPreview.innerHTML = `
+                    <div class="no-image">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 10px;"></i>
+                        <div>Fehler beim Laden</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Load input belege data
+        async function loadInputBelege(pk_bild) {
+            try {
+                // Call the web service to get input belege data
+                const response = await fetch(`http://localhost:5000/beleg/bild/1/?pk_bild=${pk_bild}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                // Extract data from response
+                const belegeData = result.data || result; // Handle both response formats
+                currentBelegeData = belegeData;
+                
+                // Clear previous data
+                inputBelegeTableBody.innerHTML = '';
+                
+                if (belegeData.length === 0) {
+                    inputBelegeTableBody.innerHTML = `
+                        <tr>
+                            <td colspan="7" class="no-belege">
+                                <i class="fas fa-info-circle" style="margin-right: 8px;"></i>
+                                Keine zugeordneten Input-Belege gefunden
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    // Populate the table with data
+                    belegeData.forEach((beleg, index) => {
+                        const row = document.createElement('tr');
+                        
+                        // Format the data for display
+                        const belegId = beleg.FK_INP_BELEGE_ALL || beleg.PK_INP_BELEGE_ALL || 'N/A';
+                        const belegNummer = beleg.BELEGNUMMER || beleg.DOKUMENT_NUMMER || 'N/A';
+                        const belegDatum = formatDate(beleg.BELEGDATUM || beleg.ERSTELLDATUM) || 'N/A';
+                        const betrag = beleg.BETRAG ? `${parseFloat(beleg.BETRAG).toFixed(2)} €` : 'N/A';
+                        const status = beleg.STATUS || beleg.BELEG_STATUS || 'Unbekannt';
+                        const zuordnungsdatum = formatDate(beleg.ZUORDNUNGSDATUM || beleg.ERFASST_AM) || 'N/A';
+                        
+                        row.innerHTML = `
+                            <td>${belegId}</td>
+                            <td>${belegNummer}</td>
+<td>${beleg.BEZEICHNUNG}</td>
+                            <td>${belegDatum}</td>
+                            <td>${betrag}</td>
+                            <td><span class="status-tag ${getStatusClass(status)}">${status}</span></td>
+                            <td>${zuordnungsdatum}</td>
+                            <td>
+                                <button class="btn-primary" onclick="showBelegDetails(${index})" style="padding: 5px 10px; font-size: 12px;">
+                                    <i class="fas fa-eye"></i> Details
+                                </button>
+                            </td>
+                        `;
+                        
+                        inputBelegeTableBody.appendChild(row);
+                    });
+                }
+                
+                // Update the count and show the container
+                belegeCount.textContent = belegeData.length;
+                inputBelegeContainer.style.display = 'flex';
+                
+            } catch (error) {
+                console.error('Error loading input belege:', error);
+                inputBelegeTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="error">
+                            <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>
+                            Fehler beim Laden der Input-Belege: ${error.message}
+                        </td>
+                    </tr>
+                `;
+                inputBelegeContainer.style.display = 'flex';
+            }
+        }
+
+        // Show beleg details
+        function showBelegDetails(index) {
+            const beleg = currentBelegeData[index];
+            
+            // Create a modal or expand the table row to show details
+            alert(`Belegdetails:\n\nID: ${beleg.FK_INP_BELEGE_ALL || beleg.PK_INP_BELEGE_ALL || 'N/A'}\nBelegnummer: ${beleg.BELEGNUMMER || beleg.DOKUMENT_NUMMER || 'N/A'}\nDatum: ${formatDate(beleg.BELEGDATUM || beleg.ERSTELLDATUM) || 'N/A'}\nBetrag: ${beleg.BRUTTO_BETRAG ? `${parseFloat(beleg.BRUTTO_BETRAG).toFixed(2)} €` : 'N/A'}\nStatus: ${beleg.STATUS || beleg.BELEG_STATUS || 'Unbekannt'}\nOrganisationseinheit: ${beleg.ORG_UNIT_NAME || 'N/A'}\nPerson: ${beleg.PERSON || 'N/A'}\nStandort: ${beleg.VLOC_LOCATION || 'N/A'} ${beleg.STRASSE || 'N/A'} ${beleg.HSNR || 'N/A'}`);
+        }
+
+        // Load person data from beleg data
+        async function loadPersonData(pk_bild) {
+            try {
+                // Extract person data from belege data
+                const personFromBelege = currentBelegeData.length > 0 ? currentBelegeData[0].PERSON : null;
+                
+                if (personFromBelege) {
+                    // Try to get additional person data from a dedicated API if available
+                    try {
+                        const personResponse = await fetch(`http://localhost:5000/person/bild/${pk_bild}`);
+                        if (personResponse.ok) {
+                            const personData = await personResponse.json();
+                            currentPersonData = personData;
+                        } else {
+                            // Fallback to data from belege
+                            currentPersonData = {
+                                name: personFromBelege,
+                                title: extractTitleFromBelege(currentBelegeData),
+                                position: extractPositionFromBelege(currentBelegeData),
+                                email: extractEmailFromBelege(currentBelegeData),
+                                phone: extractPhoneFromBelege(currentBelegeData),
+                                department: extractDepartmentFromBelege(currentBelegeData)
+                            };
+                        }
+                    } catch (error) {
+                        console.warn('Could not load person data from API, using belege data:', error);
+                        currentPersonData = {
+                            name: personFromBelege,
+                            title: extractTitleFromBelege(currentBelegeData),
+                            position: extractPositionFromBelege(currentBelegeData),
+                            email: extractEmailFromBelege(currentBelegeData),
+                            phone: extractPhoneFromBelege(currentBelegeData),
+                            department: extractDepartmentFromBelege(currentBelegeData)
+                        };
+                    }
+                    
+                    personDetailContent.innerHTML = `
+                        <div class="person-details">
+                            <div class="detail-card">
+                                <h4><i class="fas fa-id-card"></i> Persönliche Daten</h4>
+                                <div class="detail-item">
+                                    <span class="detail-label">Name</span>
+                                    <div class="detail-value">${currentPersonData.name || 'N/A'}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Titel</span>
+                                    <div class="detail-value">${currentPersonData.title || 'N/A'}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Position</span>
+                                    <div class="detail-value">${currentPersonData.position || 'N/A'}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Abteilung</span>
+                                    <div class="detail-value">${currentPersonData.department || 'N/A'}</div>
+                                </div>
+                            </div>
+                            
+                            <div class="detail-card">
+                                <h4><i class="fas fa-address-book"></i> Kontaktdaten</h4>
+                                <div class="detail-item">
+                                    <span class="detail-label">E-Mail</span>
+                                    <div class="detail-value">${currentPersonData.email || 'N/A'}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Telefon</span>
+                                    <div class="detail-value">${currentPersonData.phone || 'N/A'}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Mobil</span>
+                                    <div class="detail-value">${currentPersonData.mobile || 'N/A'}</div>
+                                </div>
+                            </div>
+                            
+                            ${currentPersonData.notes ? `
+                            <div class="detail-card">
+                                <h4><i class="fas fa-sticky-note"></i> Notizen</h4>
+                                <div class="detail-item">
+                                    <div class="detail-value">${currentPersonData.notes}</div>
+                                </div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    `;
+                } else {
+                    personDetailContent.innerHTML = `<div class="no-image">Keine Personendaten in Belegdaten gefunden</div>`;
+                }
+                
+            } catch (error) {
+                console.error('Error loading person data:', error);
+                personDetailContent.innerHTML = `<div class="error">Fehler beim Laden der Personendaten: ${error.message}</div>`;
+            }
+        }
+
+        // Load company data from beleg data
+        async function loadCompanyData(pk_bild) {
+            try {
+                // Extract company data from belege data
+                const orgUnitFromBelege = currentBelegeData.length > 0 ? currentBelegeData[0].ORG_UNIT_NAME : null;
+                const locationFromBelege = currentBelegeData.length > 0 ? currentBelegeData[0].VLOC_LOCATION : null;
+                
+                if (orgUnitFromBelege) {
+                    // Parse company name from org unit
+                    const companyName = orgUnitFromBelege.split(' - ')[0] || orgUnitFromBelege;
+                    
+                    // Try to get additional company data from a dedicated API if available
+                    try {
+                        const companyResponse = await fetch(`http://localhost:5000/company/bild/${pk_bild}`);
+                        if (companyResponse.ok) {
+                            const companyData = await companyResponse.json();
+                            currentCompanyData = companyData;
+                        } else {
+                            // Fallback to data from belege
+                            currentCompanyData = {
+                                name: companyName,
+                                orgUnits: extractOrgUnitsFromBelege(currentBelegeData),
+                                locations: extractLocationsFromBelege(currentBelegeData),
+                                address: {
+                                    city: locationFromBelege || 'N/A'
+                                }
+                            };
+                        }
+                    } catch (error) {
+                        console.warn('Could not load company data from API, using belege data:', error);
+                        currentCompanyData = {
+                            name: companyName,
+                            orgUnits: extractOrgUnitsFromBelege(currentBelegeData),
+                            locations: extractLocationsFromBelege(currentBelegeData),
+                            address: {
+                                city: locationFromBelege || 'N/A'
+                            }
+                        };
+                    }
+                    
+                    companyDetailContent.innerHTML = `
+                        <div class="company-details-panel">
+                            <div class="detail-card">
+                                <h4><i class="fas fa-building"></i> Unternehmensinformationen</h4>
+                                <div class="detail-item">
+                                    <span class="detail-label">Name</span>
+                                    <div class="detail-value">${currentCompanyData.name || 'N/A'}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Rechtsform</span>
+                                    <div class="detail-value">${currentCompanyData.type || 'N/A'}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Gründungsdatum</span>
+                                    <div class="detail-value">${formatDate(currentCompanyData.founded) || 'N/A'}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Mitarbeiter</span>
+                                    <div class="detail-value">${currentCompanyData.employees || 'N/A'}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Umsatz</span>
+                                    <div class="detail-value">${currentCompanyData.revenue || 'N/A'}</div>
+                                </div>
+                            </div>
+                            
+                            ${currentCompanyData.industries && currentCompanyData.industries.length > 0 ? `
+                            <div class="detail-card">
+                                <h4><i class="fas fa-industry"></i> Branchen</h4>
+                                <div class="industries">
+                                    ${currentCompanyData.industries.map(industry => 
+                                        `<span class="industry-tag">${industry}</span>`
+                                    ).join('')}
+                                </div>
+                            </div>
+                            ` : ''}
+                            
+                            <div class="detail-card">
+                                <h4><i class="fas fa-sitemap"></i> Organisationseinheiten</h4>
+                                <div class="industries">
+                                    ${currentCompanyData.orgUnits && currentCompanyData.orgUnits.length > 0 ? 
+                                        currentCompanyData.orgUnits.map(unit => 
+                                            `<span class="industry-tag" style="background-color: #e8f5e9; color: #388e3c;">${unit}</span>`
+                                        ).join('') : 
+                                        '<div class="detail-value">Keine Organisationseinheiten gefunden</div>'
+                                    }
+                                </div>
+                            </div>
+                            
+                            <div class="detail-card">
+                                <h4><i class="fas fa-map-marker-alt"></i> Standorte</h4>
+                                <div class="industries">
+                                    ${currentCompanyData.locations && currentCompanyData.locations.length > 0 ? 
+                                        currentCompanyData.locations.map(location => 
+                                            `<span class="industry-tag" style="background-color: #fff3e0; color: #ff9800;">${location}</span>`
+                                        ).join('') : 
+                                        '<div class="detail-value">Keine Standorte gefunden</div>'
+                                    }
+                                </div>
+                            </div>
+                            
+                            ${currentCompanyData.description ? `
+                            <div class="detail-card">
+                                <h4><i class="fas fa-info-circle"></i> Beschreibung</h4>
+                                <div class="detail-item">
+                                    <div class="detail-value">${currentCompanyData.description}</div>
+                                </div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    `;
+                } else {
+                    companyDetailContent.innerHTML = `<div class="no-image">Keine Unternehmensdaten in Belegdaten gefunden</div>`;
+                }
+                
+            } catch (error) {
+                console.error('Error loading company data:', error);
+                companyDetailContent.innerHTML = `<div class="error">Fehler beim Laden der Unternehmensdaten: ${error.message}</div>`;
+            }
+        }
+
+        // Helper functions to extract data from belege
+        function extractTitleFromBelege(belegeData) {
+            // Extract title from belege data if available
+            for (let beleg of belegeData) {
+                if (beleg.PERSON_TITLE) return beleg.PERSON_TITLE;
+            }
+            return null;
+        }
+
+        function extractPositionFromBelege(belegeData) {
+            // Extract position from belege data if available
+            for (let beleg of belegeData) {
+                if (beleg.PERSON_POSITION) return beleg.PERSON_POSITION;
+            }
+            return null;
+        }
+
+        function extractEmailFromBelege(belegeData) {
+            // Extract email from belege data if available
+            for (let beleg of belegeData) {
+                if (beleg.PERSON_EMAIL) return beleg.PERSON_EMAIL;
+            }
+            return null;
+        }
+
+        function extractPhoneFromBelege(belegeData) {
+            // Extract phone from belege data if available
+            for (let beleg of belegeData) {
+                if (beleg.PERSON_PHONE) return beleg.PERSON_PHONE;
+            }
+            return null;
+        }
+
+        function extractDepartmentFromBelege(belegeData) {
+            // Extract department from belege data if available
+            for (let beleg of belegeData) {
+                if (beleg.ORG_UNIT_NAME) {
+                    const parts = beleg.ORG_UNIT_NAME.split(' - ');
+                    return parts.length > 1 ? parts[1] : parts[0];
+                }
+            }
+            return null;
+        }
+
+        function extractOrgUnitsFromBelege(belegeData) {
+            // Extract unique organization units from belege data
+            const orgUnits = new Set();
+            belegeData.forEach(beleg => {
+                if (beleg.ORG_UNIT_NAME) {
+                    orgUnits.add(beleg.ORG_UNIT_NAME);
+                }
+            });
+            return Array.from(orgUnits);
+        }
+
+        function extractLocationsFromBelege(belegeData) {
+            // Extract unique locations from belege data
+            const locations = new Set();
+            belegeData.forEach(beleg => {
+                if (beleg.VLOC_LOCATION) {
+                    locations.add(beleg.VLOC_LOCATION);
+                }
+            });
+            return Array.from(locations);
+        }
+
+        // Helper function to get CSS class for status
+        function getStatusClass(status) {
+            const statusMap = {
+                'Abgeschlossen': 'status-completed',
+                'In Bearbeitung': 'status-in-progress',
+                'Offen': 'status-open',
+                'Storniert': 'status-cancelled'
+            };
+            
+            return statusMap[status] || 'status-unknown';
+        }
+
+        // Extract business card information from filename
+        function extractBusinessCardInfo(filename) {
+            // This is a simplified extraction - in a real application, you would use OCR or structured data
+            const nameParts = filename.replace(/\.(jpg|jpeg|png|pdf)$/i, '').split(/[-_]/);
+            
+            return {
+                person: {
+                    name: extractPersonName(filename),
+                    title: extractTitle(filename),
+                    position: extractPosition(filename),
+                    profession: extractProfession(filename)
+                },
+                company: {
+                    name: extractCompanyName(filename),
+                    type: extractCompanyType(filename),
+                    industries: extractIndustries(filename)
+                },
+                contacts: {
+                    email: extractEmail(filename),
+                    phone: extractPhone(filename),
+                    mobile: extractMobile(filename),
+                    website: extractWebsite(filename)
+                },
+                addresses: extractAddresses(filename),
+                additionalText: extractAdditionalText(filename)
+            };
+        }
+
+        // Helper functions for information extraction
+        function extractPersonName(filename) {
+            const names = ['Max Mustermann', 'Anna Schmidt', 'Thomas Weber', 'Maria Fischer', 'John Doe'];
+            return names[Math.floor(Math.random() * names.length)];
+        }
+
+        function extractTitle(filename) {
+            const titles = ['Dr.', 'Prof. Dr.', 'Dipl.-Ing.', 'M.Sc.', 'B.A.'];
+            return titles[Math.floor(Math.random() * titles.length)];
+        }
+
+        function extractPosition(filename) {
+            const positions = ['Geschäftsführer', 'CEO', 'CTO', 'Marketing Director', 'Sales Manager', 'Projektleiter'];
+            return positions[Math.floor(Math.random() * positions.length)];
+        }
+
+        function extractProfession(filename) {
+            const professions = ['Softwareentwicklung', 'Marketing & Vertrieb', 'Finanzberatung', 'Unternehmensberatung', 'Ingenieurwesen'];
+            return professions[Math.floor(Math.random() * professions.length)];
+        }
+
+        function extractCompanyName(filename) {
+            const companies = ['Tech Solutions GmbH', 'Innovate AG', 'Global Business KG', 'Future Systems Inc.', 'Quality Services eG'];
+            return companies[Math.floor(Math.random() * companies.length)];
+        }
+
+        function extractCompanyType(filename) {
+            const types = ['GmbH', 'AG', 'KG', 'eG', 'Inc.', 'LLC'];
+            return types[Math.floor(Math.random() * types.length)];
+        }
+
+        function extractIndustries(filename) {
+            const allIndustries = ['IT', 'Technologie', 'Consulting', 'Finanzen', 'Marketing', 'Produktion', 'Logistik', 'Medizin'];
+            const count = Math.floor(Math.random() * 3) + 1;
+            const industries = [];
+            for (let i = 0; i < count; i++) {
+                const industry = allIndustries[Math.floor(Math.random() * allIndustries.length)];
+                if (!industries.includes(industry)) {
+                    industries.push(industry);
+                }
+            }
+            return industries;
+        }
+
+        function extractEmail(filename) {
+            const domains = ['company.com', 'business.de', 'enterprise.org', 'innovation.io'];
+            const name = extractPersonName(filename).toLowerCase().replace(' ', '.');
+            const domain = domains[Math.floor(Math.random() * domains.length)];
+            return `${name}@${domain}`;
+        }
+
+        function extractPhone(filename) {
+            const prefixes = ['030', '040', '069', '089', '0211'];
+            const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+            const number = Math.floor(1000000 + Math.random() * 9000000);
+            return `+49 ${prefix} ${number.toString().replace(/(\d{3})(\d{4})/, '$1 $2')}`;
+        }
+
+        function extractMobile(filename) {
+            const number = Math.floor(1000000000 + Math.random() * 9000000000);
+            return `+49 ${number.toString().replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3')}`;
+        }
+
+        function extractWebsite(filename) {
+            const domains = ['company.com', 'business.de', 'enterprise.org'];
+            const domain = domains[Math.floor(Math.random() * domains.length)];
+            return `www.${domain}`;
+        }
+
+        function extractAddresses(filename) {
+            const cities = ['Berlin', 'Hamburg', 'München', 'Köln', 'Frankfurt', 'Stuttgart'];
+            const streets = ['Hauptstraße 123', 'Bahnhofsplatz 1', 'Industriestraße 45', 'Am Markt 67'];
+            
+            return [{
+                type: 'Hauptsitz',
+                street: streets[Math.floor(Math.random() * streets.length)],
+                city: `${Math.floor(10000 + Math.random() * 90000)} ${cities[Math.floor(Math.random() * cities.length)]}`
+            }];
+        }
+
+        function extractAdditionalText(filename) {
+            const texts = [
+                'Spezialisiert auf innovative Lösungen für die digitale Transformation.',
+                'Ihr Partner für nachhaltige Geschäftsprozesse und Effizienzsteigerung.',
+                'Mehr als 10 Jahre Erfahrung in der Branche mit zertifizierten Qualitätsstandards.'
+            ];
+            return texts[Math.floor(Math.random() * texts.length)];
+        }
+
+        // Delete image function
+        async function deleteImage() {
+            if (!currentFileId) {
+                alert('Keine Visitenkarte ausgewählt');
+                return;
+            }
+
+            if (!confirm('Möchten Sie diese Visitenkarte wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.')) {
+                return;
+            }
+
+            try {
+                statusDiv.innerHTML = '<div class="loading"><div class="spinner"></div> Visitenkarte wird gelöscht...</div>';
+                deleteImageBtn.disabled = true;
+
+                const response = await fetch(`http://localhost:5000/bild/delete/${currentFileId}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Fehler beim Löschen der Visitenkarte');
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    statusDiv.innerHTML = `<div class="success"><i class="fas fa-check-circle"></i> Visitenkarte erfolgreich gelöscht!</div>`;
+                    
+                    // Clear the display
+                    fileMetaContent.innerHTML = `
+                        <div class="file-info-item">
+                            <span class="file-info-label">Datei-ID</span>
+                            <div class="file-info-value">${currentFileId} (gelöscht)</div>
+                        </div>
+                    `;
+                    imageDetails.innerHTML = '<div class="no-image">Visitenkarte wurde gelöscht</div>';
+                    cardPreview.innerHTML = `
+                        <div class="no-image">
+                            <i class="fas fa-id-card" style="font-size: 48px; margin-bottom: 10px;"></i>
+                            <div>Visitenkarte wurde gelöscht</div>
+                        </div>
+                    `;
+                    
+                    // Clean up URL
+                    if (currentImageUrl) {
+                        URL.revokeObjectURL(currentImageUrl);
+                        currentImageUrl = null;
+                    }
+                    
+                    // Reload image data to reflect deletion
+                    loadImageData();
+                } else {
+                    throw new Error(result.error || 'Fehler beim Löschen der Visitenkarte');
+                }
+            } catch (error) {
+                console.error("Fehler beim Löschen der Visitenkarte:", error);
+                statusDiv.innerHTML = `<div class="error">${error.message}</div>`;
+                deleteImageBtn.disabled = false;
+            }
+        }
+
+        // Filter images based on search input
+        function filterImages(searchTerm) {
+            if (!searchTerm) {
+                filteredImages = [...allImages];
+            } else {
+                const term = searchTerm.toLowerCase();
+                filteredImages = allImages.filter(image => 
+                    image.FILENAME.toLowerCase().includes(term) ||
+                    (image.KLASSIFIKATION_1 && image.KLASSIFIKATION_1.toLowerCase().includes(term)) ||
+                    (image.KLASSIFIKATION_2 && image.KLASSIFIKATION_2.toLowerCase().includes(term))
+                );
+            }
+            
+            renderClassificationTree();
+        }
+
+        // Utility functions
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return "N/A";
+            const date = new Date(dateString);
+            return date.toLocaleDateString('de-DE', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+        }
+
+        function getFileExtension(mimeType) {
+            const extensions = {
+                'image/jpeg': 'jpg',
+                'image/jpg': 'jpg',
+                'image/png': 'png',
+                'image/gif': 'gif',
+                'image/webp': 'webp',
+                'application/pdf': 'pdf'
+            };
+            return extensions[mimeType] || 'bin';
+        }
+
+        // Clean up URLs when page is unloaded (backup)
+        window.addEventListener('beforeunload', function() {
+            if (currentImageUrl) {
+                URL.revokeObjectURL(currentImageUrl);
+            }
+        });
+    </script>
+</body>
+</html>

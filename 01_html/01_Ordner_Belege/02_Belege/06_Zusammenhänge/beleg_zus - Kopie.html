@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Beleg Analyse | 2-stufige Gruppierung: POS_ALL1 → FK2 | FK_MAIN_KEY Spalte</title>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- jQuery + DataTables + RowGroup -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/rowgroup/1.4.1/css/rowGroup.dataTables.min.css">
+    <script src="https://cdn.datatables.net/rowgroup/1.4.1/js/dataTables.rowGroup.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, system-ui, sans-serif; }
+        body { background: #f0f4f8; margin: 0; padding: 24px 20px; color: #1a2c3e; }
+        .container { max-width: 1500px; margin: 0 auto; }
+        .status-bar {
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;
+            background: white; padding: 12px 24px; border-radius: 32px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 24px;
+            border: 1px solid #e2edf2;
+        }
+        h1 { font-size: 1.7rem; font-weight: 600; margin: 0; background: linear-gradient(135deg, #1f6e8c, #0e4e6b); background-clip: text; -webkit-background-clip: text; color: transparent; }
+        .badge { background: #eef2fa; padding: 6px 14px; border-radius: 40px; font-size: 0.8rem; }
+        .filter-panel {
+            background: white; border-radius: 28px; padding: 16px 24px; margin-bottom: 24px;
+            display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end;
+            border: 1px solid #e9f0f3; box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+        .filter-group { display: flex; flex-direction: column; gap: 6px; min-width: 170px; }
+        .filter-group label { font-weight: 600; font-size: 0.75rem; text-transform: uppercase; color: #4a6f8a; letter-spacing: 0.3px; }
+        select, input { padding: 8px 14px; border-radius: 40px; border: 1px solid #cbdbe6; background: #fefefe; font-size: 0.9rem; outline: none; }
+        button { background: #1f6e8c; border: none; padding: 8px 20px; border-radius: 40px; color: white; font-weight: 500; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #0e5a75; transform: scale(0.97); }
+        .card { background: white; border-radius: 28px; box-shadow: 0 6px 16px rgba(0,0,0,0.05); margin-bottom: 32px; overflow: hidden; border: 1px solid #e9f0f3; }
+        .card-header { padding: 16px 24px; background: #ffffff; border-bottom: 1px solid #eef2f8; font-weight: 600; font-size: 1.2rem; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; }
+        .card-header h2 { margin: 0; font-size: 1.3rem; }
+        .card-body { padding: 20px 24px; }
+        .diagram-grid { display: flex; flex-wrap: wrap; gap: 28px; justify-content: space-between; margin-bottom: 20px; }
+        .chart-box { flex: 1; min-width: 280px; background: #fefefe; border-radius: 24px; padding: 12px; border: 1px solid #eef3f8; }
+        .chart-box h3 { font-size: 1rem; font-weight: 500; text-align: center; margin-bottom: 12px; color: #2c5a74; border-bottom: 1px dashed #cbdde6; padding-bottom: 6px; }
+        canvas { max-height: 260px; width: 100% !important; }
+        .table-wrapper { overflow-x: auto; }
+        #belegTable { width: 100% !important; font-size: 0.85rem; }
+        
+        /* 2-stufiges Gruppierungs-Styling */
+        .dt-row-group.level-1 {
+            cursor: pointer;
+            background-color: #eef2fa !important;
+            font-weight: 700;
+            font-size: 0.9rem;
+            border-top: 2px solid #cbdde6;
+            border-bottom: 1px solid #cbdde6;
+        }
+        .dt-row-group.level-1:hover {
+            background-color: #e0e8f2 !important;
+        }
+        .dt-row-group.level-2 {
+            cursor: pointer;
+            background-color: #f8f9fc !important;
+            font-weight: 600;
+            font-size: 0.85rem;
+            border-left: 4px solid #1f6e8c;
+            padding-left: 20px;
+        }
+        .dt-row-group.level-2:hover {
+            background-color: #eef2fa !important;
+        }
+        .group-toggle-icon {
+            margin-right: 10px;
+            font-size: 0.85rem;
+            display: inline-block;
+            width: 20px;
+            text-align: center;
+        }
+        .group-stats {
+            font-size: 0.7rem;
+            font-weight: normal;
+            margin-left: 12px;
+            color: #2c6e9e;
+        }
+        .level-2 .group-stats {
+            color: #5a7c9a;
+        }
+        .group-indent {
+            display: inline-block;
+            width: 24px;
+        }
+        .error-msg { background: #ffe6e5; color: #b91c1c; padding: 12px 18px; border-radius: 20px; margin-bottom: 20px; border-left: 6px solid #d9534f; }
+        .loading { text-align: center; padding: 30px; color: #2c6e9e; }
+        footer { text-align: center; margin-top: 20px; font-size: 0.7rem; color: #6f8faa; }
+        .level-badge { background: #e9ecef; border-radius: 30px; padding: 4px 12px; font-size: 0.7rem; font-weight: normal; }
+        .filter-info { font-size: 0.75rem; color: #1f6e8c; margin-top: 8px; padding: 6px 12px; background: #e8f4f8; border-radius: 20px; display: inline-block; }
+        @media (max-width: 700px) { body { padding: 16px; } .filter-panel { flex-direction: column; align-items: stretch; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="status-bar">
+        <h1><i class="fas fa-chart-line"></i> Beleg Analyse | <i class="fas fa-table"></i> 2-stufige Gruppierung</h1>
+        <span class="badge"><i class="fas fa-database"></i> Ebene 1: POS_ALL1 | Ebene 2: FK2 | + FK_MAIN_KEY</span>
+    </div>
+
+    <!-- Filterbereich: jahr1, FK1, POS_ALL1 (alle UND-verknüpft) -->
+    <div class="filter-panel">
+        <div class="filter-group">
+            <label><i class="fas fa-calendar-alt"></i> Filter nach jahr1</label>
+            <select id="jahr1Filter"><option value="ALL">Alle Jahre</option></select>
+        </div>
+        <div class="filter-group">
+            <label><i class="fas fa-layer-group"></i> Filter nach FK_INP_BELEGE_ALL1</label>
+            <select id="fk1Filter"><option value="ALL">Alle FK1 Werte</option></select>
+        </div>
+        <div class="filter-group">
+            <label><i class="fas fa-tag"></i> Filter nach FK_INP_BELEGE_POS_ALL1</label>
+            <select id="posAll1Filter"><option value="ALL">Alle POS_ALL1 Werte</option></select>
+        </div>
+        <div class="filter-group">
+            <label>&nbsp;</label>
+            <button id="applyFilterBtn"><i class="fas fa-filter"></i> Anwenden (UND)</button>
+        </div>
+        <div class="filter-group">
+            <label>&nbsp;</label>
+            <button id="resetFilterBtn" style="background:#6c757d;"><i class="fas fa-undo-alt"></i> Zurücksetzen</button>
+        </div>
+    </div>
+    <div class="filter-info"><i class="fas fa-info-circle"></i> Filter (UND): jahr1 + FK1 + POS_ALL1. <strong>Tabelle: 1. Ebene = FK_INP_BELEGE_POS_ALL1, 2. Ebene = FK_INP_BELEGE_ALL2</strong> (klickbare Hierarchie). Spalte <strong>FK_MAIN_KEY</strong> ist sichtbar.</div>
+
+    <div id="errorContainer"></div>
+
+    <!-- EBENE 1: Diagramme FK1 -->
+    <div class="card">
+        <div class="card-header">
+            <h2><i class="fas fa-chart-pie"></i> Ebene 1: Gruppierung nach FK_INP_BELEGE_ALL1</h2>
+        </div>
+        <div class="card-body">
+            <div class="diagram-grid">
+                <div class="chart-box"><h3>Summe Betrag (€) je FK1</h3><canvas id="fk1SumChart" height="250"></canvas></div>
+                <div class="chart-box"><h3>Anzahl Datensätze je FK1</h3><canvas id="fk1CountChart" height="250"></canvas></div>
+                <div class="chart-box"><h3>Verteilung (Summe FK1)</h3><canvas id="fk1PieChart" height="250"></canvas></div>
+            </div>
+            <div class="diagram-grid">
+                <div class="chart-box"><h3>Durchschnitt (€) je FK1</h3><canvas id="fk1AvgChart" height="250"></canvas></div>
+                <div class="chart-box"><h3>Statistik FK1</h3><div id="fk1StatsText" style="max-height:250px; overflow-y:auto; font-size:0.8rem;"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- EBENE 2: Diagramme FK2 -->
+    <div class="card">
+        <div class="card-header">
+            <h2><i class="fas fa-chart-simple"></i> Ebene 2: Gruppierung nach FK_INP_BELEGE_ALL2</h2>
+        </div>
+        <div class="card-body">
+            <div class="diagram-grid">
+                <div class="chart-box"><h3>Summe Betrag (€) je FK2</h3><canvas id="fk2SumChart" height="250"></canvas></div>
+                <div class="chart-box"><h3>Anzahl Datensätze je FK2</h3><canvas id="fk2CountChart" height="250"></canvas></div>
+                <div class="chart-box"><h3>Verteilung (Summe FK2)</h3><canvas id="fk2PieChart" height="250"></canvas></div>
+            </div>
+            <div class="diagram-grid">
+                <div class="chart-box"><h3>Durchschnitt (€) je FK2</h3><canvas id="fk2AvgChart" height="250"></canvas></div>
+                <div class="chart-box"><h3>Statistik FK2</h3><div id="fk2StatsText" style="max-height:250px; overflow-y:auto; font-size:0.8rem;"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- EBENE 3: Diagramme POS_ALL1 -->
+    <div class="card">
+        <div class="card-header">
+            <h2><i class="fas fa-chart-bar"></i> Ebene 3: Gruppierung nach FK_INP_BELEGE_POS_ALL1</h2>
+        </div>
+        <div class="card-body">
+            <div class="diagram-grid">
+                <div class="chart-box"><h3>Summe Betrag (€) je POS_ALL1</h3><canvas id="posAll1SumChart" height="250"></canvas></div>
+                <div class="chart-box"><h3>Anzahl Datensätze je POS_ALL1</h3><canvas id="posAll1CountChart" height="250"></canvas></div>
+                <div class="chart-box"><h3>Verteilung (Summe POS_ALL1)</h3><canvas id="posAll1PieChart" height="250"></canvas></div>
+            </div>
+            <div class="diagram-grid">
+                <div class="chart-box"><h3>Durchschnitt (€) je POS_ALL1</h3><canvas id="posAll1AvgChart" height="250"></canvas></div>
+                <div class="chart-box"><h3>Statistik POS_ALL1</h3><div id="posAll1StatsText" style="max-height:250px; overflow-y:auto; font-size:0.8rem;"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2-stufig gruppierte Tabelle: POS_ALL1 (Level 1) → FK2 (Level 2) -->
+    <div class="card">
+        <div class="card-header">
+            <h2><i class="fas fa-table"></i> Hierarchische Tabelle: <code>FK_INP_BELEGE_POS_ALL1</code> → <code>FK_INP_BELEGE_ALL2</code></h2>
+            <span><i class="fas fa-folder-tree"></i> Klick auf POS_ALL1 Gruppe = alle FK2 darunter ein/aus | Klick auf FK2 Gruppe = nur diese Untergruppe</span>
+        </div>
+        <div class="card-body">
+            <div class="table-wrapper">
+                <table id="belegTable" class="display" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>jahr1</th><th>FK_INP_BELEGE_ALL1</th><th>bezeichnung1</th>
+                            <th>FK_INP_BELEGE_ALL2</th><th>bezeichnung2</th><th>FK_MAIN_KEY</th>
+                            <th>FK_INP_BELEGE_POS_ALL1</th><th>FK_INP_BELEGE_POS_ALL2</th>
+                            <th>BelegNr</th><th>Datum</th><th>Betrag (€)</th><th>Typ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td colspan="12" class="loading">Lade Daten von localhost:5000 ...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="filter-info" style="margin-top: 12px;"><i class="fas fa-lightbulb"></i> <strong>Hierarchie:</strong> Dunkelblaue Gruppen = POS_ALL1 (Level 1), hellere eingerückte Gruppen = FK2 (Level 2). Klick auf Level 1 klappt alle darunter liegenden Level-2-Gruppen ein/aus. Klick auf Level 2 klappt nur die Detailzeilen dieser Gruppe ein/aus.</div>
+        </div>
+    </div>
+    <footer><strong>2-stufige Tabellengruppierung:</strong> Level 1 = FK_INP_BELEGE_POS_ALL1, Level 2 = FK_INP_BELEGE_ALL2. Alle 3 Diagramm-Ebenen (FK1, FK2, POS_ALL1) und Filter (jahr1, FK1, POS_ALL1) aktiv.</footer>
+</div>
+
+<script>
+    // ---------- CHART-INSTANZEN ----------
+    let fk1SumChart = null, fk1CountChart = null, fk1PieChart = null, fk1AvgChart = null;
+    let fk2SumChart = null, fk2CountChart = null, fk2PieChart = null, fk2AvgChart = null;
+    let posAll1SumChart = null, posAll1CountChart = null, posAll1PieChart = null, posAll1AvgChart = null;
+    
+    let originalDataset = [];
+    let filteredDataset = [];
+    
+    // ---------- HELFER: Feld-Extraktion ----------
+    function parseNumber(val) { let n = Number(val); return isNaN(n) ? 0 : n; }
+    function escapeHtml(str) { if(!str) return ''; return String(str).replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
+    
+    function getJahr1(record) { return record.jahr1 ?? record.JAHR1 ?? record.year ?? record.Jahr ?? ''; }
+    function getFk1(record) { return record.FK_INP_BELEGE_ALL1 ?? record.fk_inp_belege_all1 ?? ''; }
+    function getFk2(record) { return record.FK_INP_BELEGE_ALL2 ?? record.fk_inp_belege_all2 ?? ''; }
+    function getBetrag(record) { return parseNumber(record.Betrag ?? record.betrag ?? record.BETRAG ?? 0); }
+    function getBezeichnung1(record) { return record.bezeichnung1 ?? record.BEZEICHNUNG1 ?? record.Bezeichnung1 ?? ''; }
+    function getBezeichnung2(record) { return record.bezeichnung2 ?? record.BEZEICHNUNG2 ?? record.Bezeichnung2 ?? ''; }
+    function getPosAll1(record) { return record.FK_INP_BELEGE_POS_ALL1 ?? record.fk_inp_belege_pos_all1 ?? record.FK_INP_BELEGE_POS_ALL1 ?? ''; }
+    function getPosAll2(record) { return record.FK_INP_BELEGE_POS_ALL2 ?? record.fk_inp_belege_pos_all2 ?? ''; }
+    function getMainKey(record) { return record.FK_MAIN_KEY ?? record.fk_main_key ?? record.MAIN_KEY ?? record.mainKey ?? ''; }
+    function getBelegNr(record) { return record.BelegNr ?? record.belegNr ?? record.BELEGNR ?? '-'; }
+    function getDatum(record) { return record.Datum ?? record.datum ?? record.DATE ?? '-'; }
+    function getTyp(record) { return record.Typ ?? record.typ ?? record.TYPE ?? '-'; }
+    
+    // ---------- CHARTS ZERSTÖREN ----------
+    function destroyAllCharts() {
+        if (fk1SumChart) { fk1SumChart.destroy(); fk1SumChart = null; }
+        if (fk1CountChart) { fk1CountChart.destroy(); fk1CountChart = null; }
+        if (fk1PieChart) { fk1PieChart.destroy(); fk1PieChart = null; }
+        if (fk1AvgChart) { fk1AvgChart.destroy(); fk1AvgChart = null; }
+        if (fk2SumChart) { fk2SumChart.destroy(); fk2SumChart = null; }
+        if (fk2CountChart) { fk2CountChart.destroy(); fk2CountChart = null; }
+        if (fk2PieChart) { fk2PieChart.destroy(); fk2PieChart = null; }
+        if (fk2AvgChart) { fk2AvgChart.destroy(); fk2AvgChart = null; }
+        if (posAll1SumChart) { posAll1SumChart.destroy(); posAll1SumChart = null; }
+        if (posAll1CountChart) { posAll1CountChart.destroy(); posAll1CountChart = null; }
+        if (posAll1PieChart) { posAll1PieChart.destroy(); posAll1PieChart = null; }
+        if (posAll1AvgChart) { posAll1AvgChart.destroy(); posAll1AvgChart = null; }
+    }
+    
+    // ---------- FILTER ----------
+    function populateFilters(data) {
+        const jahreSet = new Set(), fk1Set = new Set(), posAll1Set = new Set();
+        data.forEach(rec => {
+            let j = getJahr1(rec); if(j && j!=='') jahreSet.add(String(j));
+            let f1 = getFk1(rec); if(f1 && f1!=='') fk1Set.add(String(f1));
+            let p1 = getPosAll1(rec); if(p1 && p1!=='') posAll1Set.add(String(p1));
+        });
+        const jahrSelect = document.getElementById('jahr1Filter');
+        const fk1Select = document.getElementById('fk1Filter');
+        const posSelect = document.getElementById('posAll1Filter');
+        jahrSelect.innerHTML = '<option value="ALL">Alle Jahre</option>';
+        fk1Select.innerHTML = '<option value="ALL">Alle FK1 Werte</option>';
+        posSelect.innerHTML = '<option value="ALL">Alle POS_ALL1 Werte</option>';
+        Array.from(jahreSet).sort().forEach(j => jahrSelect.innerHTML += `<option value="${escapeHtml(j)}">${escapeHtml(j)}</option>`);
+        Array.from(fk1Set).sort().forEach(f => fk1Select.innerHTML += `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`);
+        Array.from(posAll1Set).sort().forEach(p => posSelect.innerHTML += `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`);
+    }
+    
+    function applyFilters() {
+        const selectedJahr = document.getElementById('jahr1Filter').value;
+        const selectedFk1 = document.getElementById('fk1Filter').value;
+        const selectedPosAll1 = document.getElementById('posAll1Filter').value;
+        if (!originalDataset.length) return [];
+        return originalDataset.filter(rec => {
+            let recJahr = String(getJahr1(rec) ?? '');
+            let recFk1 = String(getFk1(rec) ?? '');
+            let recPosAll1 = String(getPosAll1(rec) ?? '');
+            return (selectedJahr === 'ALL' || recJahr === selectedJahr) &&
+                   (selectedFk1 === 'ALL' || recFk1 === selectedFk1) &&
+                   (selectedPosAll1 === 'ALL' || recPosAll1 === selectedPosAll1);
+        });
+    }
+    
+    // ---------- DIAGRAMME ----------
+    function groupByField(records, getFieldFn) {
+        const map = new Map();
+        for (let rec of records) {
+            let rawVal = getFieldFn(rec);
+            let label = (rawVal !== undefined && rawVal !== null && String(rawVal).trim() !== '') ? String(rawVal) : '(Leer)';
+            const betrag = getBetrag(rec);
+            if (!map.has(label)) map.set(label, { label, sumBetrag: 0, count: 0 });
+            const entry = map.get(label);
+            entry.sumBetrag += betrag;
+            entry.count += 1;
+        }
+        return Array.from(map.values()).map(g => ({ groupLabel: g.label, totalBetrag: g.sumBetrag, recordCount: g.count, avgBetrag: g.sumBetrag / g.count })).sort((a,b) => a.groupLabel.localeCompare(b.groupLabel));
+    }
+    
+    function updateAllCharts(records) {
+        // FK1
+        if (fk1SumChart) fk1SumChart.destroy();
+        if (fk1CountChart) fk1CountChart.destroy();
+        if (fk1PieChart) fk1PieChart.destroy();
+        if (fk1AvgChart) fk1AvgChart.destroy();
+        const fk1Grouped = groupByField(records, getFk1);
+        if (fk1Grouped.length) {
+            const labels = fk1Grouped.map(g => g.groupLabel);
+            const sumData = fk1Grouped.map(g => g.totalBetrag);
+            const countData = fk1Grouped.map(g => g.recordCount);
+            const avgData = fk1Grouped.map(g => g.avgBetrag);
+            const totalSum = sumData.reduce((a,b)=>a+b,0);
+            fk1SumChart = new Chart(document.getElementById('fk1SumChart'), { type: 'bar', data: { labels, datasets: [{ label: 'Summe (€)', data: sumData, backgroundColor: '#1f6e8c' }] }, options: { responsive: true } });
+            fk1CountChart = new Chart(document.getElementById('fk1CountChart'), { type: 'bar', data: { labels, datasets: [{ label: 'Anzahl', data: countData, backgroundColor: '#3b82f6' }] }, options: { responsive: true } });
+            fk1PieChart = new Chart(document.getElementById('fk1PieChart'), { type: 'pie', data: { labels, datasets: [{ data: sumData }] }, options: { responsive: true, plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw.toFixed(2)} € (${((ctx.raw/totalSum)*100).toFixed(1)}%)` } } } } });
+            fk1AvgChart = new Chart(document.getElementById('fk1AvgChart'), { type: 'bar', data: { labels, datasets: [{ label: 'Ø (€)', data: avgData, backgroundColor: '#f59e0b' }] }, options: { responsive: true } });
+            document.getElementById('fk1StatsText').innerHTML = `<ul>${fk1Grouped.map(g => `<li><strong>${escapeHtml(g.groupLabel)}</strong>: ${g.recordCount} Eintr., Σ ${g.totalBetrag.toFixed(2)} €, Ø ${g.avgBetrag.toFixed(2)} €</li>`).join('')}</ul>`;
+        }
+        
+        // FK2
+        if (fk2SumChart) fk2SumChart.destroy();
+        if (fk2CountChart) fk2CountChart.destroy();
+        if (fk2PieChart) fk2PieChart.destroy();
+        if (fk2AvgChart) fk2AvgChart.destroy();
+        const fk2Grouped = groupByField(records, getFk2);
+        if (fk2Grouped.length) {
+            const labels = fk2Grouped.map(g => g.groupLabel);
+            const sumData = fk2Grouped.map(g => g.totalBetrag);
+            const countData = fk2Grouped.map(g => g.recordCount);
+            const avgData = fk2Grouped.map(g => g.avgBetrag);
+            const totalSum = sumData.reduce((a,b)=>a+b,0);
+            fk2SumChart = new Chart(document.getElementById('fk2SumChart'), { type: 'bar', data: { labels, datasets: [{ label: 'Summe (€)', data: sumData, backgroundColor: '#10b981' }] }, options: { responsive: true } });
+            fk2CountChart = new Chart(document.getElementById('fk2CountChart'), { type: 'bar', data: { labels, datasets: [{ label: 'Anzahl', data: countData, backgroundColor: '#8b5cf6' }] }, options: { responsive: true } });
+            fk2PieChart = new Chart(document.getElementById('fk2PieChart'), { type: 'pie', data: { labels, datasets: [{ data: sumData }] }, options: { responsive: true, plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw.toFixed(2)} € (${((ctx.raw/totalSum)*100).toFixed(1)}%)` } } } } });
+            fk2AvgChart = new Chart(document.getElementById('fk2AvgChart'), { type: 'bar', data: { labels, datasets: [{ label: 'Ø (€)', data: avgData, backgroundColor: '#ef4444' }] }, options: { responsive: true } });
+            document.getElementById('fk2StatsText').innerHTML = `<ul>${fk2Grouped.map(g => `<li><strong>${escapeHtml(g.groupLabel)}</strong>: ${g.recordCount} Eintr., Σ ${g.totalBetrag.toFixed(2)} €, Ø ${g.avgBetrag.toFixed(2)} €</li>`).join('')}</ul>`;
+        }
+        
+        // POS_ALL1
+        if (posAll1SumChart) posAll1SumChart.destroy();
+        if (posAll1CountChart) posAll1CountChart.destroy();
+        if (posAll1PieChart) posAll1PieChart.destroy();
+        if (posAll1AvgChart) posAll1AvgChart.destroy();
+        const posGrouped = groupByField(records, getPosAll1);
+        if (posGrouped.length) {
+            const labels = posGrouped.map(g => g.groupLabel);
+            const sumData = posGrouped.map(g => g.totalBetrag);
+            const countData = posGrouped.map(g => g.recordCount);
+            const avgData = posGrouped.map(g => g.avgBetrag);
+            const totalSum = sumData.reduce((a,b)=>a+b,0);
+            posAll1SumChart = new Chart(document.getElementById('posAll1SumChart'), { type: 'bar', data: { labels, datasets: [{ label: 'Summe (€)', data: sumData, backgroundColor: '#2c7a4a' }] }, options: { responsive: true } });
+            posAll1CountChart = new Chart(document.getElementById('posAll1CountChart'), { type: 'bar', data: { labels, datasets: [{ label: 'Anzahl', data: countData, backgroundColor: '#a855f7' }] }, options: { responsive: true } });
+            posAll1PieChart = new Chart(document.getElementById('posAll1PieChart'), { type: 'pie', data: { labels, datasets: [{ data: sumData }] }, options: { responsive: true, plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw.toFixed(2)} € (${((ctx.raw/totalSum)*100).toFixed(1)}%)` } } } } });
+            posAll1AvgChart = new Chart(document.getElementById('posAll1AvgChart'), { type: 'bar', data: { labels, datasets: [{ label: 'Ø (€)', data: avgData, backgroundColor: '#f97316' }] }, options: { responsive: true } });
+            document.getElementById('posAll1StatsText').innerHTML = `<ul>${posGrouped.map(g => `<li><strong>${escapeHtml(g.groupLabel)}</strong>: ${g.recordCount} Eintr., Σ ${g.totalBetrag.toFixed(2)} €, Ø ${g.avgBetrag.toFixed(2)} €</li>`).join('')}</ul>`;
+        }
+    }
+    
+    // ---------- 2-STUFIGE TABELLE (POS_ALL1 → FK2) ----------
+    let currentDataTable = null;
+    
+    function renderHierarchicalTable(records) {
+        if (currentDataTable) {
+            currentDataTable.destroy();
+            currentDataTable = null;
+        }
+        if (!records || records.length === 0) {
+            $('#tableBody').html('<tr><td colspan="12" class="loading">Keine Datensätze</td></tr>');
+            return;
+        }
+        
+        // Gruppiere zuerst nach POS_ALL1 (Level 1), dann innerhalb jeder Gruppe nach FK2 (Level 2)
+        const level1Map = new Map(); // key = POS_ALL1 Wert -> { groups: Map<FK2, rows[]>, totalSum, count }
+        for (let rec of records) {
+            const posKey = getPosAll1(rec) || '(Leer)';
+            const fk2Key = getFk2(rec) || '(Leer)';
+            if (!level1Map.has(posKey)) {
+                level1Map.set(posKey, { fk2Groups: new Map(), totalSum: 0, totalCount: 0 });
+            }
+            const level1 = level1Map.get(posKey);
+            if (!level1.fk2Groups.has(fk2Key)) {
+                level1.fk2Groups.set(fk2Key, { rows: [], sum: 0, count: 0 });
+            }
+            const fk2Group = level1.fk2Groups.get(fk2Key);
+            const row = [
+                getJahr1(rec) || '-', getFk1(rec) || '-', getBezeichnung1(rec) || '-',
+                fk2Key, getBezeichnung2(rec) || '-', getMainKey(rec) || '-',
+                posKey, getPosAll2(rec) || '-', getBelegNr(rec), getDatum(rec),
+                getBetrag(rec).toFixed(2), getTyp(rec) || '-'
+            ];
+            fk2Group.rows.push(row);
+            const betrag = getBetrag(rec);
+            fk2Group.sum += betrag;
+            fk2Group.count++;
+            level1.totalSum += betrag;
+            level1.totalCount++;
+        }
+        
+        // HTML Aufbau mit verschachtelten Gruppen
+        let html = '';
+        for (let [posKey, level1] of level1Map.entries()) {
+            const posDisplay = posKey === '(Leer)' ? '📁 (Leer / Keine POS-Gruppe)' : `📁 ${escapeHtml(posKey)}`;
+            html += `<tr class="group-header level-1" data-level1="${escapeHtml(posKey)}" data-collapsed="false">
+                        <td colspan="12"><i class="fas fa-folder-open group-toggle-icon"></i> <strong>${posDisplay}</strong> <span class="group-stats">(${level1.totalCount} Einträge, Σ ${level1.totalSum.toFixed(2)} €)</span>
+                     </tr>`;
+            // Level 2 Gruppen (FK2)
+            for (let [fk2Key, fk2Group] of level1.fk2Groups.entries()) {
+                const fk2Display = fk2Key === '(Leer)' ? '📂 (Leer / Unbekannt)' : `📂 ${escapeHtml(fk2Key)}`;
+                html += `<tr class="group-header level-2" data-parent="${escapeHtml(posKey)}" data-fk2="${escapeHtml(fk2Key)}" data-collapsed="false">
+                            <td colspan="12"><span class="group-indent"></span><i class="fas fa-folder-open group-toggle-icon"></i> <strong>${fk2Display}</strong> <span class="group-stats">(${fk2Group.count} Einträge, Σ ${fk2Group.sum.toFixed(2)} €)</span>
+                         </tr>`;
+                // Detailzeilen
+                for (let row of fk2Group.rows) {
+                    html += `<tr class="detail-row" data-parent-fk2="${escapeHtml(fk2Key)}" data-parent-level1="${escapeHtml(posKey)}">`;
+                    for (let cell of row) {
+                        html += `<td>${escapeHtml(String(cell))}</td>`;
+                    }
+                    html += `</tr>`;
+                }
+            }
+        }
+        $('#tableBody').html(html);
+        
+        // Klick-Events für Level 1 und Level 2
+        $('.group-header.level-1').off('click').on('click', function(e) {
+            e.stopPropagation();
+            const $this = $(this);
+            const isCollapsed = $this.data('collapsed');
+            const level1Key = $this.data('level1');
+            // Alle Level-2-Gruppen und Detailzeilen dieser Level-1-Gruppe finden
+            const $nextRows = $this.nextUntil('.group-header.level-1');
+            if (!isCollapsed) {
+                $nextRows.hide();
+                $this.data('collapsed', true);
+                $this.find('.group-toggle-icon').removeClass('fa-folder-open').addClass('fa-folder');
+            } else {
+                $nextRows.show();
+                // Aber innerhalb der Level-2-Gruppen den collapsed-Zustand respektieren (wenn eine Level-2 Gruppe zugeklappt war, bleibt sie zugeklappt)
+                $this.data('collapsed', false);
+                $this.find('.group-toggle-icon').removeClass('fa-folder').addClass('fa-folder-open');
+                // Level-2 Gruppen, die collapsed waren, müssen ihre Detailzeilen weiterhin versteckt halten
+                $('.group-header.level-2').each(function() {
+                    if ($(this).data('collapsed') === true && $(this).data('parent') === level1Key) {
+                        let $next = $(this).nextUntil('.group-header.level-2, .group-header.level-1');
+                        $next.hide();
+                    }
+                });
+            }
+        });
+        
+        $('.group-header.level-2').off('click').on('click', function(e) {
+            e.stopPropagation();
+            const $this = $(this);
+            const isCollapsed = $this.data('collapsed');
+            const $nextRows = $this.nextUntil('.group-header.level-2, .group-header.level-1');
+            if (!isCollapsed) {
+                $nextRows.hide();
+                $this.data('collapsed', true);
+                $this.find('.group-toggle-icon').removeClass('fa-folder-open').addClass('fa-folder');
+            } else {
+                $nextRows.show();
+                $this.data('collapsed', false);
+                $this.find('.group-toggle-icon').removeClass('fa-folder').addClass('fa-folder-open');
+            }
+        });
+    }
+    
+    function refreshAll() {
+        if (!originalDataset.length) return;
+        const filtered = applyFilters();
+        renderHierarchicalTable(filtered);
+        updateAllCharts(filtered);
+    }
+    
+    // ---------- DATEN LADEN ----------
+    async function fetchData() {
+        const errorDiv = document.getElementById('errorContainer');
+        errorDiv.innerHTML = '';
+        $('#tableBody').html('<td><td colspan="12" class="loading"><i class="fas fa-spinner fa-pulse"></i> Lade Daten ...</td</tr>');
+        try {
+            const response = await fetch('http://localhost:5000/beleg_zus', { method: 'GET', mode: 'cors', headers: { 'Accept': 'application/json' } });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            let data = await response.json();
+            if (!Array.isArray(data)) {
+                if (data.data && Array.isArray(data.data)) data = data.data;
+                else if (data.records && Array.isArray(data.records)) data = data.records;
+                else throw new Error('Kein Array');
+            }
+            originalDataset = data;
+            populateFilters(originalDataset);
+            document.getElementById('jahr1Filter').value = 'ALL';
+            document.getElementById('fk1Filter').value = 'ALL';
+            document.getElementById('posAll1Filter').value = 'ALL';
+            filteredDataset = [...originalDataset];
+            renderHierarchicalTable(filteredDataset);
+            updateAllCharts(filteredDataset);
+        } catch (err) {
+            errorDiv.innerHTML = `<div class="error-msg"><i class="fas fa-bug"></i> Fehler: ${escapeHtml(err.message)}</div>`;
+            $('#tableBody').html(`<td><td colspan="12" style="color:#b91c1c;">⚠️ ${escapeHtml(err.message)}</td></tr>`);
+            destroyAllCharts();
+        }
+    }
+    
+    document.getElementById('applyFilterBtn').addEventListener('click', () => refreshAll());
+    document.getElementById('resetFilterBtn').addEventListener('click', () => {
+        document.getElementById('jahr1Filter').value = 'ALL';
+        document.getElementById('fk1Filter').value = 'ALL';
+        document.getElementById('posAll1Filter').value = 'ALL';
+        refreshAll();
+    });
+    fetchData();
+</script>
+</body>
+</html>

@@ -1,0 +1,1530 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ordner Page Übersicht</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        h1 {
+            color: #333;
+            margin: 20px;
+        }
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        .left-panel {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            border-right: 1px solid #ddd;
+        }
+        .right-panel {
+            width: 40%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .right-panel-content {
+            overflow-y: auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+            flex: 1;
+        }
+        .jahr-group {
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 5px;
+            background-color: #f9f9f9;
+        }
+        .jahr-title {
+            font-size: 20px;
+            color: #2c3e50;
+            margin: 5px 0;
+            cursor: pointer;
+            padding: 8px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+        }
+        .jahr-title:hover {
+            background-color: #dee2e6;
+        }
+        .jahr-title::before {
+            content: "▼";
+            font-size: 14px;
+            margin-right: 10px;
+            transition: transform 0.2s;
+        }
+        .jahr-title.collapsed::before {
+            content: "▶";
+        }
+        .ordner-group {
+            margin: 10px 0 10px 15px;
+            border: 1px solid #d6e9ff;
+            border-radius: 4px;
+            padding: 5px;
+            background-color: #f1f8fe;
+        }
+        .ordner-title {
+            font-size: 16px;
+            color: #1a5276;
+            margin: 3px 0;
+            cursor: pointer;
+            padding: 6px;
+            background-color: #d4e6f7;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+        }
+        .ordner-title:hover {
+            background-color: #c4ddf5;
+        }
+        .ordner-title::before {
+            content: "▼";
+            font-size: 12px;
+            margin-right: 8px;
+            transition: transform 0.2s;
+        }
+        .ordner-title.collapsed::before {
+            content: "▶";
+        }
+        .page-items {
+            margin-left: 15px;
+            padding: 5px;
+        }
+        .page-item {
+            padding: 8px 10px;
+            margin: 3px 0;
+            background-color: white;
+            border-radius: 3px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .page-item:hover {
+            background-color: #f0f7ff;
+        }
+        .page-item.active {
+            background-color: #d4e6f7;
+            font-weight: bold;
+        }
+        .page-item-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        .page-item-button {
+            padding: 3px 8px;
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .page-item-button:hover {
+            background-color: #357abd;
+        }
+        .page-item-button.pictures {
+            background-color: #e67e22;
+        }
+        .page-item-button.pictures:hover {
+            background-color: #d35400;
+        }
+        .loading {
+            text-align: center;
+            padding: 30px;
+            font-style: italic;
+            color: #7f8c8d;
+            font-size: 18px;
+        }
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+            padding: 20px;
+            border: 1px solid #e74c3c;
+            border-radius: 5px;
+            background-color: #fde8e8;
+        }
+        .search-container {
+            margin: 0 20px 20px 20px;
+        }
+        .right-search-container {
+            padding: 10px 20px;
+            background-color: #f0f0f0;
+            border-bottom: 1px solid #ddd;
+        }
+        #searchInput, #belegSearchInput {
+            padding: 8px 12px;
+            width: 100%;
+            max-width: 500px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            position: sticky;
+            top: 0;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        .beleg-details {
+            margin-top: 20px;
+        }
+        .beleg-positions {
+            margin-top: 20px;
+        }
+        .no-selection {
+            color: #999;
+            font-style: italic;
+            text-align: center;
+            padding: 50px;
+        }
+        .highlight {
+            background-color: yellow;
+            font-weight: bold;
+        }
+        .beleg-accounts {
+            margin-top: 20px;
+        }
+        .beleg-stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            padding: 5px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+        }
+        .folder-count {
+            margin-left: auto;
+            font-weight: normal;
+            color: #666;
+        }
+        .date-group {
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 5px;
+            background-color: #f5f5f5;
+        }
+        .date-title {
+            font-size: 16px;
+            color: #2c3e50;
+            margin: 5px 0;
+            cursor: pointer;
+            padding: 8px;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+        }
+        .date-title:hover {
+            background-color: #d0d0d0;
+        }
+        .date-title::before {
+            content: "▼";
+            font-size: 12px;
+            margin-right: 8px;
+            transition: transform 0.2s;
+        }
+        .date-title.collapsed::before {
+            content: "▶";
+        }
+        .beleg-items {
+            margin-left: 15px;
+            padding: 5px;
+        }
+        /* Drawer styles */
+        .drawer {
+            position: fixed;
+            top: 0;
+            right: -40%;
+            width: 40%;
+            height: 100%;
+            background-color: white;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.2);
+            transition: right 0.3s ease;
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .drawer.open {
+            right: 0;
+        }
+        .drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .drawer-title {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .close-drawer {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: none;
+        }
+        .overlay.active {
+            display: block;
+        }
+        .image-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .image-item {
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        .image-item img {
+            max-width: 100%;
+            max-height: 200px;
+            display: block;
+        }
+        .image-filename {
+            text-align: center;
+            margin-top: 5px;
+            font-size: 12px;
+            word-break: break-all;
+        }
+        .belege-count {
+            background-color: #4a90e2;
+            color: white;
+            border-radius: 10px;
+            padding: 2px 8px;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+        /* Calendar styles */
+        .calendar-container {
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            background-color: white;
+        }
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .calendar-title {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .calendar-nav {
+            display: flex;
+            gap: 10px;
+        }
+        .calendar-nav-button {
+            padding: 5px 10px;
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .calendar-nav-button:hover {
+            background-color: #357abd;
+        }
+        .calendar {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .calendar th {
+            text-align: center;
+            padding: 10px;
+            background-color: #f2f2f2;
+        }
+        .calendar td {
+            text-align: center;
+            padding: 8px;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            position: relative;
+        }
+        .calendar td:hover {
+            background-color: #f0f7ff;
+        }
+        .calendar-day {
+            display: block;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            border-radius: 50%;
+            margin: 0 auto;
+        }
+        .calendar-day.has-belege {
+            background-color: #4a90e2;
+            color: white;
+        }
+        .calendar-day.selected {
+            background-color: #e74c3c;
+            color: white;
+        }
+        .calendar-day.other-month {
+            color: #ccc;
+        }
+        .calendar-day.today {
+            border: 2px solid #e74c3c;
+        }
+        .calendar-belege-count {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            font-size: 10px;
+            background-color: #e74c3c;
+            color: white;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            line-height: 16px;
+        }
+        
+        /* Card styles for belege */
+        .belege-cards-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .beleg-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-left: 4px solid #4a90e2;
+        }
+        .beleg-card:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+        }
+        .beleg-card.selected {
+            background-color: #e8f4fd;
+            border-left-color: #e74c3c;
+        }
+        .beleg-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+        .beleg-card-title {
+            font-weight: bold;
+            font-size: 16px;
+            color: #2c3e50;
+        }
+        .beleg-card-status {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .beleg-card-status-ok {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .beleg-card-status-not-ok {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .beleg-card-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .beleg-card-detail {
+            display: flex;
+            flex-direction: column;
+        }
+        .beleg-card-label {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-bottom: 2px;
+        }
+        .beleg-card-value {
+            font-size: 14px;
+            color: #2c3e50;
+        }
+        .beleg-card-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 10px;
+            gap: 10px;
+        }
+        .beleg-card-action {
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .beleg-card-action:hover {
+            background-color: #357abd;
+        }
+    </style>
+</head>
+<body>
+    <h1>Ordner Page Übersicht</h1>
+    <div class="search-container">
+        <input type="text" id="searchInput" placeholder="Suche nach Ordner oder Seite...">
+    </div>
+    <div class="container">
+        <div class="left-panel" id="leftPanel">
+            <div id="content">
+                <div class="loading">Daten werden geladen...</div>
+            </div>
+        </div>
+        <div class="right-panel" id="rightPanel">
+            <div class="right-search-container">
+                <input type="text" id="belegSearchInput" placeholder="Suche in Belegen...">
+            </div>
+            <div class="right-panel-content">
+                <div class="no-selection">Wählen Sie eine Ordner Page aus, um die zugehörigen Belege anzuzeigen</div>
+                <div id="calendarContainer" class="calendar-container" style="display: none;">
+                    <div class="calendar-header">
+                        <div class="calendar-title">Kalenderansicht</div>
+                        <div class="calendar-nav">
+                            <button class="calendar-nav-button" onclick="changeCalendarMonth(-1)">←</button>
+                            <button class="calendar-nav-button" onclick="changeCalendarMonth(1)">→</button>
+                        </div>
+                    </div>
+                    <div id="calendar"></div>
+                </div>
+                <div id="belegDetails" style="display: none;">
+                    <div class="beleg-stats">
+                        <div>Anzahl Belege: <span id="belegCount">0</span></div>
+                        <div>OK Datum: <span id="belegDatumOKCount">0</span></div>
+                        <div>Gefilterte Belege: <span id="filteredBelegCount">0</span></div>
+                    </div>
+                    <div id="belegGroups"></div>
+                    <div class="beleg-positions">
+                        <h4>Belegpositionen</h4>
+                        <div class="positions-table"></div>
+                    </div>
+                    <div class="beleg-accounts">
+                        <h4>Kontobuchungen</h4>
+                        <div class="accounts-table"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Belege Drawer -->
+    <div class="overlay" id="belegeOverlay"></div>
+    <div class="drawer" id="belegeDrawer">
+        <div class="drawer-header">
+            <div class="drawer-title">Belege</div>
+            <button class="close-drawer" onclick="closeBelegeDrawer()">×</button>
+        </div>
+        <div id="belegeDrawerContent">
+            <div class="loading">Belege werden geladen...</div>
+        </div>
+    </div>
+
+    <!-- Pictures Drawer -->
+    <div class="overlay" id="picturesOverlay"></div>
+    <div class="drawer" id="picturesDrawer">
+        <div class="drawer-header">
+            <div class="drawer-title">Bilder</div>
+            <button class="close-drawer" onclick="closePicturesDrawer()">×</button>
+        </div>
+        <div id="picturesDrawerContent">
+            <div class="loading">Bilder werden geladen...</div>
+        </div>
+    </div>
+
+    <script>
+        let allData = []; // Store all data for searching
+        let currentBelege = []; // Store current belege data
+        let currentBelegId = null; // Store current selected beleg ID
+        let currentPositions = []; // Store current positions data
+        let belegeCounts = {}; // Store belege counts for each page
+        let currentPageId = null; // Store current page ID for calendar
+        let calendarDate = new Date(); // Current date for calendar view
+
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('http://localhost:5000/ordner_pages')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    allData = data;
+                    displayData(allData);
+                    setupCollapsible();
+                    setupSearch();
+                    setupPageItemClick();
+                    setupBelegSearch();
+                })
+                .catch(error => {
+                    document.getElementById('content').innerHTML = 
+                        `<div class="error">Fehler beim Laden der Daten: ${error.message}</div>`;
+                });
+        });
+
+        function displayData(data) {
+            if (!data || data.length === 0) {
+                document.getElementById('content').innerHTML = 
+                    '<div class="loading">Keine Daten verfügbar.</div>';
+                return;
+            }
+
+            // Group data by JAHR and then by ORDNER_NAME
+            const groupedData = {};
+            
+            data.forEach(item => {
+                if (!groupedData[item.JAHR]) {
+                    groupedData[item.JAHR] = {};
+                }
+                if (!groupedData[item.JAHR][item.ORDNER_NAME]) {
+                    groupedData[item.JAHR][item.ORDNER_NAME] = [];
+                }
+                groupedData[item.JAHR][item.ORDNER_NAME].push(item);
+            });
+
+            // Generate HTML
+            let html = '';
+            
+            // Sort years in descending order
+            const years = Object.keys(groupedData).sort((a, b) => b - a);
+            
+            years.forEach(jahr => {
+                html += `<div class="jahr-group">`;
+                html += `<div class="jahr-title collapsed">Jahr: ${jahr}</div>`;
+                html += `<div class="jahr-content" style="display:none;">`;
+                
+                // Sort folders alphabetically
+                const ordners = Object.keys(groupedData[jahr]).sort();
+                
+                ordners.forEach(ordner => {
+                    const pageCount = groupedData[jahr][ordner].length;
+                    html += `<div class="ordner-group">`;
+                    html += `<div class="ordner-title collapsed">Ordner: ${ordner} <span class="folder-count">(${pageCount})</span></div>`;
+                    html += `<div class="page-items" style="display:none;">`;
+                    
+                    // Add each page item
+                    groupedData[jahr][ordner].forEach(page => {
+                        const belegeCount = belegeCounts[page.PK_ABL_ORDNER_PAGE] || 0;
+                        html += `<div class="page-item" data-id="${page.PK_ABL_ORDNER_PAGE}" style="${page.p_datum_belege_all_ok ? 'color: green;' : ''}">
+                            <div>
+                                ${page.PK_ABL_ORDNER_PAGE}: ${page.ORDNER_PAGE} (${page.DESCR}) (${page.PK_ABL_ORDNER}) - 
+                                ${page.p_datum_belege_all_ok ? '✓ ' + formatDate(page.p_datum_belege_all_ok) : ''}
+                                <span class="belege-count" id="belegeCount">${page.cnt}</span> 
+ <span class="belege-count">${page.FINAL_CNT_BELEGE} ${page.FINAL_CNT_ORIG_APP_OVERVIEW} ${formatDate(page.DATUM_ORIG_APP_OVERVIEW)} </span> 
+                            </div>
+                            <div class="page-item-buttons">
+                                <button class="page-item-button" onclick="showBelegeDrawer(${page.PK_ABL_ORDNER_PAGE}, event)">Belege</button>
+                                <button class="page-item-button pictures" onclick="showPicturesDrawer(${page.PK_ABL_ORDNER_PAGE}, event)">Bilder</button>
+                            </div>
+                        </div>`;
+                    });
+                    
+                    html += `</div></div>`;
+                });
+                
+                html += `</div></div>`;
+            });
+
+            document.getElementById('content').innerHTML = html;
+        }
+
+        function formatDate(dateInput) {
+            if (!dateInput) return '';
+            
+            const date = new Date(dateInput);
+            if (isNaN(date.getTime())) return dateInput; // Fallback if invalid date
+            
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            
+            return `${day}.${month}.${year}`;
+        }
+
+        function setupCollapsible() {
+            // Set up click handlers for year titles
+            document.querySelectorAll('.jahr-title').forEach(title => {
+                title.addEventListener('click', function() {
+                    this.classList.toggle('collapsed');
+                    const content = this.nextElementSibling;
+                    if (content.style.display === 'none') {
+                        content.style.display = 'block';
+                    } else {
+                        content.style.display = 'none';
+                    }
+                });
+            });
+
+            // Set up click handlers for folder titles
+            document.querySelectorAll('.ordner-title').forEach(title => {
+                title.addEventListener('click', function() {
+                    this.classList.toggle('collapsed');
+                    const content = this.nextElementSibling;
+                    if (content.style.display === 'none') {
+                        content.style.display = 'block';
+                    } else {
+                        content.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        function setupSearch() {
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                if (searchTerm.length === 0) {
+                    displayData(allData);
+                    setupCollapsible();
+                    setupPageItemClick();
+                    return;
+                }
+
+                const filteredData = allData.filter(item => 
+                    item.JAHR.toString().toLowerCase().includes(searchTerm) ||
+                    item.ORDNER_NAME.toLowerCase().includes(searchTerm) ||
+                    (item.ORDNER_PAGE && item.ORDNER_PAGE.toString().toLowerCase().includes(searchTerm))
+                );
+
+                displayData(filteredData);
+                setupCollapsible();
+                setupPageItemClick();
+                
+                // Auto-expand all groups when searching
+                if (searchTerm.length > 0) {
+                    document.querySelectorAll('.jahr-title.collapsed').forEach(el => el.click());
+                    document.querySelectorAll('.ordner-title.collapsed').forEach(el => el.click());
+                }
+            });
+        }
+
+        function setupBelegSearch() {
+            const belegSearchInput = document.getElementById('belegSearchInput');
+            belegSearchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                if (searchTerm.length === 0) {
+                    // Reset to original display if search is empty
+                    displayBelege(currentBelege);
+                    if (currentBelegId) {
+                        loadBelegPositions(currentBelegId);
+                    }
+                    return;
+                }
+                
+                // Search in belege
+                const filteredBelege = currentBelege.filter(beleg => {
+                    return Object.values(beleg).some(val => 
+                        val !== null && val.toString().toLowerCase().includes(searchTerm)
+                    );
+                });
+                
+                // Update filtered count
+                document.getElementById('filteredBelegCount').textContent = filteredBelege.length;
+                
+                // Highlight matches in the table
+                displayFilteredBelege(filteredBelege, searchTerm);
+                
+                // Search in positions if they are loaded
+                if (currentPositions.length > 0) {
+                    const filteredPositions = currentPositions.filter(pos => {
+                        return Object.values(pos).some(val => 
+                            val !== null && val.toString().toLowerCase().includes(searchTerm)
+                        );
+                    });
+                    
+                    displayFilteredPositions(filteredPositions, searchTerm);
+                }
+            });
+        }
+
+        function displayFilteredBelege(filteredBelege, searchTerm) {
+            if (filteredBelege.length === 0) {
+                document.getElementById('belegGroups').innerHTML = 
+                    '<div class="no-selection">Keine Belege gefunden, die dem Suchbegriff entsprechen</div>';
+                document.querySelector('.positions-table').innerHTML = 
+                    '<div class="no-selection">Keine Belege ausgewählt</div>';
+                return;
+            }
+            
+            // Group by BELEGDATUM
+            const groupedByDate = {};
+            filteredBelege.forEach(beleg => {
+                const date = beleg.BELEGDATUM || 'Ohne Datum';
+                if (!groupedByDate[date]) {
+                    groupedByDate[date] = [];
+                }
+                groupedByDate[date].push(beleg);
+            });
+            
+            // Sort dates (newest first)
+            const sortedDates = Object.keys(groupedByDate).sort((a, b) => {
+                if (a === 'Ohne Datum') return 1;
+                if (b === 'Ohne Datum') return -1;
+                return new Date(b) - new Date(a);
+            });
+            
+            let html = '';
+            
+            sortedDates.forEach(date => {
+                const belegeForDate = groupedByDate[date];
+                
+                html += `<div class="date-group">`;
+                html += `<div class="date-title">${formatDate(date)} <span class="folder-count">(${belegeForDate.length})</span></div>`;
+                html += `<div class="beleg-items">`;
+                
+                // Use cards display instead of table
+                html += `<div class="belege-cards-container">`;
+                
+                belegeForDate.forEach(beleg => {
+                    html += createBelegCard(beleg, searchTerm);
+                });
+                
+                html += `</div></div></div>`;
+            });
+            
+            document.getElementById('belegGroups').innerHTML = html;
+            
+            // Set up click handlers for date groups
+            document.querySelectorAll('.date-title').forEach(title => {
+                title.addEventListener('click', function() {
+                    this.classList.toggle('collapsed');
+                    const content = this.nextElementSibling;
+                    if (content.style.display === 'none') {
+                        content.style.display = 'block';
+                    } else {
+                        content.style.display = 'none';
+                    }
+                });
+            });
+            
+            // Set up click handlers for beleg cards
+            document.querySelectorAll('.beleg-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    const belegId = this.getAttribute('data-id');
+                    loadBelegPositions(belegId);
+                });
+            });
+        }
+
+        function createBelegCard(beleg, searchTerm = '') {
+            const isSelected = currentBelegId == beleg.PK_INP_BELEGE_ALL;
+            const hasDatumAllOk = beleg.DATUM_ALL_OK !== null;
+            
+            let cardHtml = `<div class="beleg-card ${isSelected ? 'selected' : ''}" data-id="${beleg.PK_INP_BELEGE_ALL}">`;
+            
+            // Card header
+            cardHtml += `<div class="beleg-card-header">`;
+            cardHtml += `<div class="beleg-card-title">${beleg.BEZEICHNUNG || 'Unbenannter Beleg'}</div>`;
+            cardHtml += `<div class="beleg-card-status">`;
+            if (hasDatumAllOk) {
+                cardHtml += `<span class="beleg-card-status-ok">✓ ${formatDate(beleg.DATUM_ALL_OK)}</span>`;
+            } else {
+                cardHtml += `<span class="beleg-card-status-not-ok">✗</span>`;
+            }
+            cardHtml += `</div>`;
+            cardHtml += `</div>`;
+            
+            // Card details
+            cardHtml += `<div class="beleg-card-details">`;
+            
+            // Add key details
+            const details = [
+                { label: 'Belegnummer', value: beleg.BELEGNUMMER },
+                { label: 'Belegdatum', value: formatDate(beleg.BELEGDATUM) },
+                { label: 'Brutto Betrag', value: beleg.BRUTTO_BETRAG },
+                { label: 'ID', value: beleg.PK_INP_BELEGE_ALL },
+                { label: 'Status', value: beleg.FLG_ORIG_APP_OVERVIEW }
+            ];
+            
+            details.forEach(detail => {
+                if (detail.value) {
+                    let displayValue = detail.value.toString();
+                    
+                    // Highlight search term matches
+                    if (searchTerm && displayValue.toLowerCase().includes(searchTerm)) {
+                        displayValue = displayValue.replace(
+                            new RegExp(searchTerm, 'gi'),
+                            match => `<span class="highlight">${match}</span>`
+                        );
+                    }
+                    
+                    cardHtml += `<div class="beleg-card-detail">`;
+                    cardHtml += `<div class="beleg-card-label">${detail.label}</div>`;
+                    cardHtml += `<div class="beleg-card-value">${displayValue}</div>`;
+                    cardHtml += `</div>`;
+                }
+            });
+            
+            cardHtml += `</div>`;
+            
+            // Card actions
+            cardHtml += `<div class="beleg-card-actions">`;
+            cardHtml += `<button class="beleg-card-action" onclick="event.stopPropagation(); showBelegeDrawer(${beleg.PK_ABL_ORDNER_PAGE}, event)">Belege</button>`;
+            cardHtml += `<button class="beleg-card-action" onclick="event.stopPropagation(); showPicturesDrawer(${beleg.PK_ABL_ORDNER_PAGE}, event)">Bilder</button>`;
+            cardHtml += `</div>`;
+            
+            cardHtml += `</div>`;
+            
+            return cardHtml;
+        }
+
+        function displayFilteredPositions(filteredPositions, searchTerm) {
+            if (filteredPositions.length === 0) {
+                document.querySelector('.positions-table').innerHTML = 
+                    '<div class="no-selection">Keine Positionen gefunden, die dem Suchbegriff entsprechen</div>';
+                return;
+            }
+            
+            let tableHtml = `
+                <table>
+                    <thead>
+                        <tr>
+                            ${Object.keys(filteredPositions[0]).map(key => `<th>${key}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filteredPositions.map(pos => `
+                            <tr>
+                                ${Object.entries(pos).map(([key, val]) => {
+                                    if (val === null) return '<td></td>';
+                                    const strVal = val.toString();
+                                    if (searchTerm && strVal.toLowerCase().includes(searchTerm)) {
+                                        const highlighted = strVal.replace(
+                                            new RegExp(searchTerm, 'gi'),
+                                            match => `<span class="highlight">${match}</span>`
+                                        );
+                                        return `<td>${highlighted}</td>`;
+                                    }
+                                        return `<td>${strVal}</td>`;
+                                }).join('')}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            document.querySelector('.positions-table').innerHTML = tableHtml;
+        }
+
+        function setupPageItemClick() {
+            document.querySelectorAll('.page-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    // Remove active class from all items
+                    document.querySelectorAll('.page-item').forEach(i => {
+                        i.classList.remove('active');
+                    });
+                    
+                    // Add active class to clicked item
+                    this.classList.add('active');
+                    
+                    // Get the ID of the clicked item
+                    const pageId = this.getAttribute('data-id');
+                    currentPageId = pageId;
+                    
+                    // Load belege for this page
+                    loadBelege(pageId);
+                });
+            });
+        }
+
+        function loadBelege(pageId) {
+            // Reset search
+            document.getElementById('belegSearchInput').value = '';
+            
+            fetch(`http://localhost:5000/belege/${pageId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Belege konnten nicht geladen werden');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    currentBelege = data;
+                    currentPositions = [];
+                    
+                    // Show calendar and belege details
+                    document.getElementById('calendarContainer').style.display = 'block';
+                    displayBelege(data);
+                    generateCalendar(data);
+                })
+                .catch(error => {
+                    document.getElementById('belegDetails').style.display = 'none';
+                    document.getElementById('calendarContainer').style.display = 'none';
+                    document.querySelector('#rightPanel .no-selection').style.display = 'block';
+                    document.querySelector('#rightPanel .no-selection').textContent = 
+                        `Fehler beim Laden der Belege: ${error.message}`;
+                });
+        }
+
+        function generateCalendar(belege) {
+            // Reset calendar date to current month
+            calendarDate = new Date();
+            
+            // Create calendar with belege data
+            renderCalendar(belege);
+        }
+        
+        function renderCalendar(belege) {
+            const calendarEl = document.getElementById('calendar');
+            const year = calendarDate.getFullYear();
+            const month = calendarDate.getMonth();
+            
+            // Get first day of month and number of days in month
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            // Get previous month days
+            const prevMonthLastDay = new Date(year, month, 0).getDate();
+            
+            // Create calendar header with month name and year
+            const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni",
+                "Juli", "August", "September", "Oktober", "November", "Dezember"
+            ];
+            
+            document.querySelector('.calendar-title').textContent = `${monthNames[month]} ${year}`;
+            
+            // Create calendar table
+            let calendarHtml = `
+                <table class="calendar">
+                <thead>
+                    <tr>
+                        <th>Mo</th><th>Di</th><th>Mi</th><th>Do</th><th>Fr</th><th>Sa</th><th>So</th>
+                    </tr>
+                </thead>
+                <tbody>
+            `;
+            
+            // Group belege by date
+            const belegeByDate = {};
+            belege.forEach(beleg => {
+                if (beleg.BELEGDATUM) {
+                    const dateStr = beleg.BELEGDATUM.split('T')[0]; // Get YYYY-MM-DD part
+                    if (!belegeByDate[dateStr]) {
+                        belegeByDate[dateStr] = [];
+                    }
+                    belegeByDate[dateStr].push(beleg);
+                }
+            });
+            
+            let day = 1;
+            let dayCount = 0;
+            
+            // Create calendar rows
+            for (let i = 0; i < 6; i++) {
+                calendarHtml += '<tr>';
+                
+                for (let j = 0; j < 7; j++) {
+                    if ((i === 0 && j < (firstDay === 0 ? 6 : firstDay - 1)) || day > daysInMonth) {
+                        // Previous or next month days
+                        let prevDay;
+                        if (i === 0 && j < (firstDay === 0 ? 6 : firstDay - 1)) {
+                            prevDay = prevMonthLastDay - ((firstDay === 0 ? 6 : firstDay - 1) - j - 1);
+                            calendarHtml += `<td><span class="calendar-day other-month">${prevDay}</span></td>`;
+                        } else if (day > daysInMonth) {
+                            calendarHtml += `<td><span class="calendar-day other-month">${day - daysInMonth}</span></td>`;
+                            day++;
+                        }
+                    } else {
+                        // Current month days
+                        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                        const hasBelege = belegeByDate[dateStr] && belegeByDate[dateStr].length > 0;
+                        const belegeCount = hasBelege ? belegeByDate[dateStr].length : 0;
+                        
+                        // Check if today
+                        const today = new Date();
+                        const isToday = today.getFullYear() === year && 
+                                       today.getMonth() === month && 
+                                       today.getDate() === day;
+                        
+                        calendarHtml += `<td onclick="filterBelegeByDate('${dateStr}')">`;
+                        calendarHtml += `<span class="calendar-day ${hasBelege ? 'has-belege' : ''} ${isToday ? 'today' : ''}">${day}</span>`;
+                        if (hasBelege) {
+                            calendarHtml += `<span class="calendar-belege-count">${belegeCount}</span>`;
+                        }
+                        calendarHtml += '</td>';
+                        day++;
+                    }
+                    dayCount++;
+                }
+                
+                calendarHtml += '</tr>';
+                
+                // Break if we've shown all days
+                if (day > daysInMonth) {
+                    break;
+                }
+            }
+            
+            calendarHtml += '</tbody></table>';
+            calendarEl.innerHTML = calendarHtml;
+        }
+        
+        function changeCalendarMonth(direction) {
+            calendarDate.setMonth(calendarDate.getMonth() + direction);
+            renderCalendar(currentBelege);
+        }
+        
+        function filterBelegeByDate(dateStr) {
+            // Filter belege by selected date
+            const filteredBelege = currentBelege.filter(beleg => {
+                if (!beleg.BELEGDATUM) return false;
+                const belegDate = beleg.BELEGDATUM.split('T')[0];
+                return belegDate === dateStr;
+            });
+            
+            // Update filtered count
+            document.getElementById('filteredBelegCount').textContent = filteredBelege.length;
+            
+            // Display filtered belege
+            displayFilteredBelege(filteredBelege, '');
+            
+            // Highlight the selected date in the calendar
+            document.querySelectorAll('.calendar-day').forEach(day => {
+                day.classList.remove('selected');
+            });
+            
+            // Find and highlight the selected date
+            const dayElement = Array.from(document.querySelectorAll('.calendar-day')).find(el => {
+                return el.textContent === String(new Date(dateStr).getDate());
+            });
+            
+            if (dayElement) {
+                dayElement.classList.add('selected');
+            }
+        }
+
+        function displayBelege(belege) {
+            const rightPanel = document.querySelector('.right-panel-content');
+            const noSelection = rightPanel.querySelector('.no-selection');
+            const belegDetails = document.getElementById('belegDetails');
+            
+            if (belege.length === 0) {
+                noSelection.textContent = 'Keine Belege für diese Seite gefunden';
+                noSelection.style.display = 'block';
+                belegDetails.style.display = 'none';
+                document.getElementById('calendarContainer').style.display = 'none';
+                document.getElementById('belegCount').textContent = '0';
+                document.getElementById('filteredBelegCount').textContent = '0';
+                return;
+            }
+            
+            noSelection.style.display = 'none';
+            belegDetails.style.display = 'block';
+            
+            // Update counts
+            document.getElementById('belegCount').textContent = belege.length;
+            document.getElementById('filteredBelegCount').textContent = belege.length;
+
+            let html = '';
+            
+            // Group by BELEGDATUM
+            const groupedByDate = {};
+            let countWithDatumAllOk = 0;
+            belege.forEach(beleg => {
+                const date = beleg.BELEGDATUM || 'Ohne Datum';
+                if (!groupedByDate[date]) {
+                    groupedByDate[date] = [];
+                }
+                groupedByDate[date].push(beleg);
+
+                // Count if DATUM_ALL_OK exists
+                if (beleg.DATUM_ALL_OK) {
+                    countWithDatumAllOk++;
+                    document.getElementById('belegDatumOKCount').textContent = countWithDatumAllOk;
+                }
+            });
+            
+            // Sort dates (newest first)
+            const sortedDates = Object.keys(groupedByDate).sort((a, b) => {
+                if (a === 'Ohne Datum') return 1;
+                if (b === 'Ohne Datum') return -1;
+                return new Date(b) - new Date(a);
+            });
+            
+            sortedDates.forEach(date => {
+                const belegeForDate = groupedByDate[date];
+                
+                html += `<div class="date-group">`;
+                html += `<div class="date-title">${formatDate(date)} <span class="folder-count">(${belegeForDate.length})</span></div>`;
+                html += `<div class="beleg-items">`;
+                
+                // Use cards display instead of table
+                html += `<div class="belege-cards-container">`;
+                
+                belegeForDate.forEach(beleg => {
+                    html += createBelegCard(beleg);
+                });
+                
+                html += `</div></div></div>`;
+            });
+            
+            document.getElementById('belegGroups').innerHTML = html;
+            document.querySelector('.positions-table').innerHTML = 
+                '<div class="no-selection">Wählen Sie einen Beleg aus, um die Positionen anzuzeigen</div>';
+            document.querySelector('.accounts-table').innerHTML = 
+                '<div class="no-selection">Wählen Sie einen Beleg aus, um die Kontobuchungen anzuzeigen</div>';
+            
+            // Set up click handlers for date groups
+            document.querySelectorAll('.date-title').forEach(title => {
+                title.addEventListener('click', function() {
+                    this.classList.toggle('collapsed');
+                    const content = this.nextElementSibling;
+                    if (content.style.display === 'none') {
+                        content.style.display = 'block';
+                    } else {
+                        content.style.display = 'none';
+                    }
+                });
+            });
+            
+            // Set up click handlers for beleg cards
+            document.querySelectorAll('.beleg-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    const belegId = this.getAttribute('data-id');
+                    loadBelegPositions(belegId);
+                });
+            });
+        }
+
+        function loadBelegPositions(belegId) {
+            currentBelegId = belegId;
+            
+            // Highlight selected card
+            document.querySelectorAll('.beleg-card').forEach(card => {
+                card.classList.remove('selected');
+                if (card.getAttribute('data-id') == belegId) {
+                    card.classList.add('selected');
+                }
+            });
+            
+            // Load positions
+            fetch(`http://localhost:5000/belege_pos/${belegId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Belegpositionen konnten nicht geladen werden');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    currentPositions = data;
+                    displayBelegPositions(data);
+                })
+                .catch(error => {
+                    document.querySelector('.positions-table').innerHTML = 
+                        `<div class="error">Fehler beim Laden der Positionen: ${error.message}</div>`;
+                });
+            
+            // Load accounts
+            fetch(`http://localhost:5000/accounts/2/${belegId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Kontobuchungen konnten nicht geladen werden');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    displayAccounts(data);
+                })
+                .catch(error => {
+                    document.querySelector('.accounts-table').innerHTML = 
+                        `<div class="error">Fehler beim Laden der Kontobuchungen: ${error.message}</div>`;
+                });
+        }
+
+        function displayBelegPositions(positions) {
+            if (positions.length === 0) {
+                document.querySelector('.positions-table').innerHTML = 
+                    '<div class="no-selection">Keine Positionen für diesen Beleg gefunden</div>';
+                return;
+            }
+            
+            let tableHtml = `
+                <table>
+                    <thead>
+                        <tr>
+                            ${Object.keys(positions[0]).map(key => `<th>${key}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${positions.map(pos => `
+                            <tr>
+                                ${Object.values(pos).map(val => `<td>${val !== null ? val : ''}</td>`).join('')}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            document.querySelector('.positions-table').innerHTML = tableHtml;
+        }
+
+        function displayAccounts(accounts) {
+            if (accounts.length === 0) {
+                document.querySelector('.accounts-table').innerHTML = 
+                    '<div class="no-selection">Keine Kontobuchungen für diesen Beleg gefunden</div>';
+                return;
+            }
+            
+            let tableHtml = `
+                <table>
+                    <thead>
+                        <tr>
+                            ${Object.keys(accounts[0]).map(key => `<th>${key}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${accounts.map(account => `
+                            <tr>
+                                ${Object.values(account).map(val => `<td>${val !== null ? val : ''}</td>`).join('')}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            document.querySelector('.accounts-table').innerHTML = tableHtml;
+        }
+
+        // Drawer functions
+        function showBelegeDrawer(pageId, event) {
+            event.stopPropagation(); // Prevent triggering the page-item click
+            
+            // Show loading state
+            document.getElementById('belegeDrawerContent').innerHTML = '<div class="loading">Belege werden geladen...</div>';
+            
+            // Open drawer
+            document.getElementById('belegeDrawer').classList.add('open');
+            document.getElementById('belegeOverlay').classList.add('active');
+            
+            // Load belege data
+            fetch(`http://localhost:5000/belege/${pageId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Belege konnten nicht geladen werden');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    displayBelegeInDrawer(data);
+                })
+                .catch(error => {
+                    document.getElementById('belegeDrawerContent').innerHTML = 
+                        `<div class="error">Fehler beim Laden der Belege: ${error.message}</div>`;
+                });
+        }
+
+        function displayBelegeInDrawer(belege) {
+            if (belege.length === 0) {
+                document.getElementById('belegeDrawerContent').innerHTML = 
+                    '<div class="no-selection">Keine Belege für diese Seite gefunden</div>';
+                return;
+            }
+            
+            let html = '<div class="beleg-stats">';
+            html += `<div>Anzahl Belege: ${belege.length}</div>`;
+            
+            // Count belege with DATUM_ALL_OK
+            const countWithDatumAllOk = belege.filter(b => b.DATUM_ALL_OK).length;
+            html += `<div>OK Datum: ${countWithDatumAllOk}</div>`;
+            html += '</div>';
+            
+            // Group by BELEGDATUM
+            const groupedByDate = {};
+            belege.forEach(beleg => {
+                const date = beleg.BELEGDATUM || 'Ohne Datum';
+                if (!groupedByDate[date]) {
+                    groupedByDate[date] = [];
+                }
+                groupedByDate[date].push(beleg);
+            });
+            
+            // Sort dates (newest first)
+            const sortedDates = Object.keys(groupedByDate).sort((a, b) => {
+                if (a === 'Ohne Datum') return 1;
+                if (b === 'Ohne Datum') return -1;
+                return new Date(b) - new Date(a);
+            });
+            
+            sortedDates.forEach(date => {
+                const belegeForDate = groupedByDate[date];
+                
+                html += `<div class="date-group">`;
+                html += `<div class="date-title">${date} <span class="folder-count">(${belegeForDate.length})</span></div>`;
+                html += `<div class="beleg-items">`;
+                
+                // Use cards display instead of table
+                html += `<div class="belege-cards-container">`;
+                
+                belegeForDate.forEach(beleg => {
+                    html += createBelegCard(beleg);
+                });
+                
+                html += `</div></div></div>`;
+            });
+            
+            document.getElementById('belegeDrawerContent').innerHTML = html;
+            
+            // Set up click handlers for date groups
+            document.querySelectorAll('#belegeDrawerContent .date-title').forEach(title => {
+                title.addEventListener('click', function() {
+                    this.classList.toggle('collapsed');
+                    const content = this.nextElementSibling;
+                    if (content.style.display === 'none') {
+                        content.style.display = 'block';
+                    } else {
+                        content.style.display = 'none';
+                    }
+                });
+            });
+            
+            // Set up click handlers for beleg cards
+            document.querySelectorAll('#belegeDrawerContent .beleg-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    const belegId = this.getAttribute('data-id');
+                    // In drawer, we might want to show more details or just highlight
+                    this.classList.toggle('selected');
+                });
+            });
+        }
+
+        function closeBelegeDrawer() {
+            document.getElementById('belegeDrawer').classList.remove('open');
+            document.getElementById('belegeOverlay').classList.remove('active');
+        }
+
+        function showPicturesDrawer(pageId, event) {
+            event.stopPropagation(); // Prevent triggering the page-item click
+          
+            
+            // Show loading state
+            document.getElementById('picturesDrawerContent').innerHTML = '<div class="loading">Bilder werden geladen...</div>';
+            
+            // Open drawer
+            document.getElementById('picturesDrawer').classList.add('open');
+            document.getElementById('picturesOverlay').classList.add('active');
+            
+            // Load pictures data
+            fetch(`http://localhost:5000/visit/${pageId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Bilder konnten nicht geladen werden');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    displayPicturesInDrawer(data, pageId);
+                })
+                .catch(error => {
+                    document.getElementById('picturesDrawerContent').innerHTML = 
+                        `<div class="error">Fehler beim Laden der Bilder: ${error.message}</div>`;
+                });
+        }
+
+        function displayPicturesInDrawer(pictures, pageId) {
+            if (!pictures || pictures.length === 0) {
+                document.getElementById('picturesDrawerContent').innerHTML = 
+                    '<div class="no-selection">Keine Bilder für diese Seite gefunden</div>';
+                return;
+            }
+            
+            let html = `<div class="image-container">`;
+            let ind = 0;
+            
+            pictures.forEach(picture => {
+                html += `<div class="image-item">`;
+                if (picture.FILECONTENT) {
+                    // Convert binary data to base64 for image display
+                    const base64 = btoa(
+                        new Uint8Array(picture.FILECONTENT.data).reduce(
+                            (data, byte) => data + String.fromCharCode(byte), ''
+                        )
+                    );
+                    html += `<img src="data:image/jpeg;base64,${base64}" alt="${pageId}  test ${picture.PK_BILD_BILDER} ${picture.FILENAME || 'Bild'}">`;
+                } else {
+                    html += `<div>Kein Bildinhalt</div>`;
+                }
+                ind+=1;
+                html += `<div class="image-filename">Page: ${pageId} -  Bild (${picture.PK_BILD_BILDER}): ${picture.FILENAME || 'Unbenannt'}  ${formatDate(picture.DATUM_ZUORD_OK)} (${ind}/${pictures.length})</div>`;
+                html += `</div>`;
+            });
+            
+            html += `</div>`;
+            
+            document.getElementById('picturesDrawerContent').innerHTML = html;
+        }
+
+        function closePicturesDrawer() {
+            document.getElementById('picturesDrawer').classList.remove('open');
+            document.getElementById('picturesOverlay').classList.remove('active');
+        }
+
+        // Make functions available globally for onclick handlers
+        window.loadBelegPositions = loadBelegPositions;
+        window.showBelegeDrawer = showBelegeDrawer;
+        window.showPicturesDrawer = showPicturesDrawer;
+        window.closeBelegeDrawer = closeBelegeDrawer;
+        window.closePicturesDrawer = closePicturesDrawer;
+        window.changeCalendarMonth = changeCalendarMonth;
+        window.filterBelegeByDate = filterBelegeByDate;
+    </script>
+</body>
+</html>

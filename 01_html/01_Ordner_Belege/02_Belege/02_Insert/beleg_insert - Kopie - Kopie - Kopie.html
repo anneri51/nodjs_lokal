@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Insertion</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            gap: 20px;
+            background-color: #f5f5f5;
+        }
+        .main-content {
+            flex: 2;
+            background-color: white;
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .image-sidebar {
+            flex: 1;
+            background-color: white;
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+        .form-container {
+            display: flex;
+            gap: 20px;
+        }
+        .page-selection {
+            flex: 1;
+            min-width: 300px;
+        }
+        .document-fields {
+            flex: 2;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 50%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #response {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+        .folder-info {
+            background-color: #f5f5f5;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        /* Image Gallery Styles - from Beleg Data Viewer */
+        .images-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .refresh-btn {
+            background-color: #2196F3;
+            padding: 5px 10px;
+            font-size: 14px;
+        }
+        
+        .refresh-btn:hover {
+            background-color: #0b7dda;
+        }
+        
+        .image-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .image-item {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            text-align: center;
+            background-color: #f9f9f9;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .image-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .image-item img {
+            max-width: 100%;
+            max-height: 150px;
+            display: block;
+            margin: 0 auto 10px auto;
+        }
+        
+        .image-meta {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .no-images {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        .loading-images {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid #3498db;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* PDF Thumbnail Styles */
+        .pdf-thumbnail {
+            width: 100%;
+            height: 150px;
+            background-color: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #e74c3c;
+            cursor: pointer;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .pdf-thumbnail:hover {
+            background-color: #eeeeee;
+        }
+        
+        .pdf-thumbnail i {
+            font-size: 48px;
+            margin-bottom: 5px;
+        }
+        
+        .pdf-preview-container {
+            width: 100%;
+            height: 150px;
+            overflow: hidden;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            position: relative;
+        }
+        
+        .pdf-preview-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            transform: scale(0.8);
+            transform-origin: 0 0;
+        }
+        
+        .pdf-preview-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            cursor: pointer;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        
+        .status-badge.validated {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-badge.pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .main-image-badge {
+            background-color: #4CAF50;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            position: absolute;
+            top: 5px;
+            right: 5px;
+        }
+        
+        .image-container {
+            position: relative;
+            margin-bottom: 10px;
+            min-height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .image-actions {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+            justify-content: center;
+        }
+        
+        .image-action-btn {
+            padding: 3px 8px;
+            font-size: 11px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        
+        .image-action-btn:hover {
+            background-color: #0b7dda;
+        }
+        
+        .image-info {
+            font-size: 11px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        /* Image Stats */
+        .image-stats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+        }
+        
+        .stat-item .count {
+            font-weight: bold;
+            color: #2196F3;
+        }
+        
+        /* Search and Filter */
+        .search-filter {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .search-filter input {
+            flex: 1;
+        }
+        
+        .search-filter select {
+            width: 120px;
+        }
+        
+        /* Navigation buttons */
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .nav-buttons button {
+            background-color: #2196F3;
+            padding: 8px 12px;
+        }
+        
+        .nav-buttons button:hover {
+            background-color: #0b7dda;
+        }
+        
+        .relation-controls {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f5f5f5;
+        }
+        .relation-form {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .relation-form input {
+            width: 100px;
+        }
+        .relation-form button {
+            background-color: #4285f4;
+        }
+        .relation-form button:hover {
+            background-color: #3367d6;
+        }
+        
+        /* Modal styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            max-width: 95%;
+            max-height: 95%;
+            overflow-y: auto;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .modal-close {
+            float: right;
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        .modal-close:hover {
+            color: #333;
+        }
+        
+        .fullscreen-pdf-btn {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 15px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .fullscreen-pdf-btn:hover {
+            background-color: #c0392b;
+        }
+        
+        .image-detail-preview {
+            text-align: center;
+            margin-bottom: 20px;
+            min-height: 500px;
+        }
+        
+        .image-detail-preview img {
+            max-width: 100%;
+            max-height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .pdf-detail-container {
+            width: 100%;
+            height: 700px;
+            overflow: auto;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            background-color: #fff;
+        }
+        
+        .pdf-detail-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+            min-height: 700px;
+        }
+        
+        .image-detail-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        
+        .image-detail-info-item {
+            padding: 8px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+        }
+        
+        .image-detail-info-label {
+            font-weight: bold;
+            display: block;
+            color: #666;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        
+        .image-detail-info-value {
+            font-size: 14px;
+            word-break: break-word;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-content">
+        <h1>Insert New Document</h1>
+        
+        <div class="form-container">
+            <div class="page-selection">
+                <div class="form-group">
+                    <label for="yearSelect">Year</label>
+                    <select id="yearSelect" required>
+                        <option value="">-- Select Year --</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="folderSelect">Folder</label>
+                    <select id="folderSelect" required disabled>
+                        <option value="">-- First select a year --</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="folderPageSelect">Folder Page</label>
+                    <select id="folderPageSelect" required disabled>
+                        <option value="">-- First select a folder --</option>
+                    </select>
+                </div>
+
+                <div id="folderInfo" class="folder-info">
+                    <p><strong>Folder ID:</strong> <span id="folderid">-</span></p>
+                    <p><strong>Folder Name:</strong> <span id="folderName">-</span></p>
+                    <p><strong>Description:</strong> <span id="folderDesc">-</span></p>
+                    <p><strong>Page ID:</strong> <span id="pageid">-</span></p>
+                    <p><strong>Page Number:</strong> <span id="pageNumber">-</span></p>
+                </div>
+            </div>
+
+            <div class="document-fields">
+                <form id="documentForm">
+                    <div class="form-group">
+                        <label for="belegdatum">Document Date (DD.MM.YYYY):</label>
+                        <input type="text" id="belegdatum" name="belegdatum" required placeholder="e.g., 31.12.2023">
+                    </div>
+
+                   <div class="form-group">
+                        <label for="titel">Titel:</label>
+                        <input type="text" id="titel" name="titel" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="bezeichnung">Description:</label>
+                        <input type="text" id="bezeichnung" name="bezeichnung" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="brutto_betrag">Gross Amount:</label>
+                        <input type="number" id="brutto_betrag" name="brutto_betrag" step="0.01" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="fk_abl_ordner_page">Folder Page ID:</label>
+                        <input type="number" id="fk_abl_ordner_page" name="fk_abl_ordner_page" placeholder="Will be auto-filled from selection" readonly>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="belegnummer">Document Number:</label>
+                        <input type="text" id="belegnummer" name="belegnummer" required>
+                    </div>
+                    
+                    <button type="submit">Insert Document</button>
+                </form>
+
+                <div id="documentRelation" class="relation-controls" style="display: none;">
+                    <h3>Create Document-Image Relation</h3>
+                    <div class="relation-form">
+                        <input type="number" id="documentIdInput" placeholder="Document ID">
+                        <input type="number" id="mainBildInput" placeholder="MAIN_BILD" value="1">
+                        <button id="createRelationBtn">Create Relation</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="response"></div>
+    </div>
+    
+    <div class="image-sidebar">
+        <div class="images-header">
+            <h2><i class="fas fa-images" style="color: #2196F3;"></i> Document Images</h2>
+            <button id="refreshImagesBtn" class="refresh-btn" disabled>
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+
+        <!-- Image Stats -->
+        <div class="image-stats" id="imageStats" style="display: none;">
+            <div class="stat-item">
+                <i class="fas fa-image"></i>
+                <span class="count" id="imageCount">0</span> Images
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-file-pdf" style="color: #e74c3c;"></i>
+                <span class="count" id="pdfCount">0</span> PDFs
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-check-circle" style="color: #27ae60;"></i>
+                <span class="count" id="validatedCount">0</span> Validated
+            </div>
+        </div>
+
+        <!-- Search and Filter -->
+        <div class="search-filter">
+            <input type="text" id="imageSearch" placeholder="Search images...">
+            <select id="imageFilter">
+                <option value="all">All</option>
+                <option value="images">Images only</option>
+                <option value="pdfs">PDFs only</option>
+                <option value="validated">Validated</option>
+                <option value="pending">Pending</option>
+            </select>
+        </div>
+
+        <div class="nav-buttons">
+            <button id="prevImageBtn"><i class="fas fa-chevron-left"></i> Prev</button>
+            <input type="number" id="imageIdInput" placeholder="Enter Image/PDF ID">
+            <button id="nextImageBtn">Next <i class="fas fa-chevron-right"></i></button>
+        </div>
+
+        <div id="imagesStatus" class="status"></div>
+        <div id="imageGallery">
+            <div class="no-images">
+                <i class="fas fa-image" style="font-size: 48px; color: #ccc; margin-bottom: 10px;"></i>
+                <p>Enter an image ID above or insert a document to view images</p>
+            </div>
+        </div>
+        
+        <div class="image-info" id="imageInfo"></div>
+    </div>
+
+    <!-- Image Detail Modal -->
+    <div id="imageDetailModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 95%; width: 1400px;">
+            <button class="modal-close" onclick="closeImageDetail()">
+                <i class="fas fa-times"></i>
+            </button>
+            <button class="fullscreen-pdf-btn" id="fullscreenPdfBtn" style="display: none;" onclick="openPdfFullscreen()">
+                <i class="fas fa-expand"></i> Fullscreen PDF
+            </button>
+            <h3><i class="fas fa-image"></i> Document Details</h3>
+            <div id="imageDetailContent"></div>
+        </div>
+    </div>
+    
+    <script>
+        // DOM elements
+        const yearSelect = document.getElementById('yearSelect');
+        const folderSelect = document.getElementById('folderSelect');
+        const folderPageSelect = document.getElementById('folderPageSelect');
+        const folderInfo = document.getElementById('folderInfo');
+        const documentForm = document.getElementById('documentForm');
+        const responseDiv = document.getElementById('response');
+        const fkAblOrdnerPageInput = document.getElementById('fk_abl_ordner_page');
+        
+        // Image viewer elements
+        const imageIdInput = document.getElementById('imageIdInput');
+        const loadImageBtn = document.getElementById('loadImageBtn');
+        const prevImageBtn = document.getElementById('prevImageBtn');
+        const nextImageBtn = document.getElementById('nextImageBtn');
+        const refreshImagesBtn = document.getElementById('refreshImagesBtn');
+        const imagesStatusElement = document.getElementById('imagesStatus');
+        const imageGallery = document.getElementById('imageGallery');
+        const imageInfo = document.getElementById('imageInfo');
+        const imageStats = document.getElementById('imageStats');
+        const imageCount = document.getElementById('imageCount');
+        const pdfCount = document.getElementById('pdfCount');
+        const validatedCount = document.getElementById('validatedCount');
+        const imageSearch = document.getElementById('imageSearch');
+        const imageFilter = document.getElementById('imageFilter');
+        
+        const documentRelation = document.getElementById('documentRelation');
+        const relationDocumentIdInput = document.getElementById('documentIdInput');
+        const mainBildInput = document.getElementById('mainBildInput');
+        const createRelationBtn = document.getElementById('createRelationBtn');
+
+        // Application state
+        const state = {
+            availableYears: [],
+            currentFolders: [],
+            folderPagesData: [],
+            lastInsertedDocumentId: null,
+            allImages: [],
+            filteredImages: [],
+            currentPdfBlobUrl: null
+        };
+
+        // Blob URLs for cleanup
+        let blobUrls = [];
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeYears();
+            setupEventListeners();
+        });
+
+        // Helper Functions
+        function isPDF(image) {
+            if (image.MIMETYPE && image.MIMETYPE.toLowerCase() === 'application/pdf') {
+                return true;
+            }
+            if (image.FILENAME) {
+                const ext = image.FILENAME.split('.').pop().toLowerCase();
+                return ext === 'pdf';
+            }
+            return false;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            if (!bytes) return 'N/A';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function formatDate(date) {
+            if (!date) return "N/A";
+            try {
+                const d = new Date(date);
+                if (isNaN(d.getTime())) return "Invalid Date";
+                const day = String(d.getDate()).padStart(2, '0');
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const year = d.getFullYear();
+                return `${day}.${month}.${year}`;
+            } catch (error) {
+                return "Invalid Date";
+            }
+        }
+
+        function formatValue(value) {
+            if (value === null || value === undefined) return "N/A";
+            if (typeof value === 'string' && value.trim() === "") return "Empty";
+            if (typeof value === 'object') return JSON.stringify(value);
+            return value;
+        }
+
+        function truncateText(text, maxLength = 30) {
+            if (text === null || text === undefined) return '';
+            const textString = String(text);
+            if (textString.length <= maxLength) return textString;
+            return textString.substring(0, maxLength) + '...';
+        }
+
+        function cleanupBlobUrls() {
+            blobUrls.forEach(url => URL.revokeObjectURL(url));
+            blobUrls = [];
+            if (state.currentPdfBlobUrl) {
+                URL.revokeObjectURL(state.currentPdfBlobUrl);
+                state.currentPdfBlobUrl = null;
+            }
+        }
+
+        function filterImages() {
+            let filtered = [...state.allImages];
+            
+            const searchTerm = imageSearch ? imageSearch.value.toLowerCase() : '';
+            if (searchTerm) {
+                filtered = filtered.filter(img => 
+                    (img.FILENAME && img.FILENAME.toLowerCase().includes(searchTerm)) ||
+                    (img.PK_BILD_BILDER && img.PK_BILD_BILDER.toString().includes(searchTerm))
+                );
+            }
+            
+            const filterValue = imageFilter ? imageFilter.value : 'all';
+            if (filterValue !== 'all') {
+                filtered = filtered.filter(img => {
+                    const isPdf = isPDF(img);
+                    const isValidated = img.DATUM_ZUORD_OK && img.DATUM_ZUORD_OK !== '0000-00-00';
+                    
+                    switch(filterValue) {
+                        case 'images': return !isPdf;
+                        case 'pdfs': return isPdf;
+                        case 'validated': return isValidated;
+                        case 'pending': return !isValidated;
+                        default: return true;
+                    }
+                });
+            }
+            
+            state.filteredImages = filtered;
+            displayDocumentImages(filtered);
+        }
+
+        function initializeYears() {
+            try {
+                const currentYear = new Date().getFullYear();
+                const availableYears = Array.from({length: currentYear - 1895 + 6}, (_, i) => 1895 + i);
+                
+                yearSelect.innerHTML = '<option value="">-- Select Year --</option>';
+                availableYears.forEach(year => {
+                    const option = document.createElement('option');
+                    option.value = year;
+                    option.textContent = year;
+                    yearSelect.appendChild(option);
+                });
+            } catch (error) {
+                showError("Error loading initial data: " + error.message);
+                console.error("Initialization error:", error);
+            }
+        }
+
+        function setupEventListeners() {
+            yearSelect.addEventListener('change', handleYearChange);
+            folderSelect.addEventListener('change', handleFolderSelection);
+            folderPageSelect.addEventListener('change', handleFolderPageSelection);
+            documentForm.addEventListener('submit', handleFormSubmission);
+            
+            // Image viewer event listeners
+            if (loadImageBtn) loadImageBtn.addEventListener('click', handleImageLoad);
+            if (prevImageBtn) prevImageBtn.addEventListener('click', () => navigateImage(-1));
+            if (nextImageBtn) nextImageBtn.addEventListener('click', () => navigateImage(1));
+            if (refreshImagesBtn) refreshImagesBtn.addEventListener('click', fetchDocumentImages);
+            if (imageSearch) imageSearch.addEventListener('input', filterImages);
+            if (imageFilter) imageFilter.addEventListener('change', filterImages);
+            
+            imageIdInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    handleImageLoad();
+                }
+            });
+            
+            createRelationBtn.addEventListener('click', handleCreateRelation);
+        }
+
+        function navigateImage(change) {
+            const currentId = parseInt(imageIdInput.value) || 0;
+            const newId = currentId + change;
+            imageIdInput.value = newId > 0 ? newId : 1;
+            handleImageLoad();
+        }
+
+        async function handleImageLoad() {
+            const imageId = imageIdInput.value.trim();
+            
+            if (!imageId) {
+                showError("Please enter an image ID");
+                return;
+            }
+            
+            try {
+                imagesStatusElement.innerHTML = 'Loading image...';
+                imagesStatusElement.className = 'loading';
+                
+                const response = await fetch(`http://localhost:5000/accounts/bild/1/1/1/${imageId}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                blobUrls.push(blobUrl);
+                
+                const isPdf = blob.type === 'application/pdf';
+                
+                let content = '';
+                if (isPdf) {
+                    content = `
+                        <div class="pdf-preview-wrapper" style="height: 400px;">
+                            <iframe src="${blobUrl}#toolbar=1&navpanes=1&scrollbar=1" 
+                                    style="width: 100%; height: 100%; border: none;"
+                                    title="PDF Preview">
+                            </iframe>
+                        </div>
+                    `;
+                } else {
+                    content = `<img src="${blobUrl}" alt="Image ID: ${imageId}" style="max-width: 100%; max-height: 400px;">`;
+                }
+                
+                imageGallery.innerHTML = `
+                    <div class="image-item" style="cursor: default;" onclick="showImageDetail(${imageId})">
+                        ${content}
+                        <div class="image-meta">
+                            <p><strong>ID:</strong> ${imageId}</p>
+                            <p><strong>Type:</strong> ${isPdf ? 'PDF' : blob.type}</p>
+                            <p><strong>Size:</strong> ${(blob.size / 1024).toFixed(2)} KB</p>
+                        </div>
+                        <div class="image-actions">
+                            <button class="image-action-btn" onclick="event.stopPropagation(); window.open('${blobUrl}', '_blank')">
+                                <i class="fas fa-external-link-alt"></i> Open
+                            </button>
+                            <button class="image-action-btn" onclick="event.stopPropagation(); downloadImage('${blobUrl}', 'document_${imageId}')">
+                                <i class="fas fa-download"></i> Download
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                imagesStatusElement.innerHTML = '';
+                imagesStatusElement.className = '';
+                
+            } catch (error) {
+                imagesStatusElement.innerHTML = `Error loading image: ${error.message}`;
+                imagesStatusElement.className = 'error';
+                console.error("Image load error:", error);
+            }
+        }
+
+        async function fetchDocumentImages() {
+            if (!state.lastInsertedDocumentId) {
+                imageGallery.innerHTML = '<div class="no-images">Insert a document first to view images</div>';
+                if (imageStats) imageStats.style.display = 'none';
+                return;
+            }
+
+            try {
+                imagesStatusElement.innerHTML = "Loading images...";
+                imagesStatusElement.className = "loading";
+                imageGallery.innerHTML = '<div class="loading-images"><div class="spinner"></div><p>Loading images...</p></div>';
+                refreshImagesBtn.disabled = true;
+
+                cleanupBlobUrls();
+
+                const response = await fetch(`http://localhost:5000/beleg/bild/1/?pk_inp=${state.lastInsertedDocumentId}`);
+                
+                if (response.status === 404) {
+                    imagesStatusElement.innerHTML = "No images found for this document";
+                    imagesStatusElement.className = "error";
+                    imageGallery.innerHTML = '<div class="no-images">No images found for this document</div>';
+                    if (imageStats) imageStats.style.display = 'none';
+                    return;
+                }
+                
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                let images = [];
+                if (result.success && result.data) {
+                    images = result.data;
+                } else if (Array.isArray(result)) {
+                    images = result;
+                } else {
+                    throw new Error('Invalid response format from image service');
+                }
+
+                state.allImages = images;
+                
+                // Update stats
+                const imgCount = images.length;
+                const pdfCnt = images.filter(img => isPDF(img)).length;
+                const validCnt = images.filter(img => img.DATUM_ZUORD_OK && img.DATUM_ZUORD_OK !== '0000-00-00').length;
+                
+                if (imageCount) imageCount.textContent = imgCount;
+                if (pdfCount) pdfCount.textContent = pdfCnt;
+                if (validatedCount) validatedCount.textContent = validCnt;
+                if (imageStats) imageStats.style.display = 'flex';
+                
+                filterImages();
+                
+                imagesStatusElement.innerHTML = `Found ${images.length} images`;
+                imagesStatusElement.className = "success";
+
+            } catch (error) {
+                console.error('Error fetching document images:', error);
+                imagesStatusElement.innerHTML = `Error: ${error.message}`;
+                imagesStatusElement.className = "error";
+                imageGallery.innerHTML = '<div class="no-images">Error loading images</div>';
+                if (imageStats) imageStats.style.display = 'none';
+            } finally {
+                refreshImagesBtn.disabled = false;
+            }
+        }
+
+        function displayDocumentImages(images) {
+            if (!images || images.length === 0) {
+                imageGallery.innerHTML = '<div class="no-images">No images match your filters</div>';
+                return;
+            }
+
+            let html = '<div class="image-gallery">';
+
+            images.forEach(image => {
+                try {
+                    const imageId = image.PK_BILD_BILDER || 'N/A';
+                    const isPdf = isPDF(image);
+                    const hasContent = image.FILECONTENT && image.FILECONTENT.data;
+                    const isValidated = image.DATUM_ZUORD_OK && image.DATUM_ZUORD_OK !== '0000-00-00';
+                    
+                    html += `
+                        <div class="image-item" onclick="showImageDetail(${imageId})">
+                            <div class="image-container">
+                    `;
+                    
+                    if (hasContent) {
+                        let byteArray = new Uint8Array(image.FILECONTENT.data);
+                        const blob = new Blob([byteArray], { 
+                            type: image.MIMETYPE || (isPdf ? 'application/pdf' : 'image/jpeg') 
+                        });
+                        const blobUrl = URL.createObjectURL(blob);
+                        blobUrls.push(blobUrl);
+                        
+                        if (isPdf) {
+                            html += `
+                                <div class="pdf-preview-container">
+                                    <iframe src="${blobUrl}#toolbar=0&navpanes=0&scrollbar=0" 
+                                            class="pdf-preview-iframe" 
+                                            style="width: 100%; height: 150px; border: none;"
+                                            title="PDF Preview">
+                                    </iframe>
+                                    <div class="pdf-preview-overlay"></div>
+                                </div>
+                                <div style="text-align: center; margin-top: 5px;">
+                                    <i class="fas fa-file-pdf" style="color: #e74c3c;"></i>
+                                </div>
+                            `;
+                        } else {
+                            html += `<img src="${blobUrl}" alt="Document Image ${imageId}" loading="lazy">`;
+                        }
+                    } else {
+                        html += `
+                            <div class="pdf-thumbnail" style="background: #95a5a6;">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span>No Data</span>
+                            </div>
+                        `;
+                    }
+                    
+                    html += `
+                            </div>
+                            <div class="image-meta">
+                                <p><strong>ID:</strong> ${imageId}</p>
+                                <p><strong>Name:</strong> ${truncateText(image.FILENAME || 'N/A', 15)}</p>
+                                <p>
+                                    <span class="status-badge ${isValidated ? 'validated' : 'pending'}">
+                                        <i class="fas ${isValidated ? 'fa-check-circle' : 'fa-clock'}"></i>
+                                        ${isValidated ? 'Validated' : 'Pending'}
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                    `;
+                } catch (error) {
+                    console.error('Error processing image:', error);
+                }
+            });
+
+            html += '</div>';
+            imageGallery.innerHTML = html;
+        }
+
+        // Show image detail modal
+        window.showImageDetail = async function(imageId) {
+            try {
+                const response = await fetch(`http://localhost:5000/bild/1/${imageId}`);
+                if (!response.ok) throw new Error('Failed to load image details');
+                
+                const data = await response.json();
+                const image = data[0];
+                
+                const fileResponse = await fetch(`http://localhost:5000/accounts/bild/1/1/1/${imageId}`);
+                const blob = await fileResponse.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                blobUrls.push(blobUrl);
+                state.currentPdfBlobUrl = blobUrl;
+                
+                const isPdf = blob.type === 'application/pdf';
+                
+                const fullscreenPdfBtn = document.getElementById('fullscreenPdfBtn');
+                if (fullscreenPdfBtn) {
+                    fullscreenPdfBtn.style.display = isPdf ? 'flex' : 'none';
+                }
+                
+                let content = `
+                    <div class="image-detail-preview">
+                `;
+                
+                if (isPdf) {
+                    content += `
+                        <div class="pdf-detail-container">
+                            <iframe src="${blobUrl}#toolbar=1&navpanes=1&scrollbar=1" 
+                                    class="pdf-detail-iframe" 
+                                    style="width: 100%; height: 700px; border: none;"
+                                    title="PDF Detail View"
+                                    scrolling="yes">
+                            </iframe>
+                        </div>
+                    `;
+                } else {
+                    content += `<img src="${blobUrl}" alt="Image Detail" style="max-width: 100%; max-height: 600px;">`;
+                }
+                
+                content += `
+                    </div>
+                    <div class="image-detail-info">
+                        <div class="image-detail-info-item">
+                            <span class="image-detail-info-label">ID</span>
+                            <span class="image-detail-info-value">${image.PK_BILD_BILDER || 'N/A'}</span>
+                        </div>
+                        <div class="image-detail-info-item">
+                            <span class="image-detail-info-label">Filename</span>
+                            <span class="image-detail-info-value">${image.FILENAME || 'N/A'}</span>
+                        </div>
+                        <div class="image-detail-info-item">
+                            <span class="image-detail-info-label">Type</span>
+                            <span class="image-detail-info-value">${image.MIMETYPE || 'N/A'}</span>
+                        </div>
+                        <div class="image-detail-info-item">
+                            <span class="image-detail-info-label">Size</span>
+                            <span class="image-detail-info-value">${formatFileSize(blob.size)}</span>
+                        </div>
+                        <div class="image-detail-info-item">
+                            <span class="image-detail-info-label">Dimensions</span>
+                            <span class="image-detail-info-value">${image.W_PX || '?'} x ${image.H_PX || '?'} px</span>
+                        </div>
+                        <div class="image-detail-info-item">
+                            <span class="image-detail-info-label">Classification 1</span>
+                            <span class="image-detail-info-value">${image.KLASSIFIKATION_1 || 'N/A'}</span>
+                        </div>
+                        <div class="image-detail-info-item">
+                            <span class="image-detail-info-label">Classification 2</span>
+                            <span class="image-detail-info-value">${image.KLASSIFIKATION_2 || 'N/A'}</span>
+                        </div>
+                        <div class="image-detail-info-item">
+                            <span class="image-detail-info-label">Quality</span>
+                            <span class="image-detail-info-value">${image.QUALITY ? image.QUALITY + '%' : 'N/A'}</span>
+                        </div>
+                        <div class="image-detail-info-item">
+                            <span class="image-detail-info-label">Created</span>
+                            <span class="image-detail-info-value">${formatDate(image.CREATED_AT)}</span>
+                        </div>
+                        <div class="image-detail-info-item">
+                            <span class="image-detail-info-label">Validated</span>
+                            <span class="image-detail-info-value">${formatDate(image.DATUM_ZUORD_OK)}</span>
+                        </div>
+                    </div>
+                    <div class="image-actions" style="margin-top: 20px; justify-content: center;">
+                        <a href="${blobUrl}" download="${image.FILENAME || 'document'}" class="image-action-btn" style="text-decoration: none; display: inline-block; padding: 8px 15px;">
+                            <i class="fas fa-download"></i> Download
+                        </a>
+                        <a href="${blobUrl}" target="_blank" class="image-action-btn" style="background-color: #27ae60; text-decoration: none; display: inline-block; padding: 8px 15px;">
+                            <i class="fas fa-external-link-alt"></i> Open in New Tab
+                        </a>
+                    </div>
+                `;
+                
+                const imageDetailContent = document.getElementById('imageDetailContent');
+                if (imageDetailContent) {
+                    imageDetailContent.innerHTML = content;
+                }
+                
+                const modal = document.getElementById('imageDetailModal');
+                if (modal) {
+                    modal.style.display = 'flex';
+                }
+                
+            } catch (error) {
+                console.error('Error loading image details:', error);
+                alert('Error loading image details: ' + error.message);
+            }
+        };
+
+        window.openPdfFullscreen = function() {
+            if (state.currentPdfBlobUrl) {
+                window.open(state.currentPdfBlobUrl, '_blank');
+            }
+        };
+
+        window.closeImageDetail = function() {
+            const modal = document.getElementById('imageDetailModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            const fullscreenPdfBtn = document.getElementById('fullscreenPdfBtn');
+            if (fullscreenPdfBtn) {
+                fullscreenPdfBtn.style.display = 'none';
+            }
+        };
+
+        window.downloadImage = function(blobUrl, filename) {
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        };
+
+        // Original functions for folder/year selection and form submission
+        async function handleYearChange() {
+            const selectedYear = this.value;
+            folderSelect.innerHTML = '<option value="">Loading folders...</option>';
+            folderSelect.disabled = true;
+            folderPageSelect.innerHTML = '<option value="">-- First select a folder --</option>';
+            folderPageSelect.disabled = true;
+            folderInfo.style.display = 'none';
+            fkAblOrdnerPageInput.value = '';
+            
+            if (!selectedYear) {
+                folderSelect.innerHTML = '<option value="">-- First select a year --</option>';
+                folderSelect.disabled = true;
+                return;
+            }
+            
+            try {
+                showStatus(`Loading folders for ${selectedYear}...`);
+                const response = await fetch(`http://localhost:5000/ordner_pages/${selectedYear}`);
+                const data = await response.json();
+                
+                if (data.count === 0) {
+                    folderSelect.innerHTML = '<option value="">No folders found for this year</option>';
+                    showError(`No folders found for year ${selectedYear}`);
+                    return;
+                }
+                
+                state.folderPagesData = data.data;
+                
+                const uniqueFolders = [];
+                const folderIds = new Set();
+                
+                data.data.forEach(folder => {
+                    if (!folderIds.has(folder.PK_ABL_ORDNER)) {
+                        folderIds.add(folder.PK_ABL_ORDNER);
+                        uniqueFolders.push({
+                            id: folder.PK_ABL_ORDNER,
+                            name: folder.ORDNER_NAME,
+                            descr: folder.DESCR || ''
+                        });
+                    }
+                });
+                
+                state.currentFolders = uniqueFolders;
+                populateFolderDropdown();
+                
+            } catch (error) {
+                folderSelect.innerHTML = '<option value="">Error loading folders</option>';
+                showError("Failed to load folders: " + error.message);
+                console.error("Folder load error:", error);
+            }
+        }
+
+        function populateFolderDropdown() {
+            folderSelect.innerHTML = '<option value="">-- Select Folder --</option>';
+            folderSelect.disabled = false;
+            
+            state.currentFolders.forEach(folder => {
+                const option = document.createElement('option');
+                option.value = folder.id;
+                
+                let displayText = folder.name;
+                if (folder.descr) displayText += ` (${folder.descr})`;
+                
+                option.textContent = displayText;
+                option.dataset.name = folder.name;
+                option.dataset.descr = folder.descr;
+                
+                folderSelect.appendChild(option);
+            });
+        }
+
+        function handleFolderSelection() {
+            const selectedFolderId = this.value;
+            folderPageSelect.innerHTML = '<option value="">Loading pages...</option>';
+            folderPageSelect.disabled = true;
+            folderInfo.style.display = 'none';
+            fkAblOrdnerPageInput.value = '';
+            
+            if (!selectedFolderId) {
+                folderPageSelect.innerHTML = '<option value="">-- First select a folder --</option>';
+                return;
+            }
+            
+            try {
+                const folderPages = state.folderPagesData.filter(
+                    page => page.PK_ABL_ORDNER == selectedFolderId
+                );
+                
+                if (folderPages.length === 0) {
+                    folderPageSelect.innerHTML = '<option value="">No pages found for this folder</option>';
+                    return;
+                }
+                
+                populateFolderPageDropdown(folderPages);
+                
+                const selectedOption = this.options[this.selectedIndex];
+                document.getElementById('folderid').textContent = selectedFolderId;
+                document.getElementById('folderName').textContent = selectedOption.dataset.name;
+                document.getElementById('folderDesc').textContent = selectedOption.dataset.descr || 'N/A';
+                
+            } catch (error) {
+                folderPageSelect.innerHTML = '<option value="">Error loading pages</option>';
+                showError("Failed to load folder pages: " + error.message);
+                console.error("Folder pages load error:", error);
+            }
+        }
+
+        function populateFolderPageDropdown(folderPages) {
+            folderPageSelect.innerHTML = '<option value="">-- Select Page --</option>';
+            folderPageSelect.disabled = false;
+            
+            folderPages.forEach(page => {
+                const option = document.createElement('option');
+                option.value = page.PK_ABL_ORDNER_PAGE;
+                
+                let displayText = `Page ${page.PAGE_NUMBER}`;
+                if (page.DESCR) displayText += ` (${page.DESCR})`;
+                
+                option.textContent = displayText;
+                option.dataset.pageNumber = page.PAGE_NUMBER;
+                
+                folderPageSelect.appendChild(option);
+            });
+        }
+
+        function handleFolderPageSelection() {
+            const selectedPageId = this.value;
+            
+            if (!selectedPageId) {
+                folderInfo.style.display = 'none';
+                fkAblOrdnerPageInput.value = '';
+                return;
+            }
+            
+            const selectedOption = this.options[this.selectedIndex];
+            document.getElementById('pageid').textContent = selectedPageId;
+            document.getElementById('pageNumber').textContent = selectedOption.dataset.pageNumber;
+            folderInfo.style.display = 'block';
+            
+            fkAblOrdnerPageInput.value = selectedPageId;
+        }
+
+        async function handleFormSubmission(e) {
+            e.preventDefault();
+            const fkablordnerpage = document.getElementById('fk_abl_ordner_page').value;
+            
+            responseDiv.innerHTML = '';
+            responseDiv.className = '';
+            
+            try {
+                if (!yearSelect.value || !folderSelect.value || !folderPageSelect.value) {
+                    throw new Error('Please select a year, folder, and folder page');
+                }
+                
+                const formData = {
+                    belegdatum: document.getElementById('belegdatum').value,
+                    bezeichnung: document.getElementById('bezeichnung').value,
+                    fk_abl_ordner_page: fkablordnerpage,
+                    brutto_betrag: document.getElementById('brutto_betrag').value,
+                    belegnummer: document.getElementById('belegnummer').value,
+                    titel: document.getElementById('titel').value
+                };
+                
+                if (!/^\d{2}\.\d{2}\.\d{4}$/.test(formData.belegdatum)) {
+                    throw new Error('Invalid date format. Please use DD.MM.YYYY');
+                }
+                
+                const response = await fetch('http://localhost:5000/document/insert1', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    responseDiv.className = 'success';
+                    responseDiv.innerHTML = `
+                        <p><strong>Success!</strong></p>
+                        <p>Document inserted with ID: ${data.documentId}</p>
+                    `;
+                    
+                    state.lastInsertedDocumentId = data.documentId;
+                    relationDocumentIdInput.value = data.documentId;
+                    documentRelation.style.display = 'block';
+                    
+                    document.getElementById('belegdatum').value = '';
+                    document.getElementById('bezeichnung').value = '';
+                    document.getElementById('brutto_betrag').value = '';
+                    document.getElementById('belegnummer').value = '';
+                    
+                    // Enable refresh button and fetch images
+                    refreshImagesBtn.disabled = false;
+                    fetchDocumentImages();
+                    
+                } else {
+                    responseDiv.className = 'error';
+                    responseDiv.innerHTML = `
+                        <p><strong>Error:</strong> ${data.error}</p>
+                        ${data.details ? `<p>Details: ${data.details.message}</p>` : ''}
+                    `;
+                }
+            } catch (error) {
+                responseDiv.className = 'error';
+                responseDiv.innerHTML = `
+                    <p><strong>Error:</strong> ${error.message}</p>
+                `;
+                console.error('Error:', error);
+            }
+        }
+
+        async function handleCreateRelation() {
+            const documentId = relationDocumentIdInput.value.trim();
+            const imageId = imageIdInput.value.trim();
+            const mainBild = mainBildInput.value.trim();
+            
+            if (!documentId || !imageId || !mainBild) {
+                showError("Please fill in all fields (Document ID, Image ID, and MAIN_BILD)");
+                return;
+            }
+            
+            try {
+                showStatus("Creating document-image relation...");
+                
+                const response = await fetch('http://localhost:5000/add_belege_bild', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        FK_INP_BELEGE_ALL: documentId,
+                        FK_BILD_BILDER: imageId,
+                        MAIN_BILD: mainBild
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    responseDiv.className = 'success';
+                    responseDiv.innerHTML += `
+                        <p><strong>Relation created successfully!</strong></p>
+                        <p>Document ID: ${documentId}, Image ID: ${imageId}, MAIN_BILD: ${mainBild}</p>
+                    `;
+                    
+                    mainBildInput.value = parseInt(mainBild) + 1;
+                    
+                    // Refresh images
+                    fetchDocumentImages();
+                } else {
+                    responseDiv.className = 'error';
+                    responseDiv.innerHTML += `
+                        <p><strong>Error creating relation:</strong> ${data.error || 'Unknown error'}</p>
+                    `;
+                }
+            } catch (error) {
+                responseDiv.className = 'error';
+                responseDiv.innerHTML += `
+                    <p><strong>Error creating relation:</strong> ${error.message}</p>
+                `;
+                console.error('Relation creation error:', error);
+            }
+        }
+
+        // Helper functions
+        function showStatus(message) {
+            console.log(message);
+        }
+
+        function showError(message) {
+            console.error(message);
+            responseDiv.className = 'error';
+            responseDiv.innerHTML = `<p><strong>Error:</strong> ${message}</p>`;
+        }
+    </script>
+</body>
+</html>

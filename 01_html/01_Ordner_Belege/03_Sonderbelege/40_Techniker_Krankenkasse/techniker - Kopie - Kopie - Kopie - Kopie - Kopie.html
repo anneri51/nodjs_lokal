@@ -1,0 +1,2031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Data Viewer with Images</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+       
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            grid-column: 1 / -1;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .description {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            grid-column: 1 / -1;
+        }
+        
+        .search-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .both-data {
+            background: linear-gradient(135deg, #4CAF50 50%, #9C27B0 50%);
+            color: white;
+        }
+        
+        input, select, button {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        
+        button {
+            background: #4a6fc0;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #3b5998;
+        }
+        
+        .data-container {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            height: fit-content;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .year-header {
+            background: #3b5998;
+            color: white;
+            padding: 15px 20px;
+            font-size: 1.3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .year-header:hover {
+            background: #2d4373;
+        }
+        
+        .year-content {
+            display: none;
+            background: #f8f9fa;
+        }
+        
+        .month-container {
+            margin-bottom: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .month-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e0e0e0;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .month-header:hover {
+            background: #eef2f7;
+        }
+        
+        .month-header span:first-child {
+            font-weight: 600;
+            font-size: 1.2rem;
+            color: #2c3e50;
+        }
+        
+        .month-header.has-data span:first-child {
+          background: #eef2f7;
+        }
+        
+        .month-summary {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-right: 15px;
+        }
+        
+        .month-summary span {
+            margin: 0 5px;
+        }
+        
+        .calendar-view {
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+        }
+        
+        .calendar-day {
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: 500;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+        
+        .lila-background {
+            background-color: #B39EB5;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        .belege-background {
+            background-color: #FF9800;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        .calendar-day:hover {
+            transform: scale(1.03);
+        }
+        
+        .day-header {
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .has-data {
+            background: #4CAF50;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .no-data {
+            background: #f8f9fa;
+            color: #999;
+            border: 1px dashed #ddd;
+        }
+        
+        .partial-data {
+            background: #FF9800;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .banking-data {
+            background: #B39EB5;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .belege-data {
+            background: #FF9800;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .banking-total {
+            background-color: #2ecc71;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: 600;
+            display: inline-block;
+        }
+        
+        .data-count {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        .data-preview {
+            font-size: 0.8rem;
+            margin-top: 5px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .icon {
+            transition: transform 0.3s;
+        }
+        
+        .rotated {
+            transform: rotate(90deg);
+        }
+        
+        .empty-data {
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+        }
+        
+        .stats {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            grid-column: 1 / -1;
+        }
+        
+        .stat-box {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            flex: 1;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #3b5998;
+        }
+        
+        .stat-label {
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        
+        .legend {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            grid-column: 1 / -1;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        
+        .legend-text {
+            font-size: 0.9rem;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 1.2rem;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #ff6b6b;
+            background: white;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .detail-panel {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            height: fit-content;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .detail-header {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+            color: #3b5998;
+        }
+        
+        .detail-content {
+            margin-bottom: 15px;
+        }
+        
+        .detail-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+        
+        .detail-item h4 {
+            margin-bottom: 5px;
+            color: #3b5998;
+        }
+        
+        .detail-item p {
+            color: #666;
+        }
+        
+        .no-selection {
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+            padding: 40px 20px;
+        }
+        
+        .sum-values {
+            font-size: 0.9rem;
+            margin-top: 5px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+        }
+        
+        .sum-item {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 3px 8px;
+            border-radius: 12px;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #eee;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background: #f8f9fa;
+            border: 1px solid #eee;
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+            transition: background 0.3s;
+        }
+        
+        .tab.active {
+            background: #3b5998;
+            color: white;
+            border-color: #3b5998;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .banking-transaction {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f0f8ff;
+            border-radius: 6px;
+            border-left: 4px solid #9C27B0;
+        }
+        
+        .banking-transaction h4 {
+            color: #9C27B0;
+            margin-bottom: 5px;
+        }
+        
+        .banking-transaction p {
+            margin: 3px 0;
+            font-size: 0.9rem;
+        }
+        
+        .belege-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #fff3e0;
+            border-radius: 6px;
+            border-left: 4px solid #FF9800;
+        }
+        
+        .belege-item h4 {
+            color: #EF6C00;
+            margin-bottom: 5px;
+        }
+        
+        .belege-item p {
+            margin: 3px 0;
+            font-size: 0.9rem;
+        }
+        
+        .banking-account {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #e8f5e8;
+            border-radius: 6px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .banking-account h4 {
+            color: #2E7D32;
+            margin-bottom: 5px;
+        }
+        
+        .document-id-list {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 6px;
+        }
+        
+        .document-id-list h4 {
+            color: #3b5998;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .document-id-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .document-id-text {
+            flex: 1;
+            font-weight: 500;
+        }
+        
+        .document-image {
+            width: 40px;
+            height: 40px;
+            margin-left: 10px;
+            border-radius: 4px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .document-image:hover {
+            transform: scale(1.8);
+            z-index: 10;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+        
+        .document-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .image-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .image-modal-content {
+            max-width: 90%;
+            max-height: 90%;
+        }
+        
+        .image-modal-content img {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 8px;
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 40px;
+            cursor: pointer;
+        }
+        
+        .image-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .image-item {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        
+        .image-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .image-item img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+        
+        .image-item iframe {
+            width: 100%;
+            height: 200px;
+            border: none;
+        }
+        
+        .image-meta {
+            padding: 15px;
+            background: #f9f9f9;
+        }
+        
+        .image-meta p {
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .error-thumbnail {
+            width: 100%;
+            height: 200px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .error-message {
+            color: #721c24;
+        }
+        
+        .no-images {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+            font-style: italic;
+        }
+        
+        .btn-primary {
+            background: #4a6fc0;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 4px;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+        
+        .btn-primary:hover {
+            background: #3b5998;
+        }
+        
+        .null-value {
+            color: #6c757d;
+            font-style: italic;
+        }
+        
+        .lexoffice-link {
+            color: #4a6fc0;
+            text-decoration: none;
+        }
+        
+        .lexoffice-link:hover {
+            text-decoration: underline;
+        }
+        
+        .pdf-thumbnail {
+            width: 100%;
+            height: 200px;
+            background: #f1f1f1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .pdf-thumbnail:hover {
+            background: #e1e1e1;
+        }
+        
+        .image-count-badge {
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 10px;
+            padding: 2px 8px;
+            font-size: 0.8rem;
+            margin-left: 8px;
+        }
+        
+        .document-id-link {
+            color: #4a6fc0;
+            text-decoration: underline;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .document-id-link:hover {
+            color: #3b5998;
+        }
+        
+        @media (max-width: 992px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .detail-panel {
+                max-height: 400px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .stats, .legend {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .calendar-view {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .tabs {
+                flex-wrap: wrap;
+            }
+            
+            .tab {
+                margin-bottom: 5px;
+            }
+            
+            .document-id-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .document-image {
+                margin-left: 0;
+                margin-top: 10px;
+                width: 60px;
+                height: 60px;
+            }
+            
+            .image-gallery {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Date Data Viewer</h1>
+            <p class="description">Interactive exploration of date-based data with banking information</p>
+        </header>
+        
+        <div class="controls">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Search data...">
+            </div>
+            <div>
+                <select id="yearFilter">
+                    <option value="">Filter by Year</option>
+                    <!-- Will be populated dynamically -->
+                </select>
+                <button id="collapseAll">Collapse All</button>
+                <button id="collapseMonth">Collapse Month</button>
+                <button id="expandAll">Expand All</button>
+            </div>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-value" id="yearsCount">0</div>
+                <div class="stat-label">Years</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="monthsCount">0</div>
+                <div class="stat-label">Months</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="entriesCount">0</div>
+                <div class="stat-label">Entries</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="bankingCount">0</div>
+                <div class="stat-label">Banking Transactions</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="belegeCount">0</div>
+                <div class="stat-label">Belege Count</div>
+            </div>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #4CAF50;"></div>
+                <div class="legend-text">Data Available</div>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #f8f9fa; border: 1px dashed #ddd;"></div>
+                <div class="legend-text">No Data</div>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #FF9800;"></div>
+                <div class="legend-text">Partial Data</div>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #9C27B0;"></div>
+                <div class="legend-text">Banking Data</div>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #FF9800;"></div>
+                <div class="legend-text">Belege Data</div>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: linear-gradient(135deg, #4CAF50 50%, #9C27B0 50%);"></div>
+                <div class="legend-text">Both Data Types</div>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #C8A2C8;"></div>
+                <div class="legend-text">Banking Activity</div>
+            </div>
+        </div>
+        
+        <div class="data-container" id="dataContainer">
+            <div class="loading">
+                <i class="fas fa-spinner fa-spin"></i> Loading data...
+            </div>
+        </div>
+        
+        <div class="detail-panel" id="detailPanel">
+            <div class="no-selection">
+                <i class="fas fa-calendar-day fa-3x"></i>
+                <p>Select a day to view details</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div class="image-modal" id="imageModal">
+        <span class="close-modal" id="closeModal">&times;</span>
+        <div class="image-modal-content">
+            <img id="modalImage" src="" alt="Document Image">
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Array to track blob URLs for cleanup
+            const blobUrls = [];
+            
+            // Function to process API data into the required format
+            function processApiData(apiData) {
+                const result = {};
+                
+                if (apiData[0] && apiData[0].final_json) {
+                    // Process each year
+                    for (const year in apiData[0].final_json) {
+                        if (year === 'final_json') continue;
+                        
+                        result[year] = {};
+                        
+                        // Process each month in the year
+                        for (const month in apiData[0].final_json[year]) {
+                            if (month === 'final_json') continue;
+                            
+                            result[year][month] = {};
+                            
+                            // Process each date in the month
+                            for (const dateStr in apiData[0].final_json[year][month]) {
+                                if (dateStr === 'final_json') continue;
+                                
+                                // Extract just the date part (YYYY-MM-DD)
+                                const datePart = dateStr.split(' ')[0];
+                                result[year][month][datePart] = apiData[0].final_json[year][month][dateStr];
+                            }
+                        }
+                    }
+                }
+                
+                return result;
+            }
+            
+            // Function to calculate sums for a specific time period
+            function calculateSums(data, year, month) {
+                let sum1 = 0, sum2 = 0, sum3 = 0, sum4 = 0, sum5 = 0;
+                let bankingTotal = 0;
+                let belegeCount = 0;
+                let val3Sum = 0;
+                
+                if (month && data[year] && data[year][month]) {
+                    // Calculate for a specific month
+                    for (const date in data[year][month]) {
+                        const dayData = data[year][month][date];
+                        if (dayData.original_data) {
+                            if (dayData.original_data.desc_1) sum1 += dayData.original_data.desc_1;
+                            if (dayData.original_data.desc_2) sum2 += dayData.original_data.desc_2;
+                            if (dayData.original_data.desc_3) sum3 += dayData.original_data.desc_3;
+                            if (dayData.original_data.desc_4) sum4 += dayData.original_data.desc_4;
+                            if (dayData.original_data.desc_5) sum5 += dayData.original_data.desc_5;
+                        }
+                        if (dayData.banking_data && dayData.banking_data.total_amount) {
+                            bankingTotal += dayData.banking_data.total_amount;
+                        }
+                        if (dayData.belege_data) {
+                            belegeCount += dayData.belege_data.count || 0;
+                            val3Sum += dayData.belege_data.val3_sum || 0;
+                        }
+                    }
+                    return { 
+                        desc_1: sum1, 
+                        desc_2: sum2, 
+                        desc_3: sum3, 
+                        desc_4: sum4, 
+                        desc_5: sum5,
+                        banking_total: bankingTotal,
+                        belege_count: belegeCount,
+                        val3_sum: val3Sum
+                    };
+                } else if (data[year]) {
+                    // Calculate for a whole year
+                    for (const month in data[year]) {
+                        for (const date in data[year][month]) {
+                            const dayData = data[year][month][date];
+                            if (dayData.original_data) {
+                                if (dayData.original_data.desc_1) sum1 += dayData.original_data.desc_1;
+                                if (dayData.original_data.desc_2) sum2 += dayData.original_data.desc_2;
+                                if (dayData.original_data.desc_3) sum3 += dayData.original_data.desc_3;
+                                if (dayData.original_data.desc_4) sum4 += dayData.original_data.desc_4;
+                                if (dayData.original_data.desc_5) sum5 += dayData.original_data.desc_5;
+                            }
+                            if (dayData.banking_data && dayData.banking_data.total_amount) {
+                                bankingTotal += dayData.banking_data.total_amount;
+                            }
+                            if (dayData.belege_data) {
+                                belegeCount += dayData.belege_data.count || 0;
+                                val3Sum += dayData.belege_data.val3_sum || 0;
+                            }
+                        }
+                    }
+                    return { 
+                        desc_1: sum1, 
+                        desc_2: sum2, 
+                        desc_3: sum3, 
+                        desc_4: sum4, 
+                        desc_5: sum5,
+                        banking_total: bankingTotal,
+                        belege_count: belegeCount,
+                        val3_sum: val3Sum
+                    };
+                }
+                
+                return { 
+                    desc_1: 0, 
+                    desc_2: 0, 
+                    desc_3: 0, 
+                    desc_4: 0, 
+                    desc_5: 0, 
+                    banking_total: 0,
+                    belege_count: 0,
+                    val3_sum: 0
+                };
+            }
+            
+            // Function to extract document IDs from belege data for a specific day
+            function extractBelegeDocumentIds(dayData) {
+                const documentIds = new Set();
+                
+                // Extract from banking_data transactions
+                if (dayData.banking_data && dayData.banking_data.transactions) {
+                    dayData.banking_data.transactions.forEach(transaction => {
+                        // Check multiple possible fields for document IDs
+                        if (transaction.belege_id) {
+                            documentIds.add(transaction.belege_id.toString());
+                        }
+                        if (transaction.beleg_id) {
+                            documentIds.add(transaction.beleg_id.toString());
+                        }
+                        if (transaction.document_id) {
+                            documentIds.add(transaction.document_id.toString());
+                        }
+                        if (transaction.document12_id) {
+                            // Handle both single values and comma-separated lists
+                            const docIds = transaction.document12_id.toString().split(',');
+                            docIds.forEach(id => {
+                                const trimmedId = id.trim();
+                                if (trimmedId) {
+                                    documentIds.add(trimmedId);
+                                }
+                            });
+                        }
+                        if (transaction.reference) {
+                            // Try to extract potential document IDs from reference
+                            const refParts = transaction.reference.split(/[\s,;:/]+/);
+                            refParts.forEach(part => {
+                                if (part.length >= 5 && /[A-Za-z0-9]/.test(part)) {
+                                    documentIds.add(part);
+                                }
+                            });
+                        }
+                    });
+                }
+                
+                // Extract from original_data.desc_5 (split by commas)
+                if (dayData.original_data && dayData.original_data.desc_5) {
+                    const desc5Values = dayData.original_data.desc_5.toString().split(',');
+                    desc5Values.forEach(value => {
+                        const trimmedValue = value.trim();
+                        if (trimmedValue) {
+                            documentIds.add(trimmedValue);
+                        }
+                    });
+                }
+                
+                return Array.from(documentIds).sort();
+            }
+            
+            // Function to format date
+            function formatDate(dateString) {
+                if (!dateString) return 'Unknown';
+                
+                try {
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString('de-DE', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                } catch (e) {
+                    return dateString;
+                }
+            }
+            
+            // Function to display document images
+            function displayDocumentImages(images, docId) {
+                const imageGallery = document.getElementById('imageGallery');
+                if (!imageGallery) return;
+                
+                // Clean up previous blob URLs
+                blobUrls.forEach(url => URL.revokeObjectURL(url));
+                blobUrls.length = 0;
+                
+                if (!images || images.length === 0) {
+                    imageGallery.innerHTML = '<div class="no-images">No images found for this document</div>';
+                    return;
+                }
+
+                let html = '<div class="image-gallery">';
+
+                images.forEach(image => {
+                    try {
+                        const imageId = image.PK_BILD_BILDER || 'N/A';
+                        const isPDF = (image.FILENAME && image.FILENAME.toLowerCase().endsWith('.pdf')) || 
+                                     (image.MIMETYPE && image.MIMETYPE.includes('pdf'));
+                        
+                        // Handle the image data from FILECONTENT (bytea)
+                        if (image.FILECONTENT) {
+                            // Convert the bytea data to a Uint8Array
+                            let byteArray = new Uint8Array(image.FILECONTENT.data);
+                            
+                            // Create blob with proper MIME type
+                            const blob = new Blob([byteArray], { 
+                                type: image.MIMETYPE || (isPDF ? 'application/pdf' : 'image/jpeg') 
+                            });
+                            const blobUrl = URL.createObjectURL(blob);
+                            blobUrls.push(blobUrl); // Track for cleanup
+                            
+                            const pk = image.PK_REL_INP_INP_BELEGE_ALL_BILD_BILDER ? image.PK_REL_INP_INP_BELEGE_ALL_BILD_BILDER  : '';
+                            const mainBild = image.MAIN_BILD ? image.MAIN_BILD : '';
+                            
+                            const uploadDate = image.CREATED_AT ? formatDate(image.CREATED_AT) : 'Unknown';
+                            const imageOk = image.DATUM_ZUORD_OK ? formatDate(image.DATUM_ZUORD_OK) : 'Unknown';
+                            const imageFilename = image.FILENAME || 'Document';
+                            const lexOfficeLink = image.lex_office_buchung ? 
+                                `<a href="${image.lex_office_buchung}" target="_blank" class="lexoffice-link">View in LexOffice</a>` : 
+                                '<span class="null-value">No LexOffice link</span>';
+
+                            if (isPDF) {
+                                html += `
+                                    <div class="image-item">
+                                        <div class="pdf-thumbnail" data-blob-url="${blobUrl}">
+                                            <i class="fas fa-file-pdf fa-3x" style="color: #e74c3c;"></i>
+                                            <p>PDF Document</p>
+                                        </div>
+                                        <div class="image-meta">
+                                            <p><strong>ID:</strong> ${imageId} (${mainBild})</p>
+                                            <p><strong>Document ID:</strong> ${docId}</p>
+                                            <p><strong>Filename:</strong> ${imageFilename}</p>
+                                            <p><strong>Uploaded:</strong> ${uploadDate}</p>
+                                            <p><strong>Final:</strong> ${imageOk}</p>
+                                            ${lexOfficeLink}
+                                            relation: ${pk}
+                                        </div>
+                                    </div>
+                                `;
+                            } else {
+                                html += `
+                                    <div class="image-item">
+                                        <img src="${blobUrl}" alt="Document Image ${imageId}" loading="lazy">
+                                        <div class="image-meta">
+                                            <p><strong>ID:</strong> ${imageId} ${mainBild ? `<span style="color: #4CAF50"><b>(${mainBild})</b></span>` : ''}</p>
+                                            <p><strong>Document ID:</strong> ${docId}</p>
+                                            <p><strong>Filename:</strong> ${imageFilename}</p>
+                                            <p><strong>Uploaded:</strong> ${uploadDate}</p>
+                                            <p><strong>Final:</strong> <span style="color: #4CAF50"><b>(${imageOk})</b></span></p>
+                                            ${lexOfficeLink} <br>
+                                            relation  ${pk}
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                        } else {
+                            throw new Error('No image data available');
+                        }
+                    } catch (error) {
+                        console.error('Error processing image:', error);
+                        const imageId = image.PK_BILD_BILDER || 'N/A';
+                        html += `
+                            <div class="image-item">
+                                <div class="error-thumbnail">
+                                    Error loading image (ID: ${imageId})
+                                </div>
+                                <div class="image-meta">
+                                    <p class="error-message"><strong>Error:</strong> ${error.message}</p>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+
+                html += '</div>';
+                imageGallery.innerHTML = html;
+                
+                // Add click handlers for PDF thumbnails
+                document.querySelectorAll('.pdf-thumbnail').forEach(thumbnail => {
+                    thumbnail.addEventListener('click', function() {
+                        const blobUrl = this.getAttribute('data-blob-url');
+                        window.open(blobUrl, '_blank');
+                    });
+                });
+            }
+            
+            // Function to fetch images for a document ID and return count
+            function fetchDocumentImages(docId) {
+                return fetch(`http://localhost:5000/beleg/bild/${docId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(images => {
+                        // Return both images and count
+                        return {
+                            images: images,
+                            count: images ? images.length : 0
+                        };
+                    })
+                    .catch(error => {
+                        console.error('Error fetching document images:', error);
+                        return {
+                            images: [],
+                            count: 0,
+                            error: error.message
+                        };
+                    });
+            }
+            
+            // Function to show day details in the detail panel
+            function showDayDetails(dateStr, data) {
+                const detailPanel = document.getElementById('detailPanel');
+                const [year, month, day] = dateStr.split('-');
+                const monthNames = ["January", "February", "March", "April", "May", "June",
+                    "July", "August", "September", "October", "November", "December"];
+                const monthName = monthNames[parseInt(month) - 1];
+                
+                if (data && data[year] && data[year][monthName] && data[year][monthName][dateStr]) {
+                    const dayData = data[year][monthName][dateStr];
+                    
+                    let detailsHTML = `
+                        <div class="detail-header">
+                            <i class="fas fa-calendar-day"></i> ${monthName} ${day}, ${year}
+                        </div>
+                        <div class="tabs">
+                            <div class="tab active" data-tab="original">Original Data</div>
+                            <div class="tab" data-tab="banking">Banking Data</div>
+                            <div class="tab" data-tab="belege">Belege Data</div>
+                            <div class="tab" data-tab="images">Document Images</div>
+                        </div>
+                    `;
+
+                    // Original Data Tab
+                    detailsHTML += `
+                        <div class="tab-content active" id="original-tab">
+                    `;
+
+                    if (dayData.original_data) {
+                        const originalData = dayData.original_data;
+                        
+                        // First, add the ordered description keys
+                        for (let i = 4; i <= 5; i++) {
+                            const key = `desc_${i}`;
+                            if (originalData[key]) {
+                                detailsHTML += `
+                                    <div class="detail-item">
+                                        <h4>${key.replace(/_/g, ' ').toUpperCase()}</h4>
+                                        <p>${originalData[key]}</p>
+                                    </div>
+                                `;
+                            }
+                        }
+                        
+                        // Then add desc_1 to desc_3
+                        for (let i = 1; i <= 3; i++) {
+                            const key = `desc_${i}`;
+                            if (originalData[key]) {
+                                detailsHTML += `
+                                    <div class="detail-item">
+                                        <h4>${key.replace(/_/g, ' ').toUpperCase()}</h4>
+                                        <p>${originalData[key]}</p>
+                                    </div>
+                                `;
+                            }
+                        }
+                        
+                        // Then add the remaining keys (excluding desc_1 to desc_5)
+                        for (const key in originalData) {
+                            if (!key.startsWith('desc_')) {
+                                detailsHTML += `
+                                    <div class="detail-item">
+                                        <h4>${key.replace(/_/g, ' ').toUpperCase()}</h4>
+                                        <p>${originalData[key]}</p>
+                                    </div>
+                                `;
+                            }
+                        }
+                    } else {
+                        detailsHTML += `
+                            <div class="empty-data">
+                                <i class="fas fa-exclamation-circle"></i>
+                                <p>No original data available for this day</p>
+                            </div>
+                        `;
+                    }
+                    
+                    detailsHTML += `</div>`;
+                    
+                    // Banking Data Tab
+                    detailsHTML += `
+                        <div class="tab-content" id="banking-tab">
+                    `;
+                    
+                    if (dayData.banking_data && dayData.banking_data.transactions_by_account) {
+                        const bankingData = dayData.banking_data;
+                        
+                        // Show total banking amount first
+                        detailsHTML += `
+                            <div class="detail-item" style="background: #e8f5e8; border-left: 4px solid #4CAF50;">
+                                <h4>TOTAL BANKING AMOUNT</h4>
+                                <p style="font-size: 1.2rem; font-weight: bold; color: #2E7D32;">
+                                    ${bankingData.total_amount ? bankingData.total_amount.toFixed(2) : 0} €
+                                </p>
+                                <p>Total Transactions: ${bankingData.transaction_count || 0}</p>
+                            </div>
+                        `;
+                        
+                        // Show transactions by account
+                        for (const accountId in bankingData.transactions_by_account) {
+                            const accountData = bankingData.transactions_by_account[accountId];
+                            
+                            detailsHTML += `
+                                <div class="banking-account">
+                                    <h4>Account: ${accountId}</h4>
+                                    <p>Total: ${accountData.total_betrag ? accountData.total_betrag.toFixed(2) : 0} €</p>
+                                    <p>Transactions: ${accountData.transaction_count || 0}</p>
+                            `;
+                            
+                            if (accountData.transactions && accountData.transactions.length > 0) {
+                                detailsHTML += `<div style="margin-top: 10px;">`;
+                                accountData.transactions.forEach(transaction => {
+                                    // Create clickable document ID if available
+                                    const documentIdHtml = transaction.beleg_id ? 
+                                        `<p><strong>Document12 ID:</strong> <span class="document-id-link" data-doc-id="${transaction.beleg_id}">${transaction.beleg_id}</span></p>` : 
+                                        '';
+                                    
+                                    detailsHTML += `
+                                        <div class="banking-transaction">
+                                            <h4>${transaction.buchungstext || 'No description'}</h4>
+                                            <p><strong>Amount:</strong> ${transaction.betrag ? transaction.betrag.toFixed(2) : 0} €</p>
+                                            <p><strong>open Amount:</strong> ${transaction.offener_Betrag ? `<strong style="color:red">${transaction.offener_Betrag.toFixed(2)}</strong>`  : 0} €</p>
+                                            <p>Transactions: ${transaction.Forecast || 0}</p>
+                                            ${transaction.owner ? `<p><strong>Owner:</strong> ${transaction.owner}</p>` : ''}
+                                            ${transaction.konto ? `<p><strong>Account:</strong> ${transaction.konto}</p>` : ''}
+                                            ${transaction.iban ? `<p><strong>IBAN:</strong> ${transaction.iban}</p>` : ''}
+                                            ${documentIdHtml}
+                                        </div>
+                                    `;
+                                });
+                                detailsHTML += `</div>`;
+                            }
+                            
+                            detailsHTML += `</div>`;
+                        }
+                    } else {
+                        detailsHTML += `
+                            <div class="empty-data">
+                                <i class="fas fa-exclamation-circle"></i>
+                                <p>No banking data available for this day</p>
+                            </div>
+                        `;
+                    }
+                    
+                    detailsHTML += `</div>`;
+                    
+                    // Belege Data Tab
+                    detailsHTML += `
+                        <div class="tab-content" id="belege-tab">
+                    `;
+                    
+                    if (dayData.belege_data && dayData.belege_data.belege) {
+                        const belegeData = dayData.belege_data;
+                        
+                        // Show total belege count and val3 sum
+                        detailsHTML += `
+                            <div class="detail-item" style="background: #fff3e0; border-left: 4px solid #FF9800;">
+                                <h4>BELEGE SUMMARY</h4>
+                                <p style="font-size: 1.2rem; font-weight: bold; color: #EF6C00;">
+                                    Count: ${belegeData.count || 0}
+                                </p>
+                                <p>Val3 Total: ${belegeData.val3_sum ? belegeData.val3_sum.toFixed(2) : 0} €</p>
+                            </div>
+                        `;
+                        
+                        // Show individual belege items
+                        if (belegeData.belege && belegeData.belege.length > 0) {
+                            detailsHTML += `<div style="margin-top: 10px;">`;
+                            belegeData.belege.forEach(belege => {
+                                detailsHTML += `
+                                    <div class="belege-item">
+                                        <h4>${belege.PK_INP_BELEGE_ALL || 'No ID'}</h4>
+                                        <p><strong>Val2:</strong> ${belege.desc_5 || 'N/A'}</p>
+                                        <p><strong>Val3:</strong> ${belege.val3 ? belege.val3.toFixed(2) : 0} €</p>
+                                        ${belege.description ? `<p><strong>Description:</strong> ${belege.description}</p>` : ''}
+                                        ${belege.date ? `<p><strong>Date:</strong> ${belege.date}</p>` : ''}
+                                    </div>
+                                `;
+                            });
+                            detailsHTML += `</div>`;
+                        }
+                    } else {
+                        detailsHTML += `
+                            <div class="empty-data">
+                                <i class="fas fa-exclamation-circle"></i>
+                                <p>No belege data available for this day</p>
+                            </div>
+                        `;
+                    }
+                    
+                    detailsHTML += `</div>`;
+                    
+                    // Images Tab
+                    detailsHTML += `
+                        <div class="tab-content" id="images-tab">
+                            <div id="imageGallery" class="image-gallery-container">
+                                <div class="loading">
+                                    <i class="fas fa-spinner fa-spin"></i> Select a document ID to view images
+                                </div>
+                            </div>
+                            
+                            <div class="document-id-list">
+                                <h4>Belege Document IDs for ${monthName} ${day}, ${year}</h4>
+                    `;
+                    
+                    // Add document ID list from belege data for this day only
+                    const documentIds = extractBelegeDocumentIds(dayData);
+                    if (documentIds.length > 0) {
+                        // Create an array of promises to fetch image counts for each document ID
+                        const imageCountPromises = documentIds.map(docId => 
+                            fetchDocumentImages(docId).then(result => ({
+                                docId,
+                                count: result.count
+                            }))
+                        );
+                        
+                        // Wait for all promises to resolve
+                        Promise.all(imageCountPromises).then(results => {
+                            results.forEach(({docId, count}) => {
+                                const docElement = document.querySelector(`.document-id-item[data-doc-id="${docId}"]`);
+                                if (docElement) {
+                                    const countElement = docElement.querySelector('.image-count-badge');
+                                    if (countElement) {
+                                        countElement.textContent = `${count} images`;
+                                    } else {
+                                        const countBadge = document.createElement('span');
+                                        countBadge.className = 'image-count-badge';
+                                        countBadge.textContent = `${count} images`;
+                                        docElement.querySelector('.document-id-text').appendChild(countBadge);
+                                    }
+                                }
+                            });
+                        }).catch(error => {
+                            console.error('Error fetching image counts:', error);
+                        });
+                        
+                        documentIds.forEach(docId => {
+                            detailsHTML += `
+                                <div class="document-id-item" data-doc-id="${docId}">
+                                    <span class="document-id-text">${docId}
+                                        <span class="image-count-badge">loading...</span>
+                                    </span>
+                                    <button class="btn-primary view-images-btn" data-doc-id="${docId}">
+                                        <i class="fas fa-images"></i> View Images
+                                    </button>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        detailsHTML += `
+                            <div class="empty-data">
+                                <i class="fas fa-exclamation-circle"></i>
+                                <p>No document IDs found in belege data for this day</p>
+                            </div>
+                        `;
+                    }
+                    
+                    detailsHTML += `
+                            </div>
+                        </div>
+                    `;
+                    
+                    detailPanel.innerHTML = detailsHTML;
+                    
+                    // Add tab switching functionality
+                    const tabs = detailPanel.querySelectorAll('.tab');
+                    tabs.forEach(tab => {
+                        tab.addEventListener('click', function() {
+                            const tabName = this.getAttribute('data-tab');
+                            
+                            // Update active tab
+                            tabs.forEach(t => t.classList.remove('active'));
+                            this.classList.add('active');
+                            
+                            // Show correct content
+                            document.querySelectorAll('.tab-content').forEach(content => {
+                                content.classList.remove('active');
+                            });
+                            document.getElementById(`${tabName}-tab`).classList.add('active');
+                        });
+                    });
+                    
+                    // Add click events to view images buttons
+                    const viewButtons = detailPanel.querySelectorAll('.view-images-btn');
+                    viewButtons.forEach(button => {
+                        button.addEventListener('click', function() {
+                            const docId = this.getAttribute('data-doc-id');
+                            const imageGallery = document.getElementById('imageGallery');
+                            imageGallery.innerHTML = `
+                                <div class="loading">
+                                    <i class="fas fa-spinner fa-spin"></i> Loading images for document ${docId}...
+                                </div>
+                            `;
+                            fetchDocumentImages(docId).then(result => {
+                                displayDocumentImages(result.images, docId);
+                            });
+                        });
+                    });
+                    
+                    // Add click events to document ID links in banking transactions
+                    const docIdLinks = detailPanel.querySelectorAll('.document-id-link');
+                    docIdLinks.forEach(link => {
+                        link.addEventListener('click', function() {
+                            const docId = this.getAttribute('data-doc-id');
+                            
+                            // Switch to the Images tab
+                            tabs.forEach(t => t.classList.remove('active'));
+                            document.querySelector('.tab[data-tab="images"]').classList.add('active');
+                            
+                            document.querySelectorAll('.tab-content').forEach(content => {
+                                content.classList.remove('active');
+                            });
+                            document.getElementById('images-tab').classList.add('active');
+                            
+                            // Scroll to the document ID in the list
+                            const targetElement = document.querySelector(`.document-id-item[data-doc-id="${docId}"]`);
+                            if (targetElement) {
+                                targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                
+                                // Highlight the element
+                                targetElement.style.backgroundColor = '#e3f2fd';
+                                targetElement.style.border = '2px solid #2196f3';
+                                
+                                // Remove highlight after 3 seconds
+                                setTimeout(() => {
+                                    targetElement.style.backgroundColor = '';
+                                    targetElement.style.border = '';
+                                }, 3000);
+                                
+                                // Automatically click the view images button for this document
+                                const viewButton = targetElement.querySelector('.view-images-btn');
+                                if (viewButton) {
+                                    viewButton.click();
+                                }
+                            }
+                            
+                            // Load and display images for this document
+                            const imageGallery = document.getElementById('imageGallery');
+                            imageGallery.innerHTML = `
+                                <div class="loading">
+                                    <i class="fas fa-spinner fa-spin"></i> Loading images for document ${docId}...
+                                </div>
+                            `;
+                            fetchDocumentImages(docId).then(result => {
+                                displayDocumentImages(result.images, docId);
+                            });
+                        });
+                    });
+                } else {
+                    detailPanel.innerHTML = `
+                        <div class="no-selection">
+                            <i class="fas fa-exclamation-circle fa-3x"></i>
+                            <p>No data available for ${monthName} ${day}, ${year}</p>
+                        </div>
+                    `;
+                }
+            }
+            
+            // Fetch data from the API
+            fetch('http://localhost:5000/techniker1')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(apiData => {
+                    console.log("API Response:", apiData);
+                    // Process the API data
+                    const processedData = processApiData(apiData);
+                    renderData(processedData);
+                    updateStats(processedData);
+                    populateYearFilter(processedData);
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                    // Use sample data if API is not available
+                    const sampleData = {
+                        "2023": {
+                            "December": {
+                                "2023-12-15": {
+                                    "original_data": {
+                                        "desc_1": 10,
+                                        "desc_2": 5,
+                                        "desc_3": 8,
+                                        "desc_4": 12,
+                                        "desc_5": "DOC001, DOC002",
+                                        "notes": "Completed project tasks"
+                                    },
+                                    "banking_data": {
+                                        "transactions_by_account": {
+                                            "12345": {
+                                                "transactions": [
+                                                    {
+                                                        "betrag": 100.50,
+                                                        "buchungstext": "Payment 1",
+                                                        "owner": "John Doe",
+                                                        "konto": "DE123456789",
+                                                        "iban": "DE12345678901234567890",
+                                                        "document12_id": "DOC001"
+                                                    },
+                                                    {
+                                                        "betrag": 50.25,
+                                                        "buchungstext": "Payment 2",
+                                                        "owner": "John Doe",
+                                                        "konto": "DE123456789",
+                                                        "iban": "DE12345678901234567890",
+                                                        "document12_id": "DOC002"
+                                                    }
+                                                ],
+                                                "transaction_count": 2,
+                                                "total_betrag": 150.75
+                                            }
+                                        },
+                                        "total_amount": 150.75,
+                                        "transaction_count": 2
+                                    },
+                                    "belege_data": {
+                                        "count": 3,
+                                        "val3_sum": 450.25,
+                                        "belege": [
+                                            {
+                                                "PK_INP_BELEGE_ALL": "BELEG001",
+                                                "desc_5": "DOC001",
+                                                "val3": 150.50,
+                                                "description": "Office supplies",
+                                                "date": "2023-12-15"
+                                            },
+                                            {
+                                                "PK_INP_BELEGE_ALL": "BELEG002",
+                                                "desc_5": "DOC002",
+                                                "val3": 199.75,
+                                                "description": "Software license",
+                                                "date": "2023-12-15"
+                                            },
+                                            {
+                                                "PK_INP_BELEGE_ALL": "BELEG003",
+                                                "desc_5": "DOC003",
+                                                "val3": 100.00,
+                                                "description": "Consulting services",
+                                                "date": "2023-12-15"
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    };
+                    
+                    renderData(sampleData);
+                    updateStats(sampleData);
+                    populateYearFilter(sampleData);
+                    
+                    document.getElementById('dataContainer').innerHTML += `
+                        <div class="error">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <p>Using sample data: ${error.message}</p>
+                            <p>Please make sure the API server is running at http://localhost:5000</p>
+                        </div>
+                    `;
+                });
+            
+            // Function to update statistics
+            function updateStats(data) {
+                let years = 0;
+                let months = 0;
+                let entries = 0;
+                let bankingTransactions = 0;
+                let belegeCount = 0;
+                
+                for (const year in data) {
+                    years++;
+                    for (const month in data[year]) {
+                        months++;
+                        for (const date in data[year][month]) {
+                            entries++;
+                            const dayData = data[year][month][date];
+                            if (dayData.banking_data && dayData.banking_data.transaction_count) {
+                                bankingTransactions += dayData.banking_data.transaction_count;
+                            }
+                            if (dayData.belege_data && dayData.belege_data.count) {
+                                belegeCount += dayData.belege_data.count;
+                            }
+                        }
+                    }
+                }
+                
+                document.getElementById('yearsCount').textContent = years;
+                document.getElementById('monthsCount').textContent = months;
+                document.getElementById('entriesCount').textContent = entries;
+                document.getElementById('bankingCount').textContent = bankingTransactions;
+                document.getElementById('belegeCount').textContent = belegeCount;
+            }
+            
+            // Function to populate year filter
+            function populateYearFilter(data) {
+                const yearFilter = document.getElementById('yearFilter');
+                // Clear existing options except the first one
+                while (yearFilter.options.length > 1) {
+                    yearFilter.remove(1);
+                }
+                
+                // Get years in descending order
+                const years = Object.keys(data).sort((a, b) => parseInt(b) - parseInt(a));
+                
+                years.forEach(year => {
+                    const option = document.createElement('option');
+                    option.value = year;
+                    option.textContent = year;
+                    yearFilter.appendChild(option);
+                });
+            }
+
+            // Function to render the data
+            function renderData(data) {
+                const container = document.getElementById('dataContainer');
+                container.innerHTML = '';
+                
+                if (Object.keys(data).length === 0) {
+                    container.innerHTML = '<div class="empty-data">No data available</div>';
+                    return;
+                }
+                
+                // Get years in descending order
+                const years = Object.keys(data).sort((a, b) => parseInt(b) - parseInt(a));
+                
+                for (const year of years) {
+                    const yearSection = document.createElement('div');
+                    yearSection.className = 'year-section';
+                    
+                    // Calculate year sums
+                    const yearSums = calculateSums(data, year);
+                    
+                    const yearHeader = document.createElement('div');
+                    yearHeader.className = 'year-header';
+                    yearHeader.innerHTML = `
+                        <span>Year ${year}</span>
+                        <div>
+                            <span style="font-size: 0.9rem; margin-right: 15px;">
+                                Desc_1: ${yearSums.desc_1.toFixed(2)} | Banking: ${yearSums.banking_total.toFixed(2)} € | Belege: ${yearSums.belege_count}
+                            </span>
+                            <i class="fas fa-chevron-right icon"></i>
+                        </div>
+                    `;
+                    
+                    const yearContent = document.createElement('div');
+                    yearContent.className = 'year-content';
+                    
+                    // Get months in descending order
+                    const months = Object.keys(data[year]);
+                    const sortedMonths = sortMonthsDescending(months, year);
+                    
+                    for (const month of sortedMonths) {
+                        const monthSection = document.createElement('div');
+                        
+                        // Calculate month sums
+                        const monthSums = calculateSums(data, year, month);
+                        
+                        const monthContainer = document.createElement('div');
+                        monthContainer.className = 'month-container';
+                        
+                        const monthHeader = document.createElement('div');
+                        monthHeader.className = 'month-header';
+                        
+                        // Add 'has-data' class if any desc value is non-zero
+                        if (monthSums.desc_1 > 0 || monthSums.desc_1 < 0) {
+                            monthHeader.classList.add('has-data');
+                        }
+                         
+
+   const bankingElementId = `banking-${year}-${month.replace(/\s+/g, '-')}`;
+   const belegeElementId = `belege-${year}-${month.replace(/\s+/g, '-')}`;
+            
+            monthHeader.innerHTML = `
+                <span>${month} ${year}</span>
+                <div>
+                    <span class="month-summary">
+                       Desc_1: ${monthSums.desc_1.toFixed(2)} €  | 
+                        <span id="${bankingElementId}">
+                            Banking: ${monthSums.banking_total.toFixed(2)} € (${monthSums.banking_total.length})
+                        </span>
+                        <span id="${belegeElementId}">
+                            | Belege: ${monthSums.belege_count}
+                        </span>
+                        ${(monthSums.desc_1 > 0 || monthSums.banking_total > 0 || monthSums.belege_count > 0) ? 
+                            '<i class="fas fa-check-circle checkmark"></i>' : ''}
+                    </span>
+                    <i class="fas fa-chevron-right icon"></i>
+                </div>
+            `;
+            
+ 
+
+
+                        
+                        const monthContent = document.createElement('div');
+                        monthContent.className = 'month-content';
+
+ if (monthSums.banking_total !== 0) {
+                // Use setTimeout to ensure the element is in the DOM
+                setTimeout(() => {
+                    const bankingElement = document.getElementById(bankingElementId);
+                    if (bankingElement) {
+                        bankingElement.classList.add("lila-background");
+                    }
+                }, 0);
+            }
+            
+            if (monthSums.belege_count !== 0) {
+                // Use setTimeout to ensure the element is in the DOM
+                setTimeout(() => {
+                    const belegeElement = document.getElementById(belegeElementId);
+                    if (belegeElement) {
+                        belegeElement.classList.add("belege-background");
+                    }
+                }, 0);
+            }
+                        
+                        // Create calendar view
+                        const calendarView = document.createElement('div');
+                        calendarView.className = 'calendar-view';
+                        
+                        // Get days in month
+                        const daysInMonth = new Date(parseInt(year), getMonthNumber(month), 0).getDate();
+                        
+                        // Add days to calendar
+                        for (let day = 1; day <= daysInMonth; day++) {
+                            const dateStr = `${year}-${padZero(getMonthNumber(month))}-${padZero(day)}`;
+                            const dayElement = document.createElement('div');
+                            dayElement.className = 'calendar-day';
+                            dayElement.setAttribute('data-date', dateStr);
+                            
+                            if (data[year][month][dateStr]) {
+                                const dayData = data[year][month][dateStr];
+                                const hasOriginalData = dayData.original_data && Object.keys(dayData.original_data).length > 0;
+                                const hasBankingData = dayData.banking_data && (dayData.banking_data.total_amount > 0 ||dayData.banking_data.total_amount <0 );
+                                const hasBelegeData = dayData.belege_data && dayData.belege_data.count > 0;
+                                
+                                // Remove all color classes first
+                                dayElement.classList.remove('has-data', 'banking-data', 'partial-data', 'no-data', 'both-data', 'belege-data');
+                                
+                                if (hasOriginalData && hasBankingData && hasBelegeData) {
+                                    dayElement.classList.add('both-data');
+                                } else if (hasOriginalData && hasBankingData) {
+                                    dayElement.classList.add('both-data');
+                                } else if (hasOriginalData && hasBelegeData) {
+                                    dayElement.classList.add('both-data');
+                                } else if (hasBankingData && hasBelegeData) {
+                                    dayElement.classList.add('both-data');
+                                } else if (hasOriginalData) {
+                                    dayElement.classList.add('has-data');
+                                } else if (hasBankingData) {
+                                    dayElement.classList.add('banking-data');
+                                } else if (hasBelegeData) {
+                                    dayElement.classList.add('belege-data');
+                                } else {
+                                    dayElement.classList.add('no-data');
+                                }
+                                
+                                if (hasOriginalData || hasBankingData || hasBelegeData) {
+                                    // Calculate day sums
+                                    let daySum1 = (dayData.original_data && dayData.original_data.desc_1) || 0;
+                                    let bankingAmount = (dayData.banking_data && dayData.banking_data.total_amount) || 0;
+                                    let belegeCount = (dayData.belege_data && dayData.belege_data.count) || 0;
+                                    let val3Sum = (dayData.belege_data && dayData.belege_data.val3_sum) || 0;
+                              
+                                    dayElement.innerHTML = `
+                                        <div class="day-header">${day}</div>
+                                        ${bankingAmount > 0 || bankingAmount < 0  ? `<div class="data-count">${bankingAmount.toFixed(2)} €</div>` : ''}
+                                        ${dayData.original_data.val1}<div class="sum-values">
+                                            ${daySum1 > 0 ? `<span class="sum-item">D1: ${daySum1.toFixed(2)}</span>` : ''}
+                                            ${bankingAmount > 0 ? `<span class="sum-item">Bank: ${bankingAmount.toFixed(2)} €</span>` : ''}
+                                            ${belegeCount > 0 ? `<span class="sum-item">Belege: ${belegeCount}</span>` : ''}
+                                            ${val3Sum > 0 ? `<span class="sum-item">Val3: ${val3Sum.toFixed(2)} €</span>` : ''}
+                                        </div>
+                                    `;
+                                } else {
+                                    dayElement.innerHTML = `
+                                        <div class="day-header">${day}</div>
+                                        <div>No data</div>
+                                    `;
+                                }
+                            } else {
+                                dayElement.classList.add('no-data');
+                                dayElement.innerHTML = `
+                                    <div class="day-header">${day}</div>
+                                    <div>No data</div>
+                                `;
+                            }
+                            
+                            // Add click event to show details
+                            dayElement.addEventListener('click', function() {
+                                const date = this.getAttribute('data-date');
+                                showDayDetails(date, data);
+                                
+                                // Highlight selected day
+                                document.querySelectorAll('.calendar-day').forEach(day => {
+                                    day.style.border = '';
+                                    day.style.boxShadow = '';
+                                });
+                                this.style.border = '3px solid #ff6b6b';
+                                this.style.boxShadow = '0 0 10px rgba(255, 107, 107, 0.5)';
+                            });
+                            
+                            calendarView.appendChild(dayElement);
+                        }
+                        
+                        monthContent.appendChild(calendarView);
+                        
+                        monthHeader.addEventListener('click', function() {
+                            const icon = this.querySelector('.icon');
+                            icon.classList.toggle('rotated');
+                            monthContent.style.display = monthContent.style.display === 'block' ? 'none' : 'block';
+                        });
+                        
+                        monthContainer.appendChild(monthHeader);
+                        monthContainer.appendChild(monthContent);
+                        yearContent.appendChild(monthContainer);
+
+                     // ✅ Select the element AFTER it's been added to the DOM
+
+                    }
+                    
+                    yearHeader.addEventListener('click', function() {
+                        const icon = this.querySelector('.icon');
+                        icon.classList.toggle('rotated');
+                        yearContent.style.display = yearContent.style.display === 'block' ? 'none' : 'block';
+                    });
+                    
+                    yearSection.appendChild(yearHeader);
+                    yearSection.appendChild(yearContent);
+                    container.appendChild(yearSection);
+                }
+            }
+        
+
+            // Helper function to sort months in descending order
+            function sortMonthsDescending(months, year) {
+                return months.sort((a, b) => {
+                    // Convert month names to numbers for comparison
+                    const monthA = getMonthNumber(a);
+                    const monthB = getMonthNumber(b);
+                    
+                    // For the same year, sort by month number descending
+                    return monthB - monthA;
+                });
+            }
+            
+            // Helper functions
+            function getMonthNumber(monthName) {
+                const months = {
+                    "January": 1, "February": 2, "March": 3, "April": 4, "May": 5, "June": 6,
+                    "July": 7, "August": 8, "September": 9, "October": 10, "November": 11, "December": 12
+                };
+                return months[monthName];
+            }
+            
+            function padZero(num) {
+                return num.toString().padStart(2, '0');
+            }
+            
+            // Collapse all functionality
+            document.getElementById('collapseAll').addEventListener('click', function() {
+                const allContent = document.querySelectorAll('.year-content, .month-content');
+                const allIcons = document.querySelectorAll('.icon');
+                
+                allContent.forEach(content => {
+                    content.style.display = 'none';
+                });
+                
+                allIcons.forEach(icon => {
+                    icon.classList.remove('rotated');
+                });
+            });
+
+            // Collapse month functionality
+            document.getElementById('collapseMonth').addEventListener('click', function() {
+                const allContent = document.querySelectorAll('.month-content');
+                const allIcons = document.querySelectorAll('.month-header .icon');
+                
+                allContent.forEach(content => {
+                    content.style.display = 'none';
+                });
+                
+                allIcons.forEach(icon => {
+                    icon.classList.remove('rotated');
+                });
+            });
+            
+            // Expand all functionality
+            document.getElementById('expandAll').addEventListener('click', function() {
+                const allContent = document.querySelectorAll('.year-content, .month-content');
+                const allIcons = document.querySelectorAll('.icon');
+                
+                allContent.forEach(content => {
+                    content.style.display = 'block';
+                });
+                
+                allIcons.forEach(icon => {
+                    icon.classList.add('rotated');
+                });
+            });
+            
+            // Year filter functionality
+            document.getElementById('yearFilter').addEventListener('change', function() {
+                const selectedYear = this.value;
+                const yearSections = document.querySelectorAll('.year-section');
+                
+                yearSections.forEach(section => {
+                    const yearHeader = section.querySelector('.year-header');
+                    const year = yearHeader.textContent.split(' ')[1];
+                    
+                    if (!selectedYear || year === selectedYear) {
+                        section.style.display = '';
+                    } else {
+                        section.style.display = 'none';
+                    }
+                });
+            });
+            
+            // Search functionality
+            document.getElementById('searchInput').addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                const dayElements = document.querySelectorAll('.calendar-day');
+                
+                dayElements.forEach(day => {
+                    const dayText = day.textContent.toLowerCase();
+                    if (searchTerm && dayText.includes(searchTerm) || day.getAttribute('data-date').includes(searchTerm)) {
+                        day.style.border = '2px solid #ff6b6b';
+                        day.style.boxShadow = '0 0 8px rgba(255, 107, 107, 0.7)';
+                    } else {
+                        day.style.border = '';
+                        day.style.boxShadow = '';
+                    }
+                });
+            });
+            
+            // Image modal functionality
+            const modal = document.getElementById('imageModal');
+            const closeModal = document.getElementById('closeModal');
+            
+            closeModal.addEventListener('click', function() {
+                modal.style.display = 'none';
+            });
+            
+            window.addEventListener('click', function(event) {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+            
+            // Clean up blob URLs when page is unloaded
+            window.addEventListener('beforeunload', function() {
+                blobUrls.forEach(url => URL.revokeObjectURL(url));
+            });
+        });
+    </script>
+</body>
+</html>

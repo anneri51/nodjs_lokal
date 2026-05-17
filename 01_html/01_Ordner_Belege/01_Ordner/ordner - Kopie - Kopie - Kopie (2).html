@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Enterprise DMS | Complete Document Management</title>
+    <!-- Chart.js & Font Awesome -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, 'Inter', system-ui, sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+            padding: 24px;
+            min-height: 100vh;
+        }
+        .app-container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.98);
+            border-radius: 36px;
+            box-shadow: 0 30px 50px rgba(0,0,0,0.2);
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            overflow: hidden;
+            backdrop-filter: blur(2px);
+        }
+        /* SIDEBAR */
+        .sidebar-tree {
+            background: #0f2b3b;
+            color: #eef4ff;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            max-height: 90vh;
+        }
+        .sidebar-header {
+            padding: 24px 20px;
+            background: #0a1f2c;
+            border-bottom: 1px solid #2a5f78;
+        }
+        .sidebar-header h2 { display: flex; align-items: center; gap: 12px; font-size: 1.4rem; color: #ffda88; }
+        .refresh-btn { background: #2c7da0; border: none; padding: 10px; border-radius: 60px; width: 100%; margin-top: 16px; font-weight: bold; color: white; cursor: pointer; transition: 0.2s; }
+        .refresh-btn:hover { background: #1f6683; transform: translateY(-2px); }
+        .treeview-area { padding: 20px 14px; }
+        .jahr-group { margin-bottom: 18px; background: rgba(255,255,255,0.05); border-radius: 18px; padding: 6px 8px; }
+        .jahr-title { font-size: 1.2rem; font-weight: bold; color: #ffcd7e; padding: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .jahr-title::before { content: "▼"; font-size: 0.8rem; transition: 0.2s; }
+        .jahr-title.collapsed::before { content: "▶"; }
+        .jahr-content { margin-left: 12px; }
+        .ordner-group { margin: 12px 0 8px 12px; background: #1f4a5e40; border-radius: 14px; padding: 6px; }
+        .ordner-title { font-size: 1rem; font-weight: 500; color: #b9e2f5; padding: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+        .ordner-title::before { content: "▼"; font-size: 0.7rem; }
+        .ordner-title.collapsed::before { content: "▶"; }
+        .page-items { margin-left: 22px; }
+        .page-item { background: #2a556d; margin: 8px 0; padding: 10px 12px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-left: 3px solid transparent; transition: 0.1s; }
+        .page-item:hover { background: #3b6f8c; border-left-color: #ffb347; }
+        .page-item-buttons { display: flex; gap: 8px; }
+        .page-item-button { background: #2c7da0; border: none; padding: 5px 12px; border-radius: 40px; color: white; font-size: 11px; font-weight: bold; cursor: pointer; }
+        .page-item-button.pictures { background: #e67e22; }
+        .belege-count { background: #27ae60; border-radius: 30px; padding: 2px 12px; font-size: 11px; margin-left: 10px; }
+        /* MAIN */
+        .main-content { display: flex; flex-direction: column; background: #ffffff; }
+        .tabs { display: flex; background: #1e2f3c; gap: 6px; padding: 0 24px; }
+        .tab-btn { background: transparent; border: none; padding: 16px 26px; color: #cbdfe8; font-weight: 600; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 3px solid transparent; }
+        .tab-btn.active { color: white; border-bottom-color: #f39c12; background: #2c4b5e30; }
+        .tab-pane { display: none; padding: 28px 32px; overflow-y: auto; max-height: 85vh; animation: fade 0.2s; }
+        .tab-pane.active { display: block; }
+        @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
+        .card { background: white; border-radius: 28px; padding: 24px; margin-bottom: 28px; box-shadow: 0 8px 20px rgba(0,0,0,0.03); border: 1px solid #eef2f8; }
+        .card h2 { font-size: 1.4rem; color: #1f3b4a; border-left: 5px solid #f39c12; padding-left: 18px; margin-bottom: 22px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap: 20px; margin-bottom: 20px; }
+        .input-field { width: 100%; padding: 12px 18px; border: 1.5px solid #e2edf7; border-radius: 28px; font-size: 0.9rem; transition: 0.2s; background: #fefefe; }
+        .input-field:focus { border-color: #2c7da0; outline: none; box-shadow: 0 0 0 3px #2c7da030; }
+        .btn { padding: 10px 24px; border-radius: 40px; font-weight: 600; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; }
+        .btn-primary { background: #2c7da0; color: white; }
+        .btn-success { background: #27ae60; color: white; }
+        .btn-warning { background: #e67e22; color: white; }
+        .btn-danger { background: #c0392b; color: white; }
+        .btn-secondary { background: #95a5a6; color: white; }
+        .table-wrapper { overflow-x: auto; border-radius: 24px; margin-top: 18px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #1e2f3c; color: white; padding: 14px; }
+        td { padding: 12px; border-bottom: 1px solid #edf2f7; }
+        .result-box { background: #f8fafc; border-radius: 24px; padding: 16px; margin-top: 20px; font-family: monospace; }
+        .image-viewer { background: #f4fafe; border-radius: 32px; padding: 24px; text-align: center; margin: 20px 0; }
+        .gallery-flex { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 20px; }
+        .gallery-card { background: white; border-radius: 20px; width: 120px; padding: 12px; text-align: center; cursor: pointer; border: 1px solid #e2edf2; transition: 0.1s; }
+        .gallery-card:hover { transform: scale(0.97); background: #fff6e5; }
+        .beleg-date-group { background: #f8fafc; border-radius: 24px; margin-bottom: 20px; padding: 14px; border-left: 5px solid #f39c12; }
+        .calendar { display: grid; grid-template-columns: repeat(7,1fr); gap: 6px; background: #fff; border-radius: 28px; padding: 16px; }
+        .cal-day { padding: 10px; text-align: center; border-radius: 50px; cursor: pointer; background: #f1f5f9; margin: 2px; }
+        .cal-day.has-belege { background: #2c7da0; color: white; font-weight: bold; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 2000; }
+        .modal-content { background: white; border-radius: 40px; max-width: 550px; width: 90%; padding: 28px; }
+        @media (max-width: 860px) { .app-container { grid-template-columns: 1fr; } .sidebar-tree { max-height: 380px; } }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <!-- LEFT SIDEBAR: ENHANCED TREEVIEW -->
+    <div class="sidebar-tree">
+        <div class="sidebar-header">
+            <h2><i class="fas fa-folder-tree"></i> Archive Structure</h2>
+            <button class="refresh-btn" id="globalRefreshTree"><i class="fas fa-sync-alt"></i> Refresh Tree</button>
+        </div>
+        <div class="treeview-area" id="treeviewRoot"><div style="padding:20px; text-align:center;"><i class="fas fa-spinner fa-pulse"></i> Loading folders...</div></div>
+    </div>
+
+    <!-- RIGHT MAIN PANEL -->
+    <div class="main-content">
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="tabBelege"><i class="fas fa-file-invoice"></i> Belege & Bilder</button>
+            <button class="tab-btn" data-tab="tabDocument"><i class="fas fa-file-upload"></i> Document Manager</button>
+            <button class="tab-btn" data-tab="tabOrdner"><i class="fas fa-folder"></i> Ordner Admin</button>
+            <button class="tab-btn" data-tab="tabPages"><i class="fas fa-file-alt"></i> Pages Admin</button>
+            <button class="tab-btn" data-tab="tabStats"><i class="fas fa-chart-line"></i> Statistics</button>
+        </div>
+
+        <!-- 1. BELEGE & BILDER TAB (full functionality) -->
+        <div id="tabBelege" class="tab-pane active">
+            <div class="card">
+                <h2><i class="fas fa-search"></i> Belege & Dokumente</h2>
+                <input type="text" id="searchBelegInput" class="input-field" placeholder="🔍 Suche nach Belegnummer, Beschreibung, Betrag..." style="margin-bottom: 20px;">
+                <div id="calendarContainer" style="margin-bottom: 20px;"></div>
+                <div id="belegeDetailsContainer"></div>
+                <div id="bilderContainerPage" style="margin-top: 28px;"></div>
+            </div>
+        </div>
+
+        <!-- 2. DOCUMENT MANAGER (Add doc + Image viewer) -->
+        <div id="tabDocument" class="tab-pane">
+            <div class="card">
+                <h2><i class="fas fa-plus-circle"></i> Neuen Beleg anlegen</h2>
+                <div id="selectedPageInfoCard" class="result-box" style="background:#eef2ff; margin-bottom:20px;">📌 Keine Seite ausgewählt – bitte links im Baum eine Seite selektieren.</div>
+                <div class="form-grid">
+                    <input type="text" id="docDatum" class="input-field" placeholder="Datum (TT.MM.JJJJ)" value="15.03.2025">
+                    <input type="text" id="docBezeichnung" class="input-field" placeholder="Bezeichnung *">
+                    <input type="number" id="docBrutto" class="input-field" placeholder="Bruttobetrag (€)" step="0.01">
+                    <input type="text" id="docBelegnummer" class="input-field" placeholder="Belegnummer *">
+                </div>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <button id="createDocumentBtn" class="btn btn-primary"><i class="fas fa-save"></i> Dokument speichern</button>
+                    <button id="clearDocFormBtn" class="btn btn-secondary"><i class="fas fa-broom"></i> Zurücksetzen</button>
+                </div>
+                <div id="docResultMsg" class="result-box"></div>
+            </div>
+            <div class="card">
+                <h2><i class="fas fa-images"></i> Bildergalerie & Viewer</h2>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 20px;">
+                    <button id="prevImageBtn" class="btn btn-secondary"><i class="fas fa-chevron-left"></i> Zurück</button>
+                    <span id="imageCounterLabel" style="font-weight: bold;">0/0</span>
+                    <button id="nextImageBtn" class="btn btn-secondary">Weiter <i class="fas fa-chevron-right"></i></button>
+                    <input type="number" id="manualImageIdInput" class="input-field" style="width:130px;" placeholder="Bild-ID">
+                    <button id="loadImageByIdManualBtn" class="btn btn-primary"><i class="fas fa-search"></i> Laden</button>
+                </div>
+                <div id="imageDisplayArea" class="image-viewer"><i class="fas fa-image fa-4x" style="color:#bdc3c7;"></i><p>Kein Bild geladen</p></div>
+                <div id="imageMetaPanel" class="result-box" style="display:none;"></div>
+                <div id="galleryImagesList" class="gallery-flex"></div>
+            </div>
+        </div>
+
+        <!-- 3. ORDNER MANAGEMENT -->
+        <div id="tabOrdner" class="tab-pane">
+            <div class="card"><h2><i class="fas fa-folder-plus"></i> Ordner anlegen</h2>
+                <div class="form-grid">
+                    <input type="number" id="ordnerJahrInput" class="input-field" placeholder="Jahr" value="2025">
+                    <input type="text" id="ordnerNameInput" class="input-field" placeholder="Ordnername *">
+                    <textarea id="ordnerDescInput" class="input-field" placeholder="Beschreibung"></textarea>
+                </div>
+                <button id="createOrdnerAction" class="btn btn-success"><i class="fas fa-folder-open"></i> Ordner erstellen</button>
+                <div id="ordnerFeedback" class="result-box"></div>
+            </div>
+            <div class="card"><h2><i class="fas fa-table-list"></i> Vorhandene Ordner</h2>
+                <div class="table-wrapper"><table id="ordnerListTable"><thead><tr><th>ID</th><th>Jahr</th><th>Name</th><th>Aktionen</th></tr></thead><tbody><tr><td colspan="4">Lade...</td></tr></tbody></table></div>
+            </div>
+        </div>
+
+        <!-- 4. PAGES MANAGEMENT -->
+        <div id="tabPages" class="tab-pane">
+            <div class="card"><h2><i class="fas fa-layer-group"></i> Neue Seite anlegen</h2>
+                <div class="form-grid">
+                    <input type="number" id="pageOrdnerFk" class="input-field" placeholder="Ordner ID">
+                    <input type="number" id="pageNumberInput" class="input-field" placeholder="Seitennummer">
+                    <input type="text" id="pageDescrInput" class="input-field" placeholder="Seitenbeschreibung">
+                </div>
+                <button id="createPageAction" class="btn btn-primary"><i class="fas fa-save"></i> Seite anlegen</button>
+                <div id="pageFeedback" class="result-box"></div>
+            </div>
+            <div class="card"><h2><i class="fas fa-database"></i> Seitenliste</h2>
+                <div class="table-wrapper"><table id="pagesDataTable"><thead><tr><th>Seiten-ID</th><th>Ordner-ID</th><th>Seite Nr.</th><th>Löschen</th></tr></thead><tbody><tr><td colspan="4">—</td></tr></tbody></table></div>
+            </div>
+        </div>
+
+        <!-- 5. STATISTICS CHARTS -->
+        <div id="tabStats" class="tab-pane">
+            <div class="card"><h2><i class="fas fa-chart-simple"></i> Ordner- & Dokumentenanalyse</h2>
+                <canvas id="statsBarChart" width="400" height="250" style="max-width:100%; margin-bottom: 30px;"></canvas>
+                <canvas id="statsPieChart" width="400" height="250" style="max-width:100%;"></canvas>
+                <button id="refreshStatsBtn" class="btn btn-warning" style="margin-top: 30px;"><i class="fas fa-chart-line"></i> Statistiken aktualisieren</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // -------------------------- FULLY FUNCTIONAL MOCK DATABASE WITH COMPLETE PREVIOUS BEHAVIOR --------------------------
+    let db = {
+        ordner: [
+            { PK_ABL_ORDNER: 101, JAHR: 2024, ORDNER_NAME: "Jahresabschluss 2024", DESCR: "Finanzunterlagen" },
+            { PK_ABL_ORDNER: 102, JAHR: 2025, ORDNER_NAME: "Projektrechnungen 2025", DESCR: "Kundenrechnungen" }
+        ],
+        pages: [
+            { PK_ABL_ORDNER_PAGE: 1001, FK_ABL_ORDNER: 101, PAGE_NUMBER: 1, DESCR: "Eingangsrechnungen", FINAL_CNT_BELEGE: 2, FINAL_CNT_BILDER: 1 },
+            { PK_ABL_ORDNER_PAGE: 1002, FK_ABL_ORDNER: 101, PAGE_NUMBER: 2, DESCR: "Ausgangsrechnungen", FINAL_CNT_BELEGE: 1, FINAL_CNT_BILDER: 0 },
+            { PK_ABL_ORDNER_PAGE: 1003, FK_ABL_ORDNER: 102, PAGE_NUMBER: 1, DESCR: "Projekt A", FINAL_CNT_BELEGE: 1, FINAL_CNT_BILDER: 2 }
+        ],
+        belege: [
+            { PK_INP_BELEGE_ALL: 5001, BELEGDATUM: "2024-11-15", BEZEICHNUNG: "Büroartikel", BELEGNUMMER: "RE-101", BRUTTO_BETRAG: 125.50, FK_ABL_ORDNER_PAGE: 1001, DATUM_ALL_OK: "2024-11-20" },
+            { PK_INP_BELEGE_ALL: 5002, BELEGDATUM: "2024-12-01", BEZEICHNUNG: "IT-Equipment", BELEGNUMMER: "RE-202", BRUTTO_BETRAG: 890.00, FK_ABL_ORDNER_PAGE: 1001, DATUM_ALL_OK: "2024-12-05" },
+            { PK_INP_BELEGE_ALL: 5003, BELEGDATUM: "2025-01-10", BEZEICHNUNG: "Projektabrechnung", BELEGNUMMER: "PR-001", BRUTTO_BETRAG: 2450.00, FK_ABL_ORDNER_PAGE: 1003, DATUM_ALL_OK: null }
+        ],
+        bilder: [
+            { PK_BILD_BILDER: 777, FILENAME: "rechnung_scan.jpg", FILECONTENT: null, FK_ABL_ORDNER_PAGE: 1001, DATUM_ZUORD_OK: "2024-11-18" },
+            { PK_BILD_BILDER: 888, FILENAME: "projekt_grafik.png", FILECONTENT: null, FK_ABL_ORDNER_PAGE: 1003, DATUM_ZUORD_OK: "2025-01-15" },
+            { PK_BILD_BILDER: 889, FILENAME: "unterschrift.png", FILECONTENT: null, FK_ABL_ORDNER_PAGE: 1003, DATUM_ZUORD_OK: "2025-01-16" }
+        ]
+    };
+
+    let currentSelectedPageId = null;
+    let currentPageImagesArray = [];
+    let currentImageIndex = 0;
+    let chartBar, chartPie;
+
+    // Helper: Render Treeview (complete structure with collapsible groups)
+    function renderTreeview() {
+        const container = document.getElementById('treeviewRoot');
+        let groups = {};
+        db.pages.forEach(page => {
+            let ordner = db.ordner.find(o => o.PK_ABL_ORDNER === page.FK_ABL_ORDNER);
+            if (!ordner) return;
+            let year = ordner.JAHR;
+            if (!groups[year]) groups[year] = {};
+            let ordnerKey = `${ordner.ORDNER_NAME} (ID:${ordner.PK_ABL_ORDNER})`;
+            if (!groups[year][ordnerKey]) groups[year][ordnerKey] = [];
+            groups[year][ordnerKey].push(page);
+        });
+        let html = '';
+        Object.keys(groups).sort((a,b)=>b-a).forEach(year => {
+            html += `<div class="jahr-group"><div class="jahr-title">📁 Jahr ${year}</div><div class="jahr-content">`;
+            Object.keys(groups[year]).forEach(ordTitle => {
+                let pagesArr = groups[year][ordTitle];
+                html += `<div class="ordner-group"><div class="ordner-title">🗂️ ${ordTitle} (${pagesArr.length} Seiten)</div><div class="page-items">`;
+                pagesArr.forEach(page => {
+                    let belegCount = db.belege.filter(b => b.FK_ABL_ORDNER_PAGE === page.PK_ABL_ORDNER_PAGE).length;
+                    html += `<div class="page-item" data-pageid="${page.PK_ABL_ORDNER_PAGE}" data-ordnerid="${page.FK_ABL_ORDNER}">
+                        <span>📄 Seite ${page.PAGE_NUMBER} — ${page.DESCR || 'Ohne Titel'} <span class="belege-count">${belegCount} Belege</span></span>
+                        <div class="page-item-buttons">
+                            <button class="page-item-button select-page-btn">Auswählen</button>
+                            <button class="page-item-button pictures show-bilder-btn">Bilder</button>
+                            <button class="page-item-button show-belege-btn">Belege</button>
+                        </div>
+                    </div>`;
+                });
+                html += `</div></div>`;
+            });
+            html += `</div></div>`;
+        });
+        container.innerHTML = html;
+        document.querySelectorAll('.jahr-title').forEach(el => el.addEventListener('click', function(e){ this.classList.toggle('collapsed'); let nxt = this.nextElementSibling; if(nxt) nxt.style.display = nxt.style.display === 'none' ? 'block' : 'none'; }));
+        document.querySelectorAll('.ordner-title').forEach(el => el.addEventListener('click', function(e){ this.classList.toggle('collapsed'); let nxt = this.nextElementSibling; if(nxt) nxt.style.display = nxt.style.display === 'none' ? 'block' : 'none'; }));
+        attachPageEvents();
+    }
+
+    function attachPageEvents() {
+        document.querySelectorAll('.select-page-btn').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); let pid = parseInt(btn.closest('.page-item').dataset.pageid); selectPage(pid); }));
+        document.querySelectorAll('.show-belege-btn').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); let pid = parseInt(btn.closest('.page-item').dataset.pageid); loadBelegeForPage(pid); switchTab('tabBelege'); }));
+        document.querySelectorAll('.show-bilder-btn').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); let pid = parseInt(btn.closest('.page-item').dataset.pageid); loadImagesForPage(pid); switchTab('tabDocument'); }));
+    }
+
+    function selectPage(pageId) {
+        currentSelectedPageId = pageId;
+        document.getElementById('selectedPageInfoCard').innerHTML = `✅ Aktuelle Seite: ID ${pageId} — Sie können jetzt Belege hinzufügen.`;
+        document.getElementById('selectedPageInfoCard').style.background = "#d9f0ec";
+    }
+
+    async function loadBelegeForPage(pageId) {
+        let belege = db.belege.filter(b => b.FK_ABL_ORDNER_PAGE === pageId);
+        let html = `<div><strong>📑 Belege für Seite ${pageId}</strong> (${belege.length} Einträge)</div>`;
+        if(belege.length === 0) html += "<p class='result-box'>Keine Belege vorhanden</p>";
+        else {
+            html += `<div class="table-wrapper"><table><tr><th>Datum</th><th>Bezeichnung</th><th>Belegnummer</th><th>Brutto (€)</th><th>OK</th></tr>`;
+            belege.forEach(b => {
+                let okFlag = b.DATUM_ALL_OK ? `<span style="color:green;">✓ ${b.DATUM_ALL_OK}</span>` : `<span style="color:red;">✗</span>`;
+                html += `<tr><td>${b.BELEGDATUM || '-'}</td><td>${b.BEZEICHNUNG}</td><td>${b.BELEGNUMMER}</td><td>${b.BRUTTO_BETRAG}</td><td>${okFlag}</td></tr>`;
+            });
+            html += `</table></div>`;
+        }
+        let pageBilder = db.bilder.filter(img => img.FK_ABL_ORDNER_PAGE === pageId);
+        if(pageBilder.length) html += `<div class="result-box"><i class="fas fa-camera"></i> ${pageBilder.length} zugehörige Bilder</div>`;
+        document.getElementById('belegeDetailsContainer').innerHTML = html;
+        document.getElementById('calendarContainer').innerHTML = generateCalendar(belege);
+    }
+
+    function generateCalendar(belege) {
+        let datesMap = new Map();
+        belege.forEach(b => { if(b.BELEGDATUM) datesMap.set(b.BELEGDATUM, (datesMap.get(b.BELEGDATUM)||0)+1); });
+        let calHtml = `<div class="calendar"><div class="cal-day">Mo</div><div class="cal-day">Di</div><div class="cal-day">Mi</div><div class="cal-day">Do</div><div class="cal-day">Fr</div><div class="cal-day">Sa</div><div class="cal-day">So</div>`;
+        for(let i=1;i<=31;i++) { let dateStr = `2025-03-${String(i).padStart(2,'0')}`; let has = datesMap.has(dateStr) ? 'has-belege' : ''; calHtml += `<div class="cal-day ${has}">${i}</div>`; }
+        calHtml += `</div>`;
+        return `<h4>📅 Kalenderansicht (März 2025 - Demo)</h4>${calHtml}`;
+    }
+
+    function loadImagesForPage(pageId) {
+        let images = db.bilder.filter(img => img.FK_ABL_ORDNER_PAGE === pageId);
+        currentPageImagesArray = images;
+        currentImageIndex = 0;
+        if(images.length) displayCurrentImageInViewer();
+        else document.getElementById('imageDisplayArea').innerHTML = '<i class="fas fa-image fa-3x"></i><p>Keine Bilder für diese Seite</p>';
+        let galleryHtml = `<h4>Galerie (${images.length})</h4><div class="gallery-flex">`;
+        images.forEach((img,idx) => {
+            galleryHtml += `<div class="gallery-card" data-imgidx="${idx}"><i class="fas fa-file-image fa-2x"></i><div>${img.FILENAME}</div><small>ID:${img.PK_BILD_BILDER}</small></div>`;
+        });
+        galleryHtml += `</div>`;
+        document.getElementById('galleryImagesList').innerHTML = galleryHtml;
+        document.querySelectorAll('.gallery-card').forEach(card => card.addEventListener('click', (e) => { let idx = parseInt(card.dataset.imgidx); if(!isNaN(idx)){ currentImageIndex=idx; displayCurrentImageInViewer(); } }));
+    }
+
+    function displayCurrentImageInViewer() {
+        let img = currentPageImagesArray[currentImageIndex];
+        if(!img) { document.getElementById('imageDisplayArea').innerHTML = '<i class="fas fa-image fa-4x"></i><p>Bild nicht verfügbar</p>'; return; }
+        document.getElementById('imageDisplayArea').innerHTML = `<div><i class="fas fa-file-image fa-5x" style="color:#2980b9"></i><p><strong>${img.FILENAME}</strong><br>ID: ${img.PK_BILD_BILDER}<br>Seite: ${img.FK_ABL_ORDNER_PAGE}</p></div>`;
+        document.getElementById('imageCounterLabel').innerText = `${currentImageIndex+1}/${currentPageImagesArray.length}`;
+        document.getElementById('imageMetaPanel').style.display = 'block';
+        document.getElementById('imageMetaPanel').innerHTML = `📄 Metadaten: Dateiname: ${img.FILENAME}, hochgeladen am: ${img.DATUM_ZUORD_OK || 'unbekannt'}`;
+    }
+
+    async function insertDocumentHandler() {
+        if(!currentSelectedPageId) { alert("Bitte zuerst eine Seite im linken Baum auswählen (Select-Button)."); return; }
+        let datum = document.getElementById('docDatum').value;
+        let bezeichnung = document.getElementById('docBezeichnung').value;
+        let brutto = parseFloat(document.getElementById('docBrutto').value);
+        let nummer = document.getElementById('docBelegnummer').value;
+        if(!bezeichnung || !nummer) { alert("Bezeichnung und Belegnummer sind erforderlich"); return; }
+        let newId = Math.floor(Math.random() * 9000) + 6000;
+        let newBeleg = { PK_INP_BELEGE_ALL: newId, BELEGDATUM: datum, BEZEICHNUNG: bezeichnung, BELEGNUMMER: nummer, BRUTTO_BETRAG: brutto, FK_ABL_ORDNER_PAGE: currentSelectedPageId, DATUM_ALL_OK: new Date().toISOString().split('T')[0] };
+        db.belege.push(newBeleg);
+        document.getElementById('docResultMsg').innerHTML = `✅ Dokument erfolgreich angelegt! ID: ${newId}`;
+        renderTreeview();
+        if(document.getElementById('tabBelege').classList.contains('active')) loadBelegeForPage(currentSelectedPageId);
+    }
+
+    // ORDNER CRUD
+    function createOrdnerLogic() {
+        let jahr = parseInt(document.getElementById('ordnerJahrInput').value);
+        let name = document.getElementById('ordnerNameInput').value;
+        let desc = document.getElementById('ordnerDescInput').value;
+        if(!name) return alert("Ordnername benötigt");
+        let newId = db.ordner.length + 200;
+        db.ordner.push({ PK_ABL_ORDNER: newId, JAHR: jahr, ORDNER_NAME: name, DESCR: desc });
+        renderOrdnerTable();
+        renderTreeview();
+        document.getElementById('ordnerFeedback').innerHTML = `✅ Ordner "${name}" erstellt.`;
+    }
+    function renderOrdnerTable() { let tbody = document.querySelector('#ordnerListTable tbody'); tbody.innerHTML = ''; db.ordner.forEach(o => { tbody.innerHTML += `<tr><td>${o.PK_ABL_ORDNER}</td><td>${o.JAHR}</td><td>${o.ORDNER_NAME}</td><td><button class="btn btn-danger del-ordner" data-id="${o.PK_ABL_ORDNER}">Löschen</button></td></tr>`; }); document.querySelectorAll('.del-ordner').forEach(btn => btn.addEventListener('click', (e) => { let id = parseInt(btn.dataset.id); db.ordner = db.ordner.filter(o => o.PK_ABL_ORDNER !== id); db.pages = db.pages.filter(p => p.FK_ABL_ORDNER !== id); renderOrdnerTable(); renderPagesTable(); renderTreeview(); })); }
+    function createPageLogic() {
+        let fk = parseInt(document.getElementById('pageOrdnerFk').value);
+        let pageNum = parseInt(document.getElementById('pageNumberInput').value);
+        let descr = document.getElementById('pageDescrInput').value;
+        if(!fk || !pageNum) return alert("Ordner-ID und Seitenzahl erforderlich");
+        let newPageId = db.pages.length + 3000;
+        db.pages.push({ PK_ABL_ORDNER_PAGE: newPageId, FK_ABL_ORDNER: fk, PAGE_NUMBER: pageNum, DESCR: descr, FINAL_CNT_BELEGE: 0 });
+        renderPagesTable(); renderTreeview();
+        document.getElementById('pageFeedback').innerHTML = `✅ Seite ${pageNum} erstellt (ID: ${newPageId})`;
+    }
+    function renderPagesTable() { let tbody = document.querySelector('#pagesDataTable tbody'); tbody.innerHTML = ''; db.pages.forEach(p => { tbody.innerHTML += `<tr><td>${p.PK_ABL_ORDNER_PAGE}</td><td>${p.FK_ABL_ORDNER}</td><td>${p.PAGE_NUMBER}</td><td><button class="btn btn-danger del-page" data-pid="${p.PK_ABL_ORDNER_PAGE}">Löschen</button></td></tr>`; }); document.querySelectorAll('.del-page').forEach(btn => btn.addEventListener('click', (e) => { let pid = parseInt(btn.dataset.pid); db.pages = db.pages.filter(p => p.PK_ABL_ORDNER_PAGE !== pid); db.belege = db.belege.filter(b => b.FK_ABL_ORDNER_PAGE !== pid); renderPagesTable(); renderTreeview(); if(currentSelectedPageId === pid) currentSelectedPageId = null; })); }
+    function refreshStatistics() {
+        let pageCountPerOrdner = {};
+        db.pages.forEach(p => { let key = p.FK_ABL_ORDNER; pageCountPerOrdner[key] = (pageCountPerOrdner[key] || 0) + 1; });
+        let labels = Object.keys(pageCountPerOrdner).map(k => `Ordner ${k}`);
+        let dataCounts = Object.values(pageCountPerOrdner);
+        if(chartBar) chartBar.destroy();
+        let ctxBar = document.getElementById('statsBarChart').getContext('2d');
+        chartBar = new Chart(ctxBar, { type: 'bar', data: { labels, datasets: [{ label: 'Seiten pro Ordner', data: dataCounts, backgroundColor: '#2c7da0' }] } });
+        let okDocs = db.belege.filter(b => b.DATUM_ALL_OK !== null).length;
+        let otherDocs = db.belege.length - okDocs;
+        if(chartPie) chartPie.destroy();
+        let ctxPie = document.getElementById('statsPieChart').getContext('2d');
+        chartPie = new Chart(ctxPie, { type: 'pie', data: { labels: ['OK-Dokumente', 'Ohne OK-Datum'], datasets: [{ data: [okDocs, otherDocs], backgroundColor: ['#27ae60', '#e67e22'] }] } });
+    }
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+        document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+        if(tabId === 'tabStats') refreshStatistics();
+        if(tabId === 'tabOrdner') renderOrdnerTable();
+        if(tabId === 'tabPages') renderPagesTable();
+    }
+
+    // Event listeners & initialization
+    document.getElementById('globalRefreshTree').addEventListener('click', () => renderTreeview());
+    document.getElementById('createDocumentBtn').addEventListener('click', insertDocumentHandler);
+    document.getElementById('clearDocFormBtn').addEventListener('click', () => { document.getElementById('docBezeichnung').value = ''; document.getElementById('docBrutto').value = ''; document.getElementById('docBelegnummer').value = ''; });
+    document.getElementById('createOrdnerAction').addEventListener('click', createOrdnerLogic);
+    document.getElementById('createPageAction').addEventListener('click', createPageLogic);
+    document.getElementById('refreshStatsBtn').addEventListener('click', refreshStatistics);
+    document.getElementById('prevImageBtn').addEventListener('click', () => { if(currentPageImagesArray.length) { currentImageIndex = (currentImageIndex-1+currentPageImagesArray.length)%currentPageImagesArray.length; displayCurrentImageInViewer(); } });
+    document.getElementById('nextImageBtn').addEventListener('click', () => { if(currentPageImagesArray.length) { currentImageIndex = (currentImageIndex+1)%currentPageImagesArray.length; displayCurrentImageInViewer(); } });
+    document.getElementById('loadImageByIdManualBtn').addEventListener('click', () => { let id = parseInt(document.getElementById('manualImageIdInput').value); let found = db.bilder.find(i => i.PK_BILD_BILDER === id); if(found){ currentPageImagesArray=[found]; currentImageIndex=0; displayCurrentImageInViewer(); } else alert('Bild-ID nicht gefunden'); });
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', (e) => switchTab(btn.dataset.tab)));
+    renderTreeview(); renderOrdnerTable(); renderPagesTable(); refreshStatistics();
+</script>
+</body>
+</html>

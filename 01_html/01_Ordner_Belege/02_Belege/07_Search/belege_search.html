@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Belege Explorer | Gruppenfilter & Werteauswahl</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Roboto, system-ui, sans-serif;
+            background: #f0f4f9;
+            color: #0f172a;
+            padding: 20px;
+        }
+
+        .dashboard {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.12);
+            display: flex;
+            flex-direction: row;
+            overflow: hidden;
+            min-height: 85vh;
+        }
+
+        /* LEFT SIDEBAR - Gruppenbuttons */
+        .left-sidebar {
+            width: 320px;
+            background: #f9fbfe;
+            border-right: 1px solid #e2edf2;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            overflow-y: auto;
+            max-height: 85vh;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem 1.2rem 0.8rem 1.5rem;
+            font-weight: 700;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #475569;
+            border-bottom: 1px solid #e2edf2;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Group Buttons */
+        .group-btn {
+            background: transparent;
+            border: none;
+            text-align: left;
+            padding: 12px 16px;
+            margin: 4px 12px;
+            border-radius: 16px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #1e293b;
+            width: calc(100% - 24px);
+        }
+
+        .group-btn:hover {
+            background: #eef2ff;
+        }
+
+        .group-btn.active {
+            background: #e0e7ff;
+            color: #1e3a8a;
+            box-shadow: inset 3px 0 0 #3b82f6;
+        }
+
+        .group-btn.all-belege {
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            margin-bottom: 12px;
+        }
+        .group-btn.all-belege.active {
+            background: #d1fae5;
+            border-color: #10b981;
+            box-shadow: inset 3px 0 0 #10b981;
+        }
+
+        .group-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .group-name {
+            font-weight: 600;
+        }
+
+        .group-percent {
+            font-size: 0.7rem;
+            background: #e9eef3;
+            padding: 2px 8px;
+            border-radius: 30px;
+            color: #2c3e66;
+        }
+
+        .progress-bar-bg {
+            background: #e2e8f0;
+            border-radius: 20px;
+            height: 5px;
+            width: 100%;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-fill {
+            background: #2c9c6e;
+            height: 5px;
+            border-radius: 20px;
+            width: 0%;
+            transition: width 0.2s ease;
+        }
+
+        /* MIDDLE AREA */
+        .content-area {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            overflow: hidden;
+            min-width: 500px;
+        }
+
+        .content-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #eef2f6;
+            background: white;
+        }
+
+        .active-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+
+        .filter-badge {
+            background: #eef2ff;
+            border-radius: 30px;
+            padding: 4px 12px;
+            font-size: 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .remove-filter {
+            cursor: pointer;
+            font-weight: bold;
+            color: #ef4444;
+        }
+
+        .filter-info {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        /* DATUM_ALL_OK Status Cards */
+        .datum-ok-stats {
+            display: flex;
+            gap: 16px;
+            padding: 0.8rem 1.5rem;
+            background: #fafcff;
+            border-bottom: 1px solid #eef2f6;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 20px;
+            padding: 8px 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .stat-card.green {
+            border-left: 4px solid #15803d;
+            background: #f0fdf4;
+        }
+        .stat-card.red {
+            border-left: 4px solid #b91c1c;
+            background: #fef2f2;
+        }
+        .stat-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #475569;
+        }
+        .stat-number {
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        /* Search Row */
+        .search-stats-row {
+            padding: 0.8rem 1.5rem;
+            background: #ffffff;
+            border-bottom: 1px solid #eef2f6;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .search-box {
+            flex: 2;
+            min-width: 200px;
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 16px 10px 38px;
+            border: 1px solid #cbd5e1;
+            border-radius: 40px;
+            font-size: 0.85rem;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #2c9c6e;
+            box-shadow: 0 0 0 2px #bbf0d5;
+        }
+
+        .search-box span {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .stats-chip {
+            background: #eef2ff;
+            border-radius: 32px;
+            padding: 6px 18px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        /* TABLE */
+        .table-wrapper {
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 48vh;
+            flex: 1;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            min-width: 780px;
+        }
+
+        th {
+            background: #f1f5f9;
+            padding: 12px 14px;
+            text-align: left;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            border-bottom: 2px solid #e2e8f0;
+            z-index: 10;
+        }
+
+        td {
+            padding: 10px 14px;
+            border-bottom: 1px solid #ecf3f9;
+        }
+
+        tr.row-datum-ok td {
+            background-color: #e6f7ec;
+            border-left: 3px solid #15803d;
+        }
+        tr.row-datum-missing td {
+            background-color: #ffeae8;
+            border-left: 3px solid #b91c1c;
+        }
+
+        .empty-table {
+            text-align: center;
+            padding: 48px;
+            color: #64748b;
+        }
+
+        /* RIGHT SIDEBAR - Einzelne Werte */
+        .right-sidebar {
+            width: 320px;
+            background: #fefefe;
+            border-left: 1px solid #e2edf2;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            overflow-y: auto;
+            max-height: 85vh;
+            padding: 1.2rem;
+        }
+
+        .right-header {
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            color: #1e293b;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 0.6rem;
+        }
+
+        .right-sub {
+            font-size: 0.7rem;
+            color: #475569;
+            margin-bottom: 1rem;
+        }
+
+        .value-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .value-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: #f8fafc;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.1s;
+            border: 1px solid #e2e8f0;
+        }
+
+        .value-item:hover {
+            background: #eef2ff;
+        }
+
+        .value-item.active-value {
+            background: #2c9c6e;
+            color: white;
+            border-color: #2c9c6e;
+        }
+
+        .value-name {
+            font-size: 0.8rem;
+            font-weight: 500;
+            word-break: break-word;
+            max-width: 160px;
+        }
+
+        .value-stats {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .value-count {
+            font-size: 0.7rem;
+            background: #cbd5e1;
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
+
+        .value-percent {
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #94a3b8;
+            padding: 2rem;
+            font-size: 0.8rem;
+        }
+
+        .loading-area {
+            text-align: center;
+            padding: 60px;
+        }
+        .spinner {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            border: 3px solid #e2e8f0;
+            border-top-color: #2c9c6e;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        footer {
+            padding: 0.6rem 1.5rem;
+            font-size: 0.7rem;
+            background: #fafcff;
+            border-top: 1px solid #eef2f6;
+            color: #475569;
+        }
+
+        @media (max-width: 1100px) {
+            .dashboard { flex-wrap: wrap; }
+            .left-sidebar { width: 100%; flex-direction: row; overflow-x: auto; max-height: none; border-right: none; border-bottom: 1px solid #e2edf2; }
+            .right-sidebar { width: 100%; border-left: none; border-top: 1px solid #e2edf2; }
+            .group-btn { width: auto; min-width: 160px; }
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <!-- LEFT SIDEBAR: Gruppenbuttons mit Prozentualen Anteilen -->
+    <div class="left-sidebar" id="leftSidebar">
+        <div class="sidebar-header">📊 GRUPPEN (prozentual)</div>
+        <div id="groupButtonsContainer"></div>
+    </div>
+
+    <!-- MIDDLE CONTENT: Tabelle -->
+    <div class="content-area">
+        <div class="content-header">
+            <div class="active-filters" id="activeFiltersDisplay"></div>
+            <div class="filter-info" id="filterInfo">Alle Belege</div>
+        </div>
+
+        <div class="datum-ok-stats">
+            <div class="stat-card green">
+                <div class="stat-label">✅ DATUM_ALL_OK gefüllt</div>
+                <div class="stat-number" id="datumFilledCount">-</div>
+            </div>
+            <div class="stat-card red">
+                <div class="stat-label">❌ DATUM_ALL_OK leer</div>
+                <div class="stat-number" id="datumEmptyCount">-</div>
+            </div>
+        </div>
+
+        <div class="search-stats-row">
+            <div class="search-box">
+                <span>🔍</span>
+                <input type="text" id="globalSearch" placeholder="Tabelle durchsuchen (alle Spalten) ..." autocomplete="off">
+            </div>
+            <div class="stats-chip" id="rowStats">0 Einträge</div>
+        </div>
+
+        <div class="table-wrapper" id="tableContainer">
+            <div class="loading-area"><div class="spinner"></div> Lade Daten...</div>
+        </div>
+        <footer>✅ Grün = DATUM_ALL_OK gefüllt | 🔴 Rot = DATUM_ALL_OK leer | Klicken Sie links auf eine Gruppe, rechts auf einen Wert</footer>
+    </div>
+
+    <!-- RIGHT SIDEBAR: Einzelne Werte der ausgewählten Gruppe mit Prozenten -->
+    <div class="right-sidebar" id="rightSidebar">
+        <div class="right-header">🔍 GRUPPENWERTE</div>
+        <div class="right-sub" id="rightSubtitle">Wählen Sie links eine Gruppe</div>
+        <div id="valueListContainer">
+            <div class="no-data">Keine Gruppe ausgewählt</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Gruppenkonfiguration
+    const GROUPS_CONFIG = [
+        { id: 'fk_std_verw', label: '📌 Verwendungszweck', mainField: 'FK_STD_VERW_VERWENDUNGSZWECK' },
+        { id: 'fk_bas_kat', label: '🏷️ Kategorie', mainField: 'FK_BAS_KAT_KATEGORIE' },
+        { id: 'jahr', label: '📅 Jahr', mainField: 'JAHR' },
+        { id: 'fk_abl_ordner', label: '📂 Ordner Page', mainField: 'FK_ABL_ORDNER_PAGE' },
+        { id: 'fk_loc_location', label: '📍 Location', mainField: 'FK_LOC_LOCATION' },
+        { id: 'fk_adr_ort', label: '🏙️ Ort', mainField: 'FK_ADR_ORT' },
+        { id: 'fk_std_persoenlich', label: '👤 Persönlich vor Ort', mainField: 'FK_STD_PERSOENLICH_VOR_ORT' },
+        { id: 'fk_proj_project', label: '📁 Projekt', mainField: 'FK_PROJ_PROJECT' },
+        { id: 'fk_inv_inventar', label: '🔧 Inventar', mainField: 'FK_INV_INVENTAR' },
+        { id: 'fk_media_media_buch', label: '🎬 Medienbuch', mainField: 'FK_MEDIA_MEDIA_BUCH' },
+        { id: 'fk_kon_person', label: '👥 KON_Person', mainField: 'FK_KON_PERSON' },
+        { id: 'fk_kon_geschaeftspartner', label: '🏢 Geschäftspartner', mainField: 'FK_KON_GESCHAEFTSPARTNER' },
+        { id: 'fk_rel_kon_gp_kontakt', label: '🤝 Rel. GP-Kontakt', mainField: 'FK_REL_KON_GESCHAEFTSPARTNER_KONTAKT' },
+        { id: 'fk_kon_org_unit', label: '🏛️ Organisationseinheit', mainField: 'FK_KON_ORG_UNIT' },
+        { id: 'fk_kon_kontakt', label: '📇 Kontakt', mainField: 'FK_KON_KONTAKT' }
+    ];
+
+    let originalDataset = [];
+    let currentSelectedGroup = null;      // Aktuelle Gruppe (z.B. FK_PROJ_PROJECT)
+    let currentSelectedValue = null;       // Ausgewählter Wert innerhalb der Gruppe
+    let currentTextSearch = '';
+    let currentFilteredRows = [];
+    let currentHeaders = [];
+
+    // DOM
+    const groupButtonsContainer = document.getElementById('groupButtonsContainer');
+    const valueListContainer = document.getElementById('valueListContainer');
+    const rightSubtitle = document.getElementById('rightSubtitle');
+    const activeFiltersDisplay = document.getElementById('activeFiltersDisplay');
+    const filterInfoSpan = document.getElementById('filterInfo');
+    const globalSearchInput = document.getElementById('globalSearch');
+    const rowStatsSpan = document.getElementById('rowStats');
+    const tableContainer = document.getElementById('tableContainer');
+    const datumFilledCountSpan = document.getElementById('datumFilledCount');
+    const datumEmptyCountSpan = document.getElementById('datumEmptyCount');
+
+    // Helper
+    function isDatumAllOkFilled(item) {
+        const val = item?.DATUM_ALL_OK;
+        if (val === undefined || val === null) return false;
+        if (typeof val === 'string' && val.trim() === '') return false;
+        return true;
+    }
+
+    function updateDatumStats() {
+        const total = currentFilteredRows.length;
+        if (total === 0) {
+            datumFilledCountSpan.innerText = '0';
+            datumEmptyCountSpan.innerText = '0';
+            return;
+        }
+        let filled = 0;
+        for (const row of currentFilteredRows) {
+            if (isDatumAllOkFilled(row)) filled++;
+        }
+        datumFilledCountSpan.innerText = filled;
+        datumEmptyCountSpan.innerText = total - filled;
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    // Hauptfilter-Logik
+    function applyAllFilters() {
+        if (!originalDataset.length) {
+            currentFilteredRows = [];
+            renderTable();
+            return;
+        }
+
+        let filtered = [...originalDataset];
+
+        // 1. Gruppenfilter: Wenn eine Gruppe ausgewählt ist, zeige NUR Belege, bei denen dieses Feld NICHT leer ist
+        if (currentSelectedGroup) {
+            const field = currentSelectedGroup.mainField;
+            filtered = filtered.filter(row => {
+                const val = row[field];
+                return val !== undefined && val !== null && String(val).trim() !== '';
+            });
+        }
+
+        // 2. Wertefilter (ein spezifischer Wert)
+        if (currentSelectedGroup && currentSelectedValue) {
+            const field = currentSelectedGroup.mainField;
+            filtered = filtered.filter(row => {
+                let val = row[field];
+                if (val === undefined || val === null) val = '';
+                return String(val) === currentSelectedValue;
+            });
+        }
+
+        // 3. Textsuche
+        if (currentTextSearch.trim() !== '') {
+            const term = currentTextSearch.trim().toLowerCase();
+            filtered = filtered.filter(row => {
+                for (let key in row) {
+                    let val = row[key];
+                    if (val === undefined || val === null) continue;
+                    let strVal = typeof val === 'object' ? JSON.stringify(val) : String(val);
+                    if (strVal.toLowerCase().includes(term)) return true;
+                }
+                return false;
+            });
+        }
+
+        currentFilteredRows = filtered;
+        renderTable();
+        updateActiveFiltersDisplay();
+    }
+
+    function updateActiveFiltersDisplay() {
+        activeFiltersDisplay.innerHTML = '';
+        if (currentSelectedGroup) {
+            const badge = document.createElement('div');
+            badge.className = 'filter-badge';
+            badge.innerHTML = `📁 Gruppe: ${currentSelectedGroup.label} <span class="remove-filter" data-type="group">✖</span>`;
+            badge.querySelector('[data-type="group"]').onclick = () => {
+                currentSelectedGroup = null;
+                currentSelectedValue = null;
+                applyAllFilters();
+                renderGroupButtons();
+                renderValueList();
+            };
+            activeFiltersDisplay.appendChild(badge);
+        }
+        if (currentSelectedValue) {
+            const badge = document.createElement('div');
+            badge.className = 'filter-badge';
+            const displayValue = currentSelectedValue.length > 30 ? currentSelectedValue.substring(0,27)+'…' : currentSelectedValue;
+            badge.innerHTML = `🔍 Wert: ${escapeHtml(displayValue)} <span class="remove-filter" data-type="value">✖</span>`;
+            badge.querySelector('[data-type="value"]').onclick = () => {
+                currentSelectedValue = null;
+                applyAllFilters();
+                renderValueList();
+            };
+            activeFiltersDisplay.appendChild(badge);
+        }
+        if (currentTextSearch.trim() !== '') {
+            const badge = document.createElement('div');
+            badge.className = 'filter-badge';
+            badge.innerHTML = `🔎 Suche: "${escapeHtml(currentTextSearch)}" <span class="remove-filter" data-type="search">✖</span>`;
+            badge.querySelector('[data-type="search"]').onclick = () => {
+                globalSearchInput.value = '';
+                currentTextSearch = '';
+                applyAllFilters();
+            };
+            activeFiltersDisplay.appendChild(badge);
+        }
+        if (!currentSelectedGroup && !currentSelectedValue && currentTextSearch.trim() === '') {
+            activeFiltersDisplay.innerHTML = '<span style="font-size:0.75rem; color:#64748b;">Keine aktiven Filter</span>';
+        }
+
+        let infoText = 'Alle Belege';
+        if (currentSelectedGroup) infoText = currentSelectedGroup.label;
+        if (currentSelectedValue) infoText += ` = "${currentSelectedValue.length > 40 ? currentSelectedValue.substring(0,37)+'…' : currentSelectedValue}"`;
+        if (currentTextSearch) infoText += ` (Suche: ${currentTextSearch})`;
+        filterInfoSpan.innerText = infoText;
+    }
+
+    // Tabelle rendern
+    function renderTable() {
+        if (!currentFilteredRows.length) {
+            tableContainer.innerHTML = `<div class="empty-table">✨ Keine Belege gefunden</div>`;
+            rowStatsSpan.innerText = `0 Einträge`;
+            updateDatumStats();
+            return;
+        }
+        const headers = currentHeaders.length ? currentHeaders : Object.keys(currentFilteredRows[0] || {});
+        const thead = `<thead><tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</thead>`;
+        const tbodyRows = currentFilteredRows.map(row => {
+            const isFilled = isDatumAllOkFilled(row);
+            const rowClass = isFilled ? 'row-datum-ok' : 'row-datum-missing';
+            const cells = headers.map(header => {
+                let val = row[header];
+                if (val === undefined || val === null) val = '';
+                if (typeof val === 'object') val = JSON.stringify(val);
+                return `<td title="${escapeHtml(String(val)).replace(/"/g, '&quot;')}">${escapeHtml(String(val))}</td>`;
+            }).join('');
+            return `<tr class="${rowClass}">${cells}</tr>`;
+        }).join('');
+        tableContainer.innerHTML = `<table>${thead}<tbody>${tbodyRows}</tbody>}</div>`;
+        rowStatsSpan.innerText = `${currentFilteredRows.length} Einträge`;
+        updateDatumStats();
+    }
+
+    // Linke Sidebar: Gruppenbuttons mit prozentualen Anteilen (wie viele Belege haben dieses Feld gefüllt)
+    function renderGroupButtons() {
+        if (!originalDataset.length) {
+            groupButtonsContainer.innerHTML = '<div class="no-data" style="padding:1rem;">Keine Daten</div>';
+            return;
+        }
+        const totalAll = originalDataset.length;
+        groupButtonsContainer.innerHTML = '';
+
+        // "Alle Belege" Button
+        const allBtn = document.createElement('button');
+        allBtn.className = 'group-btn all-belege';
+        if (!currentSelectedGroup) allBtn.classList.add('active');
+        allBtn.innerHTML = `
+            <div class="group-label">
+                <span class="group-name">📋 ALLE BELEGE</span>
+                <span class="group-percent">100%</span>
+            </div>
+            <div class="progress-bar-bg"><div class="progress-fill" style="width: 100%; background: #10b981;"></div></div>
+            <div style="font-size:0.65rem; margin-top:4px;">${totalAll} Einträge</div>
+        `;
+        allBtn.onclick = () => {
+            currentSelectedGroup = null;
+            currentSelectedValue = null;
+            applyAllFilters();
+            renderGroupButtons();
+            renderValueList();
+        };
+        groupButtonsContainer.appendChild(allBtn);
+
+        // Gruppenbuttons
+        for (const group of GROUPS_CONFIG) {
+            let filledCount = 0;
+            for (const item of originalDataset) {
+                let val = item[group.mainField];
+                if (val !== undefined && val !== null && String(val).trim() !== '') {
+                    filledCount++;
+                }
+            }
+            const percent = totalAll > 0 ? (filledCount / totalAll) * 100 : 0;
+            const isActive = currentSelectedGroup && currentSelectedGroup.id === group.id;
+            const btn = document.createElement('button');
+            btn.className = 'group-btn';
+            if (isActive) btn.classList.add('active');
+            btn.innerHTML = `
+                <div class="group-label">
+                    <span class="group-name">${group.label}</span>
+                    <span class="group-percent">${percent.toFixed(1)}%</span>
+                </div>
+                <div class="progress-bar-bg"><div class="progress-fill" style="width: ${percent}%;"></div></div>
+                <div style="font-size:0.65rem; margin-top:4px;">${filledCount}/${totalAll} belegt</div>
+            `;
+            btn.onclick = () => {
+                if (currentSelectedGroup && currentSelectedGroup.id === group.id) {
+                    // Deaktivieren
+                    currentSelectedGroup = null;
+                    currentSelectedValue = null;
+                } else {
+                    currentSelectedGroup = group;
+                    currentSelectedValue = null;
+                }
+                applyAllFilters();
+                renderGroupButtons();
+                renderValueList();
+            };
+            groupButtonsContainer.appendChild(btn);
+        }
+    }
+
+    // Rechte Sidebar: Einzelne Werte der ausgewählten Gruppe mit Anzahl und Prozent (bezogen auf ALLE Belege)
+    function renderValueList() {
+        if (!currentSelectedGroup || !originalDataset.length) {
+            valueListContainer.innerHTML = '<div class="no-data">Wählen Sie links eine Gruppe</div>';
+            rightSubtitle.innerText = 'Keine Gruppe ausgewählt';
+            return;
+        }
+
+        const field = currentSelectedGroup.mainField;
+        const totalAll = originalDataset.length;
+        const valueCountMap = new Map();
+        
+        for (const item of originalDataset) {
+            let val = item[field];
+            if (val === undefined || val === null) val = '(nicht zugeordnet)';
+            const key = String(val);
+            valueCountMap.set(key, (valueCountMap.get(key) || 0) + 1);
+        }
+        
+        // Sortieren nach Anzahl absteigend
+        const sorted = Array.from(valueCountMap.entries()).sort((a, b) => b[1] - a[1]);
+        
+        rightSubtitle.innerText = `${currentSelectedGroup.label} (${totalAll} Belege gesamt)`;
+        
+        if (sorted.length === 0) {
+            valueListContainer.innerHTML = '<div class="no-data">Keine Werte vorhanden</div>';
+            return;
+        }
+        
+        let html = `<div class="value-list">`;
+        for (const [value, count] of sorted) {
+            const percent = (count / totalAll) * 100;
+            const isActive = (currentSelectedValue === value);
+            const displayValue = value.length > 35 ? value.substring(0,32)+'…' : value;
+            html += `
+                <div class="value-item ${isActive ? 'active-value' : ''}" data-value="${escapeHtml(value)}">
+                    <span class="value-name" title="${escapeHtml(value)}">${escapeHtml(displayValue)}</span>
+                    <div class="value-stats">
+                        <span class="value-count">${count}</span>
+                        <span class="value-percent">(${percent.toFixed(1)}%)</span>
+                    </div>
+                </div>
+            `;
+        }
+        html += `</div>`;
+        valueListContainer.innerHTML = html;
+        
+        // Event Handler für Werte
+        document.querySelectorAll('.value-item').forEach(el => {
+            el.onclick = () => {
+                const selectedValue = el.getAttribute('data-value');
+                if (currentSelectedValue === selectedValue) {
+                    currentSelectedValue = null;
+                } else {
+                    currentSelectedValue = selectedValue;
+                }
+                applyAllFilters();
+                renderValueList();
+                renderGroupButtons(); // Aktualisiert ggf. die aktive Darstellung
+            };
+        });
+    }
+
+    // Daten laden
+    async function loadData() {
+        tableContainer.innerHTML = `<div class="loading-area"><div class="spinner"></div> Lade Belege von API ...</div>`;
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(),100000);
+            const response = await fetch('http://localhost:5000/belege_all', {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' },
+                signal: controller.signal
+            });
+            clearTimeout(timeout);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            let data = await response.json();
+            if (!Array.isArray(data)) {
+                if (data && Array.isArray(data.data)) data = data.data;
+                else if (data && Array.isArray(data.items)) data = data.items;
+                else data = [];
+            }
+            if (!data.length) {
+                tableContainer.innerHTML = `<div class="empty-table">📭 Keine Belege vorhanden</div>`;
+                originalDataset = [];
+                return;
+            }
+            const allKeysSet = new Set();
+            data.forEach(row => { Object.keys(row).forEach(k => allKeysSet.add(k)); });
+            const normalized = data.map(row => {
+                const obj = {};
+                for (let k of allKeysSet) obj[k] = (row[k] !== undefined && row[k] !== null) ? row[k] : '';
+                return obj;
+            });
+            originalDataset = normalized;
+            
+            // Headers setzen
+            const sampleRow = originalDataset[0];
+            let headers = Object.keys(sampleRow);
+            if (headers.includes('PK_INP_BELEGE_ALL')) {
+                headers = ['PK_INP_BELEGE_ALL', ...headers.filter(h => h !== 'PK_INP_BELEGE_ALL')];
+            }
+            currentHeaders = headers;
+            
+            renderGroupButtons();
+            renderValueList();
+            applyAllFilters();
+            
+            // Suchfeld Listener
+            globalSearchInput.addEventListener('input', (e) => {
+                currentTextSearch = e.target.value;
+                applyAllFilters();
+            });
+        } catch (err) {
+            console.error(err);
+            tableContainer.innerHTML = `<div class="empty-table" style="color:#b91c1c;">⚠️ Fehler: ${err.message}<br><button id="retryLoad" style="margin-top:16px; background:#2c9c6e; border:none; color:white; padding:8px 20px; border-radius:40px; cursor:pointer;">🔄 Wiederholen</button></div>`;
+            const retryBtn = document.getElementById('retryLoad');
+            if (retryBtn) retryBtn.onclick = () => loadData();
+        }
+    }
+
+    loadData();
+</script>
+</body>
+</html>

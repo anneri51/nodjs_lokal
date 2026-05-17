@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buchungssystem - Belege und Konten</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #2c3e50, #4a6491);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .panel {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+        
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eaeaea;
+        }
+        
+        #ordner-list {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        #beleg-details {
+            flex: 2;
+            min-width: 400px;
+        }
+        
+        #buchungen-list {
+            flex: 3;
+            min-width: 600px;
+        }
+        
+        .ordner-item {
+            padding: 12px 15px;
+            border-left: 4px solid #3498db;
+            background-color: #f8f9fa;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .ordner-item:hover {
+            background-color: #e9f5ff;
+            transform: translateX(5px);
+        }
+        
+        .ordner-item.active {
+            border-left-color: #2ecc71;
+            background-color: #eafaf1;
+        }
+        
+        .ordner-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .ordner-info {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+        
+        .beleg-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        .beleg-title {
+            font-size: 20px;
+            color: #2c3e50;
+        }
+        
+        .beleg-id {
+            background-color: #3498db;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        
+        .beleg-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .info-item {
+            margin-bottom: 10px;
+        }
+        
+        .info-label {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 3px;
+        }
+        
+        .info-value {
+            font-weight: 500;
+            color: #2c3e50;
+            padding: 5px 0;
+        }
+        
+        .relations-section {
+            margin-top: 25px;
+        }
+        
+        .relations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .relation-item {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 3px solid #9b59b6;
+        }
+        
+        .buchungen-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        .buchungen-table th {
+            background-color: #2c3e50;
+            color: white;
+            text-align: left;
+            padding: 12px 15px;
+            font-weight: 600;
+        }
+        
+        .buchungen-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        .buchungen-table tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .buchung-datum {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        
+        .buchung-konto {
+            color: #27ae60;
+            font-weight: 500;
+        }
+        
+        .buchung-betrag {
+            text-align: right;
+            font-weight: 600;
+        }
+        
+        .betrag-pos {
+            color: #27ae60;
+        }
+        
+        .betrag-neg {
+            color: #e74c3c;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 30px;
+            color: #7f8c8d;
+        }
+        
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+            border-left: 4px solid #c62828;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 30px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        
+        @media (max-width: 1200px) {
+            .main-content {
+                flex-direction: column;
+            }
+        }
+        
+        .filter-section {
+            margin-bottom: 20px;
+        }
+        
+        .filter-input {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+            max-width: 300px;
+            font-size: 16px;
+        }
+        
+        .refresh-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+        
+        .refresh-btn:hover {
+            background-color: #2980b9;
+        }
+        
+        .api-status {
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-top: 10px;
+            display: inline-block;
+        }
+        
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+        
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .beleg-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .action-btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+        
+        .btn-secondary {
+            background-color: #95a5a6;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Buchungssystem</h1>
+            <div class="subtitle">Belege, Relationen und Buchungsinformationen</div>
+            <div id="api-status" class="api-status" style="display: none;"></div>
+        </header>
+        
+        <div class="main-content">
+            <!-- Ordner Page Auswahl -->
+            <div class="panel" id="ordner-list">
+                <div class="panel-title">Ordner Pages</div>
+                <div class="filter-section">
+                    <input type="text" class="filter-input" id="pageNumber" placeholder="Page Number...">
+                    <button class="refresh-btn" onclick="fetchBelegeByPageNumber(document.getElementById('pageNumber').value)">Get Page</button>
+                </div>
+                <div class="filter-section">
+                    <input type="text" class="filter-input" id="ordner-filter" placeholder="Ordner suchen...">
+                </div>
+                <div id="ordner-container">
+                    <div class="loading">Lade Ordner...</div>
+                </div>
+            </div>
+            
+            <!-- Beleg Details -->
+            <div class="panel" id="beleg-details">
+                <div class="panel-title">Belegdetails</div>
+                <div id="beleg-container">
+                    <div class="no-data">Wählen Sie einen Ordner aus, um Belege anzuzeigen</div>
+                </div>
+            </div>
+            
+            <!-- Buchungen Liste -->
+            <div class="panel" id="buchungen-list">
+                <div class="panel-title">Buchungsinformationen</div>
+                <div id="buchungen-container">
+                    <div class="no-data">Wählen Sie einen Beleg aus, um Buchungen anzuzeigen</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API URLs entsprechend der beschriebenen Struktur
+        const API_BASE_URL = 'http://localhost:5000';
+        
+        // 1. Selektiere alle Belege für OrdnerPage
+        const API_URL_BELEGE = `${API_BASE_URL}/belege`; 
+        
+        // 2. Selektiere Belegdetails für PK_INP_BELEGE_ALL
+        const API_URL_BELEG_DETAILS = `${API_BASE_URL}/beleg`;
+        
+        // 3. Selektiere alle Kontobuchungen für den ausgewählten BELEG (PK_INP_BELEGE_ALL)
+        // Note: Korrigiert von  zu generischer URL
+        const API_URL_BELEG_ZUORDNUNGEN = `${API_BASE_URL}/accounts/2`;
+        
+        // 4. Für FK_MAIN_KEY aus 3. selektiere Details zu den Kontobuchungen
+        const API_URL_BUCHUNGEN = `${API_BASE_URL}/accounts`;
+
+        // Mock-Daten für die Demonstration (Fallback)
+        const mockOrdnerPages = [
+            {
+                id: 1,
+                ABL_ORD_PAGE_NUMBER: "001",
+                ABL_ORD_JAHR: "2023",
+                ABL_ORD_ORDNER_NAME: "Hauptordner Q1/2023",
+                ABL_ORD_PAGE_DESCR: "Quartal 1 Geschäftsbelege 2023"
+            },
+            {
+                id: 2,
+                ABL_ORD_PAGE_NUMBER: "002",
+                ABL_ORD_JAHR: "2023",
+                ABL_ORD_ORDNER_NAME: "Reisekosten 2023",
+                ABL_ORD_PAGE_DESCR: "Reisekostenabrechnungen"
+            },
+            {
+                id: 3,
+                ABL_ORD_PAGE_NUMBER: "003",
+                ABL_ORD_JAHR: "2023",
+                ABL_ORD_ORDNER_NAME: "Materialeinkäufe",
+                ABL_ORD_PAGE_DESCR: "Materialbeschaffung und Lieferanten"
+            },
+            {
+                id: 4,
+                ABL_ORD_PAGE_NUMBER: "004",
+                ABL_ORD_JAHR: "2024",
+                ABL_ORD_ORDNER_NAME: "Projekt Alpha",
+                ABL_ORD_PAGE_DESCR: "Belege für Projekt Alpha"
+            }
+        ];
+
+        const mockRelations = {
+            101: [
+                { id: 1001, relation: "FK_INP_BELEGE_ALL", description: "Hauptbelegverknüpfung" },
+                { id: 1002, relation: "FK_MAIN_KEY", description: "Hauptschlüssel Buchung" },
+                { id: 1003, relation: "FK_ABL_ORDNER_PAGE", description: "Ordnerpage Verknüpfung" }
+            ]
+        };
+
+        // Statusvariablen
+        let currentOrdnerPageNumber = null;
+        let currentBelegId = null;
+        let useMockData = false; // Flag für Fallback auf Mock-Daten
+
+        // DOM Elemente
+        const ordnerContainer = document.getElementById('ordner-container');
+        const pageNumberInput = document.getElementById('pageNumber');
+        const belegContainer = document.getElementById('beleg-container');
+        const buchungenContainer = document.getElementById('buchungen-container');
+        const ordnerFilter = document.getElementById('ordner-filter');
+        const apiStatus = document.getElementById('api-status');
+
+        // Initialisierung
+        document.addEventListener('DOMContentLoaded', function() {
+            // Teste API-Verbindung
+            testApiConnection();
+            
+            // Lade Ordner Pages
+            loadOrdnerPages();
+            
+            // Event Listener für Filter
+            ordnerFilter.addEventListener('input', function() {
+                filterOrdnerPages(this.value);
+            });
+            
+            // Enter-Taste für Page Number
+            pageNumberInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    loadBelegeForOrdner(this.value);
+                }
+            });
+        });
+
+        // API-Verbindung testen
+        async function testApiConnection() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    showApiStatus('API-Verbindung erfolgreich hergestellt', 'success');
+                } else {
+                    showApiStatus('API antwortet mit Fehler, verwende Mock-Daten', 'error');
+                    useMockData = true;
+                }
+            } catch (error) {
+                console.warn('API nicht erreichbar, verwende Mock-Daten:', error.message);
+                showApiStatus('API nicht erreichbar, verwende Mock-Daten', 'error');
+                useMockData = true;
+            }
+        }
+
+        // API-Status anzeigen
+        function showApiStatus(message, type) {
+            apiStatus.textContent = message;
+            apiStatus.className = `api-status status-${type}`;
+            apiStatus.style.display = 'block';
+            
+            // Nach 5 Sekunden ausblenden
+            setTimeout(() => {
+                apiStatus.style.display = 'none';
+            }, 5000);
+        }
+
+        // Ordner Pages laden
+        async function loadOrdnerPages() {
+            ordnerContainer.innerHTML = '<div class="loading">Lade Ordner...</div>';
+            
+            if (useMockData) {
+                // Verwende Mock-Daten
+                setTimeout(() => {
+                    renderOrdnerPages(mockOrdnerPages);
+                }, 500);
+            } else {
+                try {
+                    // Versuche, Ordner von der API zu laden
+                    // In einer realen Implementierung würden wir hier eine separate API für Ordner haben
+                    // Für dieses Beispiel verwenden wir die Mock-Daten
+                    setTimeout(() => {
+                        renderOrdnerPages(mockOrdnerPages);
+                    }, 500);
+                } catch (error) {
+                    console.error('Fehler beim Laden der Ordner:', error);
+                    ordnerContainer.innerHTML = '<div class="error">Fehler beim Laden der Ordner. Verwende Mock-Daten.</div>';
+                    setTimeout(() => {
+                        renderOrdnerPages(mockOrdnerPages);
+                    }, 1000);
+                }
+            }
+        }
+
+        // Ordner Pages rendern
+        function renderOrdnerPages(ordnerPages) {
+            if (!ordnerPages || ordnerPages.length === 0) {
+                ordnerContainer.innerHTML = '<div class="no-data">Keine Ordner gefunden</div>';
+                return;
+            }
+            
+            let html = '';
+            ordnerPages.forEach(ordner => {
+                html += `
+                    <div class="ordner-item ${currentOrdnerPageNumber === ordner.ABL_ORD_PAGE_NUMBER ? 'active' : ''}" 
+                         data-page="${ordner.ABL_ORD_PAGE_NUMBER}" 
+                         onclick="selectOrdner('${ordner.ABL_ORD_PAGE_NUMBER}')">
+                        <div class="ordner-name">${ordner.ABL_ORD_ORDNER_NAME}</div>
+                        <div class="ordner-info">
+                            Jahr: ${ordner.ABL_ORD_JAHR} | 
+                            Page: ${ordner.ABL_ORD_PAGE_NUMBER}
+                        </div>
+                        <div class="ordner-info">${ordner.ABL_ORD_PAGE_DESCR}</div>
+                    </div>
+                `;
+            });
+            
+            ordnerContainer.innerHTML = html;
+        }
+
+        // Ordner filtern
+        function filterOrdnerPages(searchTerm) {
+            const filtered = mockOrdnerPages.filter(ordner => {
+                return ordner.ABL_ORD_ORDNER_NAME.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                       ordner.ABL_ORD_PAGE_DESCR.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                       ordner.ABL_ORD_JAHR.includes(searchTerm) ||
+                       ordner.ABL_ORD_PAGE_NUMBER.includes(searchTerm);
+            });
+            
+            renderOrdnerPages(filtered);
+        }
+
+        // Ordner auswählen
+        async function selectOrdner(pageNumber) {
+            currentOrdnerPageNumber = pageNumber;
+            pageNumberInput.value = pageNumber;
+            
+            // Aktive Klasse setzen
+            document.querySelectorAll('.ordner-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('data-page') === pageNumber) {
+                    item.classList.add('active');
+                }
+            });
+            
+            // Belege für ausgewählten Ordner laden
+            await loadBelegeForOrdner(pageNumber);
+        }
+
+        // 1. Belege für ausgewählten Ordner laden (API-Aufruf für FK_ABL_ORDNER_PAGE)
+        async function loadBelegeForOrdner(pageNumber) {
+            if (!pageNumber || pageNumber.trim() === '') {
+                showApiStatus('Bitte geben Sie eine Page Number ein', 'error');
+                return;
+            }
+            
+            belegContainer.innerHTML = '<div class="loading">Lade Belege...</div>';
+            currentOrdnerPageNumber = pageNumber;
+            
+            if (useMockData) {
+                // Verwende Mock-Daten
+                setTimeout(() => {
+                    const mockBelege = getMockBelegeForPage(pageNumber);
+                    renderBelege(mockBelege);
+                }, 500);
+            } else {
+                try {
+                    // API-Aufruf für Belege mit der Ordner Page Number
+                    // Endpoint: /belege/{pageNumber}
+                    const belege = await fetchBelegeByPageNumber(pageNumber);
+                    
+                    if (belege && belege.length > 0) {
+                        renderBelege(belege);
+                    } else {
+                        belegContainer.innerHTML = '<div class="no-data">Keine Belege für diesen Ordner gefunden</div>';
+                        buchungenContainer.innerHTML = '<div class="no-data">Wählen Sie einen Beleg aus, um Buchungen anzuzeigen</div>';
+                    }
+                } catch (error) {
+                    console.error('Fehler beim Laden der Belege:', error);
+                    belegContainer.innerHTML = '<div class="error">Fehler beim Laden der Belege. Verwende Mock-Daten.</div>';
+                    
+                    // Fallback auf Mock-Daten
+                    setTimeout(() => {
+                        const mockBelege = getMockBelegeForPage(pageNumber);
+                        renderBelege(mockBelege);
+                    }, 1000);
+                }
+            }
+        }
+
+        // Belege von API abrufen (API Call 1)
+        async function fetchBelegeByPageNumber(pageNumber) {
+            try {
+                const url = `${API_URL_BELEGE}/${pageNumber}`;
+                console.log('Fetching belege from:', url);
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API-Fehler: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Belege API response:', data);
+             renderBelege(data);
+                // Datenformat anpassen, falls nötig
+                if (Array.isArray(data)) {
+                    return data.map(item => ({
+   
+                        id: item.id || item.beleg_id || item.PK_INP_BELEGE_ALL || Math.floor(Math.random() * 1000),
+                        PK_INP_BELEGE_ALL: item.PK_INP_BELEGE_ALL || item.id,
+                        VBEL_VERWENDUNGSZWECK: item.verwendungszweck || item.VBEL_VERWENDUNGSZWECK || 'Ohne Zweck',
+                        VLOC_LOCATION: item.location || item.VLOC_LOCATION || 'N/A',
+                        INVENTAR: item.inventar || item.INVENTAR || 'N/A',
+                        VBEL_PROJEKT: item.projekt || item.VBEL_PROJEKT || 'N/A',
+                        VBEL_KATEGORIE: item.kategorie || item.VBEL_KATEGORIE || 'N/A',
+                        ADR_ADRESSE_SCHNELL: item.adresse || item.ADR_ADRESSE_SCHNELL || 'N/A',
+                        ORG_UNIT_NAME: item.org_unit || item.ORG_UNIT_NAME || 'N/A',
+                        GESCHAEFTSPARTNER: item.geschaeftspartner || item.GESCHAEFTSPARTNER || 'N/A',
+                        VER_BEZEICHNUNG: item.bezeichnung || item.VER_BEZEICHNUNG || 'Beleg',
+                        ADRESSE: item.strasse || item.ADRESSE || 'N/A',
+                        LAND: item.land || item.LAND || 'N/A',
+                        ORT: item.ort || item.ORT || 'N/A',
+                        CI_LAND: item.ci_land || item.CI_LAND || 'N/A',
+                        person: item.person || 'N/A',
+                        VERWENDUNGSZWECK: item.verwendungszweck_detail || item.VERWENDUNGSZWECK || item.verwendungszweck || 'N/A'
+                    }));
+                } else if (data.belege) {
+                    return data.belege;
+                } else {
+                    return [];
+                }
+            } catch (error) {
+                console.error('Fehler beim Abrufen der Belege:', error);
+                throw error;
+            }
+        }
+
+        // Mock-Belege für bestimmte Page Number (Fallback)
+        function getMockBelegeForPage(pageNumber) {
+            const mockBelegeData = {
+                "001": [
+                    {
+                        id: 101,
+                        PK_INP_BELEGE_ALL: 101,
+                        VBEL_VERWENDUNGSZWECK: "Büromaterial",
+                        VLOC_LOCATION: "Lager 1",
+                        INVENTAR: "Bürobedarf 2023",
+                        VBEL_PROJEKT: "Allgemein",
+                        VBEL_KATEGORIE: "Materialkosten",
+                        ADR_ADRESSE_SCHNELL: "Muster GmbH, Musterstraße 1, 12345 Musterstadt",
+                        ORG_UNIT_NAME: "Verwaltung",
+                        GESCHAEFTSPARTNER: "Muster GmbH",
+                        VER_BEZEICHNUNG: "Rechnung",
+                        ADRESSE: "Musterstraße 1",
+                        LAND: "Deutschland",
+                        ORT: "Musterstadt",
+                        CI_LAND: "DE",
+                        person: "Max Mustermann",
+                        VERWENDUNGSZWECK: "Büromaterial für Verwaltung"
+                    },
+                    {
+                        id: 102,
+                        PK_INP_BELEGE_ALL: 102,
+                        VBEL_VERWENDUNGSZWECK: "Dienstleistungen IT",
+                        VLOC_LOCATION: "IT-Abteilung",
+                        INVENTAR: "IT-Service",
+                        VBEL_PROJEKT: "IT-Infrastruktur",
+                        VBEL_KATEGORIE: "Dienstleistungen",
+                        ADR_ADRESSE_SCHNELL: "IT-Service AG, Techtal 15, 54321 Techstadt",
+                        ORG_UNIT_NAME: "IT",
+                        GESCHAEFTSPARTNER: "IT-Service AG",
+                        VER_BEZEICHNUNG: "Service-Rechnung",
+                        ADRESSE: "Techetal 15",
+                        LAND: "Deutschland",
+                        ORT: "Techstadt",
+                        CI_LAND: "DE",
+                        person: "Lisa Tech",
+                        VERWENDUNGSZWECK: "IT-Wartung und Support"
+                    }
+                ],
+                "002": [
+                    {
+                        id: 201,
+                        PK_INP_BELEGE_ALL: 201,
+                        VBEL_VERWENDUNGSZWECK: "Hotelübernachtung",
+                        VLOC_LOCATION: "Berlin",
+                        INVENTAR: "Dienstreise",
+                        VBEL_PROJEKT: "Kundenbesuch",
+                        VBEL_KATEGORIE: "Reisekosten",
+                        ADR_ADRESSE_SCHNELL: "Hotel Berlin, Hauptstraße 10, 10115 Berlin",
+                        ORG_UNIT_NAME: "Vertrieb",
+                        GESCHAEFTSPARTNER: "Hotel Berlin",
+                        VER_BEZEICHNUNG: "Hotelrechnung",
+                        ADRESSE: "Hauptstraße 10",
+                        LAND: "Deutschland",
+                        ORT: "Berlin",
+                        CI_LAND: "DE",
+                        person: "Anna Vertrieb",
+                        VERWENDUNGSZWECK: "Hotel für Kundentermin"
+                    }
+                ]
+            };
+            
+            return mockBelegeData[pageNumber] || [];
+        }
+
+        // Belege rendern
+        function renderBelege(belege) {
+            if (!belege || belege.length === 0) {
+                belegContainer.innerHTML = '<div class="no-data">Keine Belege für diesen Ordner gefunden</div>';
+                buchungenContainer.innerHTML = '<div class="no-data">Wählen Sie einen Beleg aus, um Buchungen anzuzeigen</div>';
+                return;
+            }
+            
+            let html = '';
+            belege.forEach((beleg, index) => {
+                html += `
+                    <div class="beleg-item" id="beleg-${beleg.id}" style="margin-bottom: ${index < belege.length - 1 ? '25px' : '0'}; padding-bottom: ${index < belege.length - 1 ? '25px' : '0'}; border-bottom: ${index < belege.length - 1 ? '1px solid #eaeaea' : 'none'}">
+                        <div class="beleg-header">
+                            <div class="beleg-title">${beleg.VER_BEZEICHNUNG || 'Beleg'}: ${beleg.VBEL_VERWENDUNGSZWECK || 'Ohne Zweck'}</div>
+                            <div class="beleg-id">#${beleg.PK_INP_BELEGE_ALL || beleg.id}</div>
+                        </div>
+                        
+                        <div class="beleg-info-grid">
+                            <div class="info-item">
+                                <div class="info-label">Projekt</div>
+                                <div class="info-value">${beleg.VBEL_PROJEKT || 'N/A'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Kategorie</div>
+                                <div class="info-value">${beleg.VBEL_KATEGORIE || 'N/A'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Standort</div>
+                                <div class="info-value">${beleg.VLOC_LOCATION || 'N/A'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Inventar</div>
+                                <div class="info-value">${beleg.INVENTAR || 'N/A'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Geschäftspartner</div>
+                                <div class="info-value">${beleg.GESCHAEFTSPARTNER || 'N/A'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Organisationseinheit</div>
+                                <div class="info-value">${beleg.ORG_UNIT_NAME || 'N/A'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Person</div>
+                                <div class="info-value">${beleg.person || 'N/A'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Verwendungszweck</div>
+                                <div class="info-value">${beleg.VERWENDUNGSZWECK || beleg.VBEL_VERWENDUNGSZWECK || 'N/A'}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Adresse</div>
+                                <div class="info-value">${beleg.ADR_ADRESSE_SCHNELL || 'N/A'}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="relations-section">
+                            <div class="panel-title">Relationsinformationen</div>
+                            ${renderRelationsForBeleg(beleg.id)}
+                        </div>
+                        
+                        <div class="beleg-actions">
+                            <button class="action-btn btn-primary" onclick="fetchKontobuchungenByBelegId(${beleg.PK_INP_BELEGE_ALL || beleg.id})">Buchungen anzeigen</button>
+                            <button class="action-btn btn-secondary" onclick="loadBelegDetails(${beleg.PK_INP_BELEGE_ALL || beleg.id})">Details aktualisieren</button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            belegContainer.innerHTML = html;
+        }
+
+        // 2. Belegdetails von API laden (für PK_INP_BELEGE_ALL)
+        async function loadBelegDetails(belegPk) {
+            const belegElement = document.querySelector(`.beleg-item [data-beleg-pk="${belegPk}"]`)?.closest('.beleg-item');
+            if (!belegElement) return;
+            
+            const loadingDiv = belegElement.querySelector('.beleg-actions');
+            if (loadingDiv) {
+                loadingDiv.innerHTML = '<div class="loading" style="padding: 10px;">Lade aktuelle Details...</div>';
+            }
+            
+            if (useMockData) {
+                // Verwende Mock-Daten
+                setTimeout(() => {
+                    if (loadingDiv) {
+                        loadingDiv.innerHTML = `
+                            <button class="action-btn btn-primary" onclick="selectBeleg(${belegPk}, ${belegPk})">Buchungen anzeigen</button>
+                            <button class="action-btn btn-secondary" onclick="loadBelegDetails(${belegPk})">Details aktualisieren</button>
+                        `;
+                    }
+                    showApiStatus(`Beleg #${belegPk} Details aktualisiert (Mock-Daten)`, 'success');
+                }, 800);
+            } else {
+                try {
+                    // API-Aufruf für Belegdetails
+                    // Endpoint: /beleg/{belegPk}
+                    const url = `${API_URL_BELEG_DETAILS}/${belegPk}`;
+                    const response = await fetch(url);
+                    
+                    if (response.ok) {
+                        const belegDetails = await response.json();
+                        // Hier könnten wir die Belegdetails aktualisieren
+                        showApiStatus(`Beleg #${belegPk} Details aktualisiert`, 'success');
+                    } else {
+                        showApiStatus('Fehler beim Aktualisieren der Belegdetails', 'error');
+                    }
+                } catch (error) {
+                    console.error('Fehler beim Laden der Belegdetails:', error);
+                    showApiStatus('Fehler beim Aktualisieren der Belegdetails', 'error');
+                } finally {
+                    if (loadingDiv) {
+                        loadingDiv.innerHTML = `
+                            <button class="action-btn btn-primary" onclick="selectBeleg(${belegPk}, ${belegPk})">Buchungen anzeigen</button>
+                            <button class="action-btn btn-secondary" onclick="loadBelegDetails(${belegPk})">Details aktualisieren</button>
+                        `;
+                    }
+                }
+            }
+        }
+
+        // Relations für Beleg rendern
+        function renderRelationsForBeleg(belegId) {
+            const relations = mockRelations[belegId] || [];
+            
+            if (relations.length === 0) {
+                return '<div class="no-data">Keine Relationsinformationen verfügbar</div>';
+            }
+            
+            let html = '<div class="relations-grid">';
+            relations.forEach(relation => {
+                html += `
+                    <div class="relation-item">
+                        <div style="font-weight: 600;">${relation.relation}</div>
+                        <div style="font-size: 14px; color: #7f8c8d;">${relation.description}</div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            return html;
+        }
+
+        // Beleg auswählen und Buchungen laden
+        async function selectBeleg(belegId, belegPk) {
+            currentBelegId = belegId;
+            
+            // Visuelle Hervorhebung des ausgewählten Belegs
+            document.querySelectorAll('.beleg-item').forEach(item => {
+                item.style.backgroundColor = '';
+            });
+            const selectedBeleg = document.getElementById(`beleg-${belegId}`);
+            if (selectedBeleg) {
+                selectedBeleg.style.backgroundColor = '#f0f9ff';
+            }
+            
+            // 3. Buchungen für ausgewählten Beleg laden (Kontobuchungen)
+            await loadBuchungenForBeleg(belegPk || belegId);
+        }
+
+        // 3. Buchungen für ausgewählten Beleg laden (Kontobuchungen für PK_INP_BELEGE_ALL)
+        async function loadBuchungenForBeleg(belegPk) {
+            buchungenContainer.innerHTML = '<div class="loading">Lade Kontobuchungen...</div>';
+            
+            if (useMockData) {
+                // Verwende Mock-Daten
+                setTimeout(() => {
+                    const kontobuchungen = getMockKontobuchungen(belegPk);
+                    renderKontobuchungen(kontobuchungen);
+                }, 500);
+            } else {
+                try {
+                    // API-Aufruf für Kontobuchungen
+                    // Endpoint: /belegzuordnungen/{belegPk}
+                    const kontobuchungen = await fetchKontobuchungenByBelegId(belegPk);
+                    
+                    if (kontobuchungen && kontobuchungen.length > 0) {
+                        renderKontobuchungen(kontobuchungen);
+                    } else {
+                        buchungenContainer.innerHTML = '<div class="no-data">Keine Kontobuchungen für diesen Beleg gefunden</div>';
+                    }
+                } catch (error) {
+                    console.error('Fehler beim Laden der Kontobuchungen:', error);
+                    buchungenContainer.innerHTML = '<div class="error">Fehler beim Laden der Kontobuchungen. Verwende Mock-Daten.</div>';
+                    
+                    // Fallback auf Mock-Daten
+                    setTimeout(() => {
+                        const kontobuchungen = getMockKontobuchungen(belegPk);
+                        renderKontobuchungen(kontobuchungen);
+                    }, 1000);
+                }
+            }
+        }
+
+        // Kontobuchungen von API abrufen (API Call 3)
+        async function fetchKontobuchungenByBelegId(belegPk) {
+            try {
+                const url = `${API_URL_BELEG_ZUORDNUNGEN}/${belegPk}`;
+                console.log('Fetching kontobuchungen from:', url);
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API-Fehler: ${response.status} ${response.statusText}`);
+                }
+
+
+                
+                const data = await response.json();
+                console.log('Kontobuchungen API response:', data);
+
+renderRelationsForBeleg(data);
+                
+                // Datenformat anpassen - hier erwarten wir FK_MAIN_KEY Werte
+                if (Array.isArray(data)) {
+                    return data.map(item => ({
+                        id: item.id || Math.floor(Math.random() * 10000),
+                        FK_MAIN_KEY: item.FK_MAIN_KEY || item.fk_main_key || item.account_id,
+                        konto: item.konto || item.account_name || 'Unbekanntes Konto',
+                        betrag: parseFloat(item.betrag) || parseFloat(item.amount) || 0,
+                        waehrung: item.waehrung || item.currency || 'EUR',
+                        buchungsdatum: item.datum || item.buchungsdatum || new Date().toISOString().split('T')[0]
+                    }));
+                } else if (data.kontobuchungen) {
+                    return data.kontobuchungen;
+                } else {
+                    return [];
+                }
+            } catch (error) {
+                console.error('Fehler beim Abrufen der Kontobuchungen:', error);
+                throw error;
+            }
+        }
+
+        // Mock-Kontobuchungen für Beleg (Fallback)
+        function getMockKontobuchungen(belegPk) {
+            // Generiere einige Beispiel-Kontobuchungen basierend auf der Beleg-ID
+            const baseAmount = (belegPk % 100) * 50 + 100;
+            return [
+                { 
+                    id: belegPk * 100 + 1, 
+                    FK_MAIN_KEY: 5001,
+                    konto: "7000 - Materialaufwand", 
+                    betrag: baseAmount, 
+                    waehrung: "EUR",
+                    buchungsdatum: "2023-03-15"
+                },
+                { 
+                    id: belegPk * 100 + 2, 
+                    FK_MAIN_KEY: 5002,
+                    konto: "1200 - Vorsteuer", 
+                    betrag: baseAmount * 0.19, 
+                    waehrung: "EUR",
+                    buchungsdatum: "2023-03-15"
+                },
+                { 
+                    id: belegPk * 100 + 3, 
+                    FK_MAIN_KEY: 5003,
+                    konto: "1100 - Verbindlichkeiten", 
+                    betrag: -(baseAmount * 1.19), 
+                    waehrung: "EUR",
+                    buchungsdatum: "2023-03-15"
+                }
+            ];
+        }
+
+        // Kontobuchungen rendern
+        function renderKontobuchungen(kontobuchungen) {
+            if (!kontobuchungen || kontobuchungen.length === 0) {
+                buchungenContainer.innerHTML = '<div class="no-data">Keine Kontobuchungen für diesen Beleg gefunden</div>';
+                return;
+            }
+            
+            // Sortieren nach Buchungsdatum
+            kontobuchungen.sort((a, b) => new Date(a.buchungsdatum) - new Date(b.buchungsdatum));
+            
+            // Gesamtbetrag berechnen
+            const gesamtBetrag = kontobuchungen.reduce((sum, buchung) => sum + buchung.betrag, 0);
+            
+            let html = `
+                <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong>Beleg #${currentBelegId}</strong> | 
+                        ${kontobuchungen.length} Kontobuchung${kontobuchungen.length !== 1 ? 'en' : ''}
+                    </div>
+                    <div style="font-weight: 600; font-size: 18px;">
+                        Gesamt: <span class="${gesamtBetrag >= 0 ? 'betrag-pos' : 'betrag-neg'}">${gesamtBetrag.toFixed(2)} ${kontobuchungen[0]?.waehrung || 'EUR'}</span>
+                    </div>
+                </div>
+                
+                <table class="buchungen-table">
+                    <thead>
+                        <tr>
+                            <th>Buchungsdatum</th>
+                            <th>Konto</th>
+                            <th>Betrag</th>
+                            <th>FK_MAIN_KEY</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            kontobuchungen.forEach(buchung => {
+                const betragClass = buchung.betrag >= 0 ? 'betrag-pos' : 'betrag-neg';
+                html += `
+                    <tr>
+                        <td class="buchung-datum">${buchung.buchungsdatum}</td>
+                        <td class="buchung-konto">${buchung.konto}</td>
+                        <td class="buchung-betrag ${betragClass}">${buchung.betrag >= 0 ? '+' : ''}${buchung.betrag.toFixed(2)} ${buchung.waehrung || 'EUR'}</td>
+                        <td>${buchung.FK_MAIN_KEY || 'N/A'}</td>
+                        <td>
+                            <button class="action-btn btn-primary" style="padding: 5px 10px; font-size: 12px;" 
+                                    onclick="loadBuchungsDetails(${buchung.FK_MAIN_KEY})">
+                                Details
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+                
+                <div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 4px;">
+                    <strong>Buchungshinweis:</strong> Die Kontobuchungen sind für Beleg #${currentBelegId}. 
+                    Klicken Sie auf "Details" für weitere Informationen zu einer spezifischen Buchung (FK_MAIN_KEY).
+                    ${useMockData ? '<br><em>(Mock-Daten werden verwendet)</em>' : ''}
+                </div>
+            `;
+            
+            buchungenContainer.innerHTML = html;
+        }
+
+        // 4. Details zu den Kontobuchungen laden (für FK_MAIN_KEY)
+        async function loadBuchungsDetails(fkMainKey) {
+            if (!fkMainKey) {
+                showApiStatus('Kein FK_MAIN_KEY angegeben', 'error');
+                return;
+            }
+            
+            showApiStatus(`Lade Details für Buchung FK_MAIN_KEY: ${fkMainKey}...`, 'success');
+            
+            if (useMockData) {
+                // Verwende Mock-Daten
+                setTimeout(() => {
+                    const buchungsDetails = getMockBuchungsDetails(fkMainKey);
+                    alert(`Details für Buchung FK_MAIN_KEY: ${fkMainKey}\n\n` +
+                          `Konto: ${buchungsDetails.konto}\n` +
+                          `Buchungstext: ${buchungsDetails.buchungstext}\n` +
+                          `Betrag: ${buchungsDetails.betrag} ${buchungsDetails.waehrung}\n` +
+                          `Datum: ${buchungsDetails.datum}`);
+                }, 500);
+            } else {
+                try {
+                    // API-Aufruf für Buchungsdetails
+                    // Endpoint: /accounts/{fkMainKey}
+                    const url = `${API_URL_BUCHUNGEN}/${fkMainKey}`;
+                    const response = await fetch(url);
+                    
+                    if (response.ok) {
+                        const buchungsDetails = await response.json();
+                        // Details anzeigen
+                        alert(`Details für Buchung FK_MAIN_KEY: ${fkMainKey}\n\n` +
+                              `Konto: ${buchungsDetails.konto || 'N/A'}\n` +
+                              `Buchungstext: ${buchungsDetails.buchungstext || 'N/A'}\n` +
+                              `Betrag: ${buchungsDetails.betrag || 0} ${buchungsDetails.waehrung || 'EUR'}\n` +
+                              `Datum: ${buchungsDetails.datum || 'N/A'}`);
+                    } else {
+                        showApiStatus('Fehler beim Laden der Buchungsdetails', 'error');
+                    }
+                } catch (error) {
+                    console.error('Fehler beim Laden der Buchungsdetails:', error);
+                    showApiStatus('Fehler beim Laden der Buchungsdetails', 'error');
+                }
+            }
+        }
+
+        // Mock-Buchungsdetails (Fallback)
+        function getMockBuchungsDetails(fkMainKey) {
+            const details = {
+                5001: {
+                    konto: "7000 - Materialaufwand",
+                    buchungstext: "Büromaterial für Verwaltung",
+                    betrag: 245.80,
+                    waehrung: "EUR",
+                    datum: "2023-03-15"
+                },
+                5002: {
+                    konto: "1200 - Vorsteuer",
+                    buchungstext: "Vorsteuer aus Büromaterial",
+                    betrag: 46.70,
+                    waehrung: "EUR",
+                    datum: "2023-03-15"
+                },
+                5003: {
+                    konto: "1100 - Verbindlichkeiten",
+                    buchungstext: "Verbindlichkeit aus Rechnung",
+                    betrag: -292.50,
+                    waehrung: "EUR",
+                    datum: "2023-03-15"
+                }
+            };
+            
+            return details[fkMainKey] || {
+                konto: "Unbekanntes Konto",
+                buchungstext: "Keine Details verfügbar",
+                betrag: 0,
+                waehrung: "EUR",
+                datum: "N/A"
+            };
+        }
+    </script>
+</body>
+</html>

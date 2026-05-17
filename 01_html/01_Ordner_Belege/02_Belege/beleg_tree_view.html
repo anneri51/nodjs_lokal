@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Belege Treeview</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7f9;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+        
+        .input-section {
+            display: flex;
+            margin-bottom: 25px;
+            gap: 15px;
+        }
+        
+        input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus {
+            border-color: #3498db;
+            outline: none;
+            box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+        }
+        
+        button {
+            padding: 12px 25px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        .treeview {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        .treeview-header {
+            display: grid;
+            grid-template-columns: 40px 1fr 1fr 1fr 1fr 1fr;
+            background-color: #2c3e50;
+            color: white;
+            font-weight: bold;
+            padding: 15px 10px;
+        }
+        
+        .treeview-item {
+            display: grid;
+            grid-template-columns: 40px 1fr 1fr 1fr 1fr 1fr;
+            padding: 12px 10px;
+            border-bottom: 1px solid #ecf0f1;
+            align-items: center;
+        }
+        
+        .treeview-item:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .treeview-item:hover {
+            background-color: #f1f8ff;
+        }
+        
+        .expand-icon {
+            cursor: pointer;
+            text-align: center;
+            user-select: none;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+        }
+        
+        .error {
+            color: #e74c3c;
+            padding: 15px;
+            text-align: center;
+            background-color: #fadbd8;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+        
+        .empty {
+            text-align: center;
+            padding: 30px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        
+        .child-item {
+            padding-left: 40px;
+        }
+        
+        @media (max-width: 768px) {
+            .treeview-header, .treeview-item {
+                grid-template-columns: 30px 1fr 1fr;
+                overflow-x: auto;
+            }
+            
+            .treeview-header > div:nth-child(n+4),
+            .treeview-item > div:nth-child(n+4) {
+                display: none;
+            }
+            
+            .input-section {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Belege Treeview</h1>
+        
+        <div class="input-section">
+            <input type="text" id="belegnummer" placeholder="Enter Belegnummer (e.g., 12345)" />
+            <button id="loadTreeview">Load Data</button>
+        </div>
+        
+        <div class="treeview">
+            <div class="treeview-header">
+                <div>EXPAND</div>
+                <div>CHILD</div>
+                <div>PAR</div>
+                
+<div>BEZ1</div>
+<div>BEZ2</div>
+<div>BEZ</div>
+                <div>PK_INP_BELEGE_ALL</div>
+                <div>SORT</div>
+            </div>
+            <div id="treeview-content">
+                <div class="empty">Enter a Belegnummer and click "Load Data" to display information</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const loadButton = document.getElementById('loadTreeview');
+            const belegnummerInput = document.getElementById('belegnummer');
+            const treeviewContent = document.getElementById('treeview-content');
+            
+            loadButton.addEventListener('click', loadTreeData);
+            
+            function loadTreeData() {
+                const belegnummer = belegnummerInput.value.trim();
+                
+                if (!belegnummer) {
+                    showError('Please enter a Belegnummer');
+                    return;
+                }
+                
+                // Show loading state
+                treeviewContent.innerHTML = '<div class="loading">Loading data...</div>';
+                
+                // For demonstration, we'll use mock data since we can't access localhost from here
+                // In a real scenario, you would fetch from your web service:
+                // fetch(`http://localhost:5000/inp_belege_tree/${belegnummer}`)
+                
+              fetch(`http://localhost:5000/inp_belege_tree/${belegnummer}`)
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        renderTreeview(data);
+    })
+    .catch(error => {
+        showError(`Error fetching data: ${error.message}`);
+        console.error('Error:', error);
+    });
+            }
+            
+            function renderTreeview(data) {
+                if (!data || data.length === 0) {
+                    treeviewContent.innerHTML = '<div class="empty">No data available for this Belegnummer</div>';
+                    return;
+                }
+                
+                // Build the tree structure from flat data
+                const tree = buildTree(data);
+                
+                let html = '';
+                
+                // Function to recursively render tree items
+                function renderNode(node, level = 0) {
+                    const hasChildren = node.children && node.children.length > 0;
+                    const expandIcon = hasChildren ? '<span class="expand-icon" onclick="toggleExpansion(this)">+</span>' : '';
+                    
+                    html += `
+                        <div class="treeview-item">
+                            <div>${expandIcon}</div>
+                            <div>${node.CHILD || ''}</div>
+                            <div>${node.PAR || ''}</div>
+                            
+ <div>${node.BEZ1 || ''}</div>
+ <div>${node.BEZ2 || ''}</div>
+<div>${node.BEZ || ''}</div>
+                            <div>${node.PK_INP_BELEGE_ALL || ''}</div>
+                            <div>${node.SORT || ''}</div>
+                        </div>
+                    `;
+                    
+                    if (hasChildren) {
+                        // Initially hide children
+                        html += `<div class="child-item" style="display: none;">`;
+                        node.children.forEach(child => renderNode(child, level + 1));
+                        html += `</div>`;
+                    }
+                }
+                
+                // Render each root node
+                tree.forEach(node => renderNode(node));
+                treeviewContent.innerHTML = html;
+            }
+            
+            function buildTree(items) {
+                // Create a map for quick lookup
+                const itemMap = {};
+                items.forEach(item => {
+                    itemMap[item.CHILD] = {...item, children: []};
+                });
+                
+                // Build the tree
+                const tree = [];
+                items.forEach(item => {
+                    if (item.PAR && itemMap[item.PAR]) {
+                        // This item is a child of another item
+                        itemMap[item.PAR].children.push(itemMap[item.CHILD]);
+                    } else {
+                        // This item is a root item
+                        tree.push(itemMap[item.CHILD]);
+                    }
+                });
+                
+                return tree;
+            }
+            
+            function showError(message) {
+                treeviewContent.innerHTML = `<div class="error">${message}</div>`;
+            }
+            
+            // Generate mock data for demonstration
+            function generateMockData(belegnummer) {
+                // This is sample data - replace with your actual API response
+                return [
+                    { CHILD: '100', PAR: null, BEZ: 'Root Item', PK_INP_BELEGE_ALL: '500', SORT: '1' },
+                    { CHILD: '101', PAR: '100', BEZ: 'Child Item 1', PK_INP_BELEGE_ALL: '501', SORT: '2' },
+                    { CHILD: '102', PAR: '100', BEZ: 'Child Item 2', PK_INP_BELEGE_ALL: '502', SORT: '3' },
+                    { CHILD: '103', PAR: '101', BEZ: 'Grandchild Item 1', PK_INP_BELEGE_ALL: '503', SORT: '4' },
+                    { CHILD: '104', PAR: '101', BEZ: 'Grandchild Item 2', PK_INP_BELEGE_ALL: '504', SORT: '5' },
+                    { CHILD: '105', PAR: null, BEZ: 'Another Root', PK_INP_BELEGE_ALL: '505', SORT: '6' },
+                    { CHILD: '106', PAR: '105', BEZ: 'Another Child', PK_INP_BELEGE_ALL: '506', SORT: '7' }
+                ];
+            }
+            
+            // Add toggleExpansion to global scope so it can be called from onclick
+            window.toggleExpansion = function(element) {
+                const parentItem = element.closest('.treeview-item');
+                const childContainer = parentItem.nextElementSibling;
+                
+                if (childContainer && childContainer.classList.contains('child-item')) {
+                    if (childContainer.style.display === 'none') {
+                        childContainer.style.display = 'block';
+                        element.textContent = '-';
+                    } else {
+                        childContainer.style.display = 'none';
+                        element.textContent = '+';
+                    }
+                }
+            };
+        });
+    </script>
+</body>
+</html>

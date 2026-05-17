@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Belege · DATUM_ALL_OK analyse</title>
+    <!-- Font Awesome 5 (free) -->
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css">
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #f3f6fc;
+            font-family: 'Inter', system-ui, sans-serif;
+            padding: 2rem 1.5rem;
+            color: #1a2639;
+        }
+        .dashboard-container { max-width: 1600px; margin: 0 auto; }
+
+        .header-row {
+            display: flex; flex-wrap: wrap; align-items: center;
+            justify-content: space-between; margin-bottom: 2rem;
+        }
+        .title-section h1 {
+            font-weight: 600; font-size: 2.2rem; letter-spacing: -0.3px; color: #0b2b40;
+        }
+        .title-section .badge {
+            background: #d0e2f2; color: #1e4b6e; font-size: 0.9rem;
+            font-weight: 500; margin-left: 0.75rem; padding: 0.3rem 0.9rem;
+            border-radius: 30px; display: inline-block;
+        }
+        .refresh-area {
+            display: flex; gap: 1rem; align-items: center;
+        }
+        .refresh-btn {
+            background: white; border: 1px solid #cdddec;
+            box-shadow: 0 4px 10px rgba(0,20,40,0.08);
+            padding: 0.7rem 1.6rem; border-radius: 40px;
+            font-weight: 500; font-size: 0.95rem; color: #1e3b5c;
+            cursor: pointer; transition: 0.2s;
+        }
+        .refresh-btn i { margin-right: 8px; color: #2f6e9e; }
+        .refresh-btn:hover {
+            background: #ecf3fa; border-color: #8fb7d6;
+            box-shadow: 0 6px 12px rgba(0,40,70,0.1);
+        }
+        .last-update {
+            font-size: 0.9rem; background: #ffffffc7;
+            padding: 0.4rem 1rem; border-radius: 40px;
+            color: #2d4d6e; border: 1px solid #d2e2f0;
+        }
+
+        /* KPI row */
+        .kpi-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
+            gap: 1.5rem; margin-bottom: 2rem;
+        }
+        .kpi-card {
+            background: white; border-radius: 26px; padding: 1.4rem 1.5rem;
+            box-shadow: 0 8px 22px rgba(0,30,60,0.06);
+            border: 1px solid rgba(150,188,220,0.3); display: flex;
+            align-items: center; gap: 1.2rem;
+        }
+        .kpi-icon {
+            background: #e1effb; width: 52px; height: 52px;
+            border-radius: 20px; display: flex; align-items: center;
+            justify-content: center; font-size: 1.8rem; color: #1d5c96;
+        }
+        .kpi-content h3 {
+            font-weight: 500; font-size: 0.9rem; text-transform: uppercase;
+            letter-spacing: 0.02em; color: #577a9e; margin-bottom: 6px;
+        }
+        .kpi-main { display: flex; align-items: baseline; gap: 0.7rem; flex-wrap: wrap; }
+        .kpi-main .value { font-size: 2.2rem; font-weight: 600; color: #0f2b40; line-height: 1.2; }
+        .kpi-main .small-unit { font-size: 1rem; font-weight: 400; color: #4d708b; }
+
+        /* Drei Diagramme nebeneander: Jahres, DATUM_ALL_OK (count + summe) */
+        .diagram-row {
+            display: flex; gap: 1.5rem; margin-bottom: 2.5rem; flex-wrap: wrap;
+        }
+        .diagram-card {
+            flex: 1 1 240px;
+            background: white; border-radius: 26px; padding: 1.4rem 1.8rem;
+            box-shadow: 0 10px 22px rgba(0,30,50,0.06); border: 1px solid #d6e4f0;
+        }
+        .diagram-card h3 {
+            font-weight: 550; font-size: 1.2rem; margin-bottom: 1.2rem;
+            color: #1b4c6f; display: flex; align-items: center; gap: 8px;
+        }
+        .bar-chart {
+            display: flex; flex-direction: column; gap: 0.8rem;
+        }
+        .chart-item {
+            display: flex; align-items: center; gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+        .bar-label {
+            width: 70px; font-weight: 600; color: #2b4b6e; white-space: nowrap;
+        }
+        .bar-bg {
+            flex: 1; height: 28px; background: #e9f0f7; border-radius: 40px;
+            overflow: hidden; box-shadow: inset 0 1px 3px #0000001a;
+        }
+        .bar-fill {
+            height: 100%; background: #3070a5; border-radius: 40px;
+            color: white; font-size: 0.8rem; padding-left: 8px;
+            line-height: 28px; white-space: nowrap; transition: width 0.2s;
+        }
+        .sum-value {
+            min-width: 70px; text-align: right; font-weight: 550;
+            color: #0f3b55;
+        }
+
+        /* Filter-leiste */
+        .filter-panel {
+            background: white; border-radius: 28px; padding: 1.5rem 1.8rem;
+            margin-bottom: 2rem; border: 1px solid #d6e4f0;
+            display: flex; flex-wrap: wrap; align-items: center; gap: 1.5rem;
+        }
+        .filter-group {
+            display: flex; align-items: center; gap: 0.6rem;
+            background: #f2f8ff; padding: 0.4rem 1rem 0.4rem 1.2rem;
+            border-radius: 40px; border: 1px solid #bdd6ec;
+        }
+        .filter-group i { color: #497eaa; font-size: 0.9rem; }
+        .filter-group select, .filter-group input {
+            border: none; background: transparent; padding: 0.45rem 0.1rem;
+            font-size: 0.95rem; outline: none; color: #1b3d59;
+            min-width: 130px;
+        }
+        .filter-group input { width: 180px; }
+        .filter-group select { cursor: pointer; }
+        .clear-filters-btn {
+            background: #e1effb; border: none; border-radius: 30px;
+            padding: 0.55rem 1.6rem; font-weight: 500; color: #1e4b6e;
+            cursor: pointer; border: 1px solid #9ebedb;
+        }
+
+        /* Tabelle */
+        .table-card {
+            background: white; border-radius: 28px; padding: 1.8rem 1.5rem 2rem;
+            box-shadow: 0 12px 28px rgba(0,30,50,0.07); border: 1px solid #d6e4f0;
+        }
+        .table-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;
+        }
+        .table-header h2 { font-weight: 550; font-size: 1.6rem; color: #183f5c; }
+        .global-search-box {
+            background: #f2f8ff; border-radius: 40px; padding: 0.3rem 0.3rem 0.3rem 1.2rem;
+            display: flex; align-items: center; border: 1px solid #bdd6ec;
+        }
+        .global-search-box i { color: #497eaa; }
+        .global-search-box input {
+            border: none; background: transparent; padding: 0.45rem 0.2rem;
+            font-size: 0.95rem; width: 220px; outline: none; color: #1b3d59;
+        }
+        .global-search-box input::placeholder { color: #7899b5; }
+        .global-search-box button {
+            background: #3070a5; border: none; color: white; border-radius: 30px;
+            padding: 0.45rem 1.4rem; margin-left: 0.2rem; font-weight: 500;
+            font-size: 0.85rem; cursor: default; letter-spacing: 0.3px;
+        }
+
+        .table-wrapper { overflow-x: auto; border-radius: 20px; border: 1px solid #e3eef9; background: #fafdff; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 1250px; }
+        th {
+            text-align: left; padding: 1rem 1rem; background: #e6f0fa;
+            color: #1b4c6f; font-weight: 550; white-space: nowrap;
+            cursor: pointer; user-select: none; position: relative;
+        }
+        th i { margin-left: 6px; font-size: 0.8rem; color: #4d7ca9; }
+        th:hover { background: #dae6f2; }
+        td { padding: 0.9rem 1rem; border-bottom: 1px solid #d9e7f2; color: #1b3348; }
+        tr:hover td { background: #f2faff; }
+        .status-badge {
+            background: #dcfce7; color: #12734a; font-weight: 500;
+            padding: 0.2rem 0.8rem; border-radius: 40px; font-size: 0.8rem;
+            display: inline-block;
+        }
+        .amount-positive { font-weight: 600; color: #11643c; }
+        .datum-cell { white-space: nowrap; }
+        .empty-message { text-align: center; padding: 3rem !important; color: #708aa5; font-style: italic; }
+        footer { margin-top: 2.2rem; color: #7b99b5; font-size: 0.85rem; text-align: right; }
+        .sort-indicator { margin-left: 5px; }
+    </style>
+</head>
+<body>
+<div class="dashboard-container">
+    <!-- header -->
+    <div class="header-row">
+        <div class="title-section">
+            <h1>📋 Belege · DATUM_ALL_OK Fokus
+                <span class="badge"><i class="fas fa-check-circle"></i> mit datum_all_ok</span>
+            </h1>
+        </div>
+        <div class="refresh-area">
+            <span class="last-update" id="lastUpdateLabel"><i class="far fa-clock"></i> never</span>
+            <button class="refresh-btn" id="refreshBtn"><i class="fas fa-sync-alt"></i> laden</button>
+        </div>
+    </div>
+
+    <!-- kleine KPIs – eine neue KPI für DATUM_ALL_OK Gesamtzahl -->
+    <div class="kpi-grid" id="kpiContainer">
+        <div class="kpi-card"><div class="kpi-icon"><i class="fas fa-calculator"></i></div><div class="kpi-content"><h3>Anzahl Belege</h3><div class="kpi-main"><span class="value" id="kpiCount">—</span></div></div></div>
+        <div class="kpi-card"><div class="kpi-icon"><i class="fas fa-euro-sign"></i></div><div class="kpi-content"><h3>Gesamt brutto</h3><div class="kpi-main"><span class="value" id="kpiSum">0,00</span><span class="small-unit">€</span></div></div></div>
+        <div class="kpi-card"><div class="kpi-icon"><i class="fas fa-arrow-up"></i></div><div class="kpi-content"><h3>Ø pro Beleg</h3><div class="kpi-main"><span class="value" id="kpiAvg">0,00</span><span class="small-unit">€</span></div></div></div>
+        <div class="kpi-card"><div class="kpi-icon"><i class="fas fa-calendar-check"></i></div><div class="kpi-content"><h3>DATUM_ALL_OK sum</h3><div class="kpi-main"><span class="value" id="kpiAllOkTotal">0</span><span class="small-unit">Belege</span></div></div></div>
+    </div>
+
+    <!-- Jahresdiagramme + zwei neue Diagramme für DATUM_ALL_OK -->
+    <div class="diagram-row">
+        <!-- bereits vorhandenes jahressumme diagramm -->
+        <div class="diagram-card">
+            <h3><i class="fas fa-chart-line" style="color:#3070a5;"></i> Brutto-Summe je Jahr</h3>
+            <div class="bar-chart" id="yearSumChart"></div>
+        </div>
+        <div class="diagram-card">
+            <h3><i class="fas fa-receipt" style="color:#3070a5;"></i> Anzahl Belege je Jahr</h3>
+            <div class="bar-chart" id="yearCountChart"></div>
+        </div>
+        <!-- NEU: diagramm anzahl belege mit DATUM_ALL_OK nach jahr -->
+        <div class="diagram-card">
+            <h3><i class="fas fa-check-double" style="color:#2d7a4b;"></i> DATUM_ALL_OK – Anzahl je Jahr</h3>
+            <div class="bar-chart" id="allOkYearCountChart"></div>
+        </div>
+        <!-- NEU: zusätzlich gesamtzahl DATUM_ALL_OK als eigenes mini diagramm? bereits in KPI, aber wir zeigen noch einen balken über alle jahre (optional) – wir machen ein weiteres: kumulierte DATUM_ALLOK als separaten balken. besser: gesamtzahl aller ok-belege als eigenes horizontales balkendiagramm? nein, wir machen ein diagramm "DATUM_ALL_OK pro Jahr (summe brutto)"? das ist Overkill. stattdessen eine einzelkarte mit gesamtzahl: aber wir haben KPI. zweites diagram: "Top Monate mit DATUM_ALL_OK"? Fokus: "show for each beleg DATUM_ALL_OK, make diagram for count belege by DATUM_ALL_OK". bedeutet: zähle Belege gruppiert nach DATUM_ALL_OK (das ist ein Datumsfeld). Also monat/jahr? wir gruppieren nach Jahr-Monat wegen Übersicht. Aber um klar zu sein: "DATUM_ALL_OK" ist ein feld, das wir in den daten erwarten. wir gruppieren nach jahr (oder jahr-monat) und zeigen die anzahl der belege, die ein DATUM_ALL_OK haben (nicht null). zusätzlich balken für gesamtzahl belege mit DATUM_ALL_OK. -->
+        <div class="diagram-card">
+            <h3><i class="fas fa-calendar-alt" style="color:#3070a5;"></i> Belege mit DATUM_ALL_OK (Monats‑Ausschnitt)</h3>
+            <div class="bar-chart" id="allOkMonthlyChart"></div>
+        </div>
+    </div>
+
+    <!-- Filter (identisch) -->
+    <div class="filter-panel">
+        <div class="filter-group">
+            <i class="fas fa-calendar-year"></i>
+            <select id="filterJahr">
+                <option value="">alle Jahre</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <i class="fas fa-boxes"></i>
+            <input type="text" id="filterInventar" placeholder="Inventar‑ID (FK_INV)">
+        </div>
+        <div class="filter-group">
+            <i class="fas fa-file-contract"></i>
+            <input type="text" id="filterVertrag" placeholder="Vertrag (FK_VER)">
+        </div>
+        <div class="filter-group">
+            <i class="fas fa-diagram-project"></i>
+            <input type="text" id="filterProjekt" placeholder="Projekt (FK_PROJ)">
+        </div>
+        <button class="clear-filters-btn" id="clearFiltersBtn"><i class="fas fa-times"></i> zurücksetzen</button>
+    </div>
+
+    <!-- Tabelle mit globaler suche inkl. DATUM_ALL_OK spalte -->
+    <div class="table-card">
+        <div class="table-header">
+            <h2><i class="fas fa-list-ul" style="margin-right: 10px; color: #3e74a0;"></i>Belege (mit DATUM_ALL_OK)</h2>
+            <div class="global-search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="globalFilter" placeholder="Suche in allen Feldern ...">
+                <button disabled>Filtern</button>
+            </div>
+        </div>
+        <div class="table-wrapper">
+            <table id="belegeTable">
+                <thead id="tableHeader">
+                    <tr>
+                        <th data-sort="PK_INP_BELEGE_ALL">Beleg-ID <i class="fas fa-sort"></i></th>
+                        <th data-sort="BELEGDATUM">Belegdatum <i class="fas fa-sort"></i></th>
+                        <th data-sort="DATUM_ALL_OK">DATUM_ALL_OK <i class="fas fa-sort"></i></th>
+                        <th data-sort="FK_KON_PERSON">Kunde <i class="fas fa-sort"></i></th>
+                        <th data-sort="BRUTTO_BETRAG">Betrag (brutto) <i class="fas fa-sort"></i></th>
+                        <th data-sort="STATUS">Status <i class="fas fa-sort"></i></th>
+                        <th data-sort="ZAHLART">Zahlart <i class="fas fa-sort"></i></th>
+                        <th data-sort="FK_INV_INVENTAR">Inventar‑ID</th>
+                        <th data-sort="FK_VER_VERTRAG">Vertrags‑ID</th>
+                        <th data-sort="FK_PROJ_PROJEKT">Projekt‑ID</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="10" class="empty-message"><i class="fas fa-circle-notch fa-spin"></i> Daten werden geladen …</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <footer>
+        <i class="fas fa-database"></i> quelle: <code>http://localhost:5000/belege_all</code> · 
+        <span id="rowCounter">0</span> einträge · sort ↕ klick auf kopf
+    </footer>
+</div>
+
+<script>
+(function() {
+    // ----- state -----
+    let allBelege = [];                 // original vom server
+    let filteredBelege = [];             // nach filter + global
+
+    let lastFetchTimestamp = null;
+    
+    // filter objekte
+    let filters = {
+        jahr: '',
+        inventar: '',
+        vertrag: '',
+        projekt: '',
+        global: ''
+    };
+
+    // sort state
+    let sortColumn = 'PK_INP_BELEGE_ALL';
+    let sortAscending = true;
+
+    // DOM elemente
+    const refreshBtn = document.getElementById('refreshBtn');
+    const lastUpdateSpan = document.getElementById('lastUpdateLabel');
+    const tableBody = document.getElementById('tableBody');
+    const kpiCount = document.getElementById('kpiCount');
+    const kpiSum = document.getElementById('kpiSum');
+    const kpiAvg = document.getElementById('kpiAvg');
+    const kpiAllOkTotal = document.getElementById('kpiAllOkTotal'); // neu
+    const rowCounterSpan = document.getElementById('rowCounter');
+
+    // filter elemente
+    const filterJahr = document.getElementById('filterJahr');
+    const filterInventar = document.getElementById('filterInventar');
+    const filterVertrag = document.getElementById('filterVertrag');
+    const filterProjekt = document.getElementById('filterProjekt');
+    const globalFilterInput = document.getElementById('globalFilter');
+    const clearBtn = document.getElementById('clearFiltersBtn');
+
+    // diagram containers
+    const yearSumChartDiv = document.getElementById('yearSumChart');
+    const yearCountChartDiv = document.getElementById('yearCountChart');
+    const allOkYearCountChartDiv = document.getElementById('allOkYearCountChart');
+    const allOkMonthlyChartDiv = document.getElementById('allOkMonthlyChart');
+
+    // ----- helper format -----
+    const formatEur = (val) => new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
+    const formatDatum = (dateStr) => {
+        if (!dateStr) return '—';
+        if (dateStr.includes('-')) {
+            let parts = dateStr.split('T')[0].split('-');
+            if (parts.length === 3) return `${parts[2]}.${parts[1]}.${parts[0]}`;
+        }
+        return dateStr;
+    };
+
+    // ----- daten holen -----
+    async function fetchBelege() {
+        tableBody.innerHTML = `<tr><td colspan="10" class="empty-message"><i class="fas fa-spinner fa-pulse"></i> lade …</td></tr>`;
+        try {
+            const response = await fetch('http://localhost:5000/belege_all');
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            let data = await response.json();
+            if (Array.isArray(data)) allBelege = data;
+            else if (data.belege && Array.isArray(data.belege)) allBelege = data.belege;
+            else if (data.data && Array.isArray(data.data)) allBelege = data.data;
+            else allBelege = [data];
+
+            // normalisiere felder – speziell DATUM_ALL_OK
+            allBelege = allBelege.map(b => ({
+                ...b,
+                FK_INV_INVENTAR: b.FK_INV_INVENTAR || b.inventarId || '',
+                FK_VER_VERTRAG: b.FK_VER_VERTRAG || b.vertragId || '',
+                FK_PROJ_PROJEKT: b.FK_PROJ_PROJEKT || b.projektId || '',
+                BRUTTO_BETRAG: b.BRUTTO_BETRAG ?? b.betrag ?? 0,
+                STATUS: b.status ?? b.belegStatus ?? 'offen',
+                ZAHLART: b.zahlart ?? b.zahlungsart ?? '—',
+                FK_KON_PERSON: b.FK_KON_PERSON ?? b.kunde ?? b.empfaenger ?? '—',
+                BELEGDATUM: b.BELEGDATUM ?? b.datum ?? '',
+                DATUM_ALL_OK: b.DATUM_ALL_OK ?? b.datum_all_ok ?? null,   // wichtig
+                PK_INP_BELEGE_ALL: b.PK_INP_BELEGE_ALL ?? b.belegId ?? b.id ?? '?'
+            }));
+
+            // jahre für dropdown
+            const jahreSet = new Set();
+            allBelege.forEach(b => {
+                if (b.BELEGDATUM) {
+                    let year = new Date(b.BELEGDATUM).getFullYear();
+                    if (!isNaN(year)) jahreSet.add(year);
+                }
+            });
+            const jahre = Array.from(jahreSet).sort((a,b)=>a-b);
+            filterJahr.innerHTML = '<option value="">alle Jahre</option>' + jahre.map(j => `<option value="${j}">${j}</option>`).join('');
+
+            lastFetchTimestamp = new Date();
+            lastUpdateSpan.innerHTML = `<i class="far fa-clock"></i> ${lastFetchTimestamp.toLocaleTimeString('de-DE')}`;
+
+            // filter reset
+            filters = { jahr: '', inventar: '', vertrag: '', projekt: '', global: '' };
+            filterJahr.value = '';
+            filterInventar.value = '';
+            filterVertrag.value = '';
+            filterProjekt.value = '';
+            globalFilterInput.value = '';
+
+            applyAllFilters();
+        } catch (err) {
+            tableBody.innerHTML = `<tr><td colspan="10" class="empty-message" style="color:#b52a2a;">
+                <i class="fas fa-exclamation-triangle"></i> Fehler: ${err.message}</td></tr>`;
+            lastUpdateSpan.innerHTML = `<i class="far fa-clock"></i> Fehler`;
+        }
+    }
+
+    // ----- filter und sort kombination -----
+    function applyAllFilters() {
+        let temp = allBelege.filter(b => {
+            if (filters.jahr) {
+                let y = new Date(b.BELEGDATUM).getFullYear();
+                if (isNaN(y) || y != filters.jahr) return false;
+            }
+            if (filters.inventar) {
+                let inv = String(b.FK_INV_INVENTAR || '').toLowerCase();
+                if (!inv.includes(filters.inventar.toLowerCase())) return false;
+            }
+            if (filters.vertrag) {
+                let vertr = String(b.FK_VER_VERTRAG || '').toLowerCase();
+                if (!vertr.includes(filters.vertrag.toLowerCase())) return false;
+            }
+            if (filters.projekt) {
+                let proj = String(b.FK_PROJ_PROJEKT || '').toLowerCase();
+                if (!proj.includes(filters.projekt.toLowerCase())) return false;
+            }
+            return true;
+        });
+
+        if (filters.global) {
+            const g = filters.global.toLowerCase();
+            temp = temp.filter(b => {
+                const row = (String(b.PK_INP_BELEGE_ALL) + ' ' + String(b.BELEGDATUM) + ' ' +  ' ' + String(b.BEZEICHNUNG) + ' ' + String(b.DATUM_ALL_OK || '') + ' ' + String(b.FK_KON_PERSON) + ' ' +
+                    String(b.BRUTTO_BETRAG) + ' ' + String(b.STATUS) + ' ' + String(b.ZAHLART) + ' ' +
+                    String(b.FK_INV_INVENTAR) + ' ' + String(b.FK_VER_VERTRAG) + ' ' + String(b.FK_PROJ_PROJEKT)
+                ).toLowerCase();
+                return row.includes(g);
+            });
+        }
+
+        filteredBelege = temp;
+        sortBelege();
+        updateKpi();
+        renderTableBody(filteredBelege);
+        renderYearDiagrams();          // nutzt allBelege (gesamt) für Jahresbalken
+        renderAllOkDiagrams();         // neu: diagramme zu DATUM_ALL_OK
+        rowCounterSpan.innerText = filteredBelege.length;
+    }
+
+    function sortBelege() {
+        filteredBelege.sort((a,b) => {
+            let valA = a[sortColumn];
+            let valB = b[sortColumn];
+            if (sortColumn === 'BRUTTO_BETRAG') {
+                valA = parseFloat(valA) || 0;
+                valB = parseFloat(valB) || 0;
+            } else if (sortColumn === 'BELEGDATUM' || sortColumn === 'DATUM_ALL_OK') {
+                valA = valA ? new Date(valA) : new Date(0);
+                valB = valB ? new Date(valB) : new Date(0);
+            } else {
+                valA = String(valA || '').toLowerCase();
+                valB = String(valB || '').toLowerCase();
+            }
+            if (valA < valB) return sortAscending ? -1 : 1;
+            if (valA > valB) return sortAscending ? 1 : -1;
+            return 0;
+        });
+    }
+
+    function updateKpi() {
+        const count = filteredBelege.length;
+        kpiCount.innerText = count;
+        let sum = filteredBelege.reduce((acc, b) => acc + (parseFloat(b.BRUTTO_BETRAG) || 0), 0);
+        kpiSum.innerText = formatEur(sum);
+        let avg = count ? sum / count : 0;
+        kpiAvg.innerText = formatEur(avg);
+        // DATUM_ALL_OK gesamtzahl (gefiltert)
+        let okCount = filteredBelege.filter(b => b.DATUM_ALL_OK && b.DATUM_ALL_OK.trim() !== '').length;
+        kpiAllOkTotal.innerText = okCount;
+    }
+
+    function renderTableBody(data) {
+        if (!data.length) {
+            tableBody.innerHTML = `<tr><td colspan="10" class="empty-message">keine Belege gefunden</td></tr>`;
+            return;
+        }
+        let html = '';
+        for (let b of data) {
+            html += `<tr>
+                <td>${b.PK_INP_BELEGE_ALL}</td>
+                <td class="datum-cell">${formatDatum(b.BELEGDATUM)}</td>
+           <td>${b.BEZEICHNUNG}</td>
+                <td class="datum-cell">${formatDatum(b.DATUM_ALL_OK) || '—'}</td>
+                <td>${b.FK_KON_PERSON}</td>
+                <td class="amount-positive">${formatEur(parseFloat(b.BRUTTO_BETRAG)||0)} €</td>
+                <td><span class="status-badge">${b.STATUS}</span></td>
+                <td>${b.ZAHLART}</td>
+                <td>${b.FK_INV_INVENTAR || '—'}</td>
+                <td>${b.FK_VER_VERTRAG || '—'}</td>
+                <td>${b.FK_PROJ_PROJEKT || '—'}</td>
+            </tr>`;
+        }
+        tableBody.innerHTML = html;
+    }
+
+    // Jahresdiagramme (bisher: summe und anzahl über alle belege)
+    function renderYearDiagrams() {
+        const yearMap = new Map(); 
+        allBelege.forEach(b => {
+            let year = new Date(b.BELEGDATUM).getFullYear();
+            if (isNaN(year)) return;
+            if (!yearMap.has(year)) yearMap.set(year, { sum: 0, count: 0 });
+            const rec = yearMap.get(year);
+            rec.sum += parseFloat(b.BRUTTO_BETRAG) || 0;
+            rec.count += 1;
+        });
+
+        const years = Array.from(yearMap.keys()).sort((a,b)=>a-b);
+        const maxSum = Math.max(...Array.from(yearMap.values()).map(v => v.sum), 0.01);
+        const maxCount = Math.max(...Array.from(yearMap.values()).map(v => v.count), 1);
+
+        yearSumChartDiv.innerHTML = years.map(y => {
+            let sum = yearMap.get(y).sum;
+            let percent = (sum / maxSum) * 100;
+            return `<div class="chart-item">
+                <span class="bar-label">${y}</span>
+                <div class="bar-bg"><div class="bar-fill" style="width: ${percent}%;">${formatEur(sum)} €</div></div>
+            </div>`;
+        }).join('') || '<div class="empty-message">keine jahresdaten</div>';
+
+        yearCountChartDiv.innerHTML = years.map(y => {
+            let cnt = yearMap.get(y).count;
+            let percent = (cnt / maxCount) * 100;
+            return `<div class="chart-item">
+                <span class="bar-label">${y}</span>
+                <div class="bar-bg"><div class="bar-fill" style="width: ${percent}%;">${cnt} Belege</div></div>
+            </div>`;
+        }).join('') || '<div class="empty-message">keine daten</div>';
+    }
+
+    // ----- neue diagramme fokus DATUM_ALL_OK -----
+    function renderAllOkDiagrams() {
+        // diagramm 1: anzahl Belege mit DATUM_ALL_OK pro Jahr
+        const okPerYear = new Map();
+        allBelege.forEach(b => {
+            if (!b.DATUM_ALL_OK) return;
+            let year = b.JAHR;
+            if (isNaN(year)) return;
+            okPerYear.set(year, (okPerYear.get(year) || 0) + 1);
+        });
+        const yearsOk = Array.from(okPerYear.keys()).sort((a,b)=>a-b);
+        const maxOkYear = Math.max(...Array.from(okPerYear.values()), 1);
+
+        allOkYearCountChartDiv.innerHTML = yearsOk.map(y => {
+            let cnt = okPerYear.get(y);
+            let percent = (cnt / maxOkYear) * 100;
+            return `<div class="chart-item">
+                <span class="bar-label">${y}</span>
+                <div class="bar-bg"><div class="bar-fill" style="width: ${percent}%;">${cnt}</div></div>
+            </div>`;
+        }).join('') || '<div class="empty-message">keine DATUM_ALL_OK</div>';
+
+        // diagramm 2: monatliche Verteilung (letzte 6 Monate beispielhaft oder gruppiert nach Jahr-Monat)
+        const monthMap = new Map();
+        allBelege.forEach(b => {
+            if (!b.DATUM_ALL_OK) return;
+            let d = new Date(b.DATUM_ALL_OK);
+            if (isNaN(d)) return;
+            let monthKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+            monthMap.set(monthKey, (monthMap.get(monthKey) || 0) + 1);
+        });
+        const sortedMonths = Array.from(monthMap.keys()).sort().slice(-8); // letzte 8 monate
+        const maxMonth = Math.max(...Array.from(monthMap.values()), 1);
+
+        allOkMonthlyChartDiv.innerHTML = sortedMonths.map(m => {
+            let cnt = monthMap.get(m);
+            let percent = (cnt / maxMonth) * 100;
+            return `<div class="chart-item">
+                <span class="bar-label">${m}</span>
+                <div class="bar-bg"><div class="bar-fill" style="width: ${percent}%;">${cnt}</div></div>
+            </div>`;
+        }).join('') || '<div class="empty-message">keine monatsdaten</div>';
+    }
+
+    // event handler für filter
+    function updateFiltersAndApply() {
+        filters.jahr = filterJahr.value;
+        filters.inventar = filterInventar.value;
+        filters.vertrag = filterVertrag.value;
+        filters.projekt = filterProjekt.value;
+        filters.global = globalFilterInput.value;
+        applyAllFilters();
+    }
+
+    filterJahr.addEventListener('change', updateFiltersAndApply);
+    filterInventar.addEventListener('input', updateFiltersAndApply);
+    filterVertrag.addEventListener('input', updateFiltersAndApply);
+    filterProjekt.addEventListener('input', updateFiltersAndApply);
+    globalFilterInput.addEventListener('input', updateFiltersAndApply);
+
+    clearBtn.addEventListener('click', ()=>{
+        filterJahr.value = ''; filterInventar.value = ''; filterVertrag.value = ''; filterProjekt.value = ''; globalFilterInput.value = '';
+        filters = { jahr: '', inventar: '', vertrag: '', projekt: '', global: '' };
+        applyAllFilters();
+    });
+
+    // sort th klick
+    document.querySelectorAll('#tableHeader th').forEach(th => {
+        th.addEventListener('click', (e) => {
+            const col = th.dataset.sort;
+            if (!col) return;
+            if (sortColumn === col) sortAscending = !sortAscending;
+            else {
+                sortColumn = col;
+                sortAscending = true;
+            }
+            document.querySelectorAll('#tableHeader th i').forEach(i => i.className = 'fas fa-sort');
+            const icon = th.querySelector('i');
+            if (icon) icon.className = sortAscending ? 'fas fa-sort-up' : 'fas fa-sort-down';
+            applyAllFilters();
+        });
+    });
+
+    refreshBtn.addEventListener('click', fetchBelege);
+    fetchBelege();
+    setInterval(fetchBelege, 30000);
+})();
+</script>
+</body>
+</html>

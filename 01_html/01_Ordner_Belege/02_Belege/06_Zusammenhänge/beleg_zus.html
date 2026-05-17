@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Beleg Analyse | Gruppierung nach jahr1 & FK_INP_BELEGE_ALL1</title>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- DataTables + jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+        body { background: #f0f4f8; margin: 0; padding: 24px 20px; color: #1a2c3e; }
+        .container { max-width: 1500px; margin: 0 auto; }
+        .status-bar {
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;
+            background: white; padding: 12px 24px; border-radius: 32px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 24px;
+            border: 1px solid #e2edf2;
+        }
+        h1 { font-size: 1.7rem; font-weight: 600; margin: 0; background: linear-gradient(135deg, #1f6e8c, #0e4e6b); background-clip: text; -webkit-background-clip: text; color: transparent; }
+        .badge { background: #eef2fa; padding: 6px 14px; border-radius: 40px; font-size: 0.8rem; }
+        .filter-panel {
+            background: white; border-radius: 28px; padding: 16px 24px; margin-bottom: 24px;
+            display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end;
+            border: 1px solid #e9f0f3; box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+        .filter-group { display: flex; flex-direction: column; gap: 6px; min-width: 160px; }
+        .filter-group label { font-weight: 600; font-size: 0.75rem; text-transform: uppercase; color: #4a6f8a; }
+        select, input { padding: 8px 14px; border-radius: 40px; border: 1px solid #cbdbe6; background: #fefefe; font-size: 0.9rem; outline: none; }
+        button { background: #1f6e8c; border: none; padding: 8px 20px; border-radius: 40px; color: white; font-weight: 500; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #0e5a75; transform: scale(0.97); }
+        .card { background: white; border-radius: 28px; box-shadow: 0 6px 16px rgba(0,0,0,0.05); margin-bottom: 32px; overflow: hidden; border: 1px solid #e9f0f3; }
+        .card-header { padding: 16px 24px; background: #ffffff; border-bottom: 1px solid #eef2f8; font-weight: 600; font-size: 1.2rem; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; }
+        .card-header h2 { margin: 0; font-size: 1.3rem; }
+        .card-body { padding: 20px 24px; }
+        .diagram-grid { display: flex; flex-wrap: wrap; gap: 28px; justify-content: space-between; margin-bottom: 20px; }
+        .chart-box { flex: 1; min-width: 280px; background: #fefefe; border-radius: 24px; padding: 12px; border: 1px solid #eef3f8; }
+        .chart-box h3 { font-size: 1rem; font-weight: 500; text-align: center; margin-bottom: 12px; color: #2c5a74; border-bottom: 1px dashed #cbdde6; padding-bottom: 6px; }
+        canvas { max-height: 280px; width: 100% !important; }
+        .table-wrapper { overflow-x: auto; }
+        #belegTable { width: 100%; font-size: 0.85rem; }
+        .error-msg { background: #ffe6e5; color: #b91c1c; padding: 12px 18px; border-radius: 20px; margin-bottom: 20px; border-left: 6px solid #d9534f; }
+        .loading { text-align: center; padding: 30px; color: #2c6e9e; }
+        footer { text-align: center; margin-top: 20px; font-size: 0.7rem; color: #6f8faa; }
+        @media (max-width: 700px) { body { padding: 16px; } .filter-panel { flex-direction: column; align-items: stretch; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="status-bar">
+        <h1><i class="fas fa-chart-line"></i> Beleg Zus | jahr1 + FK_INP_BELEGE_ALL1</h1>
+        <span class="badge"><i class="fas fa-database"></i> Quelle: /beleg_zus</span>
+    </div>
+
+    <!-- Filterbereich: Jahr1 und FK_INP_BELEGE_ALL1 (dynamisch aus Daten) -->
+    <div class="filter-panel">
+        <div class="filter-group">
+            <label><i class="fas fa-calendar-alt"></i> Filter nach jahr1</label>
+            <select id="jahr1Filter"><option value="ALL">Alle Jahre</option></select>
+        </div>
+        <div class="filter-group">
+            <label><i class="fas fa-key"></i> Filter nach FK_INP_BELEGE_ALL1</label>
+            <select id="fkFilter"><option value="ALL">Alle Schlüssel</option></select>
+        </div>
+        <div class="filter-group">
+            <label>&nbsp;</label>
+            <button id="applyFilterBtn"><i class="fas fa-filter"></i> Anwenden & Gruppieren</button>
+        </div>
+        <div class="filter-group">
+            <label>&nbsp;</label>
+            <button id="resetFilterBtn" style="background:#6c757d;"><i class="fas fa-undo-alt"></i> Zurücksetzen</button>
+        </div>
+    </div>
+
+    <div id="errorContainer"></div>
+
+    <!-- Tabelle: Detailansicht (gefilterte Rohdaten) -->
+    <div class="card">
+        <div class="card-header">
+            <h2><i class="fas fa-table-list"></i> Gefilterte Beleg-Details</h2>
+            <span style="font-size:0.7rem;"><i class="far fa-clock"></i> Datensätze mit jahr1 & FK_INP_BELEGE_ALL1</span>
+        </div>
+        <div class="card-body">
+            <div class="table-wrapper">
+                <table id="belegTable" class="display" style="width:100%">
+                    <thead><tr><th>jahr1</th><th>FK_INP_BELEGE_ALL1</th><th>BelegNr</th><th>Datum</th><th>Betrag</th><th>Typ</th><th>Info</th></tr></thead>
+                    <tbody id="tableBody"><tr><td colspan="7" class="loading">Lade Daten von localhost:5000 ...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Diagramme: Gruppiert nach jahr1 UND FK_INP_BELEGE_ALL1 (kombinierte Gruppen) -->
+    <div class="card">
+        <div class="card-header">
+            <h2><i class="fas fa-chart-pie"></i> Gruppierte Analyse (jahr1 + FK_INP_BELEGE_ALL1)</h2>
+            <span>Summe, Anzahl, Durchschnitt pro kombinierter Gruppe</span>
+        </div>
+        <div class="card-body">
+            <div class="diagram-grid">
+                <div class="chart-box">
+                    <h3><i class="fas fa-chart-column"></i> Summe Betrag (€) pro Gruppe</h3>
+                    <canvas id="sumBarChart" height="260"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h3><i class="fas fa-chart-simple"></i> Anzahl Datensätze pro Gruppe</h3>
+                    <canvas id="countBarChart" height="260"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h3><i class="fas fa-chart-pie"></i> Verteilung (Summe Betrag)</h3>
+                    <canvas id="pieChart" height="260"></canvas>
+                </div>
+            </div>
+            <div class="diagram-grid">
+                <div class="chart-box">
+                    <h3><i class="fas fa-chart-line"></i> Durchschnittlicher Betrag (€)</h3>
+                    <canvas id="avgBarChart" height="260"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h3><i class="fas fa-info-circle"></i> Gruppen-Statistiken</h3>
+                    <div id="groupStats" style="max-height: 260px; overflow-y: auto; font-size:0.8rem;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <footer><strong>Gruppierung basiert auf jahr1 + FK_INP_BELEGE_ALL1</strong> — Filter wirken auf Tabelle & Diagramme. Diagramme zeigen kombinierte Gruppen (z.B. "2023 | KEY123").</footer>
+</div>
+
+<script>
+    // Chart Instanzen
+    let sumChart = null, countChart = null, pieChart = null, avgChart = null;
+    let originalDataset = [];      // rohe daten vom service
+    let filteredDataset = [];      // aktuell gefilterte daten (nach jahr1 & FK)
+    let dataTable = null;          // datatable instanz
+
+    // Hilfsfunktionen
+    function parseNumber(val) { let n = Number(val); return isNaN(n) ? 0 : n; }
+    function escapeHtml(str) { if(!str) return ''; return String(str).replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m; }); }
+
+    // Extrahieren von jahr1 aus verschiedenen möglichen Feldnamen
+    function getJahr1(record) {
+        return record.jahr1 ?? record.JAHR1 ?? record.year ?? record.Jahr ?? '';
+    }
+    function getFkValue(record) {
+        return record.FK_INP_BELEGE_ALL1 ?? record.fk_inp_belege_all1 ?? record.FK_INP_BELEGE_ALL1 ?? '';
+    }
+    function getBetrag(record) { return parseNumber(record.Betrag ?? record.betrag ?? record.BETRAG ?? 0); }
+
+    // Fülle Filter-Dropdowns basierend auf originalDataset (eindeutige Werte)
+    function populateFilters(data) {
+        const jahreSet = new Set();
+        const fkSet = new Set();
+        data.forEach(rec => {
+            let j = getJahr1(rec);
+            if(j !== undefined && j !== null && j !== '') jahreSet.add(String(j));
+            let fk = getFkValue(rec);
+            if(fk !== undefined && fk !== null && fk !== '') fkSet.add(String(fk));
+        });
+        const jahrSelect = document.getElementById('jahr1Filter');
+        const fkSelect = document.getElementById('fkFilter');
+        jahrSelect.innerHTML = '<option value="ALL">Alle Jahre</option>';
+        fkSelect.innerHTML = '<option value="ALL">Alle Schlüssel</option>';
+        Array.from(jahreSet).sort().forEach(j => { jahrSelect.innerHTML += `<option value="${escapeHtml(j)}">${escapeHtml(j)}</option>`; });
+        Array.from(fkSet).sort().forEach(f => { fkSelect.innerHTML += `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`; });
+    }
+
+    // Filter anwenden: basierend auf ausgewähltem jahr1 und FK_INP_BELEGE_ALL1
+    function applyFilters() {
+        const selectedJahr = document.getElementById('jahr1Filter').value;
+        const selectedFk = document.getElementById('fkFilter').value;
+        if (!originalDataset.length) return [];
+        let filtered = originalDataset.filter(rec => {
+            let recJahr = String(getJahr1(rec) ?? '');
+            let recFk = String(getFkValue(rec) ?? '');
+            let jahrMatch = (selectedJahr === 'ALL') || (recJahr === selectedJahr);
+            let fkMatch = (selectedFk === 'ALL') || (recFk === selectedFk);
+            return jahrMatch && fkMatch;
+        });
+        filteredDataset = filtered;
+        return filtered;
+    }
+
+    // Tabelle rendern (gefilterte Daten)
+    function renderTable(records) {
+        const tbody = $('#tableBody');
+        if (!records || records.length === 0) {
+            tbody.html('<tr><td colspan="7" class="loading">⚠️ Keine Datensätze für diese Filterkombination.</td></tr>');
+            if(dataTable) { dataTable.clear(); dataTable.destroy(); dataTable = null; }
+            return;
+        }
+        let htmlRows = '';
+        for (let rec of records) {
+            let jahr = getJahr1(rec) || '-';
+            let fk = getFkValue(rec) || '-';
+            let belegNr = rec.BelegNr ?? rec.belegNr ?? '-';
+            let datum = rec.Datum ?? rec.datum ?? '-';
+            let betrag = getBetrag(rec).toFixed(2);
+            let typ = rec.Typ ?? rec.typ ?? '-';
+            let info = rec.WeitereInfo ?? rec.info ?? '-';
+            htmlRows += `<tr>
+                <td>${escapeHtml(String(jahr))}</td>
+
+                <td>${escapeHtml(String(fk))}</td>
+                <td>${escapeHtml(String(belegNr))}</td>
+                <td>${escapeHtml(String(datum))}</td>
+                <td>${betrag} €</td>
+                <td>${escapeHtml(String(typ))}</td>
+                <td>${escapeHtml(String(info))}</td>
+            </tr>`;
+        }
+        tbody.html(htmlRows);
+        if (dataTable) { dataTable.destroy(); }
+        dataTable = $('#belegTable').DataTable({
+            paging: true, searching: true, ordering: true, pageLength: 8,
+            lengthMenu: [[5,8,15,25], [5,8,15,25]], destroy: true, language: { search: "Suchen:" }
+        });
+    }
+
+    // GRUPPIERUNG nach jahr1 + FK_INP_BELEGE_ALL1 (kombinierter Schlüssel)
+    function groupByJahrAndFk(records) {
+        const groupsMap = new Map(); // key = "jahr1|FK"
+        for (let rec of records) {
+            const jahr = String(getJahr1(rec) ?? 'Ohne Jahr');
+            const fk = String(getFkValue(rec) ?? 'Ohne FK');
+            const groupKey = `${jahr} | ${fk}`;
+            const betrag = getBetrag(rec);
+            if (!groupsMap.has(groupKey)) {
+                groupsMap.set(groupKey, { key: groupKey, jahr: jahr, fk: fk, sumBetrag: 0, count: 0, betragValues: [] });
+            }
+            const grp = groupsMap.get(groupKey);
+            grp.sumBetrag += betrag;
+            grp.count += 1;
+            grp.betragValues.push(betrag);
+        }
+        const grouped = Array.from(groupsMap.values()).map(g => ({
+            groupLabel: g.key,
+            jahr: g.jahr,
+            fk: g.fk,
+            totalBetrag: g.sumBetrag,
+            recordCount: g.count,
+            avgBetrag: g.count > 0 ? g.sumBetrag / g.count : 0
+        }));
+        // Sortieren nach Jahr dann FK für konsistente Darstellung
+        grouped.sort((a,b) => {
+            if (a.jahr !== b.jahr) return String(a.jahr).localeCompare(String(b.jahr));
+            return String(a.fk).localeCompare(String(b.fk));
+        });
+        return grouped;
+    }
+
+    // Alle Diagramme aktualisieren basierend auf gruppierten Daten
+    function updateCharts(groupedStats) {
+        if (!groupedStats || groupedStats.length === 0) {
+            if (sumChart) sumChart.destroy();
+            if (countChart) countChart.destroy();
+            if (pieChart) pieChart.destroy();
+            if (avgChart) avgChart.destroy();
+            sumChart = countChart = pieChart = avgChart = null;
+            document.getElementById('groupStats').innerHTML = '<p style="color:#999;">Keine gruppierten Daten für die Auswahl.</p>';
+            // Leere Canvas-Clearing
+            ['sumBarChart','countBarChart','pieChart','avgBarChart'].forEach(id => {
+                const ctx = document.getElementById(id)?.getContext('2d');
+                if(ctx) ctx.clearRect(0,0,400,300);
+            });
+            return;
+        }
+        
+        const labels = groupedStats.map(g => g.groupLabel);
+        const sumData = groupedStats.map(g => g.totalBetrag);
+        const countData = groupedStats.map(g => g.recordCount);
+        const avgData = groupedStats.map(g => g.avgBetrag);
+        
+        if (sumChart) sumChart.destroy();
+        if (countChart) countChart.destroy();
+        if (pieChart) pieChart.destroy();
+        if (avgChart) avgChart.destroy();
+        
+        const ctxSum = document.getElementById('sumBarChart').getContext('2d');
+        const ctxCount = document.getElementById('countBarChart').getContext('2d');
+        const ctxPie = document.getElementById('pieChart').getContext('2d');
+        const ctxAvg = document.getElementById('avgBarChart').getContext('2d');
+        
+        sumChart = new Chart(ctxSum, {
+            type: 'bar', data: { labels: labels, datasets: [{ label: 'Summe Betrag (€)', data: sumData, backgroundColor: 'rgba(54,162,235,0.7)', borderRadius: 6 }] },
+            options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.raw.toFixed(2)} €` } } } }
+        });
+        countChart = new Chart(ctxCount, {
+            type: 'bar', data: { labels: labels, datasets: [{ label: 'Anzahl Datensätze', data: countData, backgroundColor: 'rgba(75,192,192,0.7)', borderRadius: 6 }] },
+            options: { responsive: true, maintainAspectRatio: true }
+        });
+        pieChart = new Chart(ctxPie, {
+            type: 'pie', data: { labels: labels, datasets: [{ data: sumData, backgroundColor: ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec489a','#06b6d4','#84cc16','#f97316','#6366f1','#a855f7','#14b8a6'] }] },
+            options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw.toFixed(2)} € (${((ctx.raw / sumData.reduce((a,b)=>a+b,0))*100).toFixed(1)}%)` } } } }
+        });
+        avgChart = new Chart(ctxAvg, {
+            type: 'bar', data: { labels: labels, datasets: [{ label: 'Durchschnitt (€)', data: avgData, backgroundColor: 'rgba(153,102,255,0.7)', borderRadius: 6 }] },
+            options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `Ø ${ctx.raw.toFixed(2)} €` } } } }
+        });
+        
+        // Textuelle Gruppenstatistiken
+        let statsHtml = `<div style="font-weight:500; margin-bottom:8px;">📊 ${groupedStats.length} Gruppen (jahr1 | FK)</div><ul style="margin:0; padding-left:1rem;">`;
+        groupedStats.forEach(g => {
+            statsHtml += `<li><strong>${escapeHtml(g.groupLabel)}</strong>: ${g.recordCount} Einträge, Σ ${g.totalBetrag.toFixed(2)} €, Ø ${g.avgBetrag.toFixed(2)} €</li>`;
+        });
+        statsHtml += `</ul>`;
+        document.getElementById('groupStats').innerHTML = statsHtml;
+    }
+
+    // Hauptfunktion: filter anwenden, tabelle neu zeichnen, gruppierung & charts aktualisieren
+    function refreshAll() {
+        if (!originalDataset.length) return;
+        const filtered = applyFilters();
+        renderTable(filtered);
+        // gruppiere nach jahr1 + FK_INP_BELEGE_ALL1 (kombiniert)
+        const grouped = groupByJahrAndFk(filtered);
+        updateCharts(grouped);
+    }
+
+    // Fetch vom Service http://localhost:5000/beleg_zus
+    async function fetchData() {
+        const errorDiv = document.getElementById('errorContainer');
+        errorDiv.innerHTML = '';
+        const tableBody = document.getElementById('tableBody');
+        tableBody.innerHTML = '<tr><td colspan="7" class="loading"><i class="fas fa-spinner fa-pulse"></i> Lade von http://localhost:5000/beleg_zus ...</td></tr>';
+        if(dataTable) { dataTable.destroy(); dataTable = null; }
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(),1000000);
+            const response = await fetch('http://localhost:5000/beleg_zus', { method: 'GET', mode: 'cors', signal: controller.signal, headers: { 'Accept': 'application/json' } });
+            clearTimeout(timeoutId);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            let data = await response.json();
+            if (!Array.isArray(data)) {
+                if (data.data && Array.isArray(data.data)) data = data.data;
+                else if (data.records && Array.isArray(data.records)) data = data.records;
+                else if (data.items && Array.isArray(data.items)) data = data.items;
+                else throw new Error('Antwort ist kein Array. Erwarte JSON-Liste.');
+            }
+            if (data.length === 0) {
+                errorDiv.innerHTML = `<div class="error-msg"><i class="fas fa-exclamation-triangle"></i> Webservice lieferte leeres Array. Keine Daten.</div>`;
+                document.getElementById('tableBody').innerHTML = '<tr><td colspan="7">⚠️ Keine Datensätze vorhanden</td></tr>';
+                originalDataset = []; filteredDataset = [];
+                if(sumChart) sumChart.destroy(); if(countChart) countChart.destroy(); if(pieChart) pieChart.destroy(); if(avgChart) avgChart.destroy();
+                return;
+            }
+            // Normalisiere die Daten: Stelle sicher, dass jedes Record zumindest jahr1 und FK_INP_BELEGE_ALL1 Felder hat (falls nicht, verwende default)
+            // Wir belassen originale Daten, aber in gettern wird flexibel zugegriffen
+            originalDataset = data;
+            // Filter-Dropdowns basierend auf allen Daten füllen
+            populateFilters(originalDataset);
+            // initiale Filter: "Alle" => zeige alles
+            document.getElementById('jahr1Filter').value = 'ALL';
+            document.getElementById('fkFilter').value = 'ALL';
+            filteredDataset = [...originalDataset];
+            renderTable(filteredDataset);
+            const groupedInitial = groupByJahrAndFk(filteredDataset);
+            updateCharts(groupedInitial);
+        } catch (err) {
+            console.error(err);
+            let msg = `Fehler beim Laden: ${err.message}. Stelle sicher, dass der Server auf http://localhost:5000/beleg_zus läuft und CORS erlaubt.`;
+            if (err.name === 'AbortError') msg = 'Zeitüberschreitung (8s) - Server nicht erreichbar.';
+            errorDiv.innerHTML = `<div class="error-msg"><i class="fas fa-bug"></i> ${escapeHtml(msg)}</div>`;
+            document.getElementById('tableBody').innerHTML = `<tr><td colspan="7" style="color:#b91c1c;">⚠️ ${escapeHtml(msg)}</td></tr>`;
+            if(sumChart) sumChart.destroy(); if(countChart) countChart.destroy(); if(pieChart) pieChart.destroy(); if(avgChart) avgChart.destroy();
+            sumChart=countChart=pieChart=avgChart=null;
+            document.getElementById('groupStats').innerHTML = '<p>Fehler beim Laden der Gruppendaten.</p>';
+        }
+    }
+
+    // Eventlistener
+    document.getElementById('applyFilterBtn').addEventListener('click', () => { refreshAll(); });
+    document.getElementById('resetFilterBtn').addEventListener('click', () => {
+        document.getElementById('jahr1Filter').value = 'ALL';
+        document.getElementById('fkFilter').value = 'ALL';
+        refreshAll();
+    });
+    // Start
+    fetchData();
+</script>
+</body>
+</html>
