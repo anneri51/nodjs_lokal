@@ -1,0 +1,4081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Calendar - Termin Management System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #1d4ed8;
+            --primary-light: #dbeafe;
+            --secondary: #10b981;
+            --secondary-dark: #059669;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #06b6d4;
+            --light: #f8fafc;
+            --dark: #1e293b;
+            --gray: #64748b;
+            --gray-light: #e2e8f0;
+            --border: #cbd5e1;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            --radius: 12px;
+            --radius-lg: 16px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            color: var(--dark);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+        
+        /* Header */
+        .app-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border-radius: var(--radius-lg);
+            padding: 30px 40px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow-xl);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .app-header::before {
+            content: '';
+            position: absolute;
+            top: -100px;
+            right: -100px;
+            width: 300px;
+            height: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+        }
+        
+        .header-content {
+            position: relative;
+            z-index: 2;
+        }
+        
+        .app-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .title-left h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .title-left p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 600px;
+        }
+        
+        .title-right {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .year-display {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: var(--radius);
+            padding: 15px 25px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        .year-display .year {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1;
+        }
+        
+        .year-display .label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+        
+        /* View Tabs */
+        .view-tabs {
+            display: flex;
+            background: white;
+            border-radius: var(--radius);
+            padding: 8px;
+            margin-bottom: 25px;
+            box-shadow: var(--shadow);
+            overflow-x: auto;
+        }
+        
+        .view-tab {
+            flex: 1;
+            padding: 16px 24px;
+            border: none;
+            background: none;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--gray);
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            min-width: 160px;
+            white-space: nowrap;
+        }
+        
+        .view-tab:hover {
+            background: #f1f5f9;
+            color: var(--primary);
+        }
+        
+        .view-tab.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        /* View Containers */
+        .view-container {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .view-container.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Header Controls */
+        .header-controls {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 30px;
+            align-items: center;
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        @media (max-width: 1024px) {
+            .header-controls {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+        }
+        
+        /* Year Navigation */
+        .year-navigation {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .nav-btn {
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1.3rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: white;
+            transform: scale(1.1);
+        }
+        
+        /* Search and Filter */
+        .search-filter-container {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .search-box {
+            flex: 1;
+            min-width: 300px;
+            position: relative;
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray);
+            z-index: 1;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 16px 20px 16px 50px;
+            border: 2px solid transparent;
+            border-radius: var(--radius);
+            font-size: 1.1rem;
+            background: rgba(255, 255, 255, 0.9);
+            transition: all 0.3s ease;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: white;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+            background: white;
+        }
+        
+        .filter-select {
+            padding: 16px 20px;
+            border: 2px solid transparent;
+            border-radius: var(--radius);
+            font-size: 1.1rem;
+            background: rgba(255, 255, 255, 0.9);
+            cursor: pointer;
+            min-width: 200px;
+            transition: all 0.3s ease;
+        }
+        
+        .filter-select:focus {
+            outline: none;
+            border-color: white;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+            background: white;
+        }
+        
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .action-btn {
+            padding: 16px 25px;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            white-space: nowrap;
+        }
+        
+        .action-btn.primary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .action-btn.primary:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: white;
+            transform: translateY(-2px);
+        }
+        
+        .action-btn.secondary {
+            background: var(--secondary);
+            color: white;
+            border: 2px solid var(--secondary-dark);
+        }
+        
+        .action-btn.secondary:hover {
+            background: var(--secondary-dark);
+            transform: translateY(-2px);
+        }
+        
+        .action-btn.danger {
+            background: var(--danger);
+            color: white;
+            border: 2px solid #dc2626;
+        }
+        
+        .action-btn.danger:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+        }
+        
+        /* Stats Bar */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 25px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: white;
+        }
+        
+        .stat-icon.total { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); }
+        .stat-icon.upcoming { background: linear-gradient(135deg, var(--secondary) 0%, var(--secondary-dark) 100%); }
+        .stat-icon.past { background: linear-gradient(135deg, var(--gray) 0%, #475569 100%); }
+        .stat-icon.months { background: linear-gradient(135deg, var(--info) 0%, #0891b2 100%); }
+        
+        .stat-content {
+            flex: 1;
+        }
+        
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--dark);
+            line-height: 1;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.95rem;
+            color: var(--gray);
+            font-weight: 600;
+        }
+        
+        /* OLD CALENDAR VIEW STYLES */
+        .old-calendar-container {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow);
+        }
+        
+        .calendar-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .calendar-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .month-navigation {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .month-nav-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            background: white;
+            color: var(--dark);
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .month-nav-btn:hover {
+            background: var(--primary-light);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .current-month {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
+            min-width: 200px;
+            text-align: center;
+        }
+        
+        /* Calendar Grid */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            background: var(--border);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        
+        .calendar-header {
+            background: var(--primary);
+            color: white;
+            padding: 20px 10px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        
+        .calendar-day {
+            background: white;
+            padding: 15px;
+            min-height: 120px;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .calendar-day:hover {
+            background: #f8fafc;
+            transform: translateY(-2px);
+            z-index: 1;
+            box-shadow: var(--shadow);
+        }
+        
+        .calendar-day.other-month {
+            background: #f8fafc;
+            color: var(--gray);
+            opacity: 0.7;
+        }
+        
+        .calendar-day.today {
+            background: linear-gradient(135deg, var(--primary-light) 0%, #eff6ff 100%);
+            border: 2px solid var(--primary);
+        }
+        
+        .day-number {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .day-events {
+            max-height: 80px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        
+        .day-event {
+            background: var(--secondary);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .day-event:hover {
+            background: var(--secondary-dark);
+            transform: translateX(3px);
+        }
+        
+        .event-count {
+            background: var(--danger);
+            color: white;
+            font-size: 0.8rem;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+        
+        .no-events {
+            color: var(--gray);
+            font-size: 0.9rem;
+            font-style: italic;
+            text-align: center;
+            padding: 10px 0;
+        }
+        
+        /* Year Calendar Container */
+        .year-calendar-container {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow);
+        }
+        
+        .year-calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 25px;
+        }
+        
+        @media (max-width: 1400px) {
+            .year-calendar-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        
+        @media (max-width: 1024px) {
+            .year-calendar-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .year-calendar-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Month Card */
+        .month-card {
+            background: white;
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: all 0.4s ease;
+            border: 2px solid transparent;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .month-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-xl);
+            border-color: var(--primary-light);
+        }
+        
+        .month-header {
+            background: linear-gradient(135deg, var(--primary-light) 0%, #eff6ff 100%);
+            padding: 25px;
+            border-bottom: 2px solid var(--border);
+        }
+        
+        .month-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .month-name {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--dark);
+        }
+        
+        .month-event-count {
+            background: var(--primary);
+            color: white;
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        
+        .month-stats {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .month-stat {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+        
+        .month-stat i {
+            color: var(--primary);
+        }
+        
+        /* Month Calendar */
+        .month-calendar {
+            padding: 20px;
+            flex: 1;
+        }
+        
+        .calendar-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .weekday {
+            text-align: center;
+            font-weight: 700;
+            color: var(--gray);
+            padding: 10px 5px;
+            font-size: 0.95rem;
+        }
+        
+        .calendar-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+        
+        .small-calendar-day {
+            aspect-ratio: 1;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            padding: 8px 5px;
+            border: 2px solid transparent;
+        }
+        
+        .small-calendar-day:hover {
+            background: #f0f9ff;
+            border-color: var(--primary-light);
+            transform: scale(1.05);
+        }
+        
+        .small-day-number {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+            color: var(--dark);
+        }
+        
+        .small-calendar-day.other-month {
+            opacity: 0.3;
+            cursor: default;
+        }
+        
+        .small-calendar-day.other-month:hover {
+            background: transparent;
+            transform: none;
+            border-color: transparent;
+        }
+        
+        .small-calendar-day.today {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            font-weight: 700;
+        }
+        
+        .small-calendar-day.today .small-day-number {
+            color: white;
+        }
+        
+        .small-calendar-day.has-events {
+            background: #f0f9ff;
+            border: 2px solid var(--primary-light);
+        }
+        
+        .small-event-indicators {
+            display: flex;
+            gap: 3px;
+            margin-top: 3px;
+        }
+        
+        .small-event-indicator {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--primary);
+        }
+        
+        .small-calendar-day.has-events .small-event-indicator {
+            background: var(--secondary);
+        }
+        
+        .small-calendar-day.today .small-event-indicator {
+            background: white;
+        }
+        
+        .small-event-count {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: var(--danger);
+            color: white;
+            font-size: 0.7rem;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+        
+        /* Month Events */
+        .month-events {
+            padding: 20px;
+            border-top: 2px solid var(--border);
+            background: #f8fafc;
+        }
+        
+        .events-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .events-list {
+            max-height: 180px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        
+        .event-item {
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-left: 4px solid var(--primary);
+            transition: all 0.3s ease;
+        }
+        
+        .event-item:hover {
+            transform: translateX(5px);
+            box-shadow: var(--shadow);
+        }
+        
+        .event-date {
+            font-size: 0.85rem;
+            color: var(--gray);
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .event-description {
+            font-size: 0.95rem;
+            color: var(--dark);
+            line-height: 1.4;
+        }
+        
+        /* List View Container */
+        .list-view-container {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow);
+        }
+        
+        .list-view-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .list-view-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .list-actions {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .list-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: var(--radius);
+            flex-wrap: wrap;
+        }
+        
+        .sort-select {
+            padding: 12px 16px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 1rem;
+            background: white;
+            cursor: pointer;
+            min-width: 180px;
+        }
+        
+        /* Events List */
+        .events-table-container {
+            overflow-x: auto;
+            border-radius: var(--radius);
+            border: 2px solid var(--border);
+            background: white;
+        }
+        
+        .events-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1000px;
+        }
+        
+        .events-table th {
+            background: #f1f5f9;
+            padding: 18px 16px;
+            text-align: left;
+            font-weight: 700;
+            color: var(--dark);
+            border-bottom: 2px solid var(--border);
+            position: sticky;
+            top: 0;
+        }
+        
+        .events-table th i {
+            margin-right: 8px;
+            color: var(--primary);
+        }
+        
+        .events-table td {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+        
+        .events-table tr:hover {
+            background: #f8fafc;
+        }
+        
+        .events-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .event-row.past {
+            opacity: 0.7;
+            background: #fafafa;
+        }
+        
+        .event-row.upcoming {
+            border-left: 4px solid var(--secondary);
+        }
+        
+        .event-row.today {
+            background: #f0f9ff;
+        }
+        
+        .event-id {
+            font-family: 'Courier New', monospace;
+            background: #f1f5f9;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            color: var(--gray);
+        }
+        
+        .event-date-cell {
+            font-weight: 600;
+            color: var(--dark);
+            min-width: 180px;
+        }
+        
+        .event-time {
+            color: var(--gray);
+            font-size: 0.9rem;
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .event-description-cell {
+            line-height: 1.5;
+            max-width: 600px;
+        }
+        
+        .event-location {
+            color: var(--gray);
+            font-size: 0.9rem;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .event-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-align: center;
+            min-width: 100px;
+        }
+        
+        .status-upcoming {
+            background: #d1fae5;
+            color: var(--secondary-dark);
+        }
+        
+        .status-past {
+            background: #f3f4f6;
+            color: var(--gray);
+        }
+        
+        .status-today {
+            background: #dbeafe;
+            color: var(--primary-dark);
+        }
+        
+        .no-events-message {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--gray);
+        }
+        
+        .no-events-message i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        
+        /* Form View Container */
+        .form-view-container {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow);
+        }
+        
+        .form-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .form-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 12px;
+        }
+        
+        /* Form Layout */
+        .form-layout {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+        }
+        
+        @media (max-width: 1024px) {
+            .form-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .form-section {
+            background: #f8fafc;
+            border-radius: var(--radius);
+            padding: 25px;
+            border: 2px solid var(--border);
+        }
+        
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* Form Groups */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .form-group label .required {
+            color: var(--danger);
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 1rem;
+            background: white;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .form-control.error {
+            border-color: var(--danger);
+        }
+        
+        .error-message {
+            color: var(--danger);
+            font-size: 0.85rem;
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Form Checkboxes and Radios */
+        .checkbox-group, .radio-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .checkbox-label, .radio-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        
+        .checkbox-label input, .radio-label input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        /* Form Buttons */
+        .form-buttons {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid var(--border);
+        }
+        
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .spinner {
+            width: 80px;
+            height: 80px;
+            border: 8px solid #f1f5f9;
+            border-top: 8px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 25px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+            padding: 20px;
+            display: none;
+        }
+        
+        .modal {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        
+        .modal-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--dark);
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            color: var(--gray);
+            cursor: pointer;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .close-modal:hover {
+            background: #f1f5f9;
+            color: var(--danger);
+        }
+        
+        /* Web Service Info */
+        .service-info {
+            background: #f8fafc;
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-top: 30px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .service-info h3 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .service-url {
+            font-family: 'Courier New', monospace;
+            background: white;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: block;
+            color: var(--dark);
+            border: 2px solid var(--border);
+            word-break: break-all;
+        }
+        
+        /* API Response Display */
+        .api-response {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .response-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--dark);
+        }
+        
+        .response-success {
+            background: #d1fae5;
+            border-color: var(--secondary);
+        }
+        
+        .response-error {
+            background: #fee2e2;
+            border-color: var(--danger);
+        }
+        
+        /* API Status */
+        .api-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-left: 15px;
+        }
+        
+        .api-status.online {
+            background: #d1fae5;
+            color: var(--secondary-dark);
+        }
+        
+        .api-status.offline {
+            background: #fee2e2;
+            color: var(--danger);
+        }
+        
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 30px 0;
+            color: var(--gray);
+            font-size: 1rem;
+            border-top: 2px solid var(--border);
+            margin-top: 40px;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .app-header {
+                padding: 20px;
+            }
+            
+            .title-left h1 {
+                font-size: 2.2rem;
+            }
+            
+            .year-display .year {
+                font-size: 2rem;
+            }
+            
+            .nav-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 1.1rem;
+            }
+            
+            .search-box {
+                min-width: 100%;
+            }
+            
+            .filter-select {
+                min-width: 100%;
+            }
+            
+            .action-btn {
+                padding: 12px 18px;
+                font-size: 0.95rem;
+            }
+            
+            .view-tab {
+                padding: 12px 16px;
+                font-size: 1rem;
+                min-width: 120px;
+            }
+            
+            .old-calendar-container,
+            .year-calendar-container,
+            .list-view-container,
+            .form-view-container {
+                padding: 20px;
+            }
+            
+            .calendar-title,
+            .list-view-title,
+            .form-title {
+                font-size: 1.5rem;
+            }
+            
+            .calendar-controls,
+            .list-view-header,
+            .form-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .month-navigation {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .calendar-grid {
+                grid-template-columns: repeat(7, 1fr);
+                font-size: 0.9rem;
+            }
+            
+            .calendar-day {
+                padding: 10px;
+                min-height: 100px;
+            }
+            
+            .day-number {
+                font-size: 1rem;
+            }
+            
+            .day-event {
+                font-size: 0.75rem;
+                padding: 3px 6px;
+            }
+            
+            .events-table th,
+            .events-table td {
+                padding: 12px 8px;
+                font-size: 0.9rem;
+            }
+            
+            .form-section {
+                padding: 15px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .title-left h1 {
+                font-size: 1.8rem;
+            }
+            
+            .month-stats {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .stat-card {
+                padding: 20px;
+            }
+            
+            .stat-value {
+                font-size: 1.8rem;
+            }
+            
+            .calendar-grid {
+                grid-template-columns: repeat(7, 1fr);
+            }
+            
+            .calendar-day {
+                min-height: 80px;
+                padding: 8px;
+            }
+            
+            .day-number {
+                font-size: 0.9rem;
+            }
+            
+            .list-controls,
+            .form-buttons {
+                flex-direction: column;
+            }
+            
+            .sort-select,
+            .form-control {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <h3>Loading Calendar Data...</h3>
+        <p>Fetching events from web service</p>
+    </div>
+    
+    <!-- Day Events Modal -->
+    <div class="modal-overlay" id="dayEventsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Day Events</h2>
+                <button class="close-modal" id="closeModalBtn">&times;</button>
+            </div>
+            <div id="modalContent">
+                <!-- Day events will be loaded here -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- API Response Modal -->
+    <div class="modal-overlay" id="apiResponseModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title" id="apiModalTitle">API Response</h2>
+                <button class="close-modal" id="closeApiModalBtn">&times;</button>
+            </div>
+            <div id="apiModalContent">
+                <!-- API response will be loaded here -->
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="app-title">
+                    <div class="title-left">
+                        <h1><i class="fas fa-calendar-alt"></i> Complete Calendar</h1>
+                        <p>Termin Management System with Web Service Integration</p>
+                    </div>
+                    <div class="title-right">
+                        <div class="year-display">
+                            <div class="year" id="currentYear">2023</div>
+                            <div class="label">CURRENT YEAR</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- View Tabs -->
+                <div class="view-tabs">
+                    <button class="view-tab active" data-view="oldCalendar">
+                        <i class="fas fa-calendar"></i>
+                        Old Calendar View
+                    </button>
+                    <button class="view-tab" data-view="year">
+                        <i class="fas fa-calendar-week"></i>
+                        Year View
+                    </button>
+                    <button class="view-tab" data-view="list">
+                        <i class="fas fa-list"></i>
+                        List View
+                    </button>
+                    <button class="view-tab" data-view="form">
+                        <i class="fas fa-edit"></i>
+                        Form View
+                    </button>
+                </div>
+                
+                <div class="header-controls">
+                    <div class="year-navigation">
+                        <button class="nav-btn" id="prevYearBtn">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button class="nav-btn" id="nextYearBtn">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="search-filter-container">
+                        <div class="search-box">
+                            <i class="fas fa-search search-icon"></i>
+                            <input type="text" class="search-input" id="searchInput" placeholder="Search events...">
+                        </div>
+                        
+                        <select class="filter-select" id="monthFilter">
+                            <option value="all">All Months</option>
+                            <option value="0">January</option>
+                            <option value="1">February</option>
+                            <option value="2">March</option>
+                            <option value="3">April</option>
+                            <option value="4">May</option>
+                            <option value="5">June</option>
+                            <option value="6">July</option>
+                            <option value="7">August</option>
+                            <option value="8">September</option>
+                            <option value="9">October</option>
+                            <option value="10">November</option>
+                            <option value="11">December</option>
+                        </select>
+                        
+                        <select class="filter-select" id="eventFilter">
+                            <option value="all">All Events</option>
+                            <option value="upcoming">Upcoming Only</option>
+                            <option value="past">Past Only</option>
+                            <option value="today">Today Only</option>
+                        </select>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="action-btn primary" id="todayBtn">
+                            <i class="fas fa-calendar-day"></i>
+                            Today
+                        </button>
+                        <button class="action-btn secondary" id="refreshBtn">
+                            <i class="fas fa-sync-alt"></i>
+                            Refresh
+                        </button>
+                        <button class="action-btn primary" id="testApiBtn">
+                            <i class="fas fa-plug"></i>
+                            Test API
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Statistics Bar -->
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="stat-icon total">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value" id="totalEventsStat">0</div>
+                    <div class="stat-label">Total Events This Year</div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon upcoming">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value" id="upcomingEventsStat">0</div>
+                    <div class="stat-label">Upcoming Events</div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon past">
+                    <i class="fas fa-history"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value" id="pastEventsStat">0</div>
+                    <div class="stat-label">Past Events</div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon months">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value" id="monthsWithEventsStat">0</div>
+                    <div class="stat-label">Months With Events</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- OLD CALENDAR VIEW (First Tab) -->
+        <div class="view-container old-calendar-container active" id="oldCalendarView">
+            <div class="calendar-controls">
+                <h2 class="calendar-title">
+                    <i class="fas fa-calendar"></i>
+                    Monthly Calendar - <span id="currentMonthYear">January 2023</span>
+                </h2>
+                
+                <div class="month-navigation">
+                    <button class="month-nav-btn" id="prevMonthBtn">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <div class="current-month" id="currentMonthDisplay">January 2023</div>
+                    <button class="month-nav-btn" id="nextMonthBtn">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="calendar-grid" id="oldCalendarGrid">
+                <!-- Calendar grid will be generated here -->
+            </div>
+            
+            <div style="margin-top: 30px; padding: 20px; background: #f8fafc; border-radius: var(--radius);">
+                <h3 style="margin-bottom: 15px; color: var(--dark); display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-info-circle"></i>
+                    Old Calendar View Instructions
+                </h3>
+                <ul style="color: var(--gray); line-height: 1.8; padding-left: 20px;">
+                    <li>Click on any day to view events for that day</li>
+                    <li>Click on an event to edit it</li>
+                    <li>Use the month navigation buttons to switch months</li>
+                    <li>Today is highlighted in blue</li>
+                    <li>Days with events show the event count</li>
+                    <li>Hover over days to see a preview effect</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Year View Container -->
+        <div class="view-container year-calendar-container" id="yearView">
+            <h2 class="calendar-title">
+                <i class="fas fa-calendar-week"></i>
+                Year Calendar - <span id="calendarYear">2023</span>
+            </h2>
+            
+            <div class="year-calendar-grid" id="yearCalendar">
+                <!-- Monthly calendars will be generated here -->
+            </div>
+        </div>
+        
+        <!-- List View Container -->
+        <div class="view-container list-view-container" id="listView">
+            <div class="list-view-header">
+                <h2 class="list-view-title">
+                    <i class="fas fa-list"></i>
+                    All Termine - <span id="listViewYear">2023</span>
+                    <span class="api-status" id="apiStatus">API Status</span>
+                </h2>
+                
+                <div class="list-actions">
+                    <button class="action-btn primary" id="exportListBtn">
+                        <i class="fas fa-download"></i>
+                        Export
+                    </button>
+                    <button class="action-btn secondary" id="printListBtn">
+                        <i class="fas fa-print"></i>
+                        Print
+                    </button>
+                </div>
+            </div>
+            
+            <div class="list-controls">
+                <select class="sort-select" id="sortBy">
+                    <option value="date-asc">Sort by Date (Oldest First)</option>
+                    <option value="date-desc">Sort by Date (Newest First)</option>
+                    <option value="id-asc">Sort by ID (Ascending)</option>
+                    <option value="id-desc">Sort by ID (Descending)</option>
+                </select>
+                
+                <select class="sort-select" id="itemsPerPage">
+                    <option value="10">Show 10 items</option>
+                    <option value="25">Show 25 items</option>
+                    <option value="50" selected>Show 50 items</option>
+                    <option value="100">Show 100 items</option>
+                    <option value="all">Show All</option>
+                </select>
+                
+                <select class="sort-select" id="statusFilter">
+                    <option value="all">All Status</option>
+                    <option value="1">Pending</option>
+                    <option value="2">Completed</option>
+                    <option value="3">Cancelled</option>
+                </select>
+            </div>
+            
+            <div class="events-table-container">
+                <table class="events-table" id="eventsTable">
+                    <thead>
+                        <tr>
+                            <th><i class="fas fa-hashtag"></i> ID</th>
+                            <th><i class="fas fa-calendar"></i> Date</th>
+                            <th><i class="fas fa-align-left"></i> Description</th>
+                            <th><i class="fas fa-tag"></i> Type</th>
+                            <th><i class="fas fa-flag"></i> Status</th>
+                            <th><i class="fas fa-cog"></i> Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="eventsTableBody">
+                        <!-- Events will be loaded here -->
+                    </tbody>
+                </table>
+                
+                <div id="noEventsMessage" class="no-events-message" style="display: none;">
+                    <i class="fas fa-search"></i>
+                    <h3>No Events Found</h3>
+                    <p>Try changing your search criteria or filters</p>
+                </div>
+            </div>
+            
+            <div class="pagination" id="pagination" style="display: none; margin-top: 20px;">
+                <!-- Pagination will be generated here -->
+            </div>
+        </div>
+        
+        <!-- Form View Container -->
+        <div class="view-container form-view-container" id="formView">
+            <div class="form-header">
+                <h2 class="form-title">
+                    <i class="fas fa-edit"></i>
+                    Termin Management Form
+                </h2>
+                
+                <div class="form-actions">
+                    <button class="action-btn secondary" id="loadForEditBtn">
+                        <i class="fas fa-search"></i>
+                        Load for Edit
+                    </button>
+                    <button class="action-btn danger" id="resetFormBtn">
+                        <i class="fas fa-eraser"></i>
+                        Reset Form
+                    </button>
+                </div>
+            </div>
+            
+            <form id="terminForm">
+                <div class="form-layout">
+                    <!-- Basic Information Section -->
+                    <div class="form-section">
+                        <h3 class="section-title">
+                            <i class="fas fa-info-circle"></i>
+                            Basic Information
+                        </h3>
+                        
+                        <div class="form-group">
+                            <label for="terminId">
+                                <i class="fas fa-hashtag"></i>
+                                Termin ID
+                            </label>
+                            <input type="text" id="terminId" name="PK_KAL_TERMIN" class="form-control" 
+                                   placeholder="Auto-generated on create" readonly>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="datum">
+                                    <i class="fas fa-calendar-day"></i>
+                                    Date <span class="required">*</span>
+                                </label>
+                                <input type="datetime-local" id="datum" name="DATUM" class="form-control" required>
+                                <div class="error-message" id="datumError"></div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="plannedDate">
+                                    <i class="fas fa-calendar-check"></i>
+                                    Planned Date
+                                </label>
+                                <input type="datetime-local" id="plannedDate" name="DATUM_GEPLANT" class="form-control">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="actualDate">
+                                    <i class="fas fa-check-circle"></i>
+                                    Actual Date
+                                </label>
+                                <input type="datetime-local" id="actualDate" name="DATUM_IST" class="form-control">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="nextDate">
+                                    <i class="fas fa-calendar-plus"></i>
+                                    Next Date
+                                </label>
+                                <input type="datetime-local" id="nextDate" name="DATUM_NEXT" class="form-control">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="description">
+                                <i class="fas fa-align-left"></i>
+                                Description <span class="required">*</span>
+                            </label>
+                            <textarea id="description" name="DESCR" class="form-control" rows="3" 
+                                      placeholder="Enter event description..." required></textarea>
+                            <div class="error-message" id="descriptionError"></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="comments">
+                                <i class="fas fa-comment"></i>
+                                Comments
+                            </label>
+                            <textarea id="comments" name="COMM" class="form-control" rows="2" 
+                                      placeholder="Additional comments..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Category & Status Section -->
+                    <div class="form-section">
+                        <h3 class="section-title">
+                            <i class="fas fa-tags"></i>
+                            Category & Status
+                        </h3>
+                        
+                        <div class="form-group">
+                            <label for="status">
+                                <i class="fas fa-flag"></i>
+                                Status <span class="required">*</span>
+                            </label>
+                            <select id="status" name="FK_STD_KAL_STATUS" class="form-control" required>
+                                <option value="">Select Status</option>
+                                <option value="1">Pending</option>
+                                <option value="2">Completed</option>
+                                <option value="3">Cancelled</option>
+                                <option value="4">In Progress</option>
+                                <option value="5">Rescheduled</option>
+                            </select>
+                            <div class="error-message" id="statusError"></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="type">
+                                <i class="fas fa-calendar-alt"></i>
+                                Termin Type
+                            </label>
+                            <select id="type" name="FK_STD_KAL_TERMIN_TYP" class="form-control">
+                                <option value="">Select Type</option>
+                                <option value="1">Meeting</option>
+                                <option value="2">Appointment</option>
+                                <option value="3">Event</option>
+                                <option value="4">Deadline</option>
+                                <option value="5">Reminder</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="priority">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Priority
+                            </label>
+                            <select id="priority" name="FK_STD_KAL_PRIORITAET" class="form-control">
+                                <option value="">Select Priority</option>
+                                <option value="1">Low</option>
+                                <option value="2">Medium</option>
+                                <option value="3">High</option>
+                                <option value="4">Urgent</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="relevance">
+                                <i class="fas fa-star"></i>
+                                Relevance
+                            </label>
+                            <select id="relevance" name="FK_STD_KAL_RELEVANZ" class="form-control">
+                                <option value="">Select Relevance</option>
+                                <option value="1">Personal</option>
+                                <option value="2">Work</option>
+                                <option value="3">Important</option>
+                                <option value="4">Critical</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>
+                                <i class="fas fa-sync"></i>
+                                Recurrence
+                            </label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="recurrence" name="WDH">
+                                    <span>Recurring Event</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="recurrenceDetail">
+                                <i class="fas fa-redo"></i>
+                                Recurrence Detail
+                            </label>
+                            <input type="text" id="recurrenceDetail" name="WDH1" class="form-control" 
+                                   placeholder="e.g., Weekly, Monthly, Yearly">
+                        </div>
+                    </div>
+                    
+                    <!-- Location & Project Section -->
+                    <div class="form-section">
+                        <h3 class="section-title">
+                            <i class="fas fa-map-marker-alt"></i>
+                            Location & Project
+                        </h3>
+                        
+                        <div class="form-group">
+                            <label for="location">
+                                <i class="fas fa-location-dot"></i>
+                                Location
+                            </label>
+                            <select id="location" name="FK_LOC_LOCATION" class="form-control">
+                                <option value="">Select Location</option>
+                                <option value="1">Office</option>
+                                <option value="2">Home</option>
+                                <option value="3">Meeting Room A</option>
+                                <option value="4">Conference Center</option>
+                                <option value="5">Remote/Online</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="project">
+                                <i class="fas fa-project-diagram"></i>
+                                Project
+                            </label>
+                            <select id="project" name="FK_PROJ_PROJEKT" class="form-control">
+                                <option value="">Select Project</option>
+                                <option value="1">Project Alpha</option>
+                                <option value="2">Project Beta</option>
+                                <option value="3">Project Gamma</option>
+                                <option value="4">Project Delta</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="partner">
+                                <i class="fas fa-handshake"></i>
+                                Business Partner
+                            </label>
+                            <select id="partner" name="FK_KON_GESCHAEFTSPARTNER" class="form-control">
+                                <option value="">Select Partner</option>
+                                <option value="1">ABC Corporation</option>
+                                <option value="2">XYZ Ltd.</option>
+                                <option value="3">Global Solutions</option>
+                                <option value="4">Tech Innovators</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="mandant">
+                                <i class="fas fa-building"></i>
+                                Mandant
+                            </label>
+                            <select id="mandant" name="FK_MDT_MANDANT" class="form-control">
+                                <option value="">Select Mandant</option>
+                                <option value="1">Main Office</option>
+                                <option value="2">Branch Office</option>
+                                <option value="3">Subsidiary A</option>
+                                <option value="4">Subsidiary B</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="inventory">
+                                <i class="fas fa-box"></i>
+                                Inventory
+                            </label>
+                            <input type="text" id="inventory" name="FK_INV_INVENTAR" class="form-control" 
+                                   placeholder="Inventory reference">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="document">
+                                <i class="fas fa-file"></i>
+                                Document Reference
+                            </label>
+                            <input type="text" id="document" name="FK_INP_BELEGE_ALL" class="form-control" 
+                                   placeholder="Document ID">
+                        </div>
+                    </div>
+                    
+                    <!-- Online & Validity Section -->
+                    <div class="form-section">
+                        <h3 class="section-title">
+                            <i class="fas fa-globe"></i>
+                            Online & Validity
+                        </h3>
+                        
+                        <div class="form-group">
+                            <label for="onlineStatus">
+                                <i class="fas fa-wifi"></i>
+                                Online Status
+                            </label>
+                            <select id="onlineStatus" name="FK_STD_KAL_ONLINE" class="form-control">
+                                <option value="">Select Online Status</option>
+                                <option value="1">Offline</option>
+                                <option value="2">Online</option>
+                                <option value="3">Hybrid</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="validFrom">
+                                    <i class="fas fa-hourglass-start"></i>
+                                    Valid From
+                                </label>
+                                <input type="datetime-local" id="validFrom" name="VALID_FROM" class="form-control">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="validTo">
+                                    <i class="fas fa-hourglass-end"></i>
+                                    Valid To
+                                </label>
+                                <input type="datetime-local" id="validTo" name="VALID_TO" class="form-control">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>
+                                <i class="fas fa-laptop"></i>
+                                Online Event Options
+                            </label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="onlinePlanned" name="FK_STD_KAL_ONLINE_GEPLANT">
+                                    <span>Planned as Online</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="onlineActual" name="FK_STD_KAL_ONLINE_IST">
+                                    <span>Actual Online</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="timelinePosition">
+                                <i class="fas fa-timeline"></i>
+                                Timeline Position
+                            </label>
+                            <input type="number" id="timelinePosition" name="FK_STD_KAL_ZEITREIHENPOSITION" 
+                                   class="form-control" placeholder="Position in timeline">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="createdBy">
+                                <i class="fas fa-user"></i>
+                                Created By
+                            </label>
+                            <input type="text" id="createdBy" name="CREATED_BY" class="form-control" 
+                                   placeholder="Enter your name" value="System User">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="modifiedBy">
+                                <i class="fas fa-user-edit"></i>
+                                Modified By
+                            </label>
+                            <input type="text" id="modifiedBy" name="MODIFIED_BY" class="form-control" 
+                                   placeholder="Will be set on update">
+                        </div>
+                    </div>
+                    
+                    <!-- Form Buttons -->
+                    <div class="form-buttons">
+                        <button type="button" class="action-btn secondary" id="createBtn">
+                            <i class="fas fa-plus-circle"></i>
+                            Create New Termin
+                        </button>
+                        <button type="button" class="action-btn primary" id="updateBtn">
+                            <i class="fas fa-save"></i>
+                            Update Termin
+                        </button>
+                        <button type="button" class="action-btn danger" id="deleteBtn">
+                            <i class="fas fa-trash"></i>
+                            Delete Termin
+                        </button>
+                        <button type="button" class="action-btn" id="clearBtn" style="background: var(--gray); color: white;">
+                            <i class="fas fa-times"></i>
+                            Clear Form
+                        </button>
+                    </div>
+                </div>
+            </form>
+            
+            <!-- API Response Display -->
+            <div id="apiResponse" class="api-response">
+                <div class="response-title">API Response:</div>
+                <pre id="responseContent"></pre>
+            </div>
+        </div>
+        
+        <!-- Web Service Info -->
+        <div class="service-info">
+            <h3><i class="fas fa-plug"></i> Web Service Information</h3>
+            <p>This application uses the following web service endpoints:</p>
+            <div class="service-url">GET: http://localhost:5000/termine</div>
+            <div class="service-url">GET Single: http://localhost:5000/termine/:id</div>
+            <div class="service-url">POST: http://localhost:5000/termine/insert</div>
+            <div class="service-url">PUT: http://localhost:5000/termine/update/:id</div>
+            <div class="service-url">DELETE: http://localhost:5000/termine/delete/:id</div>
+            <div class="service-url">GET Today: http://localhost:5000/termine/today</div>
+            <div class="service-url">GET Statistics: http://localhost:5000/termine/statistics</div>
+            <div class="service-url">GET Range: http://localhost:5000/termine/range/:from/:to</div>
+            <p style="margin-top: 15px; font-size: 0.95rem; color: var(--gray);">
+                <i class="fas fa-info-circle"></i>
+                Data is loaded in real-time from the web service. Click "Refresh" to update.
+            </p>
+        </div>
+        
+        <!-- Footer -->
+        <footer>
+            <p>Complete Calendar Application &copy; 2023 | Web Service Integration with Full CRUD Operations</p>
+            <p style="margin-top: 10px; font-size: 0.9rem;">Last updated: <span id="lastUpdated">Not loaded yet</span></p>
+        </footer>
+    </div>
+
+    <script>
+        // Web Service Configuration
+        const WEB_SERVICE_BASE_URL = 'http://localhost:5000';
+        const ENDPOINTS = {
+            GET_ALL: `${WEB_SERVICE_BASE_URL}/kal_termine`,
+            GET_ONE: (id) => `${WEB_SERVICE_BASE_URL}/termine/${id}`,
+            CREATE: `${WEB_SERVICE_BASE_URL}/termine/insert`,
+            UPDATE: (id) => `${WEB_SERVICE_BASE_URL}/termine/update/${id}`,
+            DELETE: (id) => `${WEB_SERVICE_BASE_URL}/termine/delete/${id}`,
+            TODAY: `${WEB_SERVICE_BASE_URL}/termine/today`,
+            STATISTICS: `${WEB_SERVICE_BASE_URL}/termine/statistics`,
+            RANGE: (from, to) => `${WEB_SERVICE_BASE_URL}/termine/range/${from}/${to}`
+        };
+        
+        // DOM Elements
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const currentYearEl = document.getElementById('currentYear');
+        const calendarYearEl = document.getElementById('calendarYear');
+        const listViewYearEl = document.getElementById('listViewYear');
+        const currentMonthYearEl = document.getElementById('currentMonthYear');
+        const currentMonthDisplayEl = document.getElementById('currentMonthDisplay');
+        const prevYearBtn = document.getElementById('prevYearBtn');
+        const nextYearBtn = document.getElementById('nextYearBtn');
+        const prevMonthBtn = document.getElementById('prevMonthBtn');
+        const nextMonthBtn = document.getElementById('nextMonthBtn');
+        const todayBtn = document.getElementById('todayBtn');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const testApiBtn = document.getElementById('testApiBtn');
+        const searchInput = document.getElementById('searchInput');
+        const monthFilter = document.getElementById('monthFilter');
+        const eventFilter = document.getElementById('eventFilter');
+        const oldCalendarGrid = document.getElementById('oldCalendarGrid');
+        const yearCalendar = document.getElementById('yearCalendar');
+        const dayEventsModal = document.getElementById('dayEventsModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalContent = document.getElementById('modalContent');
+        const lastUpdatedEl = document.getElementById('lastUpdated');
+        const viewTabs = document.querySelectorAll('.view-tab');
+        const viewContainers = document.querySelectorAll('.view-container');
+        const eventsTableBody = document.getElementById('eventsTableBody');
+        const noEventsMessage = document.getElementById('noEventsMessage');
+        const sortBySelect = document.getElementById('sortBy');
+        const itemsPerPageSelect = document.getElementById('itemsPerPage');
+        const statusFilter = document.getElementById('statusFilter');
+        const paginationEl = document.getElementById('pagination');
+        const exportListBtn = document.getElementById('exportListBtn');
+        const printListBtn = document.getElementById('printListBtn');
+        const apiStatus = document.getElementById('apiStatus');
+        
+        // Form Elements
+        const terminForm = document.getElementById('terminForm');
+        const terminIdInput = document.getElementById('terminId');
+        const createBtn = document.getElementById('createBtn');
+        const updateBtn = document.getElementById('updateBtn');
+        const deleteBtn = document.getElementById('deleteBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const resetFormBtn = document.getElementById('resetFormBtn');
+        const loadForEditBtn = document.getElementById('loadForEditBtn');
+        const apiResponseDiv = document.getElementById('apiResponse');
+        const responseContent = document.getElementById('responseContent');
+        const apiResponseModal = document.getElementById('apiResponseModal');
+        const closeApiModalBtn = document.getElementById('closeApiModalBtn');
+        const apiModalTitle = document.getElementById('apiModalTitle');
+        const apiModalContent = document.getElementById('apiModalContent');
+        
+        // Stats Elements
+        const totalEventsStat = document.getElementById('totalEventsStat');
+        const upcomingEventsStat = document.getElementById('upcomingEventsStat');
+        const pastEventsStat = document.getElementById('pastEventsStat');
+        const monthsWithEventsStat = document.getElementById('monthsWithEventsStat');
+        
+        // Global Variables
+        let allEvents = [];
+        let filteredEvents = [];
+        let currentYear = new Date().getFullYear();
+        let currentMonth = new Date().getMonth(); // 0-11
+        let currentPage = 1;
+        let itemsPerPage = 50;
+        let isApiOnline = false;
+        
+        // Month and Day Names
+        const monthNames = [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ];
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const dayNamesFull = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        
+        // Initialize Application
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            setupFormDefaults();
+            testApiConnection();
+            loadEventsFromService();
+            updateOldCalendar();
+        });
+        
+        // Setup Event Listeners
+        function setupEventListeners() {
+            // Year Navigation
+            prevYearBtn.addEventListener('click', () => changeYear(-1));
+            nextYearBtn.addEventListener('click', () => changeYear(1));
+            
+            // Month Navigation (Old Calendar)
+            prevMonthBtn.addEventListener('click', () => changeMonth(-1));
+            nextMonthBtn.addEventListener('click', () => changeMonth(1));
+            
+            // Actions
+            todayBtn.addEventListener('click', goToToday);
+            refreshBtn.addEventListener('click', loadEventsFromService);
+            testApiBtn.addEventListener('click', testApiConnection);
+            
+            // View Tabs
+            viewTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const view = tab.getAttribute('data-view');
+                    switchView(view);
+                });
+            });
+            
+            // Filters
+            searchInput.addEventListener('input', updateCalendar);
+            monthFilter.addEventListener('change', updateCalendar);
+            eventFilter.addEventListener('change', updateCalendar);
+            statusFilter.addEventListener('change', updateCalendar);
+            
+            // List View Controls
+            sortBySelect.addEventListener('change', updateListView);
+            itemsPerPageSelect.addEventListener('change', function() {
+                itemsPerPage = this.value === 'all' ? Infinity : parseInt(this.value);
+                currentPage = 1;
+                updateListView();
+            });
+            
+            // List Actions
+            exportListBtn.addEventListener('click', exportList);
+            printListBtn.addEventListener('click', printList);
+            
+            // Form Actions
+            createBtn.addEventListener('click', createTermin);
+            updateBtn.addEventListener('click', updateTermin);
+            deleteBtn.addEventListener('click', deleteTermin);
+            clearBtn.addEventListener('click', clearForm);
+            resetFormBtn.addEventListener('click', resetForm);
+            loadForEditBtn.addEventListener('click', () => {
+                const id = prompt("Enter Termin ID to load for editing:");
+                if (id) {
+                    loadTerminForEdit(id);
+                }
+            });
+            
+            // Modals
+            closeModalBtn.addEventListener('click', closeModal);
+            dayEventsModal.addEventListener('click', (e) => {
+                if (e.target === dayEventsModal) closeModal();
+            });
+            
+            closeApiModalBtn.addEventListener('click', closeApiModal);
+            apiResponseModal.addEventListener('click', (e) => {
+                if (e.target === apiResponseModal) closeApiModal();
+            });
+            
+            // Form validation
+            terminForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+            });
+            
+            // Real-time validation
+            document.getElementById('datum').addEventListener('change', validateDate);
+            document.getElementById('description').addEventListener('input', validateDescription);
+            document.getElementById('status').addEventListener('change', validateStatus);
+        }
+        
+        // Setup Form Defaults
+        function setupFormDefaults() {
+            const now = new Date();
+            const nowString = now.toISOString().slice(0, 16);
+            
+            // Set default date to now
+            document.getElementById('datum').value = nowString;
+            document.getElementById('plannedDate').value = nowString;
+            
+            // Set default created by
+            document.getElementById('createdBy').value = 'System User';
+            
+            // Set default status
+            document.getElementById('status').value = '1';
+        }
+        
+        // Test API Connection
+        async function testApiConnection() {
+            showLoading();
+            
+            try {
+                const response = await fetch(ENDPOINTS.GET_ALL);
+                isApiOnline = response.ok;
+                
+                if (isApiOnline) {
+                    apiStatus.textContent = 'API Online';
+                    apiStatus.className = 'api-status online';
+                    showNotification('API connection successful!', 'success');
+                } else {
+                    apiStatus.textContent = 'API Offline';
+                    apiStatus.className = 'api-status offline';
+                    showNotification('API connection failed', 'error');
+                }
+            } catch (error) {
+                isApiOnline = false;
+                apiStatus.textContent = 'API Offline';
+                apiStatus.className = 'api-status offline';
+                showNotification(`API connection failed: ${error.message}`, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // Switch View
+        function switchView(view) {
+            // Update active tab
+            viewTabs.forEach(tab => {
+                tab.classList.toggle('active', tab.getAttribute('data-view') === view);
+            });
+            
+            // Show corresponding view
+            viewContainers.forEach(container => {
+                container.classList.toggle('active', container.id === `${view}View`);
+            });
+            
+            // Update specific views
+            if (view === 'oldCalendar') {
+                updateOldCalendar();
+            } else if (view === 'list') {
+                updateListView();
+            }
+        }
+        
+        // Show Loading
+        function showLoading() {
+            loadingOverlay.style.display = 'flex';
+        }
+        
+        // Hide Loading
+        function hideLoading() {
+            loadingOverlay.style.display = 'none';
+        }
+        
+        // Load Events from Web Service
+        async function loadEventsFromService() {
+            showLoading();
+            
+            try {
+                const response = await fetch(ENDPOINTS.GET_ALL);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Handle both paginated and non-paginated responses
+                    allEvents = data.data || data;
+                    
+                    // Update last updated time
+                    const now = new Date();
+                    lastUpdatedEl.textContent = now.toLocaleString();
+                    
+                    // Update API status
+                    isApiOnline = true;
+                    apiStatus.textContent = 'API Online';
+                    apiStatus.className = 'api-status online';
+                    
+                    showNotification(`Loaded ${allEvents.length} events from web service`, 'success');
+                    updateCalendar();
+                    updateListView();
+                    updateOldCalendar();
+                } else {
+                    throw new Error(data.error || 'Failed to load events');
+                }
+                
+            } catch (error) {
+                console.error('Error loading events:', error);
+                showNotification(`Failed to load events: ${error.message}`, 'error');
+                
+                // Update API status
+                isApiOnline = false;
+                apiStatus.textContent = 'API Offline';
+                apiStatus.className = 'api-status offline';
+                
+                // Display error in old calendar
+                oldCalendarGrid.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: var(--danger);">
+                        <i class="fas fa-exclamation-triangle fa-3x"></i>
+                        <h3 style="margin-top: 20px;">Failed to Load Events</h3>
+                        <p>Error: ${error.message}</p>
+                        <p>Please check if the web service is running at:</p>
+                        <p><code>${ENDPOINTS.GET_ALL}</code></p>
+                        <button onclick="loadEventsFromService()" class="action-btn secondary" style="margin-top: 20px;">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
+                    </div>
+                `;
+                
+                eventsTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 60px 20px; color: var(--danger);">
+                            <i class="fas fa-exclamation-triangle fa-2x"></i>
+                            <h3 style="margin-top: 20px;">Failed to Load Events</h3>
+                            <p>Error: ${error.message}</p>
+                        </td>
+                    </tr>
+                `;
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // Change Year
+        function changeYear(delta) {
+            currentYear += delta;
+            currentYearEl.textContent = currentYear;
+            calendarYearEl.textContent = currentYear;
+            listViewYearEl.textContent = currentYear;
+            updateCalendar();
+            updateOldCalendar();
+        }
+        
+        // Change Month (Old Calendar)
+        function changeMonth(delta) {
+            currentMonth += delta;
+            
+            // Handle year rollover
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+                currentYearEl.textContent = currentYear;
+            } else if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+                currentYearEl.textContent = currentYear;
+            }
+            
+            updateOldCalendar();
+        }
+        
+        // Go to Today
+        function goToToday() {
+            const today = new Date();
+            currentYear = today.getFullYear();
+            currentMonth = today.getMonth();
+            
+            currentYearEl.textContent = currentYear;
+            calendarYearEl.textContent = currentYear;
+            listViewYearEl.textContent = currentYear;
+            
+            // Also set today's date in form
+            const nowString = today.toISOString().slice(0, 16);
+            document.getElementById('datum').value = nowString;
+            
+            updateCalendar();
+            updateOldCalendar();
+        }
+        
+        // Update Calendar
+        function updateCalendar() {
+            // Filter events based on search and filters
+            filterEvents();
+            
+            // Update year calendar
+            renderYearCalendar();
+            
+            // Update statistics
+            updateStatistics();
+        }
+        
+        // Update Old Calendar (Traditional Monthly View)
+        function updateOldCalendar() {
+            // Update month display
+            const monthYear = `${monthNames[currentMonth]} ${currentYear}`;
+            currentMonthYearEl.textContent = monthYear;
+            currentMonthDisplayEl.textContent = monthYear;
+            
+            // Generate calendar for current month
+            renderOldCalendar();
+        }
+        
+        // Render Old Calendar (Traditional Monthly View)
+        function renderOldCalendar() {
+            // Clear calendar grid
+            oldCalendarGrid.innerHTML = '';
+            
+            // Create header row
+            dayNamesFull.forEach(day => {
+                const header = document.createElement('div');
+                header.className = 'calendar-header';
+                header.textContent = day;
+                oldCalendarGrid.appendChild(header);
+            });
+            
+            // Get first day of month and total days
+            const firstDay = new Date(currentYear, currentMonth, 1);
+            const lastDay = new Date(currentYear, currentMonth + 1, 0);
+            const totalDays = lastDay.getDate();
+            const startingDay = firstDay.getDay(); // 0 = Sunday, 1 = Monday, etc.
+            
+            // Get today's date for comparison
+            const today = new Date();
+            const todayDate = today.getDate();
+            const todayMonth = today.getMonth();
+            const todayYear = today.getFullYear();
+            
+            // Get events for current month
+            const monthEvents = allEvents.filter(event => {
+                try {
+                    const eventDate = new Date(event.DATUM || event.datum);
+                    return eventDate.getMonth() === currentMonth && 
+                           eventDate.getFullYear() === currentYear;
+                } catch (error) {
+                    return false;
+                }
+            });
+            
+            // Group events by day
+            const eventsByDay = {};
+            monthEvents.forEach(event => {
+                try {
+                    const eventDate = new Date(event.DATUM || event.datum);
+                    const day = eventDate.getDate();
+                    if (!eventsByDay[day]) {
+                        eventsByDay[day] = [];
+                    }
+                    eventsByDay[day].push(event);
+                } catch (error) {
+                    // Skip invalid dates
+                }
+            });
+            
+            // Add empty cells for days before the first day of month
+            for (let i = 0; i < startingDay; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day other-month';
+                oldCalendarGrid.appendChild(emptyDay);
+            }
+            
+            // Add days of the month
+            for (let day = 1; day <= totalDays; day++) {
+                const dayElement = document.createElement('div');
+                const dayEvents = eventsByDay[day] || [];
+                const isToday = day === todayDate && 
+                               currentMonth === todayMonth && 
+                               currentYear === todayYear;
+                
+                dayElement.className = 'calendar-day';
+                if (isToday) {
+                    dayElement.classList.add('today');
+                }
+                
+                // Create day number and event count
+                dayElement.innerHTML = `
+                    <div class="day-number">
+                        <span>${day}</span>
+                        ${dayEvents.length > 0 ? `<div class="event-count">${dayEvents.length}</div>` : ''}
+                    </div>
+                    <div class="day-events">
+                        ${dayEvents.length > 0 ? 
+                            dayEvents.slice(0, 3).map(event => {
+                                const description = event.DESCR || event.description || '';
+                                const shortDesc = description.length > 30 ? 
+                                    description.substring(0, 30) + '...' : 
+                                    description;
+                                const id = event.PK_KAL_TERMIN || event.termin_id || event.id;
+                                return `<div class="day-event" onclick="loadTerminForEdit('${id}')" title="${event.PK_KAL_TERMIN} ${event.DATUM} ${description}">${shortDesc}</div>`;
+                            }).join('') :
+                            `<div class="no-events">No events</div>`
+                        }
+                        ${dayEvents.length > 3 ? `<div class="day-event" onclick="showDayEvents(${day}, ${currentMonth}, ${currentYear})">+ ${dayEvents.length - 3} more</div>` : ''}
+                    </div>
+                `;
+                
+                // Add click event to show day events
+                dayElement.addEventListener('click', (e) => {
+                    if (!e.target.classList.contains('day-event')) {
+                        showDayEvents(day, currentMonth, currentYear);
+                    }
+                });
+                
+                oldCalendarGrid.appendChild(dayElement);
+            }
+            
+            // Add empty cells to complete the grid (6 rows * 7 days = 42 cells)
+            const totalCells = 42;
+            const remainingCells = totalCells - (startingDay + totalDays);
+            for (let i = 0; i < remainingCells; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day other-month';
+                oldCalendarGrid.appendChild(emptyDay);
+            }
+        }
+        
+        // Filter Events
+        function filterEvents() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const selectedMonth = monthFilter.value;
+            const eventFilterValue = eventFilter.value;
+            const selectedStatus = statusFilter.value;
+            const today = new Date();
+            
+            filteredEvents = allEvents.filter(event => {
+                try {
+                    const eventDate = new Date(event.DATUM || event.datum);
+                    const eventYear = eventDate.getFullYear();
+                    
+                    // Year filter
+                    if (eventYear !== currentYear) return false;
+                    
+                    // Month filter
+                    if (selectedMonth !== 'all' && eventDate.getMonth() !== parseInt(selectedMonth)) {
+                        return false;
+                    }
+                    
+                    // Search filter
+                    const searchableText = (event.DESCR || event.description || '') + ' ' + 
+                                          (event.COMM || event.comments || '') + ' ' +
+                                          (event.termin_type_name || event.type || '') + ' ' +
+                                          (event.status_name || event.status || '');
+                    if (searchTerm && !searchableText.toLowerCase().includes(searchTerm)) {
+                        return false;
+                    }
+                    
+                    // Status filter
+                    if (selectedStatus !== 'all') {
+                        const eventStatus = event.FK_STD_KAL_STATUS || event.status_id;
+                        if (eventStatus != selectedStatus) return false;
+                    }
+                    
+                    // Event type filter
+                    if (eventFilterValue !== 'all') {
+                        const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+                        const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                        
+                        if (eventFilterValue === 'upcoming') {
+                            return eventDateOnly >= todayOnly;
+                        } else if (eventFilterValue === 'past') {
+                            return eventDateOnly < todayOnly;
+                        } else if (eventFilterValue === 'today') {
+                            return eventDateOnly.getTime() === todayOnly.getTime();
+                        }
+                    }
+                    
+                    return true;
+                } catch (error) {
+                    console.error('Filter error:', error);
+                    return false;
+                }
+            });
+        }
+        
+        // Render Year Calendar
+        function renderYearCalendar() {
+            yearCalendar.innerHTML = '';
+            
+            // Group events by month
+            const eventsByMonth = {};
+            for (let i = 0; i < 12; i++) {
+                eventsByMonth[i] = filteredEvents.filter(event => {
+                    try {
+                        return new Date(event.DATUM || event.datum).getMonth() === i;
+                    } catch (error) {
+                        return false;
+                    }
+                });
+            }
+            
+            // Create month cards
+            for (let month = 0; month < 12; month++) {
+                const monthEvents = eventsByMonth[month];
+                const monthCard = document.createElement('div');
+                monthCard.className = 'month-card';
+                
+                // Generate calendar for this month
+                const calendarHTML = generateMonthCalendar(month, monthEvents);
+                
+                // Get first few events for display
+                const recentEvents = monthEvents.slice(0, 3);
+                
+                monthCard.innerHTML = `
+                    <div class="month-header">
+                        <div class="month-title">
+                            <div class="month-name">${monthNames[month]}</div>
+                            <div class="month-event-count">${monthEvents.length}</div>
+                        </div>
+                        <div class="month-stats">
+                            <div class="month-stat">
+                                <i class="fas fa-calendar-check"></i>
+                                <span>${monthEvents.length} events</span>
+                            </div>
+                            <div class="month-stat">
+                                <i class="fas fa-clock"></i>
+                                <span>${countUpcomingEvents(monthEvents)} upcoming</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="month-calendar">
+                        ${calendarHTML}
+                    </div>
+                    <div class="month-events">
+                        <div class="events-title">
+                            <i class="fas fa-list"></i>
+                            <span>Recent Events</span>
+                        </div>
+                        <div class="events-list">
+                            ${recentEvents.length > 0 ? 
+                                recentEvents.map(event => {
+                                    const description = event.DESCR || event.description || '';
+                                    const shortDesc = description.length > 50 ? 
+                                        description.substring(0, 50) + '...' : 
+                                        description;
+                                    const id = event.PK_KAL_TERMIN || event.termin_id || event.id;
+                                    
+                                    return `
+                                        <div class="event-item" onclick="loadTerminForEdit('${id}')" style="cursor: pointer;">
+                                            <div class="event-date">
+                                                <i class="far fa-calendar"></i>
+                                                ${formatEventDate(event.DATUM || event.datum, true)}
+                                            </div>
+                                            <div class="event-description">
+                                                ${shortDesc}
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('') :
+                                `<div style="text-align: center; padding: 20px; color: var(--gray);">
+                                    <i class="fas fa-calendar-times"></i>
+                                    <p>No events this month</p>
+                                </div>`
+                            }
+                            ${monthEvents.length > 3 ? `
+                                <div style="text-align: center; margin-top: 15px;">
+                                    <button onclick="viewAllMonthEvents(${month})" style="
+                                        padding: 8px 16px;
+                                        background: var(--primary);
+                                        color: white;
+                                        border: none;
+                                        border-radius: 6px;
+                                        font-size: 0.9rem;
+                                        cursor: pointer;
+                                        display: inline-flex;
+                                        align-items: center;
+                                        gap: 8px;
+                                        transition: all 0.3s ease;
+                                    " onmouseover="this.style.background='var(--primary-dark)'" 
+                                     onmouseout="this.style.background='var(--primary)'">
+                                        <i class="fas fa-eye"></i>
+                                        View All ${monthEvents.length} Events
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+                
+                yearCalendar.appendChild(monthCard);
+            }
+        }
+        
+        // Generate Month Calendar HTML
+        function generateMonthCalendar(month, monthEvents) {
+            const firstDay = new Date(currentYear, month, 1);
+            const lastDay = new Date(currentYear, month + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            const startingDay = firstDay.getDay();
+            const today = new Date();
+            
+            // Group events by day
+            const eventsByDay = {};
+            monthEvents.forEach(event => {
+                try {
+                    const eventDate = new Date(event.DATUM || event.datum);
+                    const day = eventDate.getDate();
+                    if (!eventsByDay[day]) {
+                        eventsByDay[day] = [];
+                    }
+                    eventsByDay[day].push(event);
+                } catch (error) {
+                    // Skip invalid dates
+                }
+            });
+            
+            // Create calendar HTML
+            let calendarHTML = `
+                <div class="calendar-weekdays">
+                    ${dayNames.map(day => `<div class="weekday">${day}</div>`).join('')}
+                </div>
+                <div class="calendar-days">
+            `;
+            
+            // Add empty cells for days before the first day
+            for (let i = 0; i < startingDay; i++) {
+                calendarHTML += '<div class="small-calendar-day other-month"></div>';
+            }
+            
+            // Add days of the month
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayEvents = eventsByDay[day] || [];
+                const hasEvents = dayEvents.length > 0;
+                const isToday = today.getDate() === day && 
+                               today.getMonth() === month && 
+                               today.getFullYear() === currentYear;
+                
+                let dayClass = 'small-calendar-day';
+                if (isToday) dayClass += ' today';
+                if (hasEvents) dayClass += ' has-events';
+                
+                calendarHTML += `
+                    <div class="${dayClass}" 
+                         onclick="${hasEvents ? `showDayEvents(${day}, ${month}, ${currentYear})` : ''}" 
+                         style="${hasEvents ? 'cursor: pointer;' : ''}"
+                         title="${hasEvents ? `${dayEvents.length} event(s) on this day` : ''}">
+                        <div class="small-day-number">${day}</div>
+                        ${hasEvents ? `
+                            <div class="small-event-indicators">
+                                ${Array(Math.min(dayEvents.length, 3)).fill('<div class="small-event-indicator"></div>').join('')}
+                            </div>
+                            ${dayEvents.length > 1 ? `<div class="small-event-count">${dayEvents.length}</div>` : ''}
+                        ` : ''}
+                    </div>
+                `;
+            }
+            
+            // Complete the grid (6 weeks)
+            const totalCells = 42;
+            const remainingCells = totalCells - (startingDay + daysInMonth);
+            for (let i = 0; i < remainingCells; i++) {
+                calendarHTML += '<div class="small-calendar-day other-month"></div>';
+            }
+            
+            calendarHTML += '</div>';
+            return calendarHTML;
+        }
+        
+        // Update Statistics
+        function updateStatistics() {
+            const today = new Date();
+            
+            // Filter events for current year
+            const yearEvents = allEvents.filter(event => {
+                try {
+                    return new Date(event.DATUM || event.datum).getFullYear() === currentYear;
+                } catch (error) {
+                    return false;
+                }
+            });
+            
+            // Total events
+            totalEventsStat.textContent = yearEvents.length;
+            
+            // Upcoming events
+            const upcomingEvents = yearEvents.filter(event => {
+                try {
+                    const eventDate = new Date(event.DATUM || event.datum);
+                    const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+                    const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                    return eventDateOnly >= todayOnly;
+                } catch (error) {
+                    return false;
+                }
+            });
+            upcomingEventsStat.textContent = upcomingEvents.length;
+            
+            // Past events
+            const pastEvents = yearEvents.filter(event => {
+                try {
+                    const eventDate = new Date(event.DATUM || event.datum);
+                    const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+                    const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                    return eventDateOnly < todayOnly;
+                } catch (error) {
+                    return false;
+                }
+            });
+            pastEventsStat.textContent = pastEvents.length;
+            
+            // Months with events
+            const monthsWithEvents = new Set();
+            yearEvents.forEach(event => {
+                try {
+                    monthsWithEvents.add(new Date(event.DATUM || event.datum).getMonth());
+                } catch (error) {
+                    // Skip invalid dates
+                }
+            });
+            monthsWithEventsStat.textContent = monthsWithEvents.size;
+        }
+        
+        // Update List View
+        function updateListView() {
+            if (filteredEvents.length === 0) {
+                eventsTableBody.innerHTML = '';
+                noEventsMessage.style.display = 'block';
+                paginationEl.style.display = 'none';
+                return;
+            }
+            
+            noEventsMessage.style.display = 'none';
+            
+            // Sort events
+            const sortedEvents = [...filteredEvents];
+            const sortBy = sortBySelect.value;
+            
+            sortedEvents.sort((a, b) => {
+                const dateA = new Date(a.DATUM || a.datum);
+                const dateB = new Date(b.DATUM || b.datum);
+                const idA = parseInt(a.PK_KAL_TERMIN || a.termin_id || a.id);
+                const idB = parseInt(b.PK_KAL_TERMIN || b.termin_id || b.id);
+                
+                switch (sortBy) {
+                    case 'date-asc':
+                        return dateA - dateB;
+                    case 'date-desc':
+                        return dateB - dateA;
+                    case 'id-asc':
+                        return idA - idB;
+                    case 'id-desc':
+                        return idB - idA;
+                    default:
+                        return dateA - dateB;
+                }
+            });
+            
+            // Pagination
+            const totalPages = Math.ceil(sortedEvents.length / itemsPerPage);
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = Math.min(startIndex + itemsPerPage, sortedEvents.length);
+            const pageEvents = sortedEvents.slice(startIndex, endIndex);
+            
+            // Clear table
+            eventsTableBody.innerHTML = '';
+            
+            // Add events to table
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            pageEvents.forEach(event => {
+                const eventDate = new Date(event.DATUM || event.datum);
+                const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+                const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                
+                const isToday = eventDateOnly.getTime() === todayOnly.getTime();
+                const isPast = eventDateOnly < todayOnly;
+                const isUpcoming = eventDateOnly > todayOnly;
+                
+                let rowClass = 'event-row';
+                if (isPast) rowClass += ' past';
+                if (isUpcoming) rowClass += ' upcoming';
+                if (isToday) rowClass += ' today';
+                
+                const description = event.DESCR || event.description || '';
+                const comments = event.COMM || event.comments || '';
+                const type = event.termin_type_name || event.type || 'Meeting';
+                const status = event.status_name || 'Pending';
+                const time = extractTime(description);
+                const location = extractLocation(description);
+                const id = event.PK_KAL_TERMIN || event.termin_id || event.id;
+                
+                let statusClass = '';
+                if (isToday) {
+                    statusClass = 'status-today';
+                } else if (isPast) {
+                    statusClass = 'status-past';
+                } else {
+                    statusClass = 'status-upcoming';
+                }
+                
+                const row = document.createElement('tr');
+                row.className = rowClass;
+                row.innerHTML = `
+                    <td>
+                        <div class="event-id">${id}</div>
+                    </td>
+                    <td class="event-date-cell">
+                        ${formatEventDate(event.DATUM || event.datum)}
+                        ${time ? `<div class="event-time"><i class="far fa-clock"></i> ${time}</div>` : ''}
+                    </td>
+                    <td class="event-description-cell">
+                        <strong>${description}</strong>
+                        ${comments ? `<div style="color: var(--gray); font-size: 0.9rem; margin-top: 5px;">${comments}</div>` : ''}
+                        ${location ? `<div class="event-location"><i class="fas fa-map-marker-alt"></i> ${location}</div>` : ''}
+                    </td>
+                    <td>
+                        <div class="event-status" style="background: #e0f2fe; color: #0369a1;">${type}</div>
+                    </td>
+                    <td>
+                        <div class="event-status ${statusClass}">${status}</div>
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="loadTerminForEdit('${id}')" class="action-btn primary" style="padding: 8px 12px; font-size: 0.85rem;">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button onclick="deleteTerminFromList('${id}')" class="action-btn danger" style="padding: 8px 12px; font-size: 0.85rem;">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                
+                eventsTableBody.appendChild(row);
+            });
+            
+            // Update pagination
+            updatePagination(totalPages);
+        }
+        
+        // Update Pagination
+        function updatePagination(totalPages) {
+            if (totalPages <= 1 || itemsPerPage === Infinity) {
+                paginationEl.style.display = 'none';
+                return;
+            }
+            
+            paginationEl.style.display = 'block';
+            let paginationHTML = `
+                <div style="display: flex; justify-content: center; align-items: center; gap: 10px;">
+                    <button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} 
+                            style="padding: 8px 16px; border: 2px solid var(--border); background: white; border-radius: 6px; cursor: ${currentPage === 1 ? 'not-allowed' : 'pointer'}; opacity: ${currentPage === 1 ? '0.5' : '1'}">
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </button>
+            `;
+            
+            // Page numbers
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                    paginationHTML += `
+                        <button onclick="changePage(${i})" 
+                                style="padding: 8px 16px; border: 2px solid ${i === currentPage ? 'var(--primary)' : 'var(--border)'}; 
+                                       background: ${i === currentPage ? 'var(--primary)' : 'white'}; 
+                                       color: ${i === currentPage ? 'white' : 'var(--dark)'}; 
+                                       border-radius: 6px; cursor: pointer;">
+                            ${i}
+                        </button>
+                    `;
+                } else if (i === currentPage - 3 || i === currentPage + 3) {
+                    paginationHTML += `<span style="padding: 8px 4px;">...</span>`;
+                }
+            }
+            
+            paginationHTML += `
+                    <button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''} 
+                            style="padding: 8px 16px; border: 2px solid var(--border); background: white; border-radius: 6px; cursor: ${currentPage === totalPages ? 'not-allowed' : 'pointer'}; opacity: ${currentPage === totalPages ? '0.5' : '1'}">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+                <div style="text-align: center; margin-top: 10px; color: var(--gray); font-size: 0.9rem;">
+                    Page ${currentPage} of ${totalPages} • Showing ${Math.min(itemsPerPage, filteredEvents.length)} of ${filteredEvents.length} events
+                </div>
+            `;
+            
+            paginationEl.innerHTML = paginationHTML;
+        }
+        
+        // Change Page
+        function changePage(page) {
+            currentPage = page;
+            updateListView();
+            // Scroll to top of table
+            document.getElementById('eventsTable').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Export List
+        function exportList() {
+            const today = new Date();
+            const dateStr = today.toISOString().split('T')[0];
+            const filename = `calendar-events-${dateStr}.csv`;
+            
+            let csv = 'ID,Date,Time,Description,Comments,Type,Status,Location\n';
+            
+            filteredEvents.forEach(event => {
+                const eventDate = new Date(event.DATUM || event.datum);
+                const today = new Date();
+                const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+                const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                
+                const isToday = eventDateOnly.getTime() === todayOnly.getTime();
+                const isPast = eventDateOnly < todayOnly;
+                
+                let status = '';
+                if (isToday) status = 'Today';
+                else if (isPast) status = 'Past';
+                else status = 'Upcoming';
+                
+                const description = event.DESCR || event.description || '';
+                const comments = event.COMM || event.comments || '';
+                const type = event.termin_type_name || event.type || '';
+                const time = extractTime(description) || '';
+                const location = extractLocation(description) || '';
+                const desc = description.replace(/"/g, '""');
+                const comm = comments.replace(/"/g, '""');
+                const date = formatEventDate(event.DATUM || event.datum);
+                const id = event.PK_KAL_TERMIN || event.termin_id || event.id;
+                
+                csv += `"${id}","${date}","${time}","${desc}","${comm}","${type}","${status}","${location}"\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showNotification('Events exported successfully', 'success');
+        }
+        
+        // Print List
+        function printList() {
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Calendar Events - Print</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        h1 { color: #333; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                        th { background: #f1f5f9; padding: 12px; text-align: left; border-bottom: 2px solid #cbd5e1; }
+                        td { padding: 10px; border-bottom: 1px solid #e2e8f0; }
+                        .status { padding: 4px 8px; border-radius: 4px; font-size: 0.9rem; }
+                        .status-upcoming { background: #d1fae5; color: #065f46; }
+                        .status-past { background: #f3f4f6; color: #6b7280; }
+                        .status-today { background: #dbeafe; color: #1e40af; }
+                        .footer { margin-top: 30px; color: #6b7280; font-size: 0.9rem; }
+                        @media print {
+                            body { margin: 0; }
+                            table { page-break-inside: auto; }
+                            tr { page-break-inside: avoid; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>Calendar Events - ${currentYear}</h1>
+                    <p>Printed on: ${new Date().toLocaleString()}</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${filteredEvents.map(event => {
+                                const eventDate = new Date(event.DATUM || event.datum);
+                                const today = new Date();
+                                const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+                                const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                                
+                                const isToday = eventDateOnly.getTime() === todayOnly.getTime();
+                                const isPast = eventDateOnly < todayOnly;
+                                const isUpcoming = eventDateOnly > todayOnly;
+                                
+                                let status = '';
+                                let statusClass = '';
+                                if (isToday) {
+                                    status = 'Today';
+                                    statusClass = 'status-today';
+                                } else if (isPast) {
+                                    status = 'Past';
+                                    statusClass = 'status-past';
+                                } else {
+                                    status = 'Upcoming';
+                                    statusClass = 'status-upcoming';
+                                }
+                                
+                                const description = event.DESCR || event.description || '';
+                                const type = event.termin_type_name || event.type || '';
+                                const time = extractTime(description);
+                                const location = extractLocation(description);
+                                const id = event.PK_KAL_TERMIN || event.termin_id || event.id;
+                                
+                                return `
+                                    <tr>
+                                        <td>${id}</td>
+                                        <td>${formatEventDate(event.DATUM || event.datum)}${time ? `<br><small>${time}</small>` : ''}</td>
+                                        <td>${description}${location ? `<br><small><i>${location}</i></small>` : ''}</td>
+                                        <td>${type}</td>
+                                        <td><span class="status ${statusClass}">${status}</span></td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                    <div class="footer">
+                        <p>Total Events: ${filteredEvents.length}</p>
+                        <p>Source: ${ENDPOINTS.GET_ALL}</p>
+                    </div>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 250);
+        }
+        
+        // FORM FUNCTIONS
+        
+        // Validate Form
+        function validateForm() {
+            let isValid = true;
+            
+            // Clear previous errors
+            clearErrors();
+            
+            // Validate date
+            if (!validateDate()) isValid = false;
+            
+            // Validate description
+            if (!validateDescription()) isValid = false;
+            
+            // Validate status
+            if (!validateStatus()) isValid = false;
+            
+            return isValid;
+        }
+        
+        // Validate Date
+        function validateDate() {
+            const dateInput = document.getElementById('datum');
+            const errorElement = document.getElementById('datumError');
+            
+            if (!dateInput.value) {
+                dateInput.classList.add('error');
+                errorElement.textContent = 'Date is required';
+                errorElement.style.display = 'flex';
+                return false;
+            }
+            
+            dateInput.classList.remove('error');
+            errorElement.style.display = 'none';
+            return true;
+        }
+        
+        // Validate Description
+        function validateDescription() {
+            const descInput = document.getElementById('description');
+            const errorElement = document.getElementById('descriptionError');
+            
+            if (!descInput.value.trim()) {
+                descInput.classList.add('error');
+                errorElement.textContent = 'Description is required';
+                errorElement.style.display = 'flex';
+                return false;
+            }
+            
+            descInput.classList.remove('error');
+            errorElement.style.display = 'none';
+            return true;
+        }
+        
+        // Validate Status
+        function validateStatus() {
+            const statusInput = document.getElementById('status');
+            const errorElement = document.getElementById('statusError');
+            
+            if (!statusInput.value) {
+                statusInput.classList.add('error');
+                errorElement.textContent = 'Status is required';
+                errorElement.style.display = 'flex';
+                return false;
+            }
+            
+            statusInput.classList.remove('error');
+            errorElement.style.display = 'none';
+            return true;
+        }
+        
+        // Clear Errors
+        function clearErrors() {
+            document.querySelectorAll('.error').forEach(el => {
+                el.classList.remove('error');
+            });
+            
+            document.querySelectorAll('.error-message').forEach(el => {
+                el.style.display = 'none';
+            });
+        }
+        
+        // Get Form Data
+        function getFormData() {
+            const formData = {};
+            const formElements = terminForm.elements;
+            
+            for (let element of formElements) {
+                if (element.name && element.type !== 'button' && element.type !== 'submit') {
+                    if (element.type === 'checkbox') {
+                        formData[element.name] = element.checked ? '1' : '0';
+                    } else if (element.type === 'radio') {
+                        if (element.checked) {
+                            formData[element.name] = element.value;
+                        }
+                    } else {
+                        formData[element.name] = element.value || '';
+                    }
+                }
+            }
+            
+            // Convert date strings to ISO format
+            const dateFields = ['DATUM', 'DATUM_GEPLANT', 'DATUM_IST', 'DATUM_NEXT', 'VALID_FROM', 'VALID_TO'];
+            dateFields.forEach(field => {
+                if (formData[field]) {
+                    const date = new Date(formData[field]);
+                    if (!isNaN(date)) {
+                        formData[field] = date.toISOString();
+                    } else {
+                        formData[field] = '';
+                    }
+                }
+            });
+            
+            // Set default values for empty fields
+            if (!formData.FK_STD_KAL_STATUS) formData.FK_STD_KAL_STATUS = '1';
+            if (!formData.FK_MDT_MANDANT) formData.FK_MDT_MANDANT = '1';
+            if (!formData.CREATED_BY) formData.CREATED_BY = 'System User';
+            
+            return formData;
+        }
+        
+        // Create Termin
+        async function createTermin() {
+            if (!validateForm()) {
+                showNotification('Please fix form errors before submitting', 'error');
+                return;
+            }
+            
+            if (!isApiOnline) {
+                showNotification('Cannot create termin: API is offline', 'error');
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const formData = getFormData();
+                
+                // Remove ID for create
+                delete formData.PK_KAL_TERMIN;
+                
+                const response = await fetch(ENDPOINTS.CREATE, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showNotification('Termin created successfully!', 'success');
+                    displayApiResponse(result, 'success');
+                    
+                    // Clear form and reload events
+                    clearForm();
+                    loadEventsFromService();
+                    
+                    // Switch to old calendar view
+                    switchView('oldCalendar');
+                } else {
+                    throw new Error(result.error || 'Failed to create termin');
+                }
+                
+            } catch (error) {
+                console.error('Error creating termin:', error);
+                showNotification(`Failed to create termin: ${error.message}`, 'error');
+                displayApiResponse({ error: error.message }, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // Update Termin
+        async function updateTermin() {
+            const terminId = terminIdInput.value;
+            
+            if (!terminId) {
+                showNotification('Please load a termin to update first', 'error');
+                return;
+            }
+            
+            if (!validateForm()) {
+                showNotification('Please fix form errors before submitting', 'error');
+                return;
+            }
+            
+            if (!isApiOnline) {
+                showNotification('Cannot update termin: API is offline', 'error');
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const formData = getFormData();
+                
+                // Add modified by
+                formData.MODIFIED_BY = document.getElementById('modifiedBy').value || 'System User';
+                
+                const response = await fetch(ENDPOINTS.UPDATE(terminId), {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showNotification('Termin updated successfully!', 'success');
+                    displayApiResponse(result, 'success');
+                    
+                    // Reload events
+                    loadEventsFromService();
+                } else {
+                    throw new Error(result.error || 'Failed to update termin');
+                }
+                
+            } catch (error) {
+                console.error('Error updating termin:', error);
+                showNotification(`Failed to update termin: ${error.message}`, 'error');
+                displayApiResponse({ error: error.message }, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // Delete Termin
+        async function deleteTermin() {
+            const terminId = terminIdInput.value;
+            
+            if (!terminId) {
+                showNotification('Please load a termin to delete first', 'error');
+                return;
+            }
+            
+            if (!isApiOnline) {
+                showNotification('Cannot delete termin: API is offline', 'error');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to delete Termin ID: ${terminId}? This action cannot be undone.`)) {
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const response = await fetch(ENDPOINTS.DELETE(terminId), {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showNotification('Termin deleted successfully!', 'success');
+                    displayApiResponse(result, 'success');
+                    
+                    // Clear form and reload events
+                    clearForm();
+                    loadEventsFromService();
+                    
+                    // Switch to old calendar view
+                    switchView('oldCalendar');
+                } else {
+                    throw new Error(result.error || 'Failed to delete termin');
+                }
+                
+            } catch (error) {
+                console.error('Error deleting termin:', error);
+                showNotification(`Failed to delete termin: ${error.message}`, 'error');
+                displayApiResponse({ error: error.message }, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // Delete Termin from List
+        async function deleteTerminFromList(id) {
+            if (!isApiOnline) {
+                showNotification('Cannot delete termin: API is offline', 'error');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to delete Termin ID: ${id}? This action cannot be undone.`)) {
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const response = await fetch(ENDPOINTS.DELETE(id), {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showNotification('Termin deleted successfully!', 'success');
+                    
+                    // Reload events
+                    loadEventsFromService();
+                } else {
+                    throw new Error(result.error || 'Failed to delete termin');
+                }
+                
+            } catch (error) {
+                console.error('Error deleting termin:', error);
+                showNotification(`Failed to delete termin: ${error.message}`, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // Load Termin for Editing
+        async function loadTerminForEdit(id) {
+            showLoading();
+            
+            try {
+                const response = await fetch(ENDPOINTS.GET_ONE(id));
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // Switch to form view
+                    switchView('form');
+                    
+                    // Populate form
+                    populateForm(result);
+                    
+                    showNotification(`Loaded Termin ID: ${id} for editing`, 'success');
+                } else {
+                    throw new Error(result.error || 'Termin not found');
+                }
+                
+            } catch (error) {
+                console.error('Error loading termin:', error);
+                showNotification(`Failed to load termin: ${error.message}`, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // Populate Form
+        function populateForm(data) {
+            // Clear form first
+            clearForm();
+            
+            // Set ID
+            terminIdInput.value = data.PK_KAL_TERMIN || data.termin_id || data.id || '';
+            
+            // Helper function to set date fields
+            const setDateField = (fieldId, value) => {
+                if (value) {
+                    try {
+                        const date = new Date(value);
+                        if (!isNaN(date)) {
+                            // Format as YYYY-MM-DDTHH:mm
+                            const formatted = date.toISOString().slice(0, 16);
+                            document.getElementById(fieldId).value = formatted;
+                        }
+                    } catch (e) {
+                        console.error(`Error setting date for ${fieldId}:`, e);
+                    }
+                }
+            };
+            
+            // Set date fields
+            setDateField('datum', data.DATUM || data.datum);
+            setDateField('plannedDate', data.DATUM_GEPLANT || data.planned_date);
+            setDateField('actualDate', data.DATUM_IST || data.actual_date);
+            setDateField('nextDate', data.DATUM_NEXT || data.next_date);
+            setDateField('validFrom', data.VALID_FROM || data.valid_from);
+            setDateField('validTo', data.VALID_TO || data.valid_to);
+            
+            // Set text fields
+            const setTextField = (fieldId, value) => {
+                if (value !== undefined && value !== null) {
+                    document.getElementById(fieldId).value = value;
+                }
+            };
+            
+            setTextField('description', data.DESCR || data.description);
+            setTextField('comments', data.COMM || data.comments);
+            setTextField('recurrenceDetail', data.WDH1 || data.recurrence_detail);
+            setTextField('inventory', data.FK_INV_INVENTAR || data.inventory_id);
+            setTextField('document', data.FK_INP_BELEGE_ALL || data.document_id);
+            setTextField('timelinePosition', data.FK_STD_KAL_ZEITREIHENPOSITION || data.timeline_position);
+            setTextField('createdBy', data.CREATED_BY || data.created_by);
+            setTextField('modifiedBy', data.MODIFIED_BY || data.modified_by);
+            
+            // Set select fields
+            const setSelectField = (fieldId, value) => {
+                if (value !== undefined && value !== null) {
+                    const select = document.getElementById(fieldId);
+                    select.value = value.toString();
+                }
+            };
+            
+            setSelectField('status', data.FK_STD_KAL_STATUS || data.status_id);
+            setSelectField('type', data.FK_STD_KAL_TERMIN_TYP || data.type_id);
+            setSelectField('priority', data.FK_STD_KAL_PRIORITAET || data.priority_id);
+            setSelectField('relevance', data.FK_STD_KAL_RELEVANZ || data.relevance_id);
+            setSelectField('location', data.FK_LOC_LOCATION || data.location_id);
+            setSelectField('project', data.FK_PROJ_PROJEKT || data.project_id);
+            setSelectField('partner', data.FK_KON_GESCHAEFTSPARTNER || data.partner_id);
+            setSelectField('mandant', data.FK_MDT_MANDANT || data.mandant_id);
+            setSelectField('onlineStatus', data.FK_STD_KAL_ONLINE || data.online_status);
+            
+            // Set checkbox fields
+            const setCheckboxField = (fieldId, value) => {
+                const checkbox = document.getElementById(fieldId);
+                if (checkbox) {
+                    checkbox.checked = Boolean(value && value !== '0' && value !== 0);
+                }
+            };
+            
+            setCheckboxField('recurrence', data.WDH || data.recurrence);
+            setCheckboxField('onlinePlanned', data.FK_STD_KAL_ONLINE_GEPLANT || data.online_planned);
+            setCheckboxField('onlineActual', data.FK_STD_KAL_ONLINE_IST || data.online_actual);
+            
+            // Scroll to form
+            document.getElementById('formView').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Clear Form
+        function clearForm() {
+            terminForm.reset();
+            terminIdInput.value = '';
+            clearErrors();
+            setupFormDefaults();
+            apiResponseDiv.style.display = 'none';
+        }
+        
+        // Reset Form to Defaults
+        function resetForm() {
+            clearForm();
+            showNotification('Form reset to defaults', 'info');
+        }
+        
+        // Display API Response
+        function displayApiResponse(data, type) {
+            responseContent.textContent = JSON.stringify(data, null, 2);
+            apiResponseDiv.className = `api-response ${type === 'success' ? 'response-success' : 'response-error'}`;
+            apiResponseDiv.style.display = 'block';
+            
+            // Also show in modal
+            showApiModal(data, type);
+            
+            // Scroll to response
+            apiResponseDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Show API Modal
+        function showApiModal(data, type) {
+            apiModalTitle.textContent = type === 'success' ? 'Success' : 'Error';
+            apiModalContent.innerHTML = `
+                <div style="padding: 20px; background: ${type === 'success' ? '#d1fae5' : '#fee2e2'}; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="color: ${type === 'success' ? '#065f46' : '#991b1b'}; margin-bottom: 10px;">
+                        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+                        ${type === 'success' ? 'Operation Successful' : 'Operation Failed'}
+                    </h3>
+                    <p>${type === 'success' ? 'The operation was completed successfully.' : 'There was an error processing your request.'}</p>
+                </div>
+                <div>
+                    <h4>Response Details:</h4>
+                    <pre style="background: #f8fafc; padding: 15px; border-radius: 8px; overflow-x: auto; font-size: 0.9rem;">
+${JSON.stringify(data, null, 2)}
+                    </pre>
+                </div>
+            `;
+            
+            apiResponseModal.style.display = 'flex';
+        }
+        
+        // Close API Modal
+        function closeApiModal() {
+            apiResponseModal.style.display = 'none';
+        }
+        
+        // Show Day Events Modal
+        function showDayEvents(day, month, year) {
+            const date = new Date(year, month, day);
+            const dateString = date.toDateString();
+            
+            // Find events for this day
+            const dayEvents = allEvents.filter(event => {
+                try {
+                    const eventDate = new Date(event.DATUM || event.datum);
+                    return eventDate.getDate() === day && 
+                           eventDate.getMonth() === month && 
+                           eventDate.getFullYear() === year;
+                } catch (error) {
+                    return false;
+                }
+            });
+            
+            if (dayEvents.length === 0) {
+                showNotification(`No events found for ${formatEventDate(dateString)}`, 'info');
+                return;
+            }
+            
+            // Update modal
+            modalTitle.textContent = `Events on ${formatEventDate(dateString)}`;
+            
+            let eventsHTML = dayEvents.map(event => {
+                const description = event.DESCR || event.description || '';
+                const comments = event.COMM || event.comments || '';
+                const time = extractTime(description);
+                const location = extractLocation(description);
+                const type = event.termin_type_name || event.type || 'Meeting';
+                const status = event.status_name || 'Pending';
+                const id = event.PK_KAL_TERMIN || event.termin_id || event.id;
+                
+                return `
+                    <div class="event-item" style="margin-bottom: 15px; padding: 15px; border-radius: 8px; background: white; box-shadow: var(--shadow);">
+                        <div class="event-date" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <div>
+                                <i class="far fa-clock"></i>
+                                ${time || 'All day'}
+                                ${location ? `<span style="margin-left: 15px;"><i class="fas fa-map-marker-alt"></i> ${location}</span>` : ''}
+                            </div>
+                            <span style="background: #f1f5f9; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">
+                                ID: ${id}
+                            </span>
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <strong>test ${event.PK_KAL_TERMIN} ${event.DATUM} ${description}</strong>
+                            ${comments ? `<div style="color: var(--gray); font-size: 0.9rem; margin-top: 5px;">${comments}</div>` : ''}
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; gap: 10px;">
+                                <span style="background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">
+                                    ${type}
+                                </span>
+                                <span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">
+                                    ${status}
+                                </span>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <button onclick="loadTerminForEdit('${id}')" style="padding: 6px 12px; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            modalContent.innerHTML = `
+                <div style="margin-bottom: 20px; padding: 15px; background: #f0f9ff; border-radius: 10px; border-left: 4px solid var(--primary);">
+                    <i class="fas fa-info-circle" style="color: var(--primary); margin-right: 10px;"></i>
+                    ${dayEvents.length} event${dayEvents.length !== 1 ? 's' : ''} scheduled for this day
+                </div>
+                ${eventsHTML}
+            `;
+            
+            // Show modal
+            dayEventsModal.style.display = 'flex';
+        }
+        
+        // View All Month Events
+        function viewAllMonthEvents(month) {
+            const monthEvents = allEvents.filter(event => {
+                try {
+                    const eventDate = new Date(event.DATUM || event.datum);
+                    return eventDate.getMonth() === month && 
+                           eventDate.getFullYear() === currentYear;
+                } catch (error) {
+                    return false;
+                }
+            });
+            
+            if (monthEvents.length === 0) {
+                showNotification(`No events found in ${monthNames[month]}`, 'info');
+                return;
+            }
+            
+            modalTitle.textContent = `All Events in ${monthNames[month]} ${currentYear}`;
+            
+            // Sort events by date
+            monthEvents.sort((a, b) => new Date(a.DATUM || a.datum) - new Date(b.DATUM || b.datum));
+            
+            let eventsHTML = monthEvents.map(event => {
+                const eventDate = new Date(event.DATUM || event.datum);
+                const description = event.DESCR || event.description || '';
+                const comments = event.COMM || event.comments || '';
+                const time = extractTime(description);
+                const location = extractLocation(description);
+                const type = event.termin_type_name || event.type || 'Meeting';
+                const status = event.status_name || 'Pending';
+                const day = eventDate.getDate();
+                const id = event.PK_KAL_TERMIN || event.termin_id || event.id;
+                
+                return `
+                    <div class="event-item" style="margin-bottom: 15px; padding: 15px; border-radius: 8px; background: white; box-shadow: var(--shadow);">
+                        <div class="event-date" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <div>
+                                <i class="far fa-calendar"></i>
+                                ${day} ${monthNames[month]} ${currentYear}
+                                ${time ? ` at ${time}` : ''}
+                                ${location ? `<span style="margin-left: 15px;"><i class="fas fa-map-marker-alt"></i> ${location}</span>` : ''}
+                            </div>
+                            <span style="background: #f1f5f9; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">
+                                ID: ${id}
+                            </span>
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <strong>${event.PK_KAL_TERMIN} ${event.DATUM} ${description}</strong>
+                            ${comments ? `<div style="color: var(--gray); font-size: 0.9rem; margin-top: 5px;">${comments}</div>` : ''}
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; gap: 10px;">
+                                <span style="background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">
+                                    ${type}
+                                </span>
+                                <span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">
+                                    ${status}
+                                </span>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <button onclick="loadTerminForEdit('${id}')" style="padding: 6px 12px; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            modalContent.innerHTML = `
+                <div style="margin-bottom: 20px; padding: 15px; background: #f0f9ff; border-radius: 10px; border-left: 4px solid var(--secondary);">
+                    <i class="fas fa-calendar-alt" style="color: var(--secondary); margin-right: 10px;"></i>
+                    ${monthEvents.length} event${monthEvents.length !== 1 ? 's' : ''} in ${monthNames[month]}
+                </div>
+                <div style="max-height: 400px; overflow-y: auto; padding-right: 10px;">
+                    ${eventsHTML}
+                </div>
+            `;
+            
+            dayEventsModal.style.display = 'flex';
+        }
+        
+        // Close Modal
+        function closeModal() {
+            dayEventsModal.style.display = 'none';
+        }
+        
+        // Helper Functions
+        function formatEventDate(dateString, short = false) {
+            try {
+                const date = new Date(dateString);
+                if (short) {
+                    return date.toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric' 
+                    });
+                } else {
+                    return date.toLocaleDateString('en-US', { 
+                        weekday: 'short', 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                    });
+                }
+            } catch (error) {
+                return 'Invalid Date';
+            }
+        }
+        
+        function extractTime(description) {
+            if (!description) return null;
+            const timePattern = /(\d{1,2}:\d{2})/g;
+            const matches = description.match(timePattern);
+            return matches ? matches[0] : null;
+        }
+        
+        function extractLocation(description) {
+            if (!description) return null;
+            
+            const locationPatterns = [
+                /Ort:\s*([^\n-]+)/i,
+                /ort:\s*([^\n-]+)/i,
+                /(Rotkreuzplatz|Freising|Waren|Webex|Online)/i
+            ];
+            
+            for (const pattern of locationPatterns) {
+                const match = description.match(pattern);
+                if (match) {
+                    return match[1] || match[0];
+                }
+            }
+            
+            return null;
+        }
+        
+        function countUpcomingEvents(events) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            return events.filter(event => {
+                try {
+                    const eventDate = new Date(event.DATUM || event.datum);
+                    eventDate.setHours(0, 0, 0, 0);
+                    return eventDate >= today;
+                } catch (error) {
+                    return false;
+                }
+            }).length;
+        }
+        
+        function showNotification(message, type = 'success') {
+            // Remove existing notification
+            const existingNotification = document.querySelector('.notification');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+            
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 25px;
+                background: ${type === 'success' ? '#10b981' : '#ef4444'};
+                color: white;
+                border-radius: 10px;
+                box-shadow: var(--shadow-lg);
+                z-index: 1000;
+                font-weight: 600;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                animation: slideIn 0.3s ease;
+            `;
+            
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+                ${message}
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+            
+            // Add animation styles
+            if (!document.querySelector('#notification-styles')) {
+                const style = document.createElement('style');
+                style.id = 'notification-styles';
+                style.textContent = `
+                    @keyframes slideIn {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                    @keyframes slideOut {
+                        from { transform: translateX(0); opacity: 1; }
+                        to { transform: translateX(100%); opacity: 0; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        }
+        
+        // Make functions available globally
+        window.showDayEvents = showDayEvents;
+        window.viewAllMonthEvents = viewAllMonthEvents;
+        window.changePage = changePage;
+        window.loadTerminForEdit = loadTerminForEdit;
+        window.deleteTerminFromList = deleteTerminFromList;
+    </script>
+</body>
+</html>
