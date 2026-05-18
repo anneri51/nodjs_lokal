@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Bild Verwaltungssystem | Vollansicht mit Baum & Zuordnungen</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background: #e9f0f5;
+            height: 100vh;
+            overflow: hidden;
+            padding: 16px;
+        }
+
+        /* HAUPTLAYOUT: Linker Baum + Rechter Bereich mit Tabs */
+        .master-layout {
+            display: flex;
+            gap: 20px;
+            height: 100%;
+            max-width: 1920px;
+            margin: 0 auto;
+            background: transparent;
+            border-radius: 28px;
+            overflow: hidden;
+        }
+
+        /* ========= LINKER BAUM (Bilderverwaltung mit Suche) ========= */
+        .left-tree-panel {
+            width: 380px;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            backdrop-filter: blur(2px);
+            transition: 0.2s;
+        }
+
+        .tree-header {
+            background: linear-gradient(105deg, #1e3c4c, #2a5f6e);
+            color: white;
+            padding: 18px 20px;
+        }
+        .tree-header h2 {
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .tree-search-box {
+            padding: 15px;
+            background: #f4f7fc;
+            border-bottom: 1px solid #e2edf2;
+        }
+        .tree-search-box input {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 34px;
+            border: 1px solid #cbdde6;
+            font-size: 0.9rem;
+            outline: none;
+            transition: 0.2s;
+        }
+        .tree-search-box input:focus {
+            border-color: #2a7f6e;
+            box-shadow: 0 0 0 3px rgba(42,127,110,0.2);
+        }
+        .image-tree-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 8px;
+            background: #ffffff;
+        }
+
+        /* Baum-Styling */
+        .tree-group {
+            margin-bottom: 12px;
+        }
+        .group-header {
+            background: #eef3fa;
+            padding: 10px 14px;
+            border-radius: 16px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            font-weight: 600;
+            color: #1e4a5f;
+            transition: 0.2s;
+        }
+        .group-header:hover { background: #e2ecf5; }
+        .group-content {
+            margin-left: 16px;
+            padding-left: 10px;
+            border-left: 2px solid #cbdde6;
+            display: none;
+        }
+        .group-content.open {
+            display: block;
+        }
+        .image-item {
+            background: #f9fbfd;
+            margin: 8px 0;
+            padding: 10px 12px;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: 0.15s;
+            border: 1px solid #eef2f8;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .image-item:hover {
+            background: #e4f0fa;
+            transform: translateX(3px);
+        }
+        .image-item.selected {
+            background: #d4eaf5;
+            border-left: 4px solid #2a7f6e;
+        }
+        .image-id {
+            font-weight: 700;
+            color: #1c6d5e;
+        }
+        .image-filename {
+            font-size: 0.75rem;
+            color: #4a6272;
+            word-break: break-word;
+        }
+        .tree-count {
+            background: #cbdde6;
+            padding: 2px 8px;
+            border-radius: 40px;
+            font-size: 0.7rem;
+        }
+
+        /* ========= RECHTE SEITE: TABS & INHALTE ========= */
+        .right-content {
+            flex: 1;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Tab-Navigation */
+        .tabs-nav {
+            display: flex;
+            background: #f8fafd;
+            border-bottom: 2px solid #e2edf2;
+            padding: 0 18px;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            padding: 14px 20px;
+            background: transparent;
+            border: none;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #4f6f8a;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            border-radius: 30px 30px 0 0;
+        }
+        .tab-btn i { font-size: 1rem; }
+        .tab-btn.active {
+            color: #1e6f5c;
+            background: white;
+            border-bottom: 3px solid #1e6f5c;
+        }
+
+        /* Tab-Inhalte (scrollbar) */
+        .tab-pane {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            padding: 22px 24px;
+            background: white;
+        }
+        .tab-pane.active {
+            display: block;
+        }
+
+        /* Karten & Tabellen */
+        .info-card {
+            background: #ffffff;
+            border-radius: 24px;
+            border: 1px solid #e9f0f5;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            margin-bottom: 28px;
+            overflow: hidden;
+        }
+        .card-title {
+            background: #fafcff;
+            padding: 16px 22px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            border-bottom: 2px solid #eef3fc;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #1f5068;
+        }
+        .card-body {
+            padding: 20px;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        .data-table th {
+            text-align: left;
+            padding: 12px 8px;
+            background: #f4f9fe;
+            color: #2c5a6e;
+            border-bottom: 1px solid #dce7ef;
+        }
+        .data-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #eef3fa;
+            color: #1f3849;
+        }
+        .preview-img {
+            max-width: 100%;
+            max-height: 220px;
+            border-radius: 20px;
+            object-fit: contain;
+            background: #f2f6fa;
+        }
+        .badge {
+            background: #e1f0fa;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .btn-sm {
+            background: #eef2f9;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-primary {
+            background: #1e6f5c;
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 34px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .flex-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #2c7f6e;
+        }
+        .spinner {
+            width: 22px;
+            height: 22px;
+            border: 3px solid #cbdde6;
+            border-top-color: #1e6f5c;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 1000px) {
+            .master-layout { flex-direction: column; }
+            .left-tree-panel { width: 100%; height: 340px; }
+        }
+    </style>
+</head>
+<body>
+<div class="master-layout">
+    <!-- Linker Bereich: Baumstruktur mit Suche (Bilderverwaltung) -->
+    <div class="left-tree-panel">
+        <div class="tree-header">
+            <h2><i class="fas fa-folder-tree"></i> Bilderverwaltung</h2>
+            <div style="font-size: 12px; opacity:0.8;">Klassifikationsbaum</div>
+        </div>
+        <div class="tree-search-box">
+            <input type="text" id="treeSearchInput" placeholder="🔍 Suche nach ID, Dateiname, Klassifikation 1/2/3 ...">
+        </div>
+        <div class="image-tree-container" id="imageTreeContainer">
+            <div class="loading"><div class="spinner"></div> Lade Bilderdatenbank ...</div>
+        </div>
+    </div>
+
+    <!-- Rechter Bereich: Tabs (Bild + Zuordnungen: Belege, Personen, Kontoauszüge) -->
+    <div class="right-content">
+        <div class="tabs-nav">
+            <button class="tab-btn active" data-tab="tab-bild"><i class="fas fa-image"></i> Bild & Metadaten</button>
+            <button class="tab-btn" data-tab="tab-belege"><i class="fas fa-receipt"></i> Beleg-Zuordnungen</button>
+            <button class="tab-btn" data-tab="tab-personen"><i class="fas fa-user-friends"></i> Personen-Zuordnungen</button>
+            <button class="tab-btn" data-tab="tab-konto"><i class="fas fa-file-invoice-dollar"></i> Kontoauszüge</button>
+        </div>
+
+        <!-- TAB 1: Bild + Metadaten (Vorschau, Klassifikation, FINAL_CNT) -->
+        <div id="tab-bild" class="tab-pane active">
+            <div class="info-card">
+                <div class="card-title"><i class="fas fa-camera-retro"></i> Aktuelles Bild & Vorschau</div>
+                <div class="card-body">
+                    <div class="flex-row" style="justify-content: space-between;">
+                        <div><strong>Bild-ID:</strong> <span id="currentImageIdDisplay">—</span></div>
+                        <div><button class="btn-sm" id="refreshImageBtn"><i class="fas fa-sync-alt"></i> Aktualisieren</button></div>
+                    </div>
+                    <div id="previewContainer" style="margin: 20px 0; text-align: center; min-height: 200px;">
+                        <div class="loading"><div class="spinner"></div> Bild wird geladen...</div>
+                    </div>
+                    <div class="flex-row" style="margin-top: 10px;">
+                        <div><label>Klassifikation 1:</label> <input type="text" id="klass1Input" style="padding:6px 12px; border-radius:40px; border:1px solid #ccc;"></div>
+                        <div><label>Klassifikation 2:</label> <input type="text" id="klass2Input" style="padding:6px 12px; border-radius:40px;"></div>
+                        <div><label>Klassifikation 3:</label> <input type="text" id="klass3Input" style="padding:6px 12px; border-radius:40px;"></div>
+                        <div><button id="saveKlassBtn" class="btn-primary"><i class="fas fa-save"></i> Speichern</button></div>
+                    </div>
+                    <div id="klassMsg" style="margin-top: 10px; font-size:0.8rem;"></div>
+                </div>
+            </div>
+            <div class="info-card">
+                <div class="card-title"><i class="fas fa-chart-line"></i> FINAL_CNT & Zusatzinfos</div>
+                <div class="card-body">
+                    <div class="flex-row">
+                        <div><label>Anzahl verknüpfte Belege (FINAL_CNT):</label> <input type="number" id="finalCntBelege" style="width:100px;"></div>
+                        <div><label>Anzahl Kontoauszüge:</label> <input type="number" id="finalCntKonto" style="width:100px;"></div>
+                        <button id="updateFinalCntBtn" class="btn-sm"><i class="fas fa-chart-simple"></i> Update</button>
+                    </div>
+                    <div id="finalMetaInfo" style="margin-top: 15px; font-size:0.8rem; background:#f8fafc; padding:12px; border-radius:20px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: Beleg-Zuordnungen (Tabelle + neue Verknüpfung) -->
+        <div id="tab-belege" class="tab-pane">
+            <div class="info-card">
+                <div class="card-title"><i class="fas fa-link"></i> Verknüpfte Belege (Bild ↔ Beleg)</div>
+                <div class="card-body">
+                    <div style="overflow-x: auto;">
+                        <table class="data-table">
+                            <thead><tr><th>Beleg-ID</th><th>Belegnummer</th><th>Belegdatum</th><th>Bruttobetrag</th><th>Aktion</th></tr></thead>
+                            <tbody id="belegTableBody"><tr><td colspan="5">Keine Belege geladen</td></tr></tbody>
+                        </table>
+                    </div>
+                    <div style="margin-top: 20px; background:#fafdff; padding:16px; border-radius: 20px;">
+                        <strong><i class="fas fa-plus-circle"></i> Neue Beleg-Verknüpfung</strong>
+                        <div class="flex-row" style="margin-top: 12px;">
+                            <input type="number" id="newBelegId" placeholder="Beleg ID (PK_INP_BELEGE_ALL)" style="padding:8px; border-radius:40px;">
+                            <input type="number" id="mainBildNr" placeholder="Hauptbild Nr (optional)">
+                            <button id="createBelegRelationBtn" class="btn-primary">Verknüpfen</button>
+                        </div>
+                        <div id="belegRelationMsg" style="margin-top:8px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: Personen-Zuordnungen -->
+        <div id="tab-personen" class="tab-pane">
+            <div class="info-card">
+                <div class="card-title"><i class="fas fa-user-plus"></i> Personen zu Bild zuordnen</div>
+                <div class="card-body">
+                    <div class="flex-row">
+                        <input type="number" id="personIdInput" placeholder="Person ID (FK_KON_PERSON)">
+                        <button id="assignPersonBtn" class="btn-primary"><i class="fas fa-user-check"></i> Person zuordnen</button>
+                    </div>
+                    <div id="personAssignMsg" style="margin:12px 0;"></div>
+                    <hr style="margin: 16px 0;">
+                    <strong>Bereits zugeordnete Personen</strong>
+                    <div style="overflow-x: auto; margin-top: 10px;">
+                        <table class="data-table">
+                            <thead><tr><th>Nachname</th><th>Vorname</th><th>E-Mail</th><th>Entfernen</th></tr></thead>
+                            <tbody id="personTableBody"><tr><td colspan="4">Keine Personen</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: Kontoauszüge -->
+        <div id="tab-konto" class="tab-pane">
+            <div class="info-card">
+                <div class="card-title"><i class="fas fa-landmark"></i> Kontoauszüge (verknüpft mit Bild)</div>
+                <div class="card-body">
+                    <div id="kontoauszugContainer" style="max-height: 450px; overflow-y: auto;">
+                        <div class="loading"><div class="spinner"></div> Lade Kontoauszüge ...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ---------- GLOBALE VARIABLEN ----------
+    let currentBildId = 13540;          // initial
+    let allImages = [];                 // gesamter Datensatz für Baum
+    let imageTreeData = [];
+
+    // DOM-Elemente
+    const treeContainer = document.getElementById('imageTreeContainer');
+    const treeSearch = document.getElementById('treeSearchInput');
+    const previewContainer = document.getElementById('previewContainer');
+    const currentIdSpan = document.getElementById('currentImageIdDisplay');
+    const klass1Input = document.getElementById('klass1Input');
+    const klass2Input = document.getElementById('klass2Input');
+    const klass3Input = document.getElementById('klass3Input');
+    const finalCntBelege = document.getElementById('finalCntBelege');
+    const finalCntKonto = document.getElementById('finalCntKonto');
+    const finalMetaInfo = document.getElementById('finalMetaInfo');
+    const belegTableBody = document.getElementById('belegTableBody');
+    const personTableBody = document.getElementById('personTableBody');
+    const kontoauszugContainer = document.getElementById('kontoauszugContainer');
+
+    // Helper: API Calls
+    async function apiGet(endpoint) {
+        const res = await fetch(`http://localhost:5000${endpoint}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+    }
+
+    async function apiPost(endpoint, body) {
+        const res = await fetch(`http://localhost:5000${endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        if (!res.ok) throw new Error(await res.text());
+        return res.json();
+    }
+
+    async function apiDelete(endpoint) {
+        const res = await fetch(`http://localhost:5000${endpoint}`, { method: 'DELETE' });
+        return res.json();
+    }
+
+    // 1) Lade alle Bilder (für Baum + globale Suche)
+    async function loadAllImagesForTree() {
+        try {
+            const data = await apiGet('/bild/basisdaten');
+            allImages = data || [];
+            renderTree(allImages, '');
+        } catch (err) {
+            treeContainer.innerHTML = `<div class="error-msg" style="color:red;">Fehler: ${err.message}</div>`;
+        }
+    }
+
+    // Baum rendern mit Filter (ID, Filename, Klass1-3)
+    function renderTree(images, searchTerm) {
+        if (!images.length) { treeContainer.innerHTML = '<div>Keine Bilder verfügbar</div>'; return; }
+        let filtered = images;
+        if (searchTerm.trim() !== '') {
+            const term = searchTerm.toLowerCase();
+            filtered = images.filter(img =>
+                String(img.PK_BILD_BILDER).includes(term) ||
+                (img.FILENAME || '').toLowerCase().includes(term) ||
+                (img.KLASSIFIKATION_1 || '').toLowerCase().includes(term) ||
+                (img.KLASSIFIKATION_2 || '').toLowerCase().includes(term) ||
+                (img.KLASSIFIKATION_3 || '').toLowerCase().includes(term)
+            );
+        }
+        // Gruppiere nach Klassifikation 1
+        const groups = new Map();
+        for (let img of filtered) {
+            const key = img.KLASSIFIKATION_1 || 'Ohne Klassifikation';
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push(img);
+        }
+        let html = '';
+        for (let [klassName, items] of groups.entries()) {
+            html += `<div class="tree-group">
+                        <div class="group-header" onclick="toggleGroup(this)">
+                            <span><i class="fas fa-folder"></i> ${escapeHtml(klassName)}</span>
+                            <span class="tree-count">${items.length}</span>
+                        </div>
+                        <div class="group-content">`;
+            for (let img of items) {
+                const shortName = (img.FILENAME || 'Unbenannt').substring(0, 38);
+                html += `<div class="image-item" data-id="${img.PK_BILD_BILDER}" onclick="selectImage(${img.PK_BILD_BILDER}, this)">
+                            <div class="image-id">ID ${img.PK_BILD_BILDER}</div>
+                            <div class="image-filename">📄 ${escapeHtml(shortName)}</div>
+                            <div><span class="badge">K1:${escapeHtml(img.KLASSIFIKATION_1||'-')}</span> <span class="badge">K2:${escapeHtml(img.KLASSIFIKATION_2||'-')}</span></div>
+                        </div>`;
+            }
+            html += `</div></div>`;
+        }
+        treeContainer.innerHTML = html;
+        if(filtered.length !== images.length) treeContainer.insertAdjacentHTML('afterbegin', `<div style="padding:6px 12px; background:#eef2fa; border-radius: 40px; margin-bottom:12px;">🔍 ${filtered.length} von ${images.length} Treffer</div>`);
+    }
+
+    window.toggleGroup = (el) => {
+        const content = el.nextElementSibling;
+        if (content.classList.contains('open')) {
+            content.classList.remove('open');
+        } else {
+            content.classList.add('open');
+        }
+    };
+
+    window.selectImage = async (id, element) => {
+        document.querySelectorAll('.image-item').forEach(el => el.classList.remove('selected'));
+        if(element) element.classList.add('selected');
+        currentBildId = id;
+        currentIdSpan.innerText = id;
+        await loadFullImageData(id);
+    };
+
+    // Hauptfunktion: Lade alles für aktuelles Bild (Vorschau, Metadaten, Belege, Personen, Kontoauszüge)
+    async function loadFullImageData(imageId) {
+        if (!imageId) return;
+        try {
+            // 1) Vorschau + Datei-Metadaten
+            const fileResp = await fetch(`http://localhost:5000/accounts/bild/1/1/1/${imageId}`);
+            if (fileResp.ok) {
+                const blob = await fileResp.blob();
+                const url = URL.createObjectURL(blob);
+                const isImage = blob.type.startsWith('image/');
+                previewContainer.innerHTML = `
+                    ${isImage ? `<img src="${url}" class="preview-img" alt="Vorschau">` : `<iframe src="${url}" style="width:100%; height:240px; border:none;"></iframe>`}
+                    <div style="margin-top: 10px;"><span class="badge">${blob.type}</span> | ${(blob.size/1024).toFixed(1)} KB</div>
+                `;
+            } else {
+                previewContainer.innerHTML = '<div class="error-msg">Vorschau nicht verfügbar</div>';
+            }
+
+            // 2) Metadaten (Klassifikation, FinalCnt etc)
+            const meta = await apiGet(`/accounts/bild/1/1/${imageId}`).catch(() => []);
+            if (meta && meta[0]) {
+                klass1Input.value = meta[0].KLASSIFIKATION_1 || '';
+                klass2Input.value = meta[0].KLASSIFIKATION_2 || '';
+                klass3Input.value = meta[0].KLASSIFIKATION_3 || '';
+                finalCntBelege.value = meta[0].FINAL_CNT_FK_INP_BELEGE_ALL || 0;
+                finalCntKonto.value = meta[0].FINAL_CNT_FK_KTO_KONTO_AUSZUG || 0;
+                finalMetaInfo.innerHTML = `<strong>Dateiname:</strong> ${meta[0].FILENAME || '-'} &nbsp;| <strong>MIME:</strong> ${meta[0].MIMETYPE || '-'} &nbsp;| <strong>Pixel:</strong> ${meta[0].W_PX || '?'}x${meta[0].H_PX || '?'}`;
+            }
+
+            // 3) Beleg-Zuordnungen
+            const belege = await apiGet(`/beleg/bild1/${imageId}`).catch(() => []);
+            if (belege.length) {
+                belegTableBody.innerHTML = belege.map(b => `
+                    <tr>
+                        <td>${b.PK_INP_BELEGE_ALL || '-'}</td>
+                        <td>${b.BELEGNUMMER || '-'}</td>
+                        <td>${b.BELEGDATUM ? new Date(b.BELEGDATUM).toLocaleDateString('de-DE') : '-'}</td>
+                        <td>${b.BRUTTO_BETRAG ? Number(b.BRUTTO_BETRAG).toLocaleString('de-DE',{style:'currency',currency:'EUR'}) : '-'}</td>
+                        <td><button class="btn-sm" onclick="deleteBelegRelation(${b.PK_REL_INP_INP_BELEGE_ALL_BILD_BILDER})"><i class="fas fa-trash"></i> Löschen</button></td>
+                    </tr>
+                `).join('');
+            } else {
+                belegTableBody.innerHTML = '<tr><td colspan="5">Keine Belege verknüpft</td></tr>';
+            }
+
+            // 4) Personen-Zuordnungen
+            const persons = await apiGet(`/person_bild/${imageId}`).catch(() => []);
+            if (persons.length) {
+                personTableBody.innerHTML = persons.map(p => `
+                    <tr>
+                        <td>${p.NACHNAME || '-'}</td><td>${p.VORNAME || '-'}</td>
+                        <td>${p.EMAIL || '-'}</td>
+                        <td><button class="btn-sm" onclick="deletePersonRelation(${p.PK_REL_KON_PERSON_BILD})">Entfernen</button></td>
+                    </tr>
+                `).join('');
+            } else {
+                personTableBody.innerHTML = '<tr><td colspan="4">Keine Personen zugeordnet</td></tr>';
+            }
+
+            // 5) Kontoauszüge
+            const kontoauszuege = await apiGet(`/rel_konto_auszug_bild/${imageId}`).catch(() => []);
+            if (kontoauszuege.length) {
+                let kontoHtml = `<table class="data-table"><thead><tr><th>ID</th><th>IBAN</th><th>Monat/Jahr</th><th>Betrag</th></tr></thead><tbody>`;
+                kontoauszuege.forEach(k => {
+                    kontoHtml += `<tr><td>${k.PK_KTO_KONTO_AUSZUG || '-'}</td><td>${k.IBAN || '-'}</td><td>${k.MONAT || ''} ${k.JAHR || ''}</td><td>${k.BETRAG ? k.BETRAG + ' ' + (k.WAEHRUNG||'EUR') : '-'}</td></tr>`;
+                });
+                kontoHtml += `</tbody></table>`;
+                kontoauszugContainer.innerHTML = kontoHtml;
+            } else {
+                kontoauszugContainer.innerHTML = '<div class="error-msg">Keine Kontoauszüge für dieses Bild</div>';
+            }
+
+        } catch (err) {
+            console.error(err);
+            previewContainer.innerHTML = `<div class="error-msg">Fehler: ${err.message}</div>`;
+        }
+    }
+
+    // ---------- Aktionen: Beleg löschen, Person löschen, Verknüpfungen ----------
+    window.deleteBelegRelation = async (relId) => {
+        if (!confirm('Beleg-Verknüpfung löschen?')) return;
+        await apiDelete(`/rel_inp_bild_delete/${relId}`);
+        await loadFullImageData(currentBildId);
+    };
+    window.deletePersonRelation = async (relId) => {
+        if (!confirm('Person-Zuordnung löschen?')) return;
+        await apiDelete(`/rel_person_bild_delete/${relId}`);
+        await loadFullImageData(currentBildId);
+    };
+    // Neue Beleg-Verknüpfung
+    document.getElementById('createBelegRelationBtn').onclick = async () => {
+        const belegId = document.getElementById('newBelegId').value;
+        const mainBild = document.getElementById('mainBildNr').value;
+        if (!belegId) { alert('Beleg-ID eingeben'); return; }
+        try {
+            await apiPost('/add_belege_bild', {
+                FK_INP_BELEGE_ALL: parseInt(belegId),
+                FK_BILD_BILDER: currentBildId,
+                MAIN_BILD: mainBild || 0
+            });
+            document.getElementById('belegRelationMsg').innerHTML = '<span style="color:green;">✅ Verknüpfung erstellt</span>';
+            setTimeout(()=>document.getElementById('belegRelationMsg').innerHTML='',2000);
+            await loadFullImageData(currentBildId);
+        } catch(e) { alert('Fehler: '+e.message); }
+    };
+    // Person zuordnen
+    document.getElementById('assignPersonBtn').onclick = async () => {
+        const personId = document.getElementById('personIdInput').value;
+        if (!personId) { alert('Person ID erforderlich'); return; }
+        try {
+            await apiPost('/add_person_bild_rel', {
+                FK_KON_PERSON: parseInt(personId),
+                FK_BILD_BILDER: currentBildId
+            });
+            document.getElementById('personAssignMsg').innerHTML = '<span style="color:green;">✅ Person zugeordnet</span>';
+            setTimeout(()=>document.getElementById('personAssignMsg').innerHTML='',2000);
+            await loadFullImageData(currentBildId);
+        } catch(e) { alert('Fehler: '+e.message); }
+    };
+    // Klassifikation speichern
+    document.getElementById('saveKlassBtn').onclick = async () => {
+        const payload = {
+            pk_bild_bilder: currentBildId,
+            klassifikation_1: klass1Input.value,
+            klassifikation_2: klass2Input.value,
+            klassifikation_3: klass3Input.value,
+            modified_by: 'webuser'
+        };
+        try {
+            await apiPost('/update-bild', payload);
+            document.getElementById('klassMsg').innerHTML = '<span style="color:green;">✅ Klassifikation aktualisiert</span>';
+            setTimeout(()=>document.getElementById('klassMsg').innerHTML='',2000);
+            await loadAllImagesForTree();     // Baum neu laden
+            await loadFullImageData(currentBildId);
+        } catch(e) { alert('Update fehlgeschlagen'); }
+    };
+    // FINAL_CNT Update
+    document.getElementById('updateFinalCntBtn').onclick = async () => {
+        const belegeVal = finalCntBelege.value;
+        const kontoVal = finalCntKonto.value;
+        await apiPost(`/bild/final/update/${currentBildId}`, {
+            FINAL_CNT_FK_INP_BELEGE_ALL: parseInt(belegeVal),
+            FINAL_CNT_FK_KTO_KONTO_AUSZUG: parseInt(kontoVal)
+        });
+        await loadFullImageData(currentBildId);
+    };
+    // Refresh Button
+    document.getElementById('refreshImageBtn').onclick = () => loadFullImageData(currentBildId);
+
+    // Such-Event für Baum
+    treeSearch.addEventListener('input', (e) => {
+        renderTree(allImages, e.target.value);
+    });
+
+    // Tab-Wechsel (UI)
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const target = btn.getAttribute('data-tab');
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+            document.getElementById(target).classList.add('active');
+        });
+    });
+
+    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+
+    // Initialisierung
+    (async () => {
+        await loadAllImagesForTree();
+        currentIdSpan.innerText = currentBildId;
+        await loadFullImageData(currentBildId);
+        // erste Gruppe automatisch öffnen
+        setTimeout(() => {
+            const firstHeader = document.querySelector('.group-header');
+            if(firstHeader) toggleGroup(firstHeader);
+        }, 300);
+    })();
+</script>
+</body>
+</html>

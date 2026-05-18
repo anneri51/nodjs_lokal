@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Belegerfassung mit OCR</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7f9;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .description {
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+        
+        .upload-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 30px;
+            border: 2px dashed #3498db;
+            border-radius: 8px;
+            background-color: #f8fafc;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-section:hover {
+            border-color: #2980b9;
+            background-color: #e8f4ff;
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            color: #3498db;
+            margin-bottom: 15px;
+        }
+        
+        .file-input {
+            margin: 15px 0;
+            display: none;
+        }
+        
+        .file-info {
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #e8f4ff;
+            border-radius: 5px;
+            border: 1px solid #3498db;
+            text-align: center;
+            width: 100%;
+            max-width: 500px;
+        }
+        
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        
+        .results-section {
+            margin-top: 30px;
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        th {
+            background-color: #3498db;
+            color: white;
+            position: sticky;
+            top: 0;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        tr:hover {
+            background-color: #e8f4ff;
+        }
+        
+        .actions {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .export-btn {
+            background-color: #27ae60;
+        }
+        
+        .export-btn:hover {
+            background-color: #219653;
+        }
+        
+        .export-txt-btn {
+            background-color: #9b59b6;
+        }
+        
+        .export-txt-btn:hover {
+            background-color: #8e44ad;
+        }
+        
+        .save-db-btn {
+            background-color: #f39c12;
+        }
+        
+        .save-db-btn:hover {
+            background-color: #e67e22;
+        }
+        
+        .reset-btn {
+            background-color: #e74c3c;
+        }
+        
+        .reset-btn:hover {
+            background-color: #c0392b;
+        }
+        
+        .notification {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            text-align: center;
+            display: none;
+        }
+        
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .progress-bar {
+            width: 100%;
+            background-color: #f3f3f3;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .progress {
+            width: 0%;
+            height: 20px;
+            background-color: #3498db;
+            border-radius: 5px;
+            text-align: center;
+            line-height: 20px;
+            color: white;
+            transition: width 0.3s;
+        }
+        
+        .raw-text {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #e0e0e0;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        
+        .raw-text h3 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        
+        .preview-image {
+            max-width: 100%;
+            max-height: 300px;
+            margin: 15px 0;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .db-config {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .db-config h3 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        
+        .db-config input {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 200px;
+        }
+        
+        .next-filename {
+            margin-top: 10px;
+            padding: 8px;
+            background-color: #e8f4ff;
+            border-radius: 4px;
+            border: 1px solid #3498db;
+        }
+        
+        .file-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .browse-btn {
+            background-color: #3498db;
+        }
+        
+        .browse-next-btn {
+            background-color: #9b59b6;
+        }
+        
+        .file-name-display {
+            font-weight: bold;
+            margin: 10px 0;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Belegerfassung mit OCR</h1>
+            <p class="description">Laden Sie ein Bild eines Belegs hoch, um die Daten zu extrahieren und in eine tabellarische Form zu bringen.</p>
+        </header>
+        
+        <div class="upload-section">
+            <div class="upload-icon">📷</div>
+            <h2>Belegfoto hochladen</h2>
+            <p>Unterstützte Formate: JPG, PNG, GIF, BMP, WEBP</p>
+            
+            <div class="file-buttons">
+                <button id="browseBtn" class="browse-btn">Datei auswählen</button>
+                <button id="browseNextBtn" class="browse-next-btn">Nächste Seite auswählen</button>
+            </div>
+            
+            <input type="file" id="fileInput" class="file-input" accept="image/*">
+            
+            <div class="file-info">
+                <div class="file-name-display" id="fileName">Noch keine Datei ausgewählt</div>
+                <div id="nextFileName" class="next-filename" style="display: none;">Nächste Datei: <span></span></div>
+            </div>
+            
+            <button id="uploadBtn">Hochladen und Verarbeiten</button>
+            <div id="imagePreview"></div>
+        </div>
+        
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Bild wird verarbeitet...</p>
+            <div class="progress-bar">
+                <div id="progressBar" class="progress">0%</div>
+            </div>
+            <p id="statusText">Initialisiere OCR...</p>
+        </div>
+        
+        <div id="notification" class="notification"></div>
+        
+        <div class="results-section">
+            <h2>Extrahierten Daten</h2>
+            <div id="tableContainer"></div>
+            
+            <div class="raw-text">
+                <h3>Roher OCR-Text</h3>
+                <div id="rawText"></div>
+            </div>
+            
+            <div class="db-config">
+                <h3>Datenbank-Konfiguration</h3>
+                <div>
+                    <label for="pageInput">Page:</label>
+                    <input type="text" id="pageInput" value="1">
+                    
+                    <label for="userInput">Benutzer:</label>
+                    <input type="text" id="userInput" value="OCR_Import">
+                </div>
+            </div>
+            
+            <div class="actions">
+                <button id="exportCsvBtn" class="export-btn">Als CSV exportieren</button>
+                <button id="exportTxtBtn" class="export-txt-btn">Als TXT exportieren</button>
+                <button id="saveDbBtn" class="save-db-btn">In Datenbank speichern</button>
+                <button id="manualEditBtn">Manuelle Bearbeitung</button>
+                <button id="resetBtn" class="reset-btn">Zurücksetzen</button>
+            </div>
+        </div>
+        
+        <footer>
+            <p>OCR Belegerfassungstool | Entwickelt für die Buchhaltung | Powered by Tesseract.js</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInput = document.getElementById('fileInput');
+            const browseBtn = document.getElementById('browseBtn');
+            const browseNextBtn = document.getElementById('browseNextBtn');
+            const fileNameDiv = document.getElementById('fileName');
+            const nextFileNameDiv = document.getElementById('nextFileName');
+            const nextFileNameSpan = nextFileNameDiv.querySelector('span');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const exportCsvBtn = document.getElementById('exportCsvBtn');
+            const exportTxtBtn = document.getElementById('exportTxtBtn');
+            const saveDbBtn = document.getElementById('saveDbBtn');
+            const manualEditBtn = document.getElementById('manualEditBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const notification = document.getElementById('notification');
+            const loading = document.getElementById('loading');
+            const progressBar = document.getElementById('progressBar');
+            const statusText = document.getElementById('statusText');
+            const tableContainer = document.getElementById('tableContainer');
+            const rawText = document.getElementById('rawText');
+            const imagePreview = document.getElementById('imagePreview');
+            const pageInput = document.getElementById('pageInput');
+            const userInput = document.getElementById('userInput');
+            
+            let extractedData = [];
+            let ocrResult = '';
+            let originalFileName = '';
+            let nextFilename = '';
+            
+            // Show notification function
+            function showNotification(message, type) {
+                notification.textContent = message;
+                notification.className = 'notification ' + type;
+                notification.style.display = 'block';
+                
+                setTimeout(() => {
+                    notification.style.display = 'none';
+                }, 5000);
+            }
+            
+            // Function to increment filename with pattern page_xxx.png
+            function incrementFilename(filename) {
+                // Check if filename matches the pattern page_xxx.png
+                const pattern = /^(.*?page_)(\d+)(\.\w+)$/i;
+                const match = filename.match(pattern);
+                
+                if (match) {
+                    const prefix = match[1];
+                    const number = parseInt(match[2]);
+                    const extension = match[3];
+                    
+                    // Increment the number and pad with zeros
+                    const nextNumber = number + 1;
+                    const paddedNumber = nextNumber.toString().padStart(3, '0');
+                    
+                    return prefix + paddedNumber + extension;
+                }
+                
+                // If pattern doesn't match, return the original filename
+                return filename;
+            }
+            
+            // Update next filename display
+            function updateNextFilenameDisplay() {
+                if (originalFileName) {
+                    nextFilename = incrementFilename(originalFileName);
+                    nextFileNameSpan.textContent = nextFilename;
+                    nextFileNameDiv.style.display = 'block';
+                } else {
+                    nextFileNameDiv.style.display = 'none';
+                }
+            }
+            
+            // Create a custom file input with suggested filename
+            function createFileInputWithSuggestedName(suggestedName) {
+                // Create a new file input
+                const newFileInput = document.createElement('input');
+                newFileInput.type = 'file';
+                newFileInput.accept = 'image/*';
+                newFileInput.style.display = 'none';
+                
+                // Add change event listener
+                newFileInput.addEventListener('change', function() {
+                    if (this.files && this.files[0]) {
+                        fileInput.files = this.files;
+                        fileNameDiv.textContent = this.files[0].name;
+                        originalFileName = this.files[0].name;
+                        updateNextFilenameDisplay();
+                    }
+                    
+                    // Remove the temporary input
+                    document.body.removeChild(newFileInput);
+                });
+                
+                // Add to body and trigger click
+                document.body.appendChild(newFileInput);
+                
+                // Try to set the suggested filename (this is a workaround as we can't directly set the filename in the file dialog)
+                if (suggestedName) {
+                    // This is just for demonstration - we can't actually set the filename in the file dialog
+                    // due to browser security restrictions
+                    console.log('Suggested filename:', suggestedName);
+                }
+                
+                newFileInput.click();
+            }
+            
+            // Create table from data
+            function createTable(data) {
+                if (data.length === 0) {
+                    tableContainer.innerHTML = '<p>Keine tabellarischen Daten erkannt. Bitte verwenden Sie die manuelle Bearbeitung.</p>';
+                    return;
+                }
+                
+                let tableHTML = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nr.</th>
+                                <th>Datum</th>
+                                <th>Belegnr.</th>
+                                <th>Buchungsdatum</th>
+                                <th>Leistungsdatum</th>
+                                <th>Beschreibung</th>
+                                <th>Betrag</th>
+                                <th>Steuersatz</th>
+                                <th>Steuerbetrag</th>
+                                <th>Soll</th>
+                                <th>Haben</th>
+                                <th>Steuerkonto</th>
+                                <th>Benutzer</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                data.forEach(row => {
+                    tableHTML += `
+                        <tr>
+                            <td>${row.nr || ''}</td>
+                            <td>${row.datum || ''}</td>
+                            <td>${row.belegnr || ''}</td>
+                            <td>${row.buchungsdatum || ''}</td>
+                            <td>${row.leistungsdatum || ''}</td>
+                            <td>${row.beschreibung || ''}</td>
+                            <td>${row.betrag || ''}</td>
+                            <td>${row.steuersatz || ''}</td>
+                            <td>${row.steuerbetrag || ''}</td>
+                            <td>${row.soll || ''}</td>
+                            <td>${row.haben || ''}</td>
+                            <td>${row.steuerkonto || ''}</td>
+                            <td>${row.benutzer || ''}</td>
+                        </tr>
+                    `;
+                });
+                
+                tableHTML += `
+                        </tbody>
+                    </table>
+                `;
+                
+                tableContainer.innerHTML = tableHTML;
+            }
+            
+            // Process image with Tesseract OCR
+            function processImage(file) {
+                loading.style.display = 'block';
+                uploadBtn.disabled = true;
+                
+                // Get and display filename
+                originalFileName = file.name;
+                fileNameDiv.textContent = originalFileName;
+                updateNextFilenameDisplay();
+                
+                // Show image preview
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.innerHTML = `<img src="${e.target.result}" class="preview-image" alt="Vorschau">`;
+                };
+                reader.readAsDataURL(file);
+                
+                Tesseract.recognize(
+                    file,
+                    'deu', // German language
+                    {
+                        logger: message => {
+                            if (message.status === 'recognizing text') {
+                                progressBar.style.width = `${message.progress * 100}%`;
+                                progressBar.textContent = `${Math.round(message.progress * 100)}%`;
+                                statusText.textContent = 'Erkenne Text...';
+                            } else if (message.status === 'loading tesseract core') {
+                                statusText.textContent = 'Lade Tesseract Core...';
+                            } else if (message.status === 'initializing tesseract') {
+                                statusText.textContent = 'Initialisiere Tesseract...';
+                            } else if (message.status === 'loading language traineddata') {
+                                statusText.textContent = 'Lade Sprachdaten...';
+                            }
+                        }
+                    }
+                ).then(result => {
+                    loading.style.display = 'none';
+                    uploadBtn.disabled = false;
+                    
+                    ocrResult = result.data.text;
+                    rawText.textContent = ocrResult;
+                    
+                    // Try to parse the extracted text
+                    extractedData = parseOCRText(ocrResult);
+                    createTable(extractedData);
+                    
+                    if (extractedData.length > 0) {
+                        showNotification('Bild erfolgreich verarbeitet und Daten extrahiert!', 'success');
+                    } else {
+                        showNotification('Text wurde erkannt, aber keine tabellarischen Daten gefunden. Bitte bearbeiten Sie die Daten manuell.', 'warning');
+                    }
+                }).catch(err => {
+                    loading.style.display = 'none';
+                    uploadBtn.disabled = false;
+                    showNotification('Fehler bei der OCR-Verarbeitung: ' + err.message, 'error');
+                    console.error(err);
+                });
+            }
+            
+            // Parse OCR text to extract structured data
+            function parseOCRText(text) {
+                const lines = text.split('\n').filter(line => line.trim().length > 0);
+                const data = [];
+                
+                // Look for patterns that match accounting data
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    
+                    // Skip lines that are clearly not data rows
+                    if (line.includes('Nr.') || line.includes('Datum') || line.includes('Belegnr.') || 
+                        line.includes('Buchungsdatum') || line.includes('Leistungsdatum') || 
+                        line.includes('Beschreibung') || line.includes('Betrag')) {
+                        continue;
+                    }
+                    
+                    // Try to identify data rows by common patterns
+                    // This is a simplified parser - real implementation would need more sophisticated logic
+                    const datePattern = /\b\d{2}\.\d{2}\.\d{4}\b/g;
+                    const amountPattern = /\d+[.,]\d{2}\s?€/g;
+                    const accountPattern = /\b\d{4,5}\b/g;
+                    
+                    const dates = line.match(datePattern);
+                    const amounts = line.match(amountPattern);
+                    const accounts = line.match(accountPattern);
+                    
+                    if (dates && dates.length >= 1) {
+                        const row = {
+                            nr: (data.length + 1).toString(),
+                            datum: dates[0],
+                            belegnr: '',
+                            buchungsdatum: dates[0],
+                            leistungsdatum: dates[0],
+                            beschreibung: line,
+                            betrag: amounts ? amounts[0] : '',
+                            steuersatz: '',
+                            steuerbetrag: '',
+                            soll: accounts && accounts.length > 0 ? accounts[0] : '',
+                            haben: accounts && accounts.length > 1 ? accounts[1] : '',
+                            steuerkonto: '',
+                            benutzer: userInput.value
+                        };
+                        
+                        // Look for VAT information
+                        if (line.includes('19%') || line.includes('VSt')) {
+                            row.steuersatz = 'VSt 19%';
+                            if (amounts && amounts.length > 1) {
+                                row.steuerbetrag = amounts[1];
+                            }
+                        } else if (line.includes('7%') || line.includes('USt')) {
+                            row.steuersatz = 'USt 7%';
+                            if (amounts && amounts.length > 1) {
+                                row.steuerbetrag = amounts[1];
+                            }
+                        } else if (line.includes('Keine')) {
+                            row.steuersatz = 'Keine';
+                            row.steuerbetrag = '0,00 €';
+                        }
+                        
+                        data.push(row);
+                    }
+                }
+                
+                return data;
+            }
+            
+            // Save data to database via web service
+            async function saveToDatabase() {
+                if (extractedData.length === 0) {
+                    showNotification('Keine Daten zum Speichern vorhanden.', 'error');
+                    return;
+                }
+                
+                saveDbBtn.disabled = true;
+                saveDbBtn.textContent = 'Speichern...';
+                
+                const page = pageInput.value || '1';
+                const user = userInput.value || 'OCR_Import';
+                const createDate = new Date().toISOString();
+                const page1 = document.getElementById('fileName').value;
+               const filename = originalFileName; 
+                
+                let successCount = 0;
+                let errorCount = 0;
+                
+                for (let i = 0; i < extractedData.length; i++) {
+                    const row = extractedData[i];
+                    
+                    const dataToSend = {
+                        Nr: row.nr || '',
+                        Datum: row.datum || '',
+                        Belegnr: row.belegnr || '',
+                        Buchungsdatum: row.buchungsdatum || '',
+                        Leistungsdatum: row.leistungsdatum || '',
+                        Beschreibung: row.beschreibung || '',
+                        Betrag: row.betrag ? parseFloat(row.betrag.replace(',', '.').replace('€', '').trim()) : 0,
+                        Steuersatz: row.steuersatz || '',
+                        Steuerbetrag: row.steuerbetrag ? parseFloat(row.steuerbetrag.replace(',', '.').replace('€', '').trim()) : 0,
+                        Soll: row.soll || '',
+                        Haben: row.haben || '',
+                        Steuerkonto: row.steuerkonto || '',
+                        Benutzer: user,
+                        Page: filename,
+                        CreateDate: createDate
+                    };
+                    
+                    try {
+                        const response = await fetch('http://localhost:5000/buchungen/insert', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(dataToSend)
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            successCount++;
+                        } else {
+                            errorCount++;
+                            console.error('Fehler beim Speichern des Datensatzes:', result.error);
+                        }
+                    } catch (error) {
+                        errorCount++;
+                        console.error('Netzwerkfehler:', error);
+                    }
+                }
+                
+                saveDbBtn.disabled = false;
+                saveDbBtn.textContent = 'In Datenbank speichern';
+                
+                if (errorCount === 0) {
+                    showNotification(`Alle ${successCount} Datensätze erfolgreich in der Datenbank gespeichert.`, 'success');
+                } else if (successCount === 0) {
+                    showNotification(`Fehler beim Speichern aller ${errorCount} Datensätze.`, 'error');
+                } else {
+                    showNotification(`${successCount} Datensätze erfolgreich gespeichert, ${errorCount} Fehler.`, 'warning');
+                }
+            }
+            
+            // Handle file upload
+            uploadBtn.addEventListener('click', () => {
+                const file = fileInput.files[0];
+                
+                if (!file) {
+                    showNotification('Bitte wählen Sie eine Bilddatei aus.', 'error');
+                    return;
+                }
+                
+                if (!file.type.match('image.*')) {
+                    showNotification('Bitte wählen Sie eine Bilddatei aus (JPG, PNG, GIF, BMP, WEBP).', 'error');
+                    return;
+                }
+                
+                processImage(file);
+            });
+            
+            // Browse for any file
+            browseBtn.addEventListener('click', () => {
+                createFileInputWithSuggestedName(`${nextFilename}`);
+            });
+            
+            // Browse for next file
+            browseNextBtn.addEventListener('click', () => {
+                if (!nextFilename) {
+                    showNotification('Keine nächste Datei verfügbar. Bitte laden Sie zuerst eine Datei hoch.', 'warning');
+                    return;
+                }
+                
+                createFileInputWithSuggestedName(nextFilename);
+            });
+            
+            // Update filename when file is selected
+            fileInput.addEventListener('change', function() {
+                if (this.files && this.files[0]) {
+                    fileNameDiv.textContent = this.files[0].name;
+                    originalFileName = this.files[0].name;
+                    updateNextFilenameDisplay();
+                } else {
+                    fileNameDiv.textContent = 'Noch keine Datei ausgewählt';
+                    nextFileNameDiv.style.display = 'none';
+                }
+            });
+            
+            // Export to CSV with original filename
+            exportCsvBtn.addEventListener('click', () => {
+                if (extractedData.length === 0) {
+                    showNotification('Keine Daten zum Exportieren vorhanden.', 'error');
+                    return;
+                }
+                
+                // Create filename based on original file name
+                const baseName = originalFileName ? originalFileName.replace(/\.[^/.]+$/, "") : "belegerfassung";
+                const csvFileName = `${baseName}_data.csv`;
+                
+                // Create CSV content
+                const headers = ['Nr.', 'Datum', 'Belegnr.', 'Buchungsdatum', 'Leistungsdatum', 
+                               'Beschreibung', 'Betrag', 'Steuersatz', 'Steuerbetrag', 
+                               'Soll', 'Haben', 'Steuerkonto', 'Benutzer'];
+                
+                let csvContent = headers.join(';') + '\n';
+                
+                extractedData.forEach(row => {
+                    const values = [
+                        row.nr || '',
+                        row.datum || '',
+                        row.belegnr || '',
+                        row.buchungsdatum || '',
+                        row.leistungsdatum || '',
+                        `"${(row.beschreibung || '').replace(/"/g, '""')}"`,
+                        row.betrag || '',
+                        row.steuersatz || '',
+                        row.steuerbetrag || '',
+                        row.soll || '',
+                        row.haben || '',
+                        row.steuerkonto || '',
+                        row.benutzer || ''
+                    ];
+                    
+                    csvContent += values.join(';') + '\n';
+                });
+                
+                // Create download link
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.setAttribute('href', url);
+                link.setAttribute('download', csvFileName);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                showNotification(`CSV-Datei "${csvFileName}" wurde erfolgreich erstellt und heruntergeladen.`, 'success');
+            });
+            
+            // Export to TXT with original filename
+            exportTxtBtn.addEventListener('click', () => {
+                if (!ocrResult) {
+                    showNotification('Keine Textdaten zum Exportieren vorhanden.', 'error');
+                    return;
+                }
+                
+                // Create filename based on original file name
+                const baseName = originalFileName ? originalFileName.replace(/\.[^/.]+$/, "") : "ocr_text";
+                const txtFileName = `${baseName}_text.txt`;
+                
+                // Create TXT content
+                const txtContent = ocrResult;
+                
+                // Create download link
+                const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.setAttribute('href', url);
+                link.setAttribute('download', txtFileName);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                showNotification(`Text-Datei "${txtFileName}" wurde erfolgreich erstellt und heruntergeladen.`, 'success');
+            });
+            
+            // Save to database button
+            saveDbBtn.addEventListener('click', () => {
+                saveToDatabase();
+            });
+            
+            // Manual edit button
+            manualEditBtn.addEventListener('click', () => {
+                rawText.contentEditable = true;
+                rawText.style.backgroundColor = '#fff3cd';
+                rawText.focus();
+                showNotification('Sie können den Text jetzt manuell bearbeiten. Speichern Sie anschließend die Änderungen.', 'warning');
+            });
+            
+            // Reset button
+            resetBtn.addEventListener('click', () => {
+                fileInput.value = '';
+                tableContainer.innerHTML = '';
+                rawText.textContent = '';
+                rawText.contentEditable = false;
+                rawText.style.backgroundColor = '';
+                imagePreview.innerHTML = '';
+                fileNameDiv.textContent = 'Noch keine Datei ausgewählt';
+                nextFileNameDiv.style.display = 'none';
+                notification.style.display = 'none';
+                extractedData = [];
+                ocrResult = '';
+                originalFileName = '';
+                nextFilename = '';
+            });
+        });
+    </script>
+</body>
+</html>

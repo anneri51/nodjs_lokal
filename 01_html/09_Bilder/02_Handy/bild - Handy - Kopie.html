@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>BildManager • Mobil</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, sans-serif;
+            padding: 10px;
+            min-height: 100vh;
+        }
+        .app {
+            max-width: 550px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 28px;
+            box-shadow: 0 20px 40px -12px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(120deg, #0f2b3d, #1b4a6e);
+            padding: 18px 16px;
+            color: white;
+            text-align: center;
+            position: relative;
+        }
+        .header h1 { font-size: 1.6rem; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .header p { font-size: 0.7rem; opacity: 0.8; margin-top: 4px; }
+        .badge { position: absolute; right: 14px; top: 14px; background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 40px; font-size: 0.6rem; }
+        .browser-tabs { display: flex; background: #f1f5f9; gap: 2px; padding: 0 8px; }
+        .browser-tab { flex: 1; padding: 12px 6px; font-size: 0.8rem; font-weight: 600; background: none; border: none; border-bottom: 2px solid transparent; color: #475569; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; }
+        .browser-tab.active { color: #1e6f9f; border-bottom: 2px solid #1e6f9f; background: white; border-radius: 16px 16px 0 0; }
+        .browser-pane { display: none; flex-direction: column; background: #f8fafc; }
+        .browser-pane.active { display: flex; }
+        .search-box { padding: 10px; background: white; border-bottom: 1px solid #e2e8f0; }
+        .search-box input { width: 100%; padding: 12px 14px; border-radius: 40px; border: 1px solid #cbd5e1; font-size: 0.9rem; background: #fff; }
+        .scroll-list { max-height: 280px; overflow-y: auto; padding: 8px; }
+        .tree-group { margin-bottom: 10px; }
+        .group-header { background: #eef2ff; padding: 12px; border-radius: 20px; font-weight: 600; display: flex; justify-content: space-between; cursor: pointer; }
+        .group-content { margin-left: 12px; padding-left: 8px; border-left: 2px solid #cbd5e1; display: none; }
+        .image-item, .bild-item { background: white; margin: 8px 0; padding: 12px; border-radius: 24px; display: flex; align-items: center; gap: 10px; cursor: pointer; border: 1px solid #eef2ff; }
+        .image-item.selected, .bild-item.selected { background: #1e6f9f; color: white; }
+        .bild-group-header { background: #e6f0fa; padding: 12px; border-radius: 24px; margin-top: 6px; display: flex; justify-content: space-between; font-weight: 600; cursor: pointer; }
+        .control-bar { background: white; padding: 12px; display: flex; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid #eef2f6; }
+        .id-group { flex: 2; }
+        .id-group label { font-size: 0.7rem; font-weight: 600; color: #334155; }
+        .id-group input { width: 100%; padding: 12px; border-radius: 40px; border: 1px solid #cbd5e1; font-size: 1rem; }
+        .btn-group { display: flex; gap: 8px; align-items: center; }
+        button { border: none; background: #eef2ff; padding: 10px 16px; border-radius: 40px; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+        .btn-primary { background: #1e6f9f; color: white; }
+        .btn-nav { background: #334155; color: white; width: 48px; justify-content: center; }
+        .btn-danger { background: #b91c1c; color: white; }
+        .btn-success { background: #15803d; color: white; }
+        .btn-sm { padding: 6px 12px; font-size: 0.7rem; }
+        .status-msg { margin: 12px; padding: 10px; border-radius: 60px; font-size: 0.75rem; text-align: center; background: #f1f5f9; }
+        .main-tabs { display: flex; overflow-x: auto; background: white; border-bottom: 1px solid #e2e8f0; gap: 2px; padding: 0 6px; }
+        .main-tab { flex: 0 0 auto; padding: 12px 12px; font-size: 0.7rem; font-weight: 600; background: none; border-radius: 30px 30px 0 0; color: #475569; cursor: pointer; }
+        .main-tab.active { background: white; color: #1e6f9f; border-bottom: 2px solid #1e6f9f; }
+        .tab-pane { display: none; padding: 14px; background: white; }
+        .tab-pane.active { display: block; }
+        .card { background: #f9f9fc; border-radius: 24px; padding: 12px; margin-bottom: 16px; border: 1px solid #edf2f7; }
+        .section-title { font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+        .preview-img { text-align: center; background: #f1f5f9; border-radius: 24px; padding: 12px; margin-bottom: 12px; }
+        .preview-img img, .preview-img iframe { max-width: 100%; max-height: 200px; border-radius: 20px; }
+        .info-grid { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+        .info-row { display: flex; justify-content: space-between; flex-wrap: wrap; background: white; padding: 8px 12px; border-radius: 20px; }
+        .info-label { font-weight: 600; color: #4b5563; font-size: 0.7rem; }
+        .info-value { font-weight: 500; font-size: 0.8rem; word-break: break-word; }
+        .table-wrapper { overflow-x: auto; margin: 10px 0; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.7rem; }
+        th, td { padding: 10px 6px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f1f5f9; position: sticky; top: 0; }
+        .collapsible { background: #f8fafc; border-radius: 20px; margin: 12px 0; }
+        .collapsible-header { padding: 14px; font-weight: 600; display: flex; justify-content: space-between; cursor: pointer; }
+        .collapsible-content { padding: 12px; display: none; border-top: 1px solid #e2e8f0; }
+        .form-field { margin-bottom: 12px; }
+        .form-field label { font-size: 0.7rem; font-weight: 600; display: block; margin-bottom: 4px; }
+        .form-field input, .form-field select, .form-field textarea { width: 100%; padding: 10px; border-radius: 28px; border: 1px solid #cbd5e1; font-size: 0.85rem; }
+        .final-stats { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+        .stat-pill { background: #eef2ff; padding: 6px 12px; border-radius: 40px; font-size: 0.7rem; }
+        .beleg-images-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 10px; }
+        .beleg-image-card { background: #f1f5f9; border-radius: 20px; padding: 6px; text-align: center; cursor: pointer; }
+        .beleg-image-card img { width: 100%; height: 80px; object-fit: cover; border-radius: 16px; }
+        footer { text-align: center; padding: 14px; font-size: 0.6rem; color: #64748b; border-top: 1px solid #e2e8f0; background: white; }
+        @media (max-width: 480px) { .btn-group button { padding: 8px 12px; } .main-tab { padding: 10px 8px; } }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+<div class="app">
+    <div class="header"><h1><i class="fas fa-mobile-alt"></i> BildManager</h1><p>Belege • Personen • Kontoauszüge</p><div class="badge">mobil v6</div></div>
+
+    <!-- Linke Browser Tabs -->
+    <div class="browser-tabs">
+        <button class="browser-tab active" onclick="switchBrowserTab('tree')"><i class="fas fa-folder-tree"></i> Ordner</button>
+        <button class="browser-tab" onclick="switchBrowserTab('list')"><i class="fas fa-list-ul"></i> Bildliste</button>
+    </div>
+    <div id="browser-tree" class="browser-pane active">
+        <div class="search-box"><input type="text" id="tree-search" placeholder="🔍 Suchen (ID, Dateiname, Klasse)"></div>
+        <div class="scroll-list" id="image-tree"><div class="status-msg">📂 Lade...</div></div>
+    </div>
+    <div id="browser-list" class="browser-pane">
+        <div class="search-box"><input type="text" id="bildliste-search" placeholder="🔍 Suchen (ID, Dateiname, Klasse)"></div>
+        <div class="scroll-list" id="bildliste-container"><div class="status-msg">🖼️ Lade...</div></div>
+    </div>
+
+    <!-- Steuerung -->
+    <div class="control-bar">
+        <div class="id-group"><label><i class="fas fa-hashtag"></i> Bild-ID</label><input type="number" id="file-id" placeholder="z.B. 13540" value="13540"></div>
+        <div class="btn-group"><button class="btn-nav" onclick="changeFileId(-1)"><i class="fas fa-chevron-left"></i></button><button class="btn-primary" onclick="loadFile()"><i class="fas fa-download"></i> Laden</button><button class="btn-nav" onclick="changeFileId(1)"><i class="fas fa-chevron-right"></i></button></div>
+    </div>
+    <div id="status" class="status-msg">✅ Bereit</div>
+
+    <!-- Haupttabs -->
+    <div class="main-tabs">
+        <button class="main-tab active" data-tab="beleg" onclick="switchMainTab('beleg')"><i class="fas fa-receipt"></i> Belege</button>
+        <button class="main-tab" data-tab="bilddaten" onclick="switchMainTab('bilddaten')"><i class="fas fa-edit"></i> Bilddaten</button>
+        <button class="main-tab" data-tab="belegbilder" onclick="switchMainTab('belegbilder')"><i class="fas fa-images"></i> Beleg-Bilder</button>
+        <button class="main-tab" data-tab="personen" onclick="switchMainTab('personen')"><i class="fas fa-users"></i> Personen</button>
+        <button class="main-tab" data-tab="konto" onclick="switchMainTab('konto')"><i class="fas fa-coins"></i> Kontoausz.</button>
+        <button class="main-tab" data-tab="region" onclick="switchMainTab('region')"><i class="fas fa-sliders-h"></i> Region</button>
+    </div>
+
+    <!-- TAB 1: Beleginformationen -->
+    <div id="beleg-pane" class="tab-pane active">
+        <div class="card">
+            <div class="section-title"><i class="fas fa-eye"></i> Vorschau</div>
+            <div id="file-display" class="preview-img">📄 Kein Bild</div>
+            <div id="cntInfo" class="info-row" style="display:none;"></div>
+            <div id="klassInfo" class="info-row" style="display:none;"></div>
+            <div class="info-grid" id="file-meta-content"></div>
+            <button id="delete-image-btn" class="btn-danger" style="width:100%; margin-top:12px;" onclick="deleteImage()" disabled><i class="fas fa-trash"></i> Bild löschen</button>
+        </div>
+        
+        <div class="collapsible">
+            <div class="collapsible-header" onclick="toggleCollapsible(this)"><span><i class="fas fa-chart-line"></i> FINAL_CNT Zähler</span><i class="fas fa-chevron-down"></i></div>
+            <div class="collapsible-content">
+                <div class="form-field"><label>Bild ID</label><div style="display:flex; gap:6px;"><input type="number" id="final-cnt-bild-id" placeholder="ID"><button class="btn-primary btn-sm" onclick="loadFinalCntFromCurrentImage()"><i class="fas fa-sync"></i> aktuell</button></div></div>
+                <div class="final-stats"><span class="stat-pill">📄 Belege: <span id="final-cnt-current-belege">0</span></span><span class="stat-pill">💰 Konto: <span id="final-cnt-current-konto">0</span></span><span class="stat-pill">👤 Personen: <span id="final-cnt-current-person">0</span></span></div>
+                <div class="form-field"><label>Neuer FINAL_CNT Belege</label><input type="number" id="final-cnt-belege" value="0"></div>
+                <div class="form-field"><label>Neuer FINAL_CNT Kontoauszüge</label><input type="number" id="final-cnt-konto" value="0"></div>
+                <div class="form-field"><label>Neuer FINAL_CNT Personen</label><input type="number" id="final-cnt-person" value="0"></div>
+                <div class="form-field"><label>Inventare</label><input type="number" id="final-cnt-inventare" placeholder="Inventare" value="0"></div>
+                <div class="form-field"><label>Partei</label><input type="number" id="final-cnt-partei" placeholder="Partei" value="0"></div>
+                <div class="form-field"><label>Stimmzettel</label><input type="number" id="final-cnt-stimmzettel" placeholder="Stimmzettel" value="0"></div>
+                <button class="btn-success" onclick="updateFinalCnt()"><i class="fas fa-save"></i> Aktualisieren</button>
+                <div id="final-cnt-update-status"></div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="section-title"><i class="fas fa-link"></i> Beleg verbinden</div>
+            <div class="form-field"><label>Beleg ID</label><input type="number" id="fk-belege" placeholder="Beleg ID"></div>
+            <div class="form-field"><label>Hauptbild Nr</label><input type="number" id="main-bild" placeholder="optional" value="0"></div>
+            <button class="btn-success" onclick="addBelegeBildRelation()"><i class="fas fa-plus"></i> Verbinden</button>
+            <div id="relation-status"></div>
+        </div>
+        
+        <div class="section-title"><i class="fas fa-table"></i> Belegdaten</div>
+        <div class="table-wrapper"><table class="beleg-table"><thead><tr>
+ <th>PK</th>
+                                                    <th>Beleg ID</th>
+                                                    <th>Belegnummer</th>
+                                                    <th>Belegdatum</th>
+                                                    <th>Bezeichnung</th>
+                                                    <th>Bruttobetrag</th>
+                                                    <th>Datum All OK</th>
+                                                    <th>Datum Zuord OK</th>
+                                                    <th>Klassifikation 1</th>
+                                                    <th>Aktion</th>
+</tr></thead><tbody id="beleg-table"><tr><td colspan="5">Keine Belege</td></tr></tbody></table></div>
+    </div>
+
+    <!-- TAB 2: Bilddaten bearbeiten -->
+    <div id="bilddaten-pane" class="tab-pane">
+        <div class="card">
+            <div class="section-title">📷 Vorschau</div>
+            <div id="file-display1" class="preview-img">Kein Bild</div>
+            <div id="bilddaten-preview-meta" class="info-grid"></div>
+        </div>
+        <div class="collapsible">
+            <div class="collapsible-header" onclick="toggleCollapsible(this)"><span><i class="fas fa-pen-alt"></i> Bilddaten bearbeiten</span><i class="fas fa-chevron-down"></i></div>
+            <div class="collapsible-content">
+                <div class="form-field"><label>Bild ID</label><input type="number" id="pk_bild_bilder" readonly></div>
+                <div class="form-field"><label>Geändert von</label><input id="modified_by" placeholder="Benutzername"></div>
+                <div class="form-field"><label>Klassifikation 1</label><input id="klassifikation_1"></div>
+                <div class="form-field"><label>Klassifikation 2</label><input id="klassifikation_2"></div>
+                <div class="form-field"><label>Klassifikation 3</label><input id="klassifikation_3"></div>
+                <div class="form-field"><label>Kommentar</label><textarea id="comm" rows="2"></textarea></div>
+                <div class="form-field"><label>Bildart</label><select id="fk_std_bild_bildart"><option value="">Bitte wählen</option></select></div>
+                <div style="display:flex; gap:8px; align-items:center;"><input type="checkbox" id="dummy_bild"><label>Dummy Bild</label></div>
+                <div class="btn-group" style="margin-top:10px;"><button class="btn-primary" onclick="loadImageData()"><i class="fas fa-download"></i> Laden</button><button class="btn-success" onclick="updateImage()">Speichern</button><button class="btn-primary" onclick="resetForm()">Reset</button></div>
+                <div id="update-status"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: Beleg Bilder -->
+    <div id="belegbilder-pane" class="tab-pane">
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span>Beleg: <strong id="current-beleg-id">-</strong></span><div><button class="btn-nav" onclick="navigateBeleg(-1)"><i class="fas fa-chevron-left"></i></button><button class="btn-nav" onclick="navigateBeleg(1)"><i class="fas fa-chevron-right"></i></button></div></div>
+        <div id="beleg-images-container"><div class="status-msg">➡️ Beleg aus Tabelle wählen</div></div>
+    </div>
+
+    <!-- TAB 4: Personen -->
+    <div id="personen-pane" class="tab-pane">
+        <div class="card">
+            <div class="section-title"><i class="fas fa-user-plus"></i> Person zuordnen</div>
+            <div class="form-field"><label>Person ID</label><input type="number" id="fk-person"></div>
+            <button class="btn-success" onclick="addPersonBildRelation()"><i class="fas fa-link"></i> Verbinden</button>
+            <div id="person-relation-status"></div>
+        </div>
+        <div class="section-title">Zugeordnete Personen</div>
+        <div class="table-wrapper"><table class="person-table"><thead><tr><th>Name</th><th>Vorname</th><th>Aktion</th></tr></thead><tbody id="person-table"><tr><td colspan="3">Keine</td></tr></tbody></table></div>
+        <div class="section-title">🗳️ Kandidaten</div>
+        <div class="table-wrapper"><table class="kandidat-table"><thead><tr><th>Name</th><th>Listenplatz</th></tr></thead><tbody id="kandidat-table"><tr><td colspan="2">Keine</td></tr></tbody></table></div>
+    </div>
+
+    <!-- TAB 5: Kontoauszüge -->
+    <div id="konto-pane" class="tab-pane">
+        <div class="section-title"><i class="fas fa-file-invoice-dollar"></i> Kontoauszüge</div>
+        <div class="table-wrapper"><table class="konto-table"><thead><tr><th>Monat</th><th>Betrag</th><th>IBAN</th></tr></thead><tbody id="kontoauszug-table"><tr><td colspan="3">Keine</td></tr></tbody></table></div>
+    </div>
+
+    <!-- TAB 6: Region Update -->
+    <div id="region-pane" class="tab-pane">
+        <div class="card"><div id="update-tab1-preview-container" class="preview-img">Kein Bild</div></div>
+        <div class="form-field"><label>Bild ID</label><input id="update-tab1-pk-bild" placeholder="Bild-ID"></div>
+        <div class="form-field"><label>Klassifikation 1</label><input id="update-tab1-klassifikation"></div>
+        <div class="form-field"><label>Klassifikation 2</label><input id="update-tab1-klassifikation2"></div>
+        <div class="form-field"><label>Bildart</label><select id="update-tab1-fk_std_bild_bildart"><option value="">Bitte wählen</option></select></div>
+        <div class="form-field"><label>Kommentar</label><textarea id="update-tab1-comm" rows="2"></textarea></div>
+        <div class="form-field"><label>Geändert von</label><input id="update-tab1-modified-by"></div>
+        <div style="display:flex; gap:8px; align-items:center;"><input type="checkbox" id="update-tab1-dummy-bild"><label>Dummy</label></div>
+        <div class="btn-group"><button class="btn-primary" onclick="loadImageForTab1()"><i class="fas fa-download"></i> Laden</button><button class="btn-success" onclick="updateImageFromTab1()">Speichern</button></div>
+        <div id="update-tab1-status"></div>
+    </div>
+
+    <footer><i class="fas fa-mobile-alt"></i> Mobil optimiert • Alle Funktionen</footer>
+</div>
+
+<script>
+    // ====================== ALLE FUNKTIONEN MIT NULL-CHECKS ======================
+    let currentFileId = '', currentImageUrls = [], belegList = [], currentBelegIndex = -1;
+    
+    function formatDate(d) { if(!d) return '-'; return new Date(d).toLocaleDateString('de-DE'); }
+    function formatCurrency(v) { return new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(v); }
+    function formatFileSize(b) { if(!b) return '0 KB'; return (b/1024).toFixed(1)+' KB'; }
+    
+    // Navigation
+    function switchBrowserTab(type) {
+        const treePane = document.getElementById('browser-tree');
+        const listPane = document.getElementById('browser-list');
+        const tabs = document.querySelectorAll('.browser-tab');
+        if(treePane) treePane.classList.toggle('active', type==='tree');
+        if(listPane) listPane.classList.toggle('active', type==='list');
+        if(tabs.length) { tabs[0].classList.toggle('active', type==='tree'); tabs[1].classList.toggle('active', type==='list'); }
+        if(type==='tree') loadImageTree(); else loadBildliste();
+    }
+    
+    function switchMainTab(tabId) {
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        const target = document.getElementById(tabId + '-pane');
+        if(target) target.classList.add('active');
+        document.querySelectorAll('.main-tab').forEach(btn => btn.classList.remove('active'));
+        const activeBtn = document.querySelector(`.main-tab[data-tab="${tabId}"]`);
+        if(activeBtn) activeBtn.classList.add('active');
+    }
+    
+    function toggleCollapsible(header) {
+        const content = header.nextElementSibling;
+        const icon = header.querySelector('.fa-chevron-down');
+        if(content) {
+            if(content.style.display === 'none' || !content.style.display) {
+                content.style.display = 'block';
+                if(icon) icon.style.transform = 'rotate(0deg)';
+            } else {
+                content.style.display = 'none';
+                if(icon) icon.style.transform = 'rotate(-90deg)';
+            }
+        }
+    }
+    
+    function changeFileId(delta) {
+        const inp = document.getElementById('file-id');
+        if(inp) {
+            let v = parseInt(inp.value) || 0;
+            v += delta;
+            if(v < 0) v = 0;
+            inp.value = v;
+            loadFile();
+        }
+    }
+    
+    // Bildbaum
+    async function loadImageTree() {
+        try {
+            const r = await fetch('http://localhost:5000/bild/basisdaten');
+            const data = await r.json();
+            let groups = {};
+            data.forEach(d => { let k1 = d.KLASSIFIKATION_1 || 'Sonstige'; if(!groups[k1]) groups[k1] = []; groups[k1].push(d); });
+            let html = '';
+            for(let k1 in groups) {
+                groups[k1].sort((a,b) => (a.FILENAME || '').localeCompare(b.FILENAME || ''));
+                html += `<div class="tree-group"><div class="group-header" onclick="toggleGroup(this)"><span>📁 ${k1}</span><span>${groups[k1].length}</span></div><div class="group-content">`;
+                groups[k1].forEach(img => {
+                    html += `<div class="image-item" data-id="${img.PK_BILD_BILDER}" onclick="selectImage(${img.PK_BILD_BILDER}, this)"><i class="fas fa-image"></i> ID ${img.PK_BILD_BILDER}<small> ${(img.FILENAME||'').substring(0,18)}</small></div>`;
+                });
+                html += `</div></div>`;
+            }
+            const container = document.getElementById('image-tree');
+            if(container) container.innerHTML = html;
+            setupTreeSearch();
+        } catch(e) { console.error(e); }
+    }
+    
+    function toggleGroup(el) {
+        const content = el.nextElementSibling;
+        if(content) content.style.display = content.style.display === 'none' || !content.style.display ? 'block' : 'none';
+    }
+    
+    function selectImage(id, el) {
+        document.querySelectorAll('.image-item').forEach(i => i.classList.remove('selected'));
+        if(el) el.classList.add('selected');
+        const fileIdInput = document.getElementById('file-id');
+        if(fileIdInput) fileIdInput.value = id;
+        loadFile();
+    }
+    
+    function setupTreeSearch() {
+        const searchInput = document.getElementById('tree-search');
+        if(searchInput) {
+            searchInput.addEventListener('input', e => {
+                let t = e.target.value.toLowerCase();
+                document.querySelectorAll('.image-item').forEach(it => {
+                    let m = it.innerText.toLowerCase().includes(t) || (it.getAttribute('data-id') || '').includes(t);
+                    it.style.display = m ? 'flex' : 'none';
+                });
+            });
+        }
+    }
+    
+    // Bildliste
+    async function loadBildliste() {
+        try {
+            const r = await fetch('http://localhost:5000/bild/basisdaten');
+            const data = await r.json();
+            const sorted = [...data].sort((a,b) => a.PK_BILD_BILDER - b.PK_BILD_BILDER);
+            let html = '';
+            for(let i = 0; i < sorted.length; i += 10) {
+                let g = sorted.slice(i, i+10);
+                html += `<div><div class="bild-group-header" onclick="toggleBildGroup(this)"><span>Bilder ${g[0].PK_BILD_BILDER}-${g[g.length-1].PK_BILD_BILDER}</span><span>${g.length}</span></div><div class="group-content" style="display:none;">`;
+                g.forEach(img => {
+                    const searchStr = `${img.PK_BILD_BILDER} ${img.FILENAME||''} ${img.KLASSIFIKATION_1||''} ${img.KLASSIFIKATION_2||''}`.toLowerCase();
+                    html += `<div class="bild-item" data-id="${img.PK_BILD_BILDER}" data-search="${searchStr}" onclick="selectImageFromList(${img.PK_BILD_BILDER}, this)"><i class="fas fa-image"></i> ID ${img.PK_BILD_BILDER}<small> ${(img.FILENAME||'').substring(0,20)}</small></div>`;
+                });
+                html += `</div></div>`;
+            }
+            const container = document.getElementById('bildliste-container');
+            if(container) container.innerHTML = html;
+            
+            const listSearch = document.getElementById('bildliste-search');
+            if(listSearch) {
+                listSearch.addEventListener('input', e => {
+                    let t = e.target.value.toLowerCase();
+                    document.querySelectorAll('.bild-item').forEach(it => {
+                        let m = (it.getAttribute('data-search') || '').includes(t);
+                        it.style.display = m ? 'flex' : 'none';
+                        if(m) {
+                            let p = it.closest('.group-content');
+                            if(p) p.style.display = 'block';
+                        }
+                    });
+                });
+            }
+        } catch(e) { console.error(e); }
+    }
+    
+    function toggleBildGroup(el) {
+        const content = el.nextElementSibling;
+        if(content) content.style.display = content.style.display === 'none' ? 'block' : 'none';
+    }
+    
+    function selectImageFromList(id, el) {
+        document.querySelectorAll('.bild-item').forEach(i => i.classList.remove('selected'));
+        if(el) el.classList.add('selected');
+        const fileIdInput = document.getElementById('file-id');
+        if(fileIdInput) fileIdInput.value = id;
+        loadFile();
+    }
+    
+    // Hauptfunktion loadFile
+    async function loadFile() {
+        const fid = document.getElementById('file-id')?.value.trim();
+        if(!fid) return;
+        const statusDiv = document.getElementById('status');
+        if(statusDiv) statusDiv.innerHTML = '<div class="status-msg"><i class="fas fa-spinner fa-pulse"></i> Lade...</div>';
+        try {
+            const fileRes = await fetch(`http://localhost:5000/accounts/bild/1/1/1/${fid}`);
+            if(!fileRes.ok) throw new Error('Bild nicht gefunden');
+            const blob = await fileRes.blob();
+            const url = URL.createObjectURL(blob);
+            currentFileId = fid;
+            const isImage = blob.type.startsWith('image/');
+            const fileDisplay = document.getElementById('file-display');
+            if(fileDisplay) fileDisplay.innerHTML = isImage ? `<img src="${url}">` : `<iframe src="${url}" style="width:100%; height:180px;"></iframe>`;
+            const fileDisplay1 = document.getElementById('file-display1');
+            if(fileDisplay1) fileDisplay1.innerHTML = isImage ? `<img src="${url}">` : `<div>📄 ${blob.type}</div>`;
+            
+            const belegRes = await fetch(`http://localhost:5000/beleg/bild1/${fid}`);
+            const belege = await belegRes.json();
+            
+            if(belege && belege.length) {
+                belegList = belege;
+                let html = '';
+                belege.forEach((b, idx) => {
+                    html += `<tr onclick="selectBelegForImages(${idx}, ${b.PK_INP_BELEGE_ALL})"><td>${b.PK_INP_BELEGE_ALL}</td>
+<td>${b.BELEGNUMMER || '-'}</td>
+<td class="beleg-date">${b.BELEGDATUM ? formatDate(b.BELEGDATUM) : 'N/A'}</td>
+<td class="beleg-number">${b.BELEGNUMMER || 'N/A'}</td>
+<td class="beleg-amount">${b.BRUTTO_BETRAG ? formatCurrency(b.BRUTTO_BETRAG) : '-'}</td>
+<td><span class="bold-green">${b.DATUM_ALL_OK ? formatDate(b.DATUM_ALL_OK) : 'N/A'}</span></td>
+<td>${formatDate(b.DATUM_ZUORD_OK)}</td>
+<td>${b.FK_MEDIA_BUCH_BUCH || 'N/A'}</td>
+<td>${b.PK_ABL_ORDNER_PAGE || 'N/A'}</td>
+<td>${b.ORDNER_NAME || 'N/A'}</td>
+<td>${b.ORDNER_PAGE || 'N/A'}</td>
+<td>${b.KLASSIFIKATION_1 || 'N/A'}</td>
+<td class="action-cell">
+    <button class="btn-danger btn-sm" onclick="event.stopPropagation();deleteRelation(${b.PK_REL_INP_INP_BELEGE_ALL_BILD_BILDER})">
+        <i class="fas fa-trash"></i>
+    </button>
+</td></td></tr>`;
+                });
+                const belegTable = document.getElementById('beleg-table');
+                if(belegTable) belegTable.innerHTML = html;
+                
+                const cntInfo = document.getElementById('cntInfo');
+                if(cntInfo) {
+                    cntInfo.style.display = 'flex';
+                    cntInfo.innerHTML = `<span class="info-label">📅 DATUM_ZUORD_OK:</span><span>${formatDate(belege[0].DATUM_ZUORD_OK)}</span><span class="info-label">FINAL_CNT:</span><span>Belege:${belege[0].FINAL_CNT_FK_INP_BELEGE_ALL||0} Pers:${belege[0].FINAL_CNT_FK_KON_PERSON||0} Kto:${belege[0].FINAL_CNT_FK_KTO_KONTO_AUSZUG||0}</span>`;
+                }
+                const klassInfo = document.getElementById('klassInfo');
+                if(klassInfo) {
+                    klassInfo.style.display = 'flex';
+                    klassInfo.innerHTML = `<span class="info-label"><i class="fas fa-tags"></i> Klassifikation:</span><span>${belege[0].KLASSIFIKATION_1||'N/A'} / ${belege[0].KLASSIFIKATION_2||''} / ${belege[0].KLASSIFIKATION_3||''}</span>`;
+                }
+            } else {
+                const belegTable = document.getElementById('beleg-table');
+                if(belegTable) belegTable.innerHTML = '<tr><td colspan="5">Keine Belege</td></tr>';
+            }
+            
+            const metaContent = document.getElementById('file-meta-content');
+            if(metaContent) {
+                metaContent.innerHTML = `<div class="info-row"><span class="info-label">ID</span><span>${fid}</span></div>
+                                        <div class="info-row"><span class="info-label">Typ</span><span>${blob.type}</span></div>
+                                        <div class="info-row"><span class="info-label">Größe</span><span>${formatFileSize(blob.size)}</span></div>`;
+            }
+            
+            const pkField = document.getElementById('pk_bild_bilder');
+            if(pkField) pkField.value = fid;
+            
+            const deleteBtn = document.getElementById('delete-image-btn');
+            if(deleteBtn) deleteBtn.disabled = false;
+            
+            await loadPersonsForImage(fid);
+            await loadKontoauszuegeForImage(fid);
+            
+            const finalCntId = document.getElementById('final-cnt-bild-id');
+            if(finalCntId) finalCntId.value = fid;
+            await loadFinalCntData();
+            
+            if(statusDiv) statusDiv.innerHTML = '<div class="status-msg">✅ Geladen</div>';
+        } catch(e) {
+            const statusDiv = document.getElementById('status');
+            if(statusDiv) statusDiv.innerHTML = `<div class="status-msg">❌ ${e.message}</div>`;
+        }
+    }
+    
+    function selectBelegForImages(idx, belegId) {
+        currentBelegIndex = idx;
+        const belegIdSpan = document.getElementById('current-beleg-id');
+        if(belegIdSpan) belegIdSpan.innerText = belegId;
+        loadBelegImages(belegId);
+    }
+    
+    async function loadPersonsForImage(id) {
+        try {
+            const r = await fetch(`http://localhost:5000/person_bild/${id}`);
+            const p = await r.json();
+            let html = '';
+            p.forEach(per => {
+                html += `<tr><td>${per.NACHNAME||''}</td><td>${per.VORNAME||''}</td><td><button class="btn-danger btn-sm" onclick="deletePersonRelation(${per.PK_REL_KON_PERSON_BILD})"><i class="fas fa-trash"></i></button></td></tr>`;
+            });
+            const personTable = document.getElementById('person-table');
+            if(personTable) personTable.innerHTML = html || '<tr><td colspan="3">Keine Personen</td></tr>';
+        } catch(e) { console.error(e); }
+    }
+    
+    async function loadKontoauszuegeForImage(id) {
+        try {
+            const r = await fetch(`http://localhost:5000/rel_konto_auszug_bild/${id}`);
+            const d = await r.json();
+            let html = '';
+            d.forEach(k => {
+                html += `<tr><td>${k.MONAT||''}</td><td>${k.BETRAG ? formatCurrency(k.BETRAG) : ''}</td><td>${k.IBAN||''}</td></tr>`;
+            });
+            const kontoTable = document.getElementById('kontoauszug-table');
+            if(kontoTable) kontoTable.innerHTML = html || '<tr><td colspan="3">Keine</td></tr>';
+        } catch(e) { console.error(e); }
+    }
+    
+    async function deleteRelation(rid) {
+        if(confirm('Verbindung löschen?')) {
+            await fetch(`http://localhost:5000/rel_inp_bild_delete/${rid}`, {method: 'DELETE'});
+            loadFile();
+        }
+    }
+    
+    async function addBelegeBildRelation() {
+        const fk = document.getElementById('fk-belege')?.value;
+        if(!fk) { alert('Beleg-ID eingeben'); return; }
+        await fetch('http://localhost:5000/add_belege_bild', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({FK_INP_BELEGE_ALL: parseInt(fk), FK_BILD_BILDER: parseInt(currentFileId), MAIN_BILD: document.getElementById('main-bild')?.value || 0})
+        });
+        loadFile();
+    }
+    
+    async function addPersonBildRelation() {
+        const pid = document.getElementById('fk-person')?.value;
+        if(!pid) { alert('Person-ID eingeben'); return; }
+        await fetch('http://localhost:5000/add_person_bild_rel', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({FK_KON_PERSON: parseInt(pid), FK_BILD_BILDER: parseInt(currentFileId)})
+        });
+        loadFile();
+    }
+    
+    async function deletePersonRelation(rid) {
+        if(confirm('Person löschen?')) {
+            await fetch(`http://localhost:5000/rel_person_bild_delete/${rid}`, {method: 'DELETE'});
+            loadFile();
+        }
+    }
+    
+    async function deleteImage() {
+        if(!confirm('Endgültig löschen?')) return;
+        await fetch(`http://localhost:5000/bild/delete/${currentFileId}`, {method: 'DELETE'});
+        loadImageTree();
+        loadBildliste();
+        const fileDisplay = document.getElementById('file-display');
+        if(fileDisplay) fileDisplay.innerHTML = '<div>Bild gelöscht</div>';
+        const deleteBtn = document.getElementById('delete-image-btn');
+        if(deleteBtn) deleteBtn.disabled = true;
+    }
+    
+    function navigateBeleg(delta) {
+        if(belegList.length && currentBelegIndex + delta >= 0 && currentBelegIndex + delta < belegList.length) {
+            currentBelegIndex += delta;
+            loadBelegImages(belegList[currentBelegIndex].PK_INP_BELEGE_ALL);
+            const belegIdSpan = document.getElementById('current-beleg-id');
+            if(belegIdSpan) belegIdSpan.innerText = belegList[currentBelegIndex].PK_INP_BELEGE_ALL;
+        }
+    }
+    
+    async function loadBelegImages(belegId) {
+        const cont = document.getElementById('beleg-images-container');
+        if(!cont) return;
+        cont.innerHTML = '<div class="status-msg">⏳ Lade...</div>';
+        try {
+            const r = await fetch(`http://localhost:5000/beleg/bild/1/?pk_inp=${belegId}`);
+            const d = await r.json();
+            if(!d.data || !d.data.length) { cont.innerHTML = '<div>Keine Bilder</div>'; return; }
+            let html = '<div class="beleg-images-grid">';
+            for(let img of d.data) {
+                const imgR = await fetch(`http://localhost:5000/bild/1/${img.FK_BILD_BILDER}`);
+                const imgD = await imgR.json();
+                if(imgD[0]?.FILECONTENT?.data) {
+                    const blob = new Blob([new Uint8Array(imgD[0].FILECONTENT.data)], {type: imgD[0].MIMETYPE});
+                    const url = URL.createObjectURL(blob);
+                    html += `<div class="beleg-image-card" onclick="document.getElementById('file-id').value=${img.FK_BILD_BILDER}; loadFile();"><img src="${url}"><div>ID ${img.FK_BILD_BILDER}</div></div>`;
+                }
+            }
+            html += '</div>';
+            cont.innerHTML = html;
+        } catch(e) { cont.innerHTML = 'Fehler'; }
+    }
+    
+    async function loadFinalCntData() {
+        const bid = document.getElementById('final-cnt-bild-id')?.value;
+        if(!bid) return;
+        try {
+            const r = await fetch(`http://localhost:5000/accounts/bild/1/1/${bid}`);
+            const d = await r.json();
+            if(d[0]) {
+                const setInner = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val; };
+                setInner('final-cnt-current-belege', d[0].FINAL_CNT_FK_INP_BELEGE_ALL || 0);
+                setInner('final-cnt-current-konto', d[0].FINAL_CNT_FK_KTO_KONTO_AUSZUG || 0);
+                setInner('final-cnt-current-person', d[0].FINAL_CNT_FK_KON_PERSON || 0);
+                const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val; };
+                setVal('final-cnt-belege', d[0].FINAL_CNT_FK_INP_BELEGE_ALL || 0);
+                setVal('final-cnt-konto', d[0].FINAL_CNT_FK_KTO_KONTO_AUSZUG || 0);
+                setVal('final-cnt-person', d[0].FINAL_CNT_FK_KON_PERSON || 0);
+                setVal('final-cnt-inventare', d[0].FINAL_CNT_FK_INV_INVENTARE || 0);
+                setVal('final-cnt-partei', d[0].FINAL_CNT_FK_WAHL_PARTEI || 0);
+                setVal('final-cnt-stimmzettel', d[0].FINAL_CNT_FK_WAHL_STIMM_ZETTEL || 0);
+            }
+        } catch(e) {}
+    }
+    
+    function loadFinalCntFromCurrentImage() {
+        const cur = document.getElementById('pk_bild_bilder')?.value;
+        const finalId = document.getElementById('final-cnt-bild-id');
+        if(cur && finalId) { finalId.value = cur; loadFinalCntData(); }
+    }
+    
+    async function updateFinalCnt() {
+        const id = document.getElementById('final-cnt-bild-id')?.value;
+        if(!id) { alert('Bild-ID eingeben'); return; }
+        const payload = {
+            FINAL_CNT_FK_INP_BELEGE_ALL: parseInt(document.getElementById('final-cnt-belege')?.value) || 0,
+            FINAL_CNT_FK_KTO_KONTO_AUSZUG: parseInt(document.getElementById('final-cnt-konto')?.value) || 0,
+            FINAL_CNT_FK_KON_PERSON: parseInt(document.getElementById('final-cnt-person')?.value) || 0,
+            FINAL_CNT_FK_INV_INVENTARE: parseInt(document.getElementById('final-cnt-inventare')?.value) || 0,
+            FINAL_CNT_FK_WAHL_PARTEI: parseInt(document.getElementById('final-cnt-partei')?.value) || 0,
+            FINAL_CNT_FK_WAHL_STIMM_ZETTEL: parseInt(document.getElementById('final-cnt-stimmzettel')?.value) || 0
+        };
+        try {
+            await fetch(`http://localhost:5000/bild/final/update/${id}`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)});
+            loadFinalCntData();
+            const statusDiv = document.getElementById('final-cnt-update-status');
+            if(statusDiv) statusDiv.innerHTML = '✅ Aktualisiert';
+        } catch(e) {}
+    }
+    
+    async function loadImageData() {
+        const id = document.getElementById('pk_bild_bilder')?.value;
+        if(!id) return;
+        try {
+            const r = await fetch(`http://localhost:5000/bild/1/${id}`);
+            const d = await r.json();
+            if(d[0]) {
+                const img = d[0];
+                const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val; };
+                setVal('modified_by', img.MODIFIED_BY || '');
+                setVal('klassifikation_1', img.KLASSIFIKATION_1 || '');
+                setVal('klassifikation_2', img.KLASSIFIKATION_2 || '');
+                setVal('klassifikation_3', img.KLASSIFIKATION_3 || '');
+                setVal('comm', img.COMM || '');
+                const dummyChk = document.getElementById('dummy_bild');
+                if(dummyChk) dummyChk.checked = !!img.DUMMY_BILD;
+                const previewMeta = document.getElementById('bilddaten-preview-meta');
+                if(previewMeta) {
+                    previewMeta.innerHTML = `<div class="info-row"><span>Dateiname:</span><span>${img.FILENAME||'-'}</span></div>
+                                            <div class="info-row"><span>Auflösung:</span><span>${img.W_PX||'?'}x${img.H_PX||'?'}</span></div>`;
+                }
+            }
+        } catch(e) {}
+    }
+    
+    async function updateImage() {
+        const payload = {
+            pk_bild_bilder: parseInt(document.getElementById('pk_bild_bilder')?.value),
+            modified_by: document.getElementById('modified_by')?.value || '',
+            klassifikation_1: document.getElementById('klassifikation_1')?.value || '',
+            klassifikation_2: document.getElementById('klassifikation_2')?.value || '',
+            klassifikation_3: document.getElementById('klassifikation_3')?.value || '',
+            comm: document.getElementById('comm')?.value || '',
+            dummy_bild: document.getElementById('dummy_bild')?.checked ? 1 : 0,
+            fk_std_bild_bildart: parseInt(document.getElementById('fk_std_bild_bildart')?.value) || null
+        };
+        await fetch('http://localhost:5000/update-bild', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)});
+        const statusDiv = document.getElementById('update-status');
+        if(statusDiv) statusDiv.innerHTML = '✅ Gespeichert';
+    }
+    
+    function resetForm() {
+        const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val; };
+        setVal('modified_by', '');
+        setVal('klassifikation_1', '');
+        setVal('klassifikation_2', '');
+        setVal('comm', '');
+        const dummyChk = document.getElementById('dummy_bild');
+        if(dummyChk) dummyChk.checked = false;
+    }
+    
+    async function loadImageForTab1() {
+        const id = document.getElementById('update-tab1-pk-bild')?.value;
+        if(!id) return;
+        try {
+            const meta = await fetch(`http://localhost:5000/accounts/bild/1/1/${id}`);
+            const data = await meta.json();
+            if(data[0]) {
+                const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val; };
+                setVal('update-tab1-klassifikation', data[0].KLASSIFIKATION_1 || '');
+                setVal('update-tab1-klassifikation2', data[0].KLASSIFIKATION_2 || '');
+                setVal('update-tab1-comm', data[0].COMM || '');
+                setVal('update-tab1-modified-by', data[0].MODIFIED_BY || '');
+                const dummyChk = document.getElementById('update-tab1-dummy-bild');
+                if(dummyChk) dummyChk.checked = !!data[0].DUMMY_BILD;
+                const imgBlob = await fetch(`http://localhost:5000/accounts/bild/1/1/1/${id}`);
+                const blob = await imgBlob.blob();
+                const url = URL.createObjectURL(blob);
+                const preview = document.getElementById('update-tab1-preview-container');
+                if(preview) preview.innerHTML = `<img src="${url}" style="max-width:100%; max-height:140px;">`;
+            }
+        } catch(e) {}
+    }
+    
+    async function updateImageFromTab1() {
+        const id = document.getElementById('update-tab1-pk-bild')?.value;
+        if(!id) return;
+        const payload = {
+            pk_bild_bilder: parseInt(id),
+            klassifikation_1: document.getElementById('update-tab1-klassifikation')?.value || '',
+            klassifikation_2: document.getElementById('update-tab1-klassifikation2')?.value || '',
+            comm: document.getElementById('update-tab1-comm')?.value || '',
+            modified_by: document.getElementById('update-tab1-modified-by')?.value || '',
+            dummy_bild: document.getElementById('update-tab1-dummy-bild')?.checked ? 1 : 0,
+            fk_std_bild_bildart: parseInt(document.getElementById('update-tab1-fk_std_bild_bildart')?.value) || null
+        };
+        await fetch('http://localhost:5000/update-bild', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)});
+        const statusDiv = document.getElementById('update-tab1-status');
+        if(statusDiv) statusDiv.innerHTML = '✅ Gespeichert';
+    }
+    
+    async function loadBildartOptions() {
+        try {
+            const r = await fetch('http://localhost:5000/std/44');
+            const d = await r.json();
+            ['fk_std_bild_bildart', 'update-tab1-fk_std_bild_bildart'].forEach(id => {
+                const sel = document.getElementById(id);
+                if(sel) {
+                    sel.innerHTML = '<option value="">Bitte wählen</option>';
+                    d.forEach(opt => {
+                        const o = document.createElement('option');
+                        o.value = opt.STD_VALUE;
+                        o.textContent = opt.STD_NAME || opt.STD_VALUE;
+                        sel.appendChild(o);
+                    });
+                }
+            });
+        } catch(e) { console.error(e); }
+    }
+    
+    window.addEventListener('load', () => {
+        loadBildartOptions();
+        loadImageTree();
+        loadBildliste();
+        setTimeout(() => { loadFile(); }, 400);
+    });
+</script>
+</body>
+</html>

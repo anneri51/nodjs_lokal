@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Viewer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        .image-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .image-container img {
+            max-width: 100%;
+            max-height: 500px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .image-info {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .image-info div {
+            margin-bottom: 8px;
+        }
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+            color: #7f8c8d;
+        }
+        .error {
+            color: #e74c3c;
+            padding: 15px;
+            background-color: #fadbd8;
+            border-radius: 4px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .id-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 20px 0;
+        }
+        .id-item {
+            padding: 8px 12px;
+            background-color: #3498db;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .id-item:hover {
+            background-color: #2980b9;
+        }
+        .id-item.active {
+            background-color: #2c3e50;
+            font-weight: bold;
+        }
+        .table-container {
+            margin-top: 30px;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            position: sticky;
+            top: 0;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .json-viewer {
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 20px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+
+ 
+    <div class="container">
+        <h1>Image Viewer</h1>
+        <div id="status"></div>
+        <div class="navigation">
+            <button id="prevBtn" onclick="prevImage()" disabled>Previous</button>
+            <span id="positionDisplay">0/0</span>
+            <button id="nextBtn" onclick="nextImage()" disabled>Next</button>
+        </div>
+        <div id="idListContainer" class="id-list"></div>
+        <div id="content">
+            <div class="loading">Loading image IDs...</div>
+        </div>
+     <div class="action-buttons">
+            <button class="insert-btn" onclick="insertImage()">Insert Image</button>
+            <button class="delete-btn" onclick="deleteCurrentImage()" >Delete Current Image</button>
+             <div id="PK_BILD"></div>
+        </div>
+        <div id="tableContainer" class="table-container" style="display: none;">
+            <h2>IMP_IMAGES Table Data</h2>
+            <div id="tableContent"></div>
+        </div>
+    </div>
+
+    <script>
+        let imageIds = [];
+        let currentIndex = -1;
+        let currentImageData = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchImageIds();
+        });
+
+        function fetchImageIds() {
+            document.getElementById('status').innerHTML = '';
+            document.getElementById('content').innerHTML = '<div class="loading">Loading image IDs...</div>';
+            document.getElementById('tableContainer').style.display = 'none';
+            
+            fetch('http://localhost:5000/images')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (!Array.isArray(data)) {
+                        throw new Error('Invalid data format - expected array');
+                    }
+                    
+                    imageIds = data.map(item => item.id);
+                    renderIdList();
+                    
+                    if (imageIds.length > 0) {
+                        // Load first image by default
+                        currentIndex = 0;
+                        fetchImageData(imageIds[currentIndex]);
+                    } else {
+                        document.getElementById('content').innerHTML = '<div class="error">No images found</div>';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('status').innerHTML = `
+                        <div class="error">
+                            Failed to load image IDs: ${error.message}
+                        </div>
+                    `;
+                    console.error('Error fetching image IDs:', error);
+                });
+        }
+
+        function renderIdList() {
+            const idListContainer = document.getElementById('idListContainer');
+            idListContainer.innerHTML = '';
+            
+            imageIds.forEach((id, index) => {
+                const idElement = document.createElement('div');
+                idElement.className = `id-item ${index === currentIndex ? 'active' : ''}`;
+                idElement.textContent = id;
+                idElement.onclick = () => {
+                    currentIndex = index;
+                    fetchImageData(id);
+                    updateIdListSelection();
+                };
+                idListContainer.appendChild(idElement);
+            });
+        }
+
+        function updateIdListSelection() {
+            const idItems = document.querySelectorAll('.id-item');
+            idItems.forEach((item, index) => {
+                if (index === currentIndex) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        }
+
+        function fetchImageData(id) {
+            document.getElementById('content').innerHTML = '<div class="loading">Loading image...</div>';
+            document.getElementById('tableContainer').style.display = 'none';
+            
+            fetch(`http://localhost:5000/images/${id}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    currentImageData = data;
+                    displayCurrentImage();
+                    updateNavigation();
+                    displayTableData(data);
+                })
+                .catch(error => {
+                    document.getElementById('status').innerHTML = `
+                        <div class="error">
+                            Failed to load image data: ${error.message}
+                        </div>
+                    `;
+                    console.error('Error fetching image data:', error);
+                });
+        }
+
+        function displayCurrentImage() {
+            if (!currentImageData) return;
+            
+            const contentDiv = document.getElementById('content');
+            
+            let imageUrl;
+            if (currentImageData.data) {
+                // Handle base64 image data
+                try {
+                    // Check if it's already a data URL
+                    if (currentImageData.data.startsWith('data:')) {
+                        imageUrl = currentImageData.data;
+                    } else {
+                        // Assume it's raw base64
+                        const contentType = currentImageData.file_type || 'image/jpeg';
+                        imageUrl = `data:${contentType};base64,${currentImageData.data}`;
+                    }
+                } catch (error) {
+                    console.error('Error processing image data:', error);
+                    imageUrl = '';
+                }
+            } else {
+                // Handle case where image is referenced by URL
+                imageUrl = currentImageData.url || '';
+            }
+            
+            const imageHtml = `
+                <div class="image-container">
+                    ${imageUrl ? `<img src="${imageUrl}" alt="${currentImageData.name || 'Image'}">` : 
+                    '<div class="error">No image data available</div>'}
+                </div>
+                <div class="image-info">
+                    <div><strong>ID:</strong> ${currentImageData.id || currentImageData.PK_IMP_IMAGES || 'N/A'}</div>
+                    <div><strong>Name:</strong> ${currentImageData.name || 'N/A'}</div>
+                    ${currentImageData.uploaded_at ? `<div><strong>Uploaded at:</strong> ${formatDate(currentImageData.uploaded_at)}</div>` : ''}
+                    ${currentImageData.file_size ? `<div><strong>File size:</strong> ${formatFileSize(currentImageData.file_size)}</div>` : ''}
+                    ${currentImageData.file_type ? `<div><strong>File type:</strong> ${currentImageData.file_type}</div>` : ''}
+                </div>
+            `;
+            
+            contentDiv.innerHTML = imageHtml;
+        }
+
+        function displayTableData(data) {
+            const tableContainer = document.getElementById('tableContainer');
+            const tableContent = document.getElementById('tableContent');
+            
+            // First display as JSON for complete data
+            tableContent.innerHTML = `
+                <div class="json-viewer">${JSON.stringify(data, null, 2)}</div>
+            `;
+            
+            // Then try to create a table if the data has regular structure
+            if (typeof data === 'object' && !Array.isArray(data)) {
+                let tableHtml = '<table><thead><tr>';
+                const headers = Object.keys(data);
+                
+                // Create table headers
+                headers.forEach(header => {
+                    tableHtml += `<th>${header}</th>`;
+                });
+                tableHtml += '</tr></thead><tbody><tr>';
+                
+                // Create table rows
+                headers.forEach(header => {
+                    let value = data[header];
+                    if (value === null || value === undefined) {
+                        value = 'NULL';
+                    } else if (typeof value === 'object') {
+                        value = JSON.stringify(value);
+                    } else if (header === 'data' && typeof value === 'string' && value.length > 50) {
+                        value = `${value.substring(0, 50)}... [truncated]`;
+                    }
+                    tableHtml += `<td>${value}</td>`;
+                });
+                
+                tableHtml += '</tr></tbody></table>';
+                tableContent.innerHTML += tableHtml;
+            }
+            
+            tableContainer.style.display = 'block';
+        }
+
+        function prevImage() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                fetchImageData(imageIds[currentIndex]);
+                updateNavigation();
+                updateIdListSelection();
+            }
+        }
+
+        function nextImage() {
+            if (currentIndex < imageIds.length - 1) {
+                currentIndex++;
+                fetchImageData(imageIds[currentIndex]);
+                updateNavigation();
+                updateIdListSelection();
+            }
+        }
+
+        function updateNavigation() {
+            document.getElementById('positionDisplay').textContent = `${currentIndex + 1}/${imageIds.length}`;
+            document.getElementById('prevBtn').disabled = currentIndex === 0;
+            document.getElementById('nextBtn').disabled = currentIndex === imageIds.length - 1;
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleString();
+            } catch (e) {
+                return dateString;
+            }
+        }
+
+        function formatFileSize(bytes) {
+            if (!bytes) return 'N/A';
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function displayCurrentImage() {
+            if (!currentImageData) return;
+            
+            const contentDiv = document.getElementById('content');
+            
+            let imageUrl;
+            if (currentImageData.data) {
+                try {
+                    // Handle Buffer data
+                    if (currentImageData.data.type === "Buffer" && Array.isArray(currentImageData.data.data)) {
+                        // Convert buffer array to Uint8Array
+                        const byteArray = new Uint8Array(currentImageData.data.data);
+                        
+                        // Convert to binary string
+                        let binary = '';
+                        byteArray.forEach(byte => {
+                            binary += String.fromCharCode(byte);
+                        });
+                        
+                        // Create base64 encoded image
+                        imageUrl = 'data:image/jpeg;base64,' + btoa(binary);
+                        
+                        // Add info about the binary data
+                        const binaryInfo = `
+                            <div class="binary-data-info">
+                                <div><strong>Image Data Type:</strong> Buffer (${currentImageData.data.data.length} bytes)</div>
+                                <div><strong>First 10 bytes:</strong> ${currentImageData.data.data.slice(0, 10).join(', ')}...</div>
+                            </div>
+                        `;
+                        contentDiv.innerHTML += binaryInfo;
+                    } 
+                    // Handle base64 string data
+                    else if (typeof currentImageData.data === 'string') {
+                        if (currentImageData.data.startsWith('data:')) {
+                            imageUrl = currentImageData.data;
+                        } else {
+                            const contentType = currentImageData.file_type || 'image/jpeg';
+                            imageUrl = `data:${contentType};base64,${currentImageData.data}`;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error processing image data:', error);
+                    imageUrl = '';
+                }
+            } else {
+                // Handle case where image is referenced by URL
+                imageUrl = currentImageData.url || '';
+            }
+            
+            const imageHtml = `
+                <div class="image-container">
+                    ${imageUrl ? `<img src="${imageUrl}" alt="${currentImageData.name || 'Image'}">` : 
+                    '<div class="error">No image data available</div>'}
+                </div>
+                <div class="image-info">
+                    <div><strong>ID:</strong> <input type="text" id="PK" value ="${currentImageData.id || currentImageData.PK_IMP_IMAGES || 'N/A'}"></div>
+                    <div><strong>Name:</strong> ${currentImageData.name || 'N/A'}</div>
+                    ${currentImageData.uploaded_at ? `<div><strong>Uploaded at:</strong> ${formatDate(currentImageData.uploaded_at)}</div>` : ''}
+                    ${currentImageData.file_size ? `<div><strong>File size:</strong> ${formatFileSize(currentImageData.file_size)}</div>` : ''}
+                    ${currentImageData.file_type ? `<div><strong>File type:</strong> ${currentImageData.file_type}</div>` : ''}
+                </div>
+            `;
+            
+            contentDiv.innerHTML = imageHtml;
+        }
+
+// Add new function to insert image
+      function insertImage() {
+    if (currentIndex === -1 || !currentImageData) {
+        alert('No image selected to insert');
+        return;
+    }
+    
+    const imageId = document.getElementById('PK').value;
+    if (!imageId) {
+        alert('Cannot determine image ID (PK_IMP_IMAGES)');
+        return;
+    }
+
+    fetch('http://localhost:5000/images/insert1', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            imageId: imageId,
+            description: 'test'
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Create a success message with the returned ID
+        const statusDiv = document.getElementById('status');
+ const statusDivBild = document.getElementById('PK_BILD');
+        statusDivBild.innerHTML = `${data.PK_BILD_BILDER}`;
+        statusDiv.innerHTML = `
+            <div style="background-color: #d4edda; color: #155724; padding: 10px; border-radius: 4px; margin: 10px 0;">
+                <h3>Insert Successful</h3>
+                <p>Image inserted with ID: <strong>${data.PK_BILD_BILDER}</strong></p>
+                <p>Full response:</p>
+                <pre style="background: white; padding: 10px; border-radius: 4px; overflow-x: auto;">${JSON.stringify(data, null, 2)}</pre>
+            </div>
+        `;
+      statusDivBild.innerHTML +=  `
+            <div style="background-color: #d4edda; color: #155724; padding: 10px; border-radius: 4px; margin: 10px 0;">
+                <h3>Insert Successful</h3>
+                <p>Image inserted with ID: <strong>${data.PK_BILD_BILDER}</strong></p>
+                <p>Full response:</p>
+                <pre style="background: white; padding: 10px; border-radius: 4px; overflow-x: auto;">${JSON.stringify(data, null, 2)}</pre>
+            </div>
+        `;
+
+
+        
+        // Refresh the image list to include the newly inserted image
+        fetchImageIds();
+    })
+    .catch(error => {
+        document.getElementById('status').innerHTML = `
+            <div class="error">
+                Failed to insert image: ${error.message}
+            </div>
+        `;
+        console.error('Error inserting image:', error);
+    });
+}
+
+
+// Add new function to delete image
+        function deleteCurrentImage() {
+            if (currentIndex === -1 || !currentImageData) {
+                alert('No image selected to delete');
+                return;
+            }
+            
+            const imageId = document.getElementById('PK').value;
+            if (!imageId) {
+                alert('Cannot determine image ID (PK_IMP_IMAGES)');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to delete image ${imageId}?`)) {
+                return;
+            }
+            
+         
+            
+            fetch(`http://localhost:5000/api/images/delete/${imageId}`, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                document.getElementById('status').innerHTML = `
+                    <div class="success">
+                        Image deleted successfully! ${imageId}
+                    </div>
+                `;
+                // Refresh the image list
+                fetchImageIds();
+            })
+            .catch(error => {
+                document.getElementById('status').innerHTML = `
+                    <div class="error">
+                        Failed to delete image: ${error.message}
+                    </div>
+                `;
+                console.error('Error deleting image:', error);
+            });
+        }
+
+
+    </script>
+</body>
+</html>

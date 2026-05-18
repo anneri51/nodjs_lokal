@@ -1,0 +1,1931 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bild Daten Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(90deg, #2c3e50, #4a6491);
+            color: white;
+            padding: 25px 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .logo {
+            position: absolute;
+            top: 20px;
+            left: 30px;
+            font-size: 2rem;
+            color: #fff;
+        }
+
+        .dashboard-controls {
+            padding: 20px;
+            background: #f5f7fa;
+            border-bottom: 1px solid #e0e6ed;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            border-left: 4px solid #3498db;
+        }
+
+        .stat-card h3 {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-card.primary {
+            border-left-color: #3498db;
+        }
+
+        .stat-card.success {
+            border-left-color: #27ae60;
+        }
+
+        .stat-card.warning {
+            border-left-color: #f39c12;
+        }
+
+        .stat-card.danger {
+            border-left-color: #e74c3c;
+        }
+
+        .dashboard-content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .charts-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            height: 400px;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e0e6ed;
+        }
+
+        .chart-header h2 {
+            color: #2c3e50;
+            font-size: 1.3rem;
+        }
+
+        .data-table-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .table-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .search-box {
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            min-width: 300px;
+        }
+
+        .search-box:focus {
+            border-color: #3498db;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+
+        .filter-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        select {
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+        }
+
+        select:focus {
+            border-color: #3498db;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+        }
+
+        .data-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: #2c3e50;
+            color: white;
+            padding: 12px 15px;
+            text-align: left;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .data-table thead th:hover {
+            background-color: #34495e;
+        }
+
+        .data-table th i {
+            margin-left: 5px;
+            font-size: 0.8em;
+        }
+
+        .data-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e6ed;
+        }
+
+        .data-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        .data-table tr:hover {
+            background-color: #e3f2fd;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+            padding: 10px;
+        }
+
+        .pagination button {
+            padding: 8px 15px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination-info {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+
+        .status {
+            padding: 15px;
+            margin: 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .loading {
+            background-color: #e7f3fe;
+            color: #0066cc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .error {
+            background-color: #ffebee;
+            color: #d32f2f;
+        }
+
+        .success {
+            background-color: #e8f5e9;
+            color: #388e3c;
+        }
+
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid #3498db;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px 20px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+
+        .bold-green {
+            font-weight: bold;
+            color: #27ae60;
+        }
+
+        .bold-red {
+            font-weight: bold;
+            color: #e74c3c;
+        }
+
+        .bold-blue {
+            font-weight: bold;
+            color: #3498db;
+        }
+
+        .export-btn {
+            background: linear-gradient(135deg, #27ae60, #219653);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .export-btn:hover {
+            background: linear-gradient(135deg, #219653, #1e8449);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, #3498db, #2c3e50);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .refresh-btn:hover {
+            background: linear-gradient(135deg, #2980b9, #1a252f);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            border-top: 1px solid #e0e6ed;
+            background-color: #f5f7fa;
+        }
+
+        @media (max-width: 768px) {
+            .charts-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .table-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-box {
+                min-width: 100%;
+            }
+            
+            .filter-controls {
+                justify-content: center;
+            }
+            
+            .data-table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+
+        .chart-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chart-btn {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+
+        .chart-btn:hover {
+            background: #e9ecef;
+        }
+
+        .section-title {
+            color: #2c3e50;
+            margin: 30px 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+            font-size: 1.5rem;
+        }
+
+        /* Tabs Styles */
+        .tabs-container {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 20px;
+        }
+
+        .tabs-header {
+            display: flex;
+            background: #f5f7fa;
+            border-bottom: 1px solid #e0e6ed;
+            overflow-x: auto;
+        }
+
+        .tab-button {
+            padding: 15px 25px;
+            background: none;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            color: #7f8c8d;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .tab-button:hover {
+            background: #e3f2fd;
+            color: #3498db;
+        }
+
+        .tab-button.active {
+            background: white;
+            color: #3498db;
+            border-bottom: 3px solid #3498db;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px;
+            background: white;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .tab-charts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+        }
+
+        .filter-info {
+            background: #e8f4fd;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            color: #2c3e50;
+            border-left: 4px solid #3498db;
+        }
+
+        .filter-info i {
+            margin-right: 8px;
+            color: #3498db;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-chart-bar"></i>
+            </div>
+            <h1>Bild Daten Dashboard</h1>
+            <p class="subtitle">Übersicht und Analyse der Bilddaten</p>
+        </header>
+        
+        <div class="dashboard-controls">
+            <button class="refresh-btn" onclick="loadData()">
+                <i class="fas fa-sync-alt"></i> Daten aktualisieren
+            </button>
+            <button class="export-btn" onclick="exportToCSV()">
+                <i class="fas fa-download"></i> Als CSV exportieren
+            </button>
+        </div>
+
+        <div class="filter-controls" style="padding: 15px 20px; background: #f8f9fa; border-bottom: 1px solid #e0e6ed;">
+            <input type="text" id="global-search-input" class="search-box" placeholder="In allen Feldern suchen...">
+            <select id="global-klassifikation1-filter">
+                <option value="">Alle Klassifikationen 1</option>
+            </select>
+            <select id="global-klassifikation2-filter">
+                <option value="">Alle Klassifikationen 2</option>
+            </select>
+            <select id="global-klassifikation3-filter">
+                <option value="">Alle Klassifikationen 3</option>
+            </select>
+            <select id="global-buch-filter">
+                <option value="">Alle Bücher</option>
+            </select>
+            <button class="refresh-btn" onclick="applyGlobalFilters()" style="padding: 10px 15px;">
+                <i class="fas fa-filter"></i> Filter anwenden
+            </button>
+            <button class="chart-btn" onclick="resetGlobalFilters()" style="padding: 10px 15px;">
+                <i class="fas fa-times"></i> Zurücksetzen
+            </button>
+        </div>
+
+        <div id="status" class="status loading">
+            <div class="spinner"></div>
+            <span>Lade Bilderdaten...</span>
+        </div>
+
+        <div class="stats-overview" id="stats-overview" style="display: none;">
+            <div class="stat-card primary">
+                <h3>Gesamtanzahl Bilder</h3>
+                <div class="stat-value" id="total-images">0</div>
+            </div>
+            <div class="stat-card success">
+                <h3>Klassifizierte Bilder</h3>
+                <div class="stat-value" id="classified-images">0</div>
+            </div>
+            <div class="stat-card warning">
+                <h3>Durchschnitt Belege pro Bild</h3>
+                <div class="stat-value" id="avg-belege">0</div>
+            </div>
+            <div class="stat-card danger">
+                <h3>Durchschnitt Personen pro Bild</h3>
+                <div class="stat-value" id="avg-personen">0</div>
+            </div>
+   <div class="stat-card success">
+                <h3>Gesamtanzahl Bilder</h3>
+                <div class="stat-value" id="total-images-datum_zuord_ok">0</div>
+            </div>
+   <div class="stat-card primary">
+                <h3>Gesamtanzahl Bilder</h3>
+                <div class="stat-value" id="total-images-datum_zuord_nok">0</div>
+            </div>
+        </div>
+
+        <div class="dashboard-content">
+            <!-- Previous Diagrams Section -->
+            <h2 class="section-title">Übersichtsdiagramme</h2>
+            <div class="charts-section">
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h2><i class="fas fa-chart-pie"></i> Verteilung nach Klassifikation 1</h2>
+                        <div class="chart-actions">
+                            <button class="chart-btn" onclick="toggleChartType('klassifikation1PieChart')">Typ wechseln</button>
+                            <button class="chart-btn" onclick="downloadChart('klassifikation1PieChart')">Download</button>
+                        </div>
+                    </div>
+                    <canvas id="klassifikation1PieChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h2><i class="fas fa-chart-bar"></i> Top 10 Bücher (FK_MEDIA_BUCH_BUCH)</h2>
+                        <div class="chart-actions">
+                            <button class="chart-btn" onclick="toggleChartType('buecherChart')">Typ wechseln</button>
+                            <button class="chart-btn" onclick="downloadChart('buecherChart')">Download</button>
+                        </div>
+                    </div>
+                    <canvas id="buecherChart"></canvas>
+                </div>
+            </div>
+
+            <div class="charts-section">
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h2><i class="fas fa-calendar"></i> Bilder pro Monat (DATUM_ZUORD_OK)</h2>
+                        <div class="chart-actions">
+                            <button class="chart-btn" onclick="toggleChartType('monatlichChart')">Typ wechseln</button>
+                            <button class="chart-btn" onclick="downloadChart('monatlichChart')">Download</button>
+                        </div>
+                    </div>
+                    <canvas id="monatlichChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h2><i class="fas fa-chart-line"></i> Belege vs. Personen pro Bild</h2>
+                        <div class="chart-actions">
+                            <button class="chart-btn" onclick="toggleChartType('belegePersonenChart')">Typ wechseln</button>
+                            <button class="chart-btn" onclick="downloadChart('belegePersonenChart')">Download</button>
+                        </div>
+                    </div>
+                    <canvas id="belegePersonenChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Classification Bar Charts Section with Tabs -->
+            <h2 class="section-title">Detaillierte Klassifikationsanalyse</h2>
+            <div class="tabs-container">
+                <div class="tabs-header">
+                    <button class="tab-button active" onclick="switchTab('klassifikation1-tab', this)">
+                        <i class="fas fa-chart-bar"></i> Klassifikation 1
+                    </button>
+                    <button class="tab-button" onclick="switchTab('klassifikation2-tab', this)">
+                        <i class="fas fa-chart-bar"></i> Klassifikation 2
+                    </button>
+                    <button class="tab-button" onclick="switchTab('klassifikation3-tab', this)">
+                        <i class="fas fa-chart-bar"></i> Klassifikation 3
+                    </button>
+                    <button class="tab-button" onclick="switchTab('vergleich-tab', this)">
+                        <i class="fas fa-chart-line"></i> Klassifikationsvergleich
+                    </button>
+                </div>
+
+                <!-- Klassifikation 1 Tab -->
+                <div id="klassifikation1-tab" class="tab-content active">
+                    <div class="filter-info">
+                        <i class="fas fa-info-circle"></i>
+                        Die Diagramme zeigen die Verteilung der Daten basierend auf den aktuellen Filtereinstellungen.
+                    </div>
+                    <div class="tab-charts">
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                <h2><i class="fas fa-chart-bar"></i> Klassifikation 1 Verteilung</h2>
+                                <div class="chart-actions">
+                                    <button class="chart-btn" onclick="toggleChartType('klassifikation1Chart')">Typ wechseln</button>
+                                    <button class="chart-btn" onclick="downloadChart('klassifikation1Chart')">Download</button>
+                                </div>
+                            </div>
+                            <canvas id="klassifikation1Chart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                <h2><i class="fas fa-chart-pie"></i> Klassifikation 1 Anteile</h2>
+                                <div class="chart-actions">
+                                    <button class="chart-btn" onclick="toggleChartType('klassifikation1PieDetailed')">Typ wechseln</button>
+                                    <button class="chart-btn" onclick="downloadChart('klassifikation1PieDetailed')">Download</button>
+                                </div>
+                            </div>
+                            <canvas id="klassifikation1PieDetailed"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Klassifikation 2 Tab -->
+                <div id="klassifikation2-tab" class="tab-content">
+                    <div class="filter-info">
+                        <i class="fas fa-info-circle"></i>
+                        Die Diagramme zeigen die Verteilung der Daten basierend auf den aktuellen Filtereinstellungen.
+                    </div>
+                    <div class="tab-charts">
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                <h2><i class="fas fa-chart-bar"></i> Klassifikation 2 Verteilung</h2>
+                                <div class="chart-actions">
+                                    <button class="chart-btn" onclick="toggleChartType('klassifikation2Chart')">Typ wechseln</button>
+                                    <button class="chart-btn" onclick="downloadChart('klassifikation2Chart')">Download</button>
+                                </div>
+                            </div>
+                            <canvas id="klassifikation2Chart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                <h2><i class="fas fa-chart-pie"></i> Klassifikation 2 Anteile</h2>
+                                <div class="chart-actions">
+                                    <button class="chart-btn" onclick="toggleChartType('klassifikation2PieDetailed')">Typ wechseln</button>
+                                    <button class="chart-btn" onclick="downloadChart('klassifikation2PieDetailed')">Download</button>
+                                </div>
+                            </div>
+                            <canvas id="klassifikation2PieDetailed"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Klassifikation 3 Tab -->
+                <div id="klassifikation3-tab" class="tab-content">
+                    <div class="filter-info">
+                        <i class="fas fa-info-circle"></i>
+                        Die Diagramme zeigen die Verteilung der Daten basierend auf den aktuellen Filtereinstellungen.
+                    </div>
+                    <div class="tab-charts">
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                <h2><i class="fas fa-chart-bar"></i> Klassifikation 3 Verteilung</h2>
+                                <div class="chart-actions">
+                                    <button class="chart-btn" onclick="toggleChartType('klassifikation3Chart')">Typ wechseln</button>
+                                    <button class="chart-btn" onclick="downloadChart('klassifikation3Chart')">Download</button>
+                                </div>
+                            </div>
+                            <canvas id="klassifikation3Chart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                <h2><i class="fas fa-chart-pie"></i> Klassifikation 3 Anteile</h2>
+                                <div class="chart-actions">
+                                    <button class="chart-btn" onclick="toggleChartType('klassifikation3PieDetailed')">Typ wechseln</button>
+                                    <button class="chart-btn" onclick="downloadChart('klassifikation3PieDetailed')">Download</button>
+                                </div>
+                            </div>
+                            <canvas id="klassifikation3PieDetailed"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vergleich Tab -->
+                <div id="vergleich-tab" class="tab-content">
+                    <div class="filter-info">
+                        <i class="fas fa-info-circle"></i>
+                        Die Diagramme zeigen die Verteilung der Daten basierend auf den aktuellen Filtereinstellungen.
+                    </div>
+                    <div class="tab-charts">
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                <h2><i class="fas fa-chart-bar"></i> Klassifikationen im Vergleich</h2>
+                                <div class="chart-actions">
+                                    <button class="chart-btn" onclick="downloadChart('vergleichChart')">Download</button>
+                                </div>
+                            </div>
+                            <canvas id="vergleichChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                <h2><i class="fas fa-chart-line"></i> Zeitliche Entwicklung</h2>
+                                <div class="chart-actions">
+                                    <button class="chart-btn" onclick="downloadChart('zeitverlaufChart')">Download</button>
+                                </div>
+                            </div>
+                            <canvas id="zeitverlaufChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="data-table-container">
+                <div class="chart-header">
+                    <h2><i class="fas fa-table"></i> Bilddaten Tabelle</h2>
+                </div>
+                
+                <div class="table-controls">
+                    <div class="pagination-info" id="filtered-info">Alle Datensätze werden angezeigt</div>
+                    <div class="filter-controls">
+                        <select id="rows-per-page">
+                            <option value="10">10 Zeilen</option>
+                            <option value="25" selected>25 Zeilen</option>
+                            <option value="50">50 Zeilen</option>
+                            <option value="100">100 Zeilen</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table class="data-table" id="data-table">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable(0)">ID <i class="fas fa-sort"></i></th>
+                                <th onclick="sortTable(1)">Klassifikation 1 <i class="fas fa-sort"></i></th>
+                                <th onclick="sortTable(2)">Klassifikation 2 <i class="fas fa-sort"></i></th>
+                                <th onclick="sortTable(3)">Klassifikation 3 <i class="fas fa-sort"></i></th>
+                                <th onclick="sortTable(4)">Final Klass. <i class="fas fa-sort"></i></th>
+                                <th onclick="sortTable(5)">Dateiname <i class="fas fa-sort"></i></th>
+                                <th onclick="sortTable(6)">Datum Zuord. <i class="fas fa-sort"></i></th>
+                                <th onclick="sortTable(7)">Anz. Belege <i class="fas fa-sort"></i></th>
+                                <th onclick="sortTable(8)">Anz. Personen <i class="fas fa-sort"></i></th>
+                                <th onclick="sortTable(9)">Anz. Inventare <i class="fas fa-sort"></i></th>
+                                <th onclick="sortTable(10)">Buch ID <i class="fas fa-sort"></i></th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <tr>
+                                <td colspan="11" class="no-data">Keine Daten verfügbar</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="pagination">
+                    <button id="prev-btn" onclick="changePage(-1)" disabled>Zurück</button>
+                    <span class="pagination-info" id="page-info">Seite 1 von 1</span>
+                    <button id="next-btn" onclick="changePage(1)" disabled>Weiter</button>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Bild Daten Dashboard &copy; 2023 | Datenquelle: http://localhost:5000/bild/basisdaten</p>
+        </footer>
+    </div>
+
+    <script>
+        // Sample data for demonstration
+        const sampleData = [
+            {
+                PK_BILD_BILDER: 1001,
+                KLASSIFIKATION_1: "Rechnung",
+                KLASSIFIKATION_2: "Einkauf",
+                KLASSIFIKATION_3: "Büromaterial",
+                FINAL_KLASSIFIKATION: "2023-05-15",
+                FILENAME: "rechnung_001.pdf",
+                DATUM_ZUORD_OK: "2023-05-20",
+                FINAL_CNT_FK_INP_BELEGE_ALL: 2,
+                FINAL_CNT_FK_KON_PERSON: 1,
+                FINAL_CNT_FK_INV_INVENTARE: 0,
+                FK_MEDIA_BUCH_BUCH: 5
+            },
+            {
+                PK_BILD_BILDER: 1002,
+                KLASSIFIKATION_1: "Vertrag",
+                KLASSIFIKATION_2: "Dienstleistung",
+                KLASSIFIKATION_3: "IT-Service",
+                FINAL_KLASSIFIKATION: "2023-06-10",
+                FILENAME: "vertrag_it.pdf",
+                DATUM_ZUORD_OK: "2023-06-15",
+                FINAL_CNT_FK_INP_BELEGE_ALL: 1,
+                FINAL_CNT_FK_KON_PERSON: 2,
+                FINAL_CNT_FK_INV_INVENTARE: 1,
+                FK_MEDIA_BUCH_BUCH: 3
+            },
+            {
+                PK_BILD_BILDER: 1003,
+                KLASSIFIKATION_1: "Rechnung",
+                KLASSIFIKATION_2: "Dienstleistung",
+                KLASSIFIKATION_3: "Reinigung",
+                FINAL_KLASSIFIKATION: "2023-04-22",
+                FILENAME: "rechnung_reinigung.pdf",
+                DATUM_ZUORD_OK: "2023-04-25",
+                FINAL_CNT_FK_INP_BELEGE_ALL: 1,
+                FINAL_CNT_FK_KON_PERSON: 1,
+                FINAL_CNT_FK_INV_INVENTARE: 0,
+                FK_MEDIA_BUCH_BUCH: 5
+            },
+            {
+                PK_BILD_BILDER: 1004,
+                KLASSIFIKATION_1: "Lohnabrechnung",
+                KLASSIFIKATION_2: "Personal",
+                KLASSIFIKATION_3: "Gehalt",
+                FINAL_KLASSIFIKATION: "2023-07-05",
+                FILENAME: "lohn_07_2023.pdf",
+                DATUM_ZUORD_OK: "2023-07-10",
+                FINAL_CNT_FK_INP_BELEGE_ALL: 0,
+                FINAL_CNT_FK_KON_PERSON: 3,
+                FINAL_CNT_FK_INV_INVENTARE: 0,
+                FK_MEDIA_BUCH_BUCH: 2
+            },
+            {
+                PK_BILD_BILDER: 1005,
+                KLASSIFIKATION_1: "Gutschrift",
+                KLASSIFIKATION_2: "Einkauf",
+                KLASSIFIKATION_3: "Büromaterial",
+                FINAL_KLASSIFIKATION: "2023-05-18",
+                FILENAME: "gutschrift_001.pdf",
+                DATUM_ZUORD_OK: "2023-05-22",
+                FINAL_CNT_FK_INP_BELEGE_ALL: 1,
+                FINAL_CNT_FK_KON_PERSON: 0,
+                FINAL_CNT_FK_INV_INVENTARE: 0,
+                FK_MEDIA_BUCH_BUCH: 5
+            },
+            {
+                PK_BILD_BILDER: 1006,
+                KLASSIFIKATION_1: "Reisekosten",
+                KLASSIFIKATION_2: "Dienstleistung",
+                KLASSIFIKATION_3: "Transport",
+                FINAL_KLASSIFIKATION: "2023-08-12",
+                FILENAME: "reisekosten_q3.pdf",
+                DATUM_ZUORD_OK: "2023-08-15",
+                FINAL_CNT_FK_INP_BELEGE_ALL: 3,
+                FINAL_CNT_FK_KON_PERSON: 2,
+                FINAL_CNT_FK_INV_INVENTARE: 0,
+                FK_MEDIA_BUCH_BUCH: 4
+            },
+            {
+                PK_BILD_BILDER: 1007,
+                KLASSIFIKATION_1: "Vertrag",
+                KLASSIFIKATION_2: "Miete",
+                KLASSIFIKATION_3: "Büroräume",
+                FINAL_KLASSIFIKATION: "2023-01-15",
+                FILENAME: "mietvertrag.pdf",
+                DATUM_ZUORD_OK: "2023-01-20",
+                FINAL_CNT_FK_INP_BELEGE_ALL: 1,
+                FINAL_CNT_FK_KON_PERSON: 1,
+                FINAL_CNT_FK_INV_INVENTARE: 0,
+                FK_MEDIA_BUCH_BUCH: 1
+            },
+            {
+                PK_BILD_BILDER: 1008,
+                KLASSIFIKATION_1: "Rechnung",
+                KLASSIFIKATION_2: "Energie",
+                KLASSIFIKATION_3: "Strom",
+                FINAL_KLASSIFIKATION: "2023-09-05",
+                FILENAME: "strom_rechnung.pdf",
+                DATUM_ZUORD_OK: "2023-09-10",
+                FINAL_CNT_FK_INP_BELEGE_ALL: 1,
+                FINAL_CNT_FK_KON_PERSON: 0,
+                FINAL_CNT_FK_INV_INVENTARE: 0,
+                FK_MEDIA_BUCH_BUCH: 6
+            },
+            {
+                PK_BILD_BILDER: 1009,
+                KLASSIFIKATION_1: "Angebot",
+                KLASSIFIKATION_2: "Dienstleistung",
+                KLASSIFIKATION_3: "Beratung",
+                FINAL_KLASSIFIKATION: "2023-03-20",
+                FILENAME: "angebot_beratung.pdf",
+                DATUM_ZUORD_OK: "2023-03-25",
+                FINAL_CNT_FK_INP_BELEGE_ALL: 0,
+                FINAL_CNT_FK_KON_PERSON: 1,
+                FINAL_CNT_FK_INV_INVENTARE: 0,
+                FK_MEDIA_BUCH_BUCH: 3
+            },
+            {
+                PK_BILD_BILDER: 1010,
+                KLASSIFIKATION_1: "Quittung",
+                KLASSIFIKATION_2: "Einkauf",
+                KLASSIFIKATION_3: "Büromaterial",
+                FINAL_KLASSIFIKATION: "2023-10-15",
+                FILENAME: "quittung_buero.pdf",
+                DATUM_ZUORD_OK: "2023-10-18",
+                FINAL_CNT_FK_INP_BELEGE_ALL: 1,
+                FINAL_CNT_FK_KON_PERSON: 0,
+                FINAL_CNT_FK_INV_INVENTARE: 0,
+                FK_MEDIA_BUCH_BUCH: 5
+            }
+        ];
+
+        let allData = [];
+        let filteredData = [];
+        let currentPage = 1;
+        let rowsPerPage = 25;
+        let currentSort = { column: 0, direction: 'asc' };
+        let charts = {};
+        let currentFilters = {
+            search: '',
+            klass1: '',
+            klass2: '',
+            klass3: '',
+            buch: ''
+        };
+
+        // Load data from API
+        async function loadData() {
+            const statusDiv = document.getElementById('status');
+            const statsOverview = document.getElementById('stats-overview');
+            
+            try {
+                statusDiv.className = 'status loading';
+                statusDiv.innerHTML = '<div class="spinner"></div><span>Lade Bilderdaten...</span>';
+                statsOverview.style.display = 'none';
+
+                // Try to fetch from API, fall back to sample data if fails
+                let response;
+                try {
+                    response = await fetch('http://localhost:5000/bild/basisdaten');
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP Fehler! Status: ${response.status}`);
+                    }
+                    
+                    allData = await response.json();
+                } catch (apiError) {
+                    console.warn('API nicht erreichbar, verwende Beispieldaten:', apiError.message);
+                    allData = sampleData;
+                }
+
+                if (!allData || allData.length === 0) {
+                    throw new Error('Keine Daten erhalten');
+                }
+
+                // Process data
+                processData();
+                updateStats();
+                setupGlobalFilters();
+                applyGlobalFilters();
+                
+                statusDiv.className = 'status success';
+                statusDiv.innerHTML = `<i class="fas fa-check-circle"></i> ${allData.length} Datensätze erfolgreich geladen`;
+                statsOverview.style.display = 'grid';
+                
+            } catch (error) {
+                console.error('Fehler beim Laden der Daten:', error);
+                statusDiv.className = 'status error';
+                statusDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Fehler: ${error.message}`;
+            }
+        }
+
+        // Process and filter data
+        function processData() {
+            filteredData = allData.map(item => ({
+                PK_BILD_BILDER: item.PK_BILD_BILDER || 'N/A',
+                KLASSIFIKATION_1: item.KLASSIFIKATION_1 || 'Ohne Klassifikation',
+                KLASSIFIKATION_2: item.KLASSIFIKATION_2 || 'Ohne Klassifikation',
+                KLASSIFIKATION_3: item.KLASSIFIKATION_3 || 'Ohne Klassifikation',
+                FINAL_KLASSIFIKATION: formatDate(item.FINAL_KLASSIFIKATION) || 'N/A',
+                FILENAME: item.FILENAME || 'N/A',
+                DATUM_ZUORD_OK: formatDate(item.DATUM_ZUORD_OK) || 'N/A',
+                FINAL_CNT_FK_INP_BELEGE_ALL: item.FINAL_CNT_FK_INP_BELEGE_ALL || 0,
+                FINAL_CNT_FK_KON_PERSON: item.FINAL_CNT_FK_KON_PERSON || 0,
+                FINAL_CNT_FK_INV_INVENTARE: item.FINAL_CNT_FK_INV_INVENTARE || 0,
+                FK_MEDIA_BUCH_BUCH: item.FK_MEDIA_BUCH_BUCH || 'N/A'
+            }));
+        }
+
+        // Update statistics
+        function updateStats() {
+            document.getElementById('total-images').textContent = allData.length.toLocaleString();
+
+const validItems = allData.filter(item => item.DATUM_ZUORD_OK);         
+              document.getElementById('total-images-datum_zuord_ok').textContent = validItems.length.toLocaleString();
+
+const validItems1 = allData.filter(item => item.DATUM_ZUORD_OK === null);
+         document.getElementById('total-images-datum_zuord_nok').textContent = validItems1.length.toLocaleString();
+
+            const classified = allData.filter(item => item.KLASSIFIKATION_1 && item.KLASSIFIKATION_1 !== 'Ohne Klassifikation').length;
+            document.getElementById('classified-images').textContent = classified.toLocaleString();
+            
+            const avgBelege = allData.reduce((sum, item) => sum + (item.FINAL_CNT_FK_INP_BELEGE_ALL || 0), 0) / allData.length;
+            document.getElementById('avg-belege').textContent = avgBelege.toFixed(1);
+            
+            const avgPersonen = allData.reduce((sum, item) => sum + (item.FINAL_CNT_FK_KON_PERSON || 0), 0) / allData.length;
+            document.getElementById('avg-personen').textContent = avgPersonen.toFixed(1);
+        }
+
+        // Setup global filters
+        function setupGlobalFilters() {
+            const klass1Filter = document.getElementById('global-klassifikation1-filter');
+            const klass2Filter = document.getElementById('global-klassifikation2-filter');
+            const klass3Filter = document.getElementById('global-klassifikation3-filter');
+            const buchFilter = document.getElementById('global-buch-filter');
+            
+            // Get unique values and sort them alphabetically
+            const klass1Values = [...new Set(allData.map(item => item.KLASSIFIKATION_1 || 'Ohne Klassifikation'))].sort();
+            const klass2Values = [...new Set(allData.map(item => item.KLASSIFIKATION_2 || 'Ohne Klassifikation'))].sort();
+            const klass3Values = [...new Set(allData.map(item => item.KLASSIFIKATION_3 || 'Ohne Klassifikation'))].sort();
+            const buchValues = [...new Set(allData.map(item => item.FK_MEDIA_BUCH_BUCH || 'Ohne Buch'))].sort((a, b) => {
+                // Sort numerically for book IDs, alphabetically for other values
+                if (!isNaN(a) && !isNaN(b)) {
+                    return Number(a) - Number(b);
+                }
+                return String(a).localeCompare(String(b));
+            });
+            
+            // Populate dropdowns
+            klass1Values.forEach(value => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                klass1Filter.appendChild(option);
+            });
+            
+            klass2Values.forEach(value => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                klass2Filter.appendChild(option);
+            });
+            
+            klass3Values.forEach(value => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                klass3Filter.appendChild(option);
+            });
+            
+            buchValues.forEach(value => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = `Buch ${value}`;
+                buchFilter.appendChild(option);
+            });
+            
+            // Add event listeners for Enter key in search
+            document.getElementById('global-search-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    applyGlobalFilters();
+                }
+            });
+            
+            document.getElementById('rows-per-page').addEventListener('change', function() {
+                rowsPerPage = parseInt(this.value);
+                currentPage = 1;
+                renderTable();
+            });
+        }
+
+        // Apply global filters
+        function applyGlobalFilters() {
+            currentFilters.search = document.getElementById('global-search-input').value.toLowerCase();
+            currentFilters.klass1 = document.getElementById('global-klassifikation1-filter').value;
+            currentFilters.klass2 = document.getElementById('global-klassifikation2-filter').value;
+            currentFilters.klass3 = document.getElementById('global-klassifikation3-filter').value;
+            currentFilters.buch = document.getElementById('global-buch-filter').value;
+            
+            filteredData = allData.filter(item => {
+                // Search across all fields
+                const matchesSearch = 
+                    item.PK_BILD_BILDER.toString().includes(currentFilters.search) ||
+                    (item.FILENAME && item.FILENAME.toLowerCase().includes(currentFilters.search)) ||
+                    (item.KLASSIFIKATION_1 && item.KLASSIFIKATION_1.toLowerCase().includes(currentFilters.search)) ||
+                    (item.KLASSIFIKATION_2 && item.KLASSIFIKATION_2.toLowerCase().includes(currentFilters.search)) ||
+                    (item.KLASSIFIKATION_3 && item.KLASSIFIKATION_3.toLowerCase().includes(currentFilters.search)) ||
+                    (item.FINAL_KLASSIFIKATION && item.FINAL_KLASSIFIKATION.toLowerCase().includes(currentFilters.search)) ||
+                    (item.DATUM_ZUORD_OK && item.DATUM_ZUORD_OK.toLowerCase().includes(currentFilters.search)) ||
+                    (item.FK_MEDIA_BUCH_BUCH && item.FK_MEDIA_BUCH_BUCH.toString().includes(currentFilters.search)) ||
+                    (item.FINAL_CNT_FK_INP_BELEGE_ALL && item.FINAL_CNT_FK_INP_BELEGE_ALL.toString().includes(currentFilters.search)) ||
+                    (item.FINAL_CNT_FK_KON_PERSON && item.FINAL_CNT_FK_KON_PERSON.toString().includes(currentFilters.search)) ||
+                    (item.FINAL_CNT_FK_INV_INVENTARE && item.FINAL_CNT_FK_INV_INVENTARE.toString().includes(currentFilters.search));
+                
+                const matchesKlass1 = !currentFilters.klass1 || item.KLASSIFIKATION_1 === currentFilters.klass1;
+                const matchesKlass2 = !currentFilters.klass2 || item.KLASSIFIKATION_2 === currentFilters.klass2;
+                const matchesKlass3 = !currentFilters.klass3 || item.KLASSIFIKATION_3 === currentFilters.klass3;
+                const matchesBuch = !currentFilters.buch || item.FK_MEDIA_BUCH_BUCH == currentFilters.buch;
+                
+                return matchesSearch && matchesKlass1 && matchesKlass2 && matchesKlass3 && matchesBuch;
+            }).map(item => ({
+                PK_BILD_BILDER: item.PK_BILD_BILDER || 'N/A',
+                KLASSIFIKATION_1: item.KLASSIFIKATION_1 || 'Ohne Klassifikation',
+                KLASSIFIKATION_2: item.KLASSIFIKATION_2 || 'Ohne Klassifikation',
+                KLASSIFIKATION_3: item.KLASSIFIKATION_3 || 'Ohne Klassifikation',
+                FINAL_KLASSIFIKATION: formatDate(item.FINAL_KLASSIFIKATION) || 'N/A',
+                FILENAME: item.FILENAME || 'N/A',
+                DATUM_ZUORD_OK: formatDate(item.DATUM_ZUORD_OK) || 'N/A',
+                FINAL_CNT_FK_INP_BELEGE_ALL: item.FINAL_CNT_FK_INP_BELEGE_ALL || 0,
+                FINAL_CNT_FK_KON_PERSON: item.FINAL_CNT_FK_KON_PERSON || 0,
+                FINAL_CNT_FK_INV_INVENTARE: item.FINAL_CNT_FK_INV_INVENTARE || 0,
+                FK_MEDIA_BUCH_BUCH: item.FK_MEDIA_BUCH_BUCH || 'N/A'
+            }));
+            
+            // Update filtered info
+            const filteredInfo = document.getElementById('filtered-info');
+            if (filteredData.length === allData.length) {
+                filteredInfo.textContent = `Alle ${allData.length} Datensätze werden angezeigt`;
+            } else {
+                filteredInfo.textContent = `${filteredData.length} von ${allData.length} Datensätzen nach Filterkriterien`;
+            }
+            
+            currentPage = 1;
+            renderCharts();
+            renderTable();
+        }
+
+        // Reset global filters
+        function resetGlobalFilters() {
+            document.getElementById('global-search-input').value = '';
+            document.getElementById('global-klassifikation1-filter').value = '';
+            document.getElementById('global-klassifikation2-filter').value = '';
+            document.getElementById('global-klassifikation3-filter').value = '';
+            document.getElementById('global-buch-filter').value = '';
+            
+            applyGlobalFilters();
+        }
+
+        // Render charts
+        function renderCharts() {
+            // Previous diagrams
+            renderKlassifikation1PieChart();
+            renderBuecherChart();
+            renderMonatlichChart();
+            renderBelegePersonenChart();
+            
+            // Classification bar charts
+            renderKlassifikationChart('klassifikation1Chart', 'KLASSIFIKATION_1', 'Klassifikation 1 Verteilung');
+            renderKlassifikationChart('klassifikation2Chart', 'KLASSIFIKATION_2', 'Klassifikation 2 Verteilung');
+            renderKlassifikationChart('klassifikation3Chart', 'KLASSIFIKATION_3', 'Klassifikation 3 Verteilung');
+            
+            // Detailed pie charts
+            renderDetailedPieChart('klassifikation1PieDetailed', 'KLASSIFIKATION_1', 'Klassifikation 1 Anteile');
+            renderDetailedPieChart('klassifikation2PieDetailed', 'KLASSIFIKATION_2', 'Klassifikation 2 Anteile');
+            renderDetailedPieChart('klassifikation3PieDetailed', 'KLASSIFIKATION_3', 'Klassifikation 3 Anteile');
+            
+            // Comparison charts
+            renderVergleichChart();
+            renderZeitverlaufChart();
+        }
+
+        // Previous diagrams
+        function renderKlassifikation1PieChart() {
+            const ctx = document.getElementById('klassifikation1PieChart').getContext('2d');
+            
+            // Count by KLASSIFIKATION_1
+            const counts = {};
+            filteredData.forEach(item => {
+                const key = item.KLASSIFIKATION_1 || 'Ohne Klassifikation';
+                counts[key] = (counts[key] || 0) + 1;
+            });
+
+            const labels = Object.keys(counts);
+            const data = Object.values(counts);
+
+            // Destroy existing chart if it exists
+            if (charts.klassifikation1PieChart) {
+                charts.klassifikation1PieChart.destroy();
+            }
+
+            charts.klassifikation1PieChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: [
+                            '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6',
+                            '#1abc9c', '#d35400', '#c0392b', '#16a085', '#8e44ad'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        title: {
+                            display: true,
+                            text: `Verteilung nach Hauptklassifikation (${filteredData.length} Datensätze)`
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderBuecherChart() {
+            const ctx = document.getElementById('buecherChart').getContext('2d');
+            
+            // Count by FK_MEDIA_BUCH_BUCH
+            const counts = {};
+            filteredData.forEach(item => {
+                const key = item.FK_MEDIA_BUCH_BUCH || 'Ohne Buch';
+                counts[key] = (counts[key] || 0) + 1;
+            });
+
+            // Get top 10
+            const sorted = Object.entries(counts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+
+            const labels = sorted.map(item => `Buch ${item[0]}`);
+            const data = sorted.map(item => item[1]);
+
+            if (charts.buecherChart) {
+                charts.buecherChart.destroy();
+            }
+
+            charts.buecherChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Anzahl Bilder',
+                        data: data,
+                        backgroundColor: '#3498db',
+                        borderColor: '#2980b9',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: `Top 10 Bücher nach Bildanzahl (${filteredData.length} Datensätze)`
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Anzahl Bilder'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderMonatlichChart() {
+            const ctx = document.getElementById('monatlichChart').getContext('2d');
+            
+            // Count by month from DATUM_ZUORD_OK
+            const counts = {};
+            filteredData.forEach(item => {
+                if (item.DATUM_ZUORD_OK && item.DATUM_ZUORD_OK !== 'N/A') {
+                    const date = new Date(item.DATUM_ZUORD_OK);
+                    const key = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+                    counts[key] = (counts[key] || 0) + 1;
+                }
+            });
+
+            // Sort by date
+            const sorted = Object.entries(counts)
+                .sort((a, b) => a[0].localeCompare(b[0]));
+
+            const labels = sorted.map(item => item[0]);
+            const data = sorted.map(item => item[1]);
+
+            if (charts.monatlichChart) {
+                charts.monatlichChart.destroy();
+            }
+
+            charts.monatlichChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Bilder pro Monat',
+                        data: data,
+                        backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                        borderColor: '#3498db',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `Bilder pro Monat (${filteredData.length} Datensätze)`
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Anzahl Bilder'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderBelegePersonenChart() {
+            const ctx = document.getElementById('belegePersonenChart').getContext('2d');
+
+            if (charts.belegePersonenChart) {
+                charts.belegePersonenChart.destroy();
+            }
+
+            charts.belegePersonenChart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Belege vs. Personen',
+                        data: filteredData.map(item => ({
+                            x: item.FINAL_CNT_FK_INP_BELEGE_ALL || 0,
+                            y: item.FINAL_CNT_FK_KON_PERSON || 0
+                        })),
+                        backgroundColor: 'rgba(231, 76, 60, 0.6)',
+                        borderColor: '#e74c3c',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `Belege vs. Personen pro Bild (${filteredData.length} Datensätze)`
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Anzahl Belege'
+                            },
+                            beginAtZero: true
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Anzahl Personen'
+                            },
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Classification bar charts
+        function renderKlassifikationChart(canvasId, field, title) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            
+            // Count by field
+            const counts = {};
+            filteredData.forEach(item => {
+                const key = item[field] || 'Ohne Klassifikation';
+                counts[key] = (counts[key] || 0) + 1;
+            });
+
+            // Sort by count (descending) and take top 10
+            const sorted = Object.entries(counts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+
+            const labels = sorted.map(item => item[0]);
+            const data = sorted.map(item => item[1]);
+
+            // Destroy existing chart if it exists
+            if (charts[canvasId]) {
+                charts[canvasId].destroy();
+            }
+
+            charts[canvasId] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Anzahl Bilder',
+                        data: data,
+                        backgroundColor: [
+                            '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6',
+                            '#1abc9c', '#d35400', '#c0392b', '#16a085', '#8e44ad'
+                        ],
+                        borderColor: [
+                            '#2980b9', '#c0392b', '#27ae60', '#e67e22', '#8e44ad',
+                            '#16a085', '#e74c3c', '#a93226', '#117a65', '#7d3c98'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: `${title} (${filteredData.length} Datensätze)`
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Anzahl Bilder'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: field.replace('_', ' ')
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Detailed pie charts
+        function renderDetailedPieChart(canvasId, field, title) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            
+            // Count by field
+            const counts = {};
+            filteredData.forEach(item => {
+                const key = item[field] || 'Ohne Klassifikation';
+                counts[key] = (counts[key] || 0) + 1;
+            });
+
+            const labels = Object.keys(counts);
+            const data = Object.values(counts);
+
+            // Destroy existing chart if it exists
+            if (charts[canvasId]) {
+                charts[canvasId].destroy();
+            }
+
+            charts[canvasId] = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: [
+                            '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6',
+                            '#1abc9c', '#d35400', '#c0392b', '#16a085', '#8e44ad',
+                            '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        title: {
+                            display: true,
+                            text: `${title} (${filteredData.length} Datensätze)`
+                        }
+                    }
+                }
+            });
+        }
+
+        // Comparison chart
+        function renderVergleichChart() {
+            const ctx = document.getElementById('vergleichChart').getContext('2d');
+            
+            // Get top 5 from each classification
+            const topKlass1 = getTopCategories('KLASSIFIKATION_1', 5);
+            const topKlass2 = getTopCategories('KLASSIFIKATION_2', 5);
+            const topKlass3 = getTopCategories('KLASSIFIKATION_3', 5);
+
+            if (charts.vergleichChart) {
+                charts.vergleichChart.destroy();
+            }
+
+            charts.vergleichChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Top 5 Kategorien'],
+                    datasets: [
+                        {
+                            label: `Klassifikation 1 (${topKlass1.total})`,
+                            data: [topKlass1.total],
+                            backgroundColor: '#3498db'
+                        },
+                        {
+                            label: `Klassifikation 2 (${topKlass2.total})`,
+                            data: [topKlass2.total],
+                            backgroundColor: '#e74c3c'
+                        },
+                        {
+                            label: `Klassifikation 3 (${topKlass3.total})`,
+                            data: [topKlass3.total],
+                            backgroundColor: '#2ecc71'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `Vergleich der Top 5 Kategorien (${filteredData.length} Datensätze)`
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Anzahl Bilder'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Time progression chart
+        function renderZeitverlaufChart() {
+            const ctx = document.getElementById('zeitverlaufChart').getContext('2d');
+            
+            // Count by month from DATUM_ZUORD_OK for each classification
+            const klass1Counts = getMonthlyCounts('KLASSIFIKATION_1', 'Rechnung');
+            const klass2Counts = getMonthlyCounts('KLASSIFIKATION_2', 'Einkauf');
+            const klass3Counts = getMonthlyCounts('KLASSIFIKATION_3', 'Büromaterial');
+
+            // Get all unique months
+            const allMonths = [...new Set([
+                ...Object.keys(klass1Counts),
+                ...Object.keys(klass2Counts),
+                ...Object.keys(klass3Counts)
+            ])].sort();
+
+            if (charts.zeitverlaufChart) {
+                charts.zeitverlaufChart.destroy();
+            }
+
+            charts.zeitverlaufChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: allMonths,
+                    datasets: [
+                        {
+                            label: 'Rechnung (K1)',
+                            data: allMonths.map(month => klass1Counts[month] || 0),
+                            borderColor: '#3498db',
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            tension: 0.1,
+                            fill: true
+                        },
+                        {
+                            label: 'Einkauf (K2)',
+                            data: allMonths.map(month => klass2Counts[month] || 0),
+                            borderColor: '#e74c3c',
+                            backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                            tension: 0.1,
+                            fill: true
+                        },
+                        {
+                            label: 'Büromaterial (K3)',
+                            data: allMonths.map(month => klass3Counts[month] || 0),
+                            borderColor: '#2ecc71',
+                            backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                            tension: 0.1,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `Zeitliche Entwicklung ausgewählter Kategorien (${filteredData.length} Datensätze)`
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Anzahl Bilder'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Helper function to get top categories
+        function getTopCategories(field, limit) {
+            const counts = {};
+            filteredData.forEach(item => {
+                const key = item[field] || 'Ohne Klassifikation';
+                counts[key] = (counts[key] || 0) + 1;
+            });
+
+            const sorted = Object.entries(counts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, limit);
+
+            return {
+                categories: sorted.map(item => item[0]),
+                counts: sorted.map(item => item[1]),
+                total: sorted.reduce((sum, item) => sum + item[1], 0)
+            };
+        }
+
+        // Helper function to get monthly counts for a specific category
+        function getMonthlyCounts(field, category) {
+            const counts = {};
+            filteredData.forEach(item => {
+                if (item[field] === category && item.DATUM_ZUORD_OK && item.DATUM_ZUORD_OK !== 'N/A') {
+                    const date = new Date(item.DATUM_ZUORD_OK);
+                    const key = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+                    counts[key] = (counts[key] || 0) + 1;
+                }
+            });
+            return counts;
+        }
+
+        // Toggle chart type between bar and pie
+        function toggleChartType(canvasId) {
+            if (charts[canvasId]) {
+                const currentType = charts[canvasId].config.type;
+                const newType = currentType === 'bar' ? 'pie' : 'bar';
+                
+                // Store current data
+                const data = charts[canvasId].data;
+                
+                // Destroy current chart
+                charts[canvasId].destroy();
+                
+                // Recreate with new type
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                charts[canvasId] = new Chart(ctx, {
+                    type: newType,
+                    data: data,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: newType === 'pie',
+                                position: 'right'
+                            },
+                            title: {
+                                display: true,
+                                text: data.datasets[0].label || 'Chart'
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Download chart as image
+        function downloadChart(canvasId) {
+            if (charts[canvasId]) {
+                const link = document.createElement('a');
+                link.download = `${canvasId}.png`;
+                link.href = document.getElementById(canvasId).toDataURL();
+                link.click();
+            }
+        }
+
+        // Switch between tabs
+        function switchTab(tabName, buttonElement) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            const tabContent = document.getElementById(tabName);
+            if (tabContent) {
+                tabContent.classList.add('active');
+            }
+            
+            // Add active class to clicked tab button
+            if (buttonElement) {
+                buttonElement.classList.add('active');
+            }
+        }
+
+        // Sort table
+        function sortTable(columnIndex) {
+            if (currentSort.column === columnIndex) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = columnIndex;
+                currentSort.direction = 'asc';
+            }
+            
+            filteredData.sort((a, b) => {
+                const aVal = Object.values(a)[columnIndex];
+                const bVal = Object.values(b)[columnIndex];
+                
+                // Handle numeric values
+                if (columnIndex === 0 || columnIndex === 7 || columnIndex === 8 || columnIndex === 9 || columnIndex === 10) {
+                    const numA = parseFloat(aVal) || 0;
+                    const numB = parseFloat(bVal) || 0;
+                    return currentSort.direction === 'asc' ? numA - numB : numB - numA;
+                }
+                
+                // Handle dates
+                if (columnIndex === 4 || columnIndex === 6) {
+                    const dateA = new Date(aVal === 'N/A' ? 0 : aVal);
+                    const dateB = new Date(bVal === 'N/A' ? 0 : bVal);
+                    return currentSort.direction === 'asc' ? dateA - dateB : dateB - dateA;
+                }
+                
+                // Handle strings
+                const strA = String(aVal || '').toLowerCase();
+                const strB = String(bVal || '').toLowerCase();
+                return currentSort.direction === 'asc' ? strA.localeCompare(strB) : strB.localeCompare(strA);
+            });
+            
+            renderTable();
+        }
+
+        // Render table with pagination
+        function renderTable() {
+            const tableBody = document.getElementById('table-body');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const pageInfo = document.getElementById('page-info');
+            
+            const startIndex = (currentPage - 1) * rowsPerPage;
+            const endIndex = startIndex + rowsPerPage;
+            const pageData = filteredData.slice(startIndex, endIndex);
+            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+            
+            // Clear table
+            tableBody.innerHTML = '';
+            
+            if (pageData.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="11" class="no-data">Keine Daten entsprechen den Filterkriterien</td></tr>';
+            } else {
+                pageData.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="bold-blue">${item.PK_BILD_BILDER}</td>
+                        <td>${item.KLASSIFIKATION_1}</td>
+                        <td>${item.KLASSIFIKATION_2}</td>
+                        <td>${item.KLASSIFIKATION_3}</td>
+                        <td>${item.FINAL_KLASSIFIKATION}</td>
+                        <td title="${item.FILENAME}">${truncateText(item.FILENAME, 30)}</td>
+                        <td>${item.DATUM_ZUORD_OK}</td>
+                        <td class="${item.FINAL_CNT_FK_INP_BELEGE_ALL > 0 ? 'bold-green' : ''}">${item.FINAL_CNT_FK_INP_BELEGE_ALL}</td>
+                        <td class="${item.FINAL_CNT_FK_KON_PERSON > 0 ? 'bold-green' : ''}">${item.FINAL_CNT_FK_KON_PERSON}</td>
+                        <td class="${item.FINAL_CNT_FK_INV_INVENTARE > 0 ? 'bold-green' : ''}">${item.FINAL_CNT_FK_INV_INVENTARE}</td>
+                        <td>${item.FK_MEDIA_BUCH_BUCH}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            }
+            
+            // Update pagination
+            prevBtn.disabled = currentPage <= 1;
+            nextBtn.disabled = currentPage >= totalPages;
+            pageInfo.textContent = `Seite ${currentPage} von ${totalPages} (${filteredData.length} Datensätze)`;
+        }
+
+        // Change page
+        function changePage(direction) {
+            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+            currentPage += direction;
+            
+            if (currentPage < 1) currentPage = 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+            
+            renderTable();
+        }
+
+        // Export to CSV
+        function exportToCSV() {
+            const headers = ['ID', 'Klassifikation 1', 'Klassifikation 2', 'Klassifikation 3', 'Final Klassifikation', 
+                           'Dateiname', 'Datum Zuordnung OK', 'Anzahl Belege', 'Anzahl Personen', 'Anzahl Inventare', 'Buch ID'];
+            
+            const csvContent = [
+                headers.join(','),
+                ...filteredData.map(item => [
+                    item.PK_BILD_BILDER,
+                    `"${item.KLASSIFIKATION_1}"`,
+                    `"${item.KLASSIFIKATION_2}"`,
+                    `"${item.KLASSIFIKATION_3}"`,
+                    `"${item.FINAL_KLASSIFIKATION}"`,
+                    `"${item.FILENAME}"`,
+                    `"${item.DATUM_ZUORD_OK}"`,
+                    item.FINAL_CNT_FK_INP_BELEGE_ALL,
+                    item.FINAL_CNT_FK_KON_PERSON,
+                    item.FINAL_CNT_FK_INV_INVENTARE,
+                    item.FK_MEDIA_BUCH_BUCH
+                ].join(','))
+            ].join('\n');
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `bild_daten_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Utility functions
+        function formatDate(dateString) {
+            if (!dateString) return "N/A";
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('de-DE');
+            } catch (e) {
+                return "N/A";
+            }
+        }
+
+        function truncateText(text, maxLength) {
+            if (!text || text === 'N/A') return "N/A";
+            if (text.length <= maxLength) return text;
+            return text.substring(0, maxLength) + '...';
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+        });
+    </script>
+</body>
+</html>

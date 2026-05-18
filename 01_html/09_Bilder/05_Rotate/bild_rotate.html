@@ -1,0 +1,2216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Explorer Image Browser with Full Screen & Rotation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary: #4361ee;
+            --secondary: #3a0ca3;
+            --accent: #4cc9f0;
+            --dark: #1a1a2e;
+            --darker: #0d0d1a;
+            --light: #f8f9fa;
+            --gray: #6c757d;
+            --light-gray: #e9ecef;
+            --dark-gray: #343a40;
+            --success: #38b000;
+            --warning: #ff9e00;
+            --danger: #e63946;
+            --border: rgba(255, 255, 255, 0.1);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--darker), var(--dark));
+            color: var(--light);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* App Container */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 15px;
+            gap: 15px;
+        }
+
+        /* Header */
+        .app-header {
+            background: rgba(26, 26, 46, 0.95);
+            border-radius: 12px;
+            padding: 20px 30px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--accent), var(--primary));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .header-text h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--accent), var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+        }
+
+        .header-text p {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* Main Content */
+        .main-content {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+            min-height: 0;
+        }
+
+        /* Sidebar - File Explorer */
+        .sidebar {
+            width: 350px;
+            background: rgba(26, 26, 46, 0.95);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        }
+
+        .explorer-header {
+            padding: 20px;
+            background: rgba(40, 40, 60, 0.5);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .explorer-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .explorer-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .explorer-btn {
+            background: rgba(60, 60, 80, 0.7);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 6px 12px;
+            color: white;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .explorer-btn:hover {
+            background: rgba(80, 80, 100, 0.9);
+        }
+
+        .path-display {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.6);
+            font-family: monospace;
+            word-break: break-all;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-top: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .explorer-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        /* Folder Tree */
+        .folder-tree {
+            list-style: none;
+        }
+
+        .folder-item {
+            margin-bottom: 5px;
+        }
+
+        .folder-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .folder-header:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .folder-header.active {
+            background: rgba(67, 97, 238, 0.2);
+            border-left: 3px solid var(--primary);
+        }
+
+        .folder-icon {
+            font-size: 1.2rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        .folder-name {
+            flex: 1;
+            font-size: 0.95rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .folder-count {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .folder-contents {
+            list-style: none;
+            margin-left: 25px;
+            border-left: 1px dashed rgba(255, 255, 255, 0.1);
+            padding-left: 15px;
+            display: none;
+        }
+
+        .folder-contents.expanded {
+            display: block;
+        }
+
+        /* File List */
+        .file-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .file-item {
+            background: rgba(40, 40, 60, 0.5);
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .file-item:hover {
+            transform: translateY(-3px);
+            background: rgba(60, 60, 80, 0.7);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .file-item.selected {
+            border-color: var(--accent);
+            background: rgba(76, 201, 240, 0.1);
+            box-shadow: 0 5px 20px rgba(76, 201, 240, 0.3);
+        }
+
+        .file-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            opacity: 0.8;
+        }
+
+        .file-name {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.9);
+            word-break: break-word;
+            line-height: 1.3;
+        }
+
+        .file-size {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 5px;
+        }
+
+        .file-badge {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: var(--accent);
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .file-item.selected .file-badge {
+            display: block;
+        }
+
+        /* Preview Area */
+        .preview-area {
+            flex: 1;
+            background: rgba(26, 26, 46, 0.95);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+        }
+
+        .preview-header {
+            padding: 20px;
+            background: rgba(40, 40, 60, 0.5);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .preview-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .preview-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .preview-btn {
+            background: rgba(60, 60, 80, 0.7);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 16px;
+            color: white;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .preview-btn:hover {
+            background: rgba(80, 80, 100, 0.9);
+            transform: translateY(-2px);
+        }
+
+        .preview-btn.fullscreen {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+        }
+
+        .image-info {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 10px;
+        }
+
+        .preview-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .preview-placeholder {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.5);
+            padding: 50px;
+            max-width: 600px;
+        }
+
+        .placeholder-icon {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        .preview-placeholder h3 {
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .preview-placeholder p {
+            font-size: 1rem;
+            line-height: 1.6;
+            margin: 0 auto;
+        }
+
+        .image-container {
+            position: relative;
+            max-width: 100%;
+            max-height: 100%;
+            display: none;
+        }
+
+        #previewImage {
+            max-width: 100%;
+            max-height: 70vh;
+            border-radius: 8px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+            transition: transform 0.5s ease;
+            cursor: pointer;
+        }
+
+        #previewImage:hover {
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.6);
+        }
+
+        /* Rotation Controls */
+        .rotation-controls {
+            background: rgba(40, 40, 60, 0.5);
+            padding: 25px;
+            border-top: 1px solid var(--border);
+        }
+
+        .rotation-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .rotation-btn {
+            background: rgba(60, 60, 80, 0.7);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .rotation-btn:hover {
+            background: rgba(80, 80, 100, 0.9);
+            transform: translateY(-3px);
+        }
+
+        .rotation-btn i {
+            font-size: 1.4rem;
+        }
+
+        .rotation-display {
+            background: rgba(30, 30, 50, 0.7);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        .rotation-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--accent);
+            margin: 10px 0;
+        }
+
+        .rotation-slider-container {
+            margin: 15px 0;
+        }
+
+        .rotation-slider {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .rotation-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .action-btn {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            border-radius: 8px;
+            padding: 14px;
+            color: white;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+        }
+
+        .action-btn.save {
+            background: linear-gradient(135deg, var(--success), #2a9134);
+        }
+
+        .action-btn.reset {
+            background: linear-gradient(135deg, var(--danger), #c1121f);
+        }
+
+        /* Status Bar */
+        .status-bar {
+            background: rgba(26, 26, 46, 0.95);
+            border-radius: 12px;
+            padding: 15px 25px;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+        }
+
+        .status-message {
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .status-message .highlight {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .selection-info {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Full Screen Modal */
+        .fullscreen-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            backdrop-filter: blur(10px);
+        }
+
+        .fullscreen-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 30px;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10001;
+        }
+
+        .fullscreen-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .fullscreen-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .fullscreen-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            padding: 8px 16px;
+            color: white;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .fullscreen-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .fullscreen-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+        }
+
+        #fullscreenImage {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease;
+        }
+
+        .fullscreen-nav {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 30px;
+            border-radius: 50px;
+            display: flex;
+            gap: 20px;
+            z-index: 10001;
+        }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .exit-fullscreen {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10002;
+        }
+
+        .exit-fullscreen:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Breadcrumb */
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .breadcrumb-item {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.85rem;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .breadcrumb-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--accent);
+        }
+
+        .breadcrumb-separator {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Loader */
+        .loader {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.1);
+            border-top: 5px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.3;
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: rgba(26, 26, 46, 0.95);
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1.8rem;
+            cursor: pointer;
+            padding: 5px;
+            line-height: 1;
+        }
+
+        .modal-body {
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                max-height: 400px;
+            }
+            
+            .rotation-grid, .action-buttons {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .app-header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .header-actions {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .rotation-grid, .action-buttons {
+                grid-template-columns: 1fr;
+            }
+            
+            .file-list {
+                grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            }
+            
+            .preview-actions {
+                flex-wrap: wrap;
+            }
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease forwards;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo-area">
+                <div class="logo-icon">🖼️</div>
+                <div class="header-text">
+                    <h1>File Explorer Image Browser</h1>
+                    <p>Browse, rotate, and view images in full screen</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="file-input-wrapper">
+                    <button id="openFolderBtn" class="action-btn">
+                        <span>📂</span> Open Folder
+                    </button>
+                    <input type="file" id="folderInput" webkitdirectory directory multiple style="display: none;">
+                </div>
+                <button id="refreshBtn" class="action-btn">
+                    <span>🔄</span> Refresh
+                </button>
+                <button id="helpBtn" class="action-btn">
+                    <span>?</span> Help
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar - File Explorer -->
+            <div class="sidebar">
+                <div class="explorer-header">
+                    <div class="explorer-title">
+                        <span>📁 File Explorer</span>
+                        <div class="explorer-actions">
+                            <button class="explorer-btn" id="collapseAllBtn">
+                                <span>−</span> Collapse
+                            </button>
+                            <button class="explorer-btn" id="expandAllBtn">
+                                <span>+</span> Expand
+                            </button>
+                        </div>
+                    </div>
+                    <div class="path-display" id="currentPath">No folder selected</div>
+                    <div class="breadcrumb" id="breadcrumb">
+                        <!-- Breadcrumb will be generated dynamically -->
+                    </div>
+                </div>
+                
+                <div class="explorer-content" id="explorerContent">
+                    <div class="loader" id="explorerLoader">
+                        <div class="spinner"></div>
+                    </div>
+                    
+                    <div class="empty-state" id="emptyState">
+                        <div class="empty-state-icon">📁</div>
+                        <h3>No Folder Selected</h3>
+                        <p>Click "Open Folder" to browse your computer for images</p>
+                    </div>
+                    
+                    <!-- Folder Tree will be generated here -->
+                    <ul class="folder-tree" id="folderTree" style="display: none;"></ul>
+                    
+                    <!-- File List will be generated here -->
+                    <div class="file-list" id="fileList" style="display: none;"></div>
+                </div>
+            </div>
+
+            <!-- Preview Area -->
+            <div class="preview-area">
+                <div class="preview-header">
+                    <div class="preview-title">Image Preview</div>
+                    <div class="preview-actions">
+                        <button class="preview-btn fullscreen" id="fullscreenBtn">
+                            <span>⛶</span> Full Screen
+                        </button>
+                        <button class="preview-btn" id="zoomInBtn">
+                            <span>➕</span> Zoom In
+                        </button>
+                        <button class="preview-btn" id="zoomOutBtn">
+                            <span>➖</span> Zoom Out
+                        </button>
+                        <button class="preview-btn" id="zoomResetBtn">
+                            <span>↺</span> Reset Zoom
+                        </button>
+                    </div>
+                </div>
+                <div class="image-info" id="previewInfo">No image selected</div>
+                
+                <div class="preview-content">
+                    <div class="loader" id="imageLoader">
+                        <div class="spinner"></div>
+                    </div>
+                    
+                    <div class="preview-placeholder" id="previewPlaceholder">
+                        <div class="placeholder-icon">🖼️</div>
+                        <h3>Select an Image</h3>
+                        <p>Browse folders on the left and click on any image file to preview it.</p>
+                        <p style="margin-top: 15px; font-size: 0.9rem; color: rgba(255,255,255,0.4);">
+                            Click the image or press F to view in full screen
+                        </p>
+                    </div>
+                    
+                    <div class="image-container" id="imageContainer">
+                        <img id="previewImage" alt="Selected Image Preview">
+                    </div>
+                </div>
+                
+                <!-- Rotation Controls -->
+                <div class="rotation-controls">
+                    <div class="rotation-grid" id="rotationGrid">
+                        <button class="rotation-btn" data-rotation="-90">
+                            <span>↶</span> -90°
+                        </button>
+                        <button class="rotation-btn" data-rotation="90">
+                            <span>↷</span> +90°
+                        </button>
+                        <button class="rotation-btn" data-rotation="180">
+                            <span>⟲</span> 180°
+                        </button>
+                        <button class="rotation-btn" data-rotation="-45">
+                            <span>↺</span> -45°
+                        </button>
+                        <button class="rotation-btn" data-rotation="45">
+                            <span>↻</span> +45°
+                        </button>
+                        <button class="rotation-btn" data-rotation="270">
+                            <span>⟳</span> 270°
+                        </button>
+                        <button class="rotation-btn" data-rotation="360">
+                            <span>🔄</span> 360°
+                        </button>
+                        <button class="rotation-btn" id="customRotateBtn">
+                            <span>🎯</span> Custom
+                        </button>
+                    </div>
+                    
+                    <div class="rotation-display">
+                        <div style="font-size: 0.9rem; color: rgba(255,255,255,0.6); margin-bottom: 5px;">
+                            Rotation Angle
+                        </div>
+                        <div class="rotation-value" id="rotationValue">0°</div>
+                        <div class="rotation-slider-container">
+                            <input type="range" id="rotationSlider" class="rotation-slider" min="0" max="360" value="0" step="1">
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-top: 5px;">
+                            <span>0°</span>
+                            <span>180°</span>
+                            <span>360°</span>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="action-btn save" id="saveBtn">
+                            <span>💾</span> Save Image
+                        </button>
+                        <button class="action-btn reset" id="resetBtn">
+                            <span>↺</span> Reset All
+                        </button>
+                        <button class="action-btn" id="prevBtn">
+                            <span>◀</span> Previous
+                        </button>
+                        <button class="action-btn" id="nextBtn">
+                            <span>▶</span> Next
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-message">
+                Status: <span class="highlight" id="statusText">Ready to browse folders</span>
+            </div>
+            <div class="selection-info">
+                <span id="selectedCount">0</span> selected • 
+                <span id="totalFiles">0</span> files • 
+                <span id="folderCount">0</span> folders
+            </div>
+        </div>
+    </div>
+
+    <!-- Full Screen Modal -->
+    <div id="fullscreenModal" class="fullscreen-modal">
+        <div class="fullscreen-header">
+            <div class="fullscreen-title" id="fullscreenTitle">Full Screen View</div>
+            <div class="fullscreen-actions">
+                <button class="fullscreen-btn" id="fsPrevBtn">
+                    <span>◀</span> Previous
+                </button>
+                <button class="fullscreen-btn" id="fsNextBtn">
+                    <span>▶</span> Next
+                </button>
+                <button class="fullscreen-btn" id="fsRotateLeftBtn">
+                    <span>↶</span> Rotate
+                </button>
+            </div>
+        </div>
+        
+        <button class="exit-fullscreen" id="exitFullscreenBtn">
+            ✕
+        </button>
+        
+        <div class="fullscreen-content">
+            <img id="fullscreenImage" alt="Full Screen Image">
+        </div>
+        
+        <div class="fullscreen-nav">
+            <button class="nav-btn" id="fsZoomInBtn">➕</button>
+            <button class="nav-btn" id="fsZoomOutBtn">➖</button>
+            <button class="nav-btn" id="fsResetZoomBtn">↺</button>
+        </div>
+    </div>
+
+    <!-- Custom Rotation Modal -->
+    <div id="customModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Custom Rotation</h2>
+                <button class="close-modal" id="closeCustomModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Enter the rotation angle (-360° to 360°):</p>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <input type="number" id="customAngleInput" min="-360" max="360" value="0" 
+                           style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--border); 
+                                  background: rgba(0,0,0,0.2); color: white; font-size: 1.2rem;">
+                    <button id="applyCustomAngle" class="action-btn" style="padding: 12px 24px;">
+                        Apply
+                    </button>
+                </div>
+                <div style="margin-top: 20px; font-size: 0.9rem; color: rgba(255,255,255,0.6);">
+                    Tip: Positive angles rotate clockwise, negative angles rotate counter-clockwise
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="helpModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Help & Instructions</h2>
+                <button class="close-modal" id="closeHelp">&times;</button>
+            </div>
+            <div class="modal-body">
+                <h3>How to Use:</h3>
+                
+                <p><strong>1. Open & Refresh Folders:</strong></p>
+                <ul>
+                    <li>Click "Open Folder" to select a folder with images</li>
+                    <li>Use "Refresh" button to reload the current folder</li>
+                    <li>Click folders in the explorer to navigate</li>
+                    <li>Use breadcrumb to jump to parent folders</li>
+                </ul>
+                
+                <p><strong>2. Browse & Select Images:</strong></p>
+                <ul>
+                    <li>Click on image files to select them</li>
+                    <li>Use Previous/Next buttons to navigate through images</li>
+                    <li>Selected image appears in the preview area</li>
+                </ul>
+                
+                <p><strong>3. Full Screen View:</strong></p>
+                <ul>
+                    <li>Click the image or press "Full Screen" button</li>
+                    <li>Use F key to toggle full screen</li>
+                    <li>Navigate images in full screen mode</li>
+                    <li>Use zoom controls to adjust view</li>
+                    <li>Press ESC or click X to exit full screen</li>
+                </ul>
+                
+                <p><strong>4. Rotate Images:</strong></p>
+                <ul>
+                    <li>Use rotation buttons for common angles</li>
+                    <li>Drag the slider for precise rotation control</li>
+                    <li>Click "Custom" to enter a specific angle</li>
+                    <li>Multiple rotations can be applied sequentially</li>
+                </ul>
+                
+                <p><strong>5. Save & Manage:</strong></p>
+                <ul>
+                    <li>Click "Save Image" to save rotated version</li>
+                    <li>Use "Reset All" to clear rotation and zoom</li>
+                    <li>Original files are never modified</li>
+                </ul>
+                
+                <p><strong>Keyboard Shortcuts:</strong></p>
+                <ul>
+                    <li><kbd>F</kbd>: Toggle full screen</li>
+                    <li><kbd>←</kbd> / <kbd>→</kbd>: Previous/Next image</li>
+                    <li><kbd>+</kbd> / <kbd>-</kbd>: Zoom in/out</li>
+                    <li><kbd>0</kbd>: Reset zoom</li>
+                    <li><kbd>R</kbd>: Reset rotation</li>
+                    <li><kbd>Ctrl + S</kbd>: Save image</li>
+                    <li><kbd>ESC</kbd>: Exit full screen / close modals</li>
+                    <li><kbd>F5</kbd>: Refresh folder</li>
+                </ul>
+                
+                <p><strong>Supported Formats:</strong></p>
+                <ul>
+                    <li>JPEG/JPG (.jpg, .jpeg)</li>
+                    <li>PNG (.png)</li>
+                    <li>GIF (.gif)</li>
+                    <li>WebP (.webp)</li>
+                    <li>BMP (.bmp)</li>
+                    <li>SVG (.svg)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Application State
+        const state = {
+            currentFolder: null,
+            folderStructure: {},
+            currentPath: '',
+            selectedImage: null,
+            currentRotation: 0,
+            currentZoom: 1,
+            images: [],
+            currentImageIndex: -1,
+            fileCache: new Map(),
+            isFullscreen: false
+        };
+
+        // DOM Elements
+        const folderInput = document.getElementById('folderInput');
+        const openFolderBtn = document.getElementById('openFolderBtn');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const helpBtn = document.getElementById('helpBtn');
+        const currentPath = document.getElementById('currentPath');
+        const breadcrumb = document.getElementById('breadcrumb');
+        const folderTree = document.getElementById('folderTree');
+        const fileList = document.getElementById('fileList');
+        const emptyState = document.getElementById('emptyState');
+        const explorerLoader = document.getElementById('explorerLoader');
+        const previewImage = document.getElementById('previewImage');
+        const previewPlaceholder = document.getElementById('previewPlaceholder');
+        const previewInfo = document.getElementById('previewInfo');
+        const imageContainer = document.getElementById('imageContainer');
+        const imageLoader = document.getElementById('imageLoader');
+        const rotationValue = document.getElementById('rotationValue');
+        const rotationSlider = document.getElementById('rotationSlider');
+        const statusText = document.getElementById('statusText');
+        const selectedCount = document.getElementById('selectedCount');
+        const totalFiles = document.getElementById('totalFiles');
+        const folderCount = document.getElementById('folderCount');
+        const saveBtn = document.getElementById('saveBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const zoomInBtn = document.getElementById('zoomInBtn');
+        const zoomOutBtn = document.getElementById('zoomOutBtn');
+        const zoomResetBtn = document.getElementById('zoomResetBtn');
+        const collapseAllBtn = document.getElementById('collapseAllBtn');
+        const expandAllBtn = document.getElementById('expandAllBtn');
+        const fullscreenModal = document.getElementById('fullscreenModal');
+        const fullscreenImage = document.getElementById('fullscreenImage');
+        const fullscreenTitle = document.getElementById('fullscreenTitle');
+        const exitFullscreenBtn = document.getElementById('exitFullscreenBtn');
+        const fsPrevBtn = document.getElementById('fsPrevBtn');
+        const fsNextBtn = document.getElementById('fsNextBtn');
+        const fsRotateLeftBtn = document.getElementById('fsRotateLeftBtn');
+        const fsZoomInBtn = document.getElementById('fsZoomInBtn');
+        const fsZoomOutBtn = document.getElementById('fsZoomOutBtn');
+        const fsResetZoomBtn = document.getElementById('fsResetZoomBtn');
+        const customModal = document.getElementById('customModal');
+        const closeCustomModal = document.getElementById('closeCustomModal');
+        const customAngleInput = document.getElementById('customAngleInput');
+        const applyCustomAngle = document.getElementById('applyCustomAngle');
+        const customRotateBtn = document.getElementById('customRotateBtn');
+        const helpModal = document.getElementById('helpModal');
+        const closeHelp = document.getElementById('closeHelp');
+
+        // Supported image extensions
+        const supportedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
+
+        // Initialize
+        function init() {
+            setupEventListeners();
+            updateStatus('Ready to browse folders');
+            
+            // Try to load last opened folder
+            loadLastFolder();
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Folder operations
+            openFolderBtn.addEventListener('click', () => folderInput.click());
+            folderInput.addEventListener('change', handleFolderSelect);
+            refreshBtn.addEventListener('click', refreshFolder);
+            collapseAllBtn.addEventListener('click', collapseAllFolders);
+            expandAllBtn.addEventListener('click', expandAllFolders);
+
+            // Rotation controls
+            document.querySelectorAll('.rotation-btn[data-rotation]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const rotation = parseInt(btn.dataset.rotation);
+                    applyRotation(rotation);
+                });
+            });
+
+            customRotateBtn.addEventListener('click', () => {
+                customModal.style.display = 'flex';
+                customAngleInput.value = state.currentRotation;
+                customAngleInput.focus();
+            });
+
+            rotationSlider.addEventListener('input', (e) => {
+                state.currentRotation = parseInt(e.target.value);
+                updateRotationDisplay();
+                updatePreviewImage();
+            });
+
+            // Custom rotation modal
+            closeCustomModal.addEventListener('click', () => customModal.style.display = 'none');
+            applyCustomAngle.addEventListener('click', applyCustomRotation);
+            customAngleInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') applyCustomRotation();
+            });
+            customModal.addEventListener('click', (e) => {
+                if (e.target === customModal) customModal.style.display = 'none';
+            });
+
+            // Preview controls
+            previewImage.addEventListener('click', toggleFullscreen);
+            fullscreenBtn.addEventListener('click', toggleFullscreen);
+            zoomInBtn.addEventListener('click', () => zoomImage(0.1));
+            zoomOutBtn.addEventListener('click', () => zoomImage(-0.1));
+            zoomResetBtn.addEventListener('click', resetZoom);
+
+            // Action buttons
+            saveBtn.addEventListener('click', saveRotatedImage);
+            resetBtn.addEventListener('click', resetAll);
+            prevBtn.addEventListener('click', showPreviousImage);
+            nextBtn.addEventListener('click', showNextImage);
+
+            // Full screen controls
+            exitFullscreenBtn.addEventListener('click', toggleFullscreen);
+            fsPrevBtn.addEventListener('click', showPreviousImage);
+            fsNextBtn.addEventListener('click', showNextImage);
+            fsRotateLeftBtn.addEventListener('click', () => applyRotation(-90));
+            fsZoomInBtn.addEventListener('click', () => zoomImage(0.1, true));
+            fsZoomOutBtn.addEventListener('click', () => zoomImage(-0.1, true));
+            fsResetZoomBtn.addEventListener('click', resetZoom);
+
+            // Modal controls
+            helpBtn.addEventListener('click', () => helpModal.style.display = 'flex');
+            closeHelp.addEventListener('click', () => helpModal.style.display = 'none');
+            helpModal.addEventListener('click', (e) => {
+                if (e.target === helpModal) helpModal.style.display = 'none';
+            });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', handleKeyboardShortcuts);
+            
+            // Handle full screen changes
+            document.addEventListener('fullscreenchange', handleFullscreenChange);
+            document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+            document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+            document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+        }
+
+        // Handle folder selection
+        async function handleFolderSelect(event) {
+            const files = Array.from(event.target.files);
+            
+            if (files.length === 0) {
+                updateStatus('No folder selected', 'error');
+                return;
+            }
+
+            showExplorerLoader(true);
+            updateStatus('Building folder structure...');
+
+            // Reset state
+            state.folderStructure = {};
+            state.images = [];
+            state.currentImageIndex = -1;
+            state.selectedImage = null;
+            state.fileCache.clear();
+            state.currentRotation = 0;
+            state.currentZoom = 1;
+
+            // Get folder path from first file
+            const firstFile = files[0];
+            const pathParts = firstFile.webkitRelativePath.split('/');
+            state.currentFolder = pathParts[0];
+            state.currentPath = state.currentFolder;
+
+            // Save folder reference for refresh
+            saveLastFolder(files);
+
+            // Build folder structure
+            await buildFolderStructure(files);
+
+            showExplorerLoader(false);
+            updateFolderDisplay();
+            updateStatus(`Opened folder: ${state.currentFolder} (${state.images.length} images)`);
+        }
+
+        // Build folder structure
+        async function buildFolderStructure(files) {
+            files.forEach(file => {
+                const path = file.webkitRelativePath;
+                const parts = path.split('/');
+                
+                // Skip files in root (only process files in subdirectories)
+                if (parts.length > 1) {
+                    let currentLevel = state.folderStructure;
+                    
+                    // Build directory structure
+                    for (let i = 0; i < parts.length - 1; i++) {
+                        const part = parts[i];
+                        if (!currentLevel[part]) {
+                            currentLevel[part] = { _files: [], _subfolders: {} };
+                        }
+                        currentLevel = currentLevel[part];
+                    }
+                    
+                    // Add file to its directory
+                    const fileName = parts[parts.length - 1];
+                    const extension = '.' + fileName.split('.').pop().toLowerCase();
+                    
+                    if (supportedExtensions.includes(extension)) {
+                        currentLevel._files.push({
+                            name: fileName,
+                            size: file.size,
+                            type: file.type,
+                            file: file,
+                            path: path,
+                            lastModified: file.lastModified
+                        });
+                        
+                        // Add to images array for navigation
+                        state.images.push({
+                            name: fileName,
+                            size: file.size,
+                            type: file.type,
+                            file: file,
+                            path: path,
+                            data: null // Will load on demand
+                        });
+                    }
+                }
+            });
+        }
+
+        // Refresh current folder
+        async function refreshFolder() {
+            if (!state.currentFolder) {
+                updateStatus('No folder to refresh', 'error');
+                return;
+            }
+
+            showExplorerLoader(true);
+            updateStatus('Refreshing folder...');
+
+            try {
+                // Re-select the folder
+                const files = await getFolderFiles();
+                if (!files || files.length === 0) {
+                    throw new Error('Failed to refresh folder');
+                }
+
+                // Reset state
+                state.folderStructure = {};
+                state.images = [];
+                state.currentImageIndex = -1;
+                state.selectedImage = null;
+                state.fileCache.clear();
+                state.currentRotation = 0;
+                state.currentZoom = 1;
+
+                // Build folder structure
+                await buildFolderStructure(files);
+
+                showExplorerLoader(false);
+                updateFolderDisplay();
+                updateStatus(`Folder refreshed: ${state.images.length} images loaded`);
+            } catch (error) {
+                showExplorerLoader(false);
+                updateStatus('Failed to refresh folder. Please open the folder again.', 'error');
+                console.error('Refresh error:', error);
+            }
+        }
+
+        // Get folder files (simulated - in real app would need user interaction)
+        function getFolderFiles() {
+            return new Promise((resolve) => {
+                // This is a simulation - in a real app, you'd need to re-trigger folder selection
+                // or use a different approach since browsers don't allow programmatic folder access
+                updateStatus('Please select the folder again to refresh', 'warning');
+                folderInput.click();
+                
+                const handleRefresh = (e) => {
+                    const files = Array.from(e.target.files);
+                    folderInput.removeEventListener('change', handleRefresh);
+                    resolve(files);
+                };
+                
+                folderInput.addEventListener('change', handleRefresh);
+            });
+        }
+
+        // Update folder display
+        function updateFolderDisplay() {
+            // Update path display
+            currentPath.textContent = state.currentPath;
+            
+            // Update breadcrumb
+            updateBreadcrumb();
+            
+            // Show/hide empty state
+            if (Object.keys(state.folderStructure).length === 0) {
+                emptyState.style.display = 'block';
+                folderTree.style.display = 'none';
+                fileList.style.display = 'none';
+                return;
+            } else {
+                emptyState.style.display = 'none';
+                folderTree.style.display = 'block';
+                fileList.style.display = 'block';
+            }
+            
+            // Get current folder contents
+            const pathParts = state.currentPath.split('/');
+            let currentLevel = state.folderStructure;
+            
+            // Navigate to current path
+            for (const part of pathParts) {
+                if (part && currentLevel[part]) {
+                    currentLevel = currentLevel[part];
+                }
+            }
+            
+            // Build folder tree
+            buildFolderTree(currentLevel);
+            
+            // Build file list
+            buildFileList(currentLevel._files || []);
+            
+            // Update counters
+            const fileCount = currentLevel._files ? currentLevel._files.length : 0;
+            const subfolderCount = Object.keys(currentLevel).filter(key => !key.startsWith('_')).length;
+            
+            selectedCount.textContent = state.currentImageIndex >= 0 ? '1' : '0';
+            totalFiles.textContent = fileCount;
+            folderCount.textContent = subfolderCount;
+        }
+
+        // Update breadcrumb navigation
+        function updateBreadcrumb() {
+            breadcrumb.innerHTML = '';
+            
+            const parts = state.currentPath.split('/');
+            let currentPath = '';
+            
+            // Add home/root
+            const homeItem = document.createElement('div');
+            homeItem.className = 'breadcrumb-item';
+            homeItem.textContent = '🏠 Home';
+            homeItem.addEventListener('click', () => {
+                state.currentPath = state.currentFolder;
+                updateFolderDisplay();
+            });
+            breadcrumb.appendChild(homeItem);
+            
+            // Add path parts
+            parts.forEach((part, index) => {
+                if (!part) return;
+                
+                currentPath += (currentPath ? '/' : '') + part;
+                
+                const separator = document.createElement('div');
+                separator.className = 'breadcrumb-separator';
+                separator.textContent = '›';
+                breadcrumb.appendChild(separator);
+                
+                const item = document.createElement('div');
+                item.className = 'breadcrumb-item';
+                item.textContent = part;
+                
+                const pathToNavigate = currentPath;
+                item.addEventListener('click', () => {
+                    state.currentPath = pathToNavigate;
+                    updateFolderDisplay();
+                });
+                
+                breadcrumb.appendChild(item);
+            });
+        }
+
+        // Build folder tree
+        function buildFolderTree(currentLevel) {
+            folderTree.innerHTML = '';
+            
+            // Get subfolders (excluding metadata keys)
+            const subfolders = Object.keys(currentLevel)
+                .filter(key => !key.startsWith('_'))
+                .sort();
+            
+            subfolders.forEach(folderName => {
+                const folderItem = createFolderElement(folderName, currentLevel[folderName]);
+                folderTree.appendChild(folderItem);
+            });
+        }
+
+        // Create folder element
+        function createFolderElement(name, folderData) {
+            const li = document.createElement('li');
+            li.className = 'folder-item';
+            
+            const header = document.createElement('div');
+            header.className = 'folder-header';
+            
+            const icon = document.createElement('div');
+            icon.className = 'folder-icon';
+            icon.textContent = '📁';
+            
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'folder-name';
+            nameSpan.textContent = name;
+            
+            const count = document.createElement('span');
+            count.className = 'folder-count';
+            
+            // Count files and subfolders
+            const fileCount = folderData._files ? folderData._files.length : 0;
+            const subfolderCount = Object.keys(folderData).filter(key => !key.startsWith('_')).length;
+            count.textContent = fileCount + subfolderCount;
+            
+            header.appendChild(icon);
+            header.appendChild(nameSpan);
+            header.appendChild(count);
+            
+            // Create contents container
+            const contents = document.createElement('ul');
+            contents.className = 'folder-contents';
+            
+            // Add click handler
+            header.addEventListener('click', (e) => {
+                e.stopPropagation();
+                
+                // Navigate to this folder
+                const newPath = state.currentPath + (state.currentPath ? '/' : '') + name;
+                state.currentPath = newPath;
+                updateFolderDisplay();
+            });
+            
+            li.appendChild(header);
+            li.appendChild(contents);
+            
+            return li;
+        }
+
+        // Build file list
+        function buildFileList(files) {
+            fileList.innerHTML = '';
+            
+            if (!files || files.length === 0) {
+                const emptyMsg = document.createElement('div');
+                emptyMsg.className = 'empty-state';
+                emptyMsg.innerHTML = `
+                    <div class="empty-state-icon">📄</div>
+                    <h3>No Images in This Folder</h3>
+                    <p>This folder doesn't contain any supported image files</p>
+                `;
+                fileList.appendChild(emptyMsg);
+                return;
+            }
+            
+            // Sort files by name
+            files.sort((a, b) => a.name.localeCompare(b.name));
+            
+            files.forEach((file, index) => {
+                const fileItem = createFileElement(file, index);
+                fileList.appendChild(fileItem);
+            });
+        }
+
+        // Create file element
+        function createFileElement(file, index) {
+            const div = document.createElement('div');
+            div.className = 'file-item';
+            if (state.currentImageIndex >= 0 && state.images[state.currentImageIndex]?.path === file.path) {
+                div.classList.add('selected');
+            }
+            
+            // Get file icon based on extension
+            const extension = '.' + file.name.split('.').pop().toLowerCase();
+            let icon = '📄';
+            if (['.jpg', '.jpeg', '.png'].includes(extension)) icon = '🖼️';
+            else if (extension === '.gif') icon = '🎬';
+            else if (extension === '.svg') icon = '⚡';
+            else if (extension === '.webp') icon = '🌐';
+            else if (extension === '.bmp') icon = '💠';
+            
+            div.innerHTML = `
+                <div class="file-icon">${icon}</div>
+                <div class="file-name">${file.name}</div>
+                <div class="file-size">${formatFileSize(file.size)}</div>
+                <div class="file-badge">✓</div>
+            `;
+            
+            // Add click handler
+            div.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                
+                // Remove selection from all files
+                document.querySelectorAll('.file-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                
+                // Add selection to clicked file
+                div.classList.add('selected');
+                
+                // Load and display the image
+                await selectImage(file);
+            });
+            
+            return div;
+        }
+
+        // Select and display image
+        async function selectImage(file) {
+            showImageLoader(true);
+            updateStatus(`Loading ${file.name}...`);
+            
+            try {
+                // Find the image in our array
+                const imageIndex = state.images.findIndex(img => img.path === file.path);
+                if (imageIndex === -1) return;
+                
+                state.currentImageIndex = imageIndex;
+                state.currentRotation = 0;
+                state.currentZoom = 1;
+                
+                const image = state.images[imageIndex];
+                
+                // Load image data if not cached
+                if (!image.data) {
+                    image.data = await readFileAsDataURL(image.file);
+                }
+                
+                // Update preview
+                previewImage.src = image.data;
+                previewImage.style.transform = `scale(${state.currentZoom})`;
+                previewImage.style.display = 'block';
+                previewPlaceholder.style.display = 'none';
+                imageContainer.style.display = 'block';
+                
+                // Get image dimensions
+                const dimensions = await getImageDimensions(image.data);
+                
+                // Update info
+                const date = new Date(image.file.lastModified);
+                const dateStr = date.toLocaleDateString();
+                previewInfo.textContent = `${image.name} • ${dimensions.width} × ${dimensions.height} • ${formatFileSize(image.size)} • Modified: ${dateStr}`;
+                
+                // Update rotation display
+                updateRotationDisplay();
+                rotationSlider.value = 0;
+                
+                // Update full screen image
+                fullscreenImage.src = image.data;
+                fullscreenTitle.textContent = image.name;
+                
+                // Update counters
+                selectedCount.textContent = '1';
+                
+                updateStatus(`Loaded: ${image.name}`);
+            } catch (error) {
+                console.error('Error loading image:', error);
+                updateStatus('Error loading image', 'error');
+            } finally {
+                showImageLoader(false);
+            }
+        }
+
+        // Read file as DataURL
+        function readFileAsDataURL(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Get image dimensions
+        function getImageDimensions(dataUrl) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    resolve({
+                        width: img.width,
+                        height: img.height
+                    });
+                };
+                img.src = dataUrl;
+            });
+        }
+
+        // Apply rotation
+        function applyRotation(degrees) {
+            if (state.currentImageIndex === -1) {
+                updateStatus('No image selected', 'error');
+                return;
+            }
+            
+            state.currentRotation = (state.currentRotation + degrees) % 360;
+            if (state.currentRotation < 0) state.currentRotation += 360;
+            
+            updateRotationDisplay();
+            rotationSlider.value = state.currentRotation;
+            updatePreviewImage();
+            
+            updateStatus(`Rotated to ${state.currentRotation}°`);
+        }
+
+        // Apply custom rotation
+        function applyCustomRotation() {
+            const angle = parseInt(customAngleInput.value);
+            if (isNaN(angle) || angle < -360 || angle > 360) {
+                updateStatus('Please enter a valid angle between -360 and 360', 'error');
+                return;
+            }
+            
+            customModal.style.display = 'none';
+            applyRotation(angle - state.currentRotation);
+        }
+
+        // Update rotation display
+        function updateRotationDisplay() {
+            rotationValue.textContent = `${state.currentRotation}°`;
+        }
+
+        // Update preview image with rotation
+        function updatePreviewImage() {
+            if (state.currentImageIndex === -1) return;
+            
+            const image = state.images[state.currentImageIndex];
+            const img = new Image();
+            
+            img.onload = function() {
+                // Create canvas for rotation
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // Calculate new dimensions for rotation
+                const radians = state.currentRotation * Math.PI / 180;
+                const cos = Math.abs(Math.cos(radians));
+                const sin = Math.abs(Math.sin(radians));
+                
+                canvas.width = img.width * cos + img.height * sin;
+                canvas.height = img.width * sin + img.height * cos;
+                
+                // Center and rotate
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                ctx.rotate(radians);
+                ctx.drawImage(img, -img.width / 2, -img.height / 2);
+                
+                // Update preview
+                previewImage.src = canvas.toDataURL();
+                previewImage.style.transform = `scale(${state.currentZoom})`;
+                
+                // Update full screen image
+                fullscreenImage.src = canvas.toDataURL();
+            };
+            
+            img.src = image.data;
+        }
+
+        // Zoom image
+        function zoomImage(delta, inFullscreen = false) {
+            if (state.currentImageIndex === -1) return;
+            
+            state.currentZoom = Math.max(0.1, Math.min(5, state.currentZoom + delta));
+            
+            if (inFullscreen || state.isFullscreen) {
+                fullscreenImage.style.transform = `scale(${state.currentZoom})`;
+            } else {
+                previewImage.style.transform = `scale(${state.currentZoom})`;
+            }
+            
+            updateStatus(`Zoom: ${Math.round(state.currentZoom * 100)}%`);
+        }
+
+        // Reset zoom
+        function resetZoom() {
+            state.currentZoom = 1;
+            
+            if (state.isFullscreen) {
+                fullscreenImage.style.transform = 'scale(1)';
+            } else {
+                previewImage.style.transform = 'scale(1)';
+            }
+            
+            updateStatus('Zoom reset to 100%');
+        }
+
+        // Toggle full screen
+        function toggleFullscreen() {
+            if (state.currentImageIndex === -1) {
+                updateStatus('No image to view in full screen', 'error');
+                return;
+            }
+            
+            if (state.isFullscreen) {
+                // Exit full screen
+                fullscreenModal.style.display = 'none';
+                state.isFullscreen = false;
+                
+                // Enable scroll on body
+                document.body.style.overflow = 'auto';
+            } else {
+                // Enter full screen
+                fullscreenModal.style.display = 'flex';
+                state.isFullscreen = true;
+                
+                // Disable scroll on body
+                document.body.style.overflow = 'hidden';
+                
+                // Update full screen image
+                const image = state.images[state.currentImageIndex];
+                fullscreenImage.src = image.data;
+                fullscreenImage.style.transform = `scale(${state.currentZoom})`;
+                fullscreenTitle.textContent = image.name;
+            }
+        }
+
+        // Handle full screen changes
+        function handleFullscreenChange() {
+            if (!document.fullscreenElement && !document.webkitFullscreenElement && 
+                !document.mozFullScreenElement && !document.msFullscreenElement) {
+                fullscreenModal.style.display = 'none';
+                state.isFullscreen = false;
+                document.body.style.overflow = 'auto';
+            }
+        }
+
+        // Save rotated image
+        function saveRotatedImage() {
+            if (state.currentImageIndex === -1) {
+                updateStatus('No image to save', 'error');
+                return;
+            }
+            
+            if (state.currentRotation === 0) {
+                updateStatus('Image is not rotated - nothing to save', 'warning');
+                return;
+            }
+            
+            const image = state.images[state.currentImageIndex];
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            img.onload = function() {
+                // Calculate canvas size for rotation
+                const radians = state.currentRotation * Math.PI / 180;
+                const cos = Math.abs(Math.cos(radians));
+                const sin = Math.abs(Math.sin(radians));
+                
+                canvas.width = img.width * cos + img.height * sin;
+                canvas.height = img.width * sin + img.height * cos;
+                
+                // Draw rotated image
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                ctx.rotate(radians);
+                ctx.drawImage(img, -img.width / 2, -img.height / 2);
+                
+                // Create download link
+                const link = document.createElement('a');
+                const filename = image.name.replace(/\.[^/.]+$/, "") + `_rotated_${state.currentRotation}deg.png`;
+                link.download = filename;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                
+                updateStatus(`Saved rotated image as "${filename}"`);
+            };
+            
+            img.src = image.data;
+        }
+
+        // Reset all (rotation and zoom)
+        function resetAll() {
+            if (state.currentImageIndex === -1) return;
+            
+            state.currentRotation = 0;
+            state.currentZoom = 1;
+            
+            updateRotationDisplay();
+            rotationSlider.value = 0;
+            
+            // Reset to original image
+            const image = state.images[state.currentImageIndex];
+            previewImage.src = image.data;
+            previewImage.style.transform = 'scale(1)';
+            
+            if (state.isFullscreen) {
+                fullscreenImage.src = image.data;
+                fullscreenImage.style.transform = 'scale(1)';
+            }
+            
+            updateStatus('Rotation and zoom reset');
+        }
+
+        // Show previous image
+        function showPreviousImage() {
+            if (state.images.length === 0) return;
+            
+            let newIndex = state.currentImageIndex - 1;
+            if (newIndex < 0) newIndex = state.images.length - 1;
+            
+            // Find the file object for this image
+            const image = state.images[newIndex];
+            const pathParts = image.path.split('/').slice(0, -1);
+            const folderPath = pathParts.join('/') || state.currentFolder;
+            
+            // Navigate to the folder if needed
+            if (state.currentPath !== folderPath) {
+                state.currentPath = folderPath;
+                updateFolderDisplay();
+            }
+            
+            // Select the image after a brief delay to allow DOM update
+            setTimeout(() => {
+                // Find and click the file element
+                const fileElements = document.querySelectorAll('.file-item');
+                fileElements.forEach((el, index) => {
+                    if (el.querySelector('.file-name').textContent === image.name) {
+                        el.click();
+                    }
+                });
+            }, 100);
+        }
+
+        // Show next image
+        function showNextImage() {
+            if (state.images.length === 0) return;
+            
+            let newIndex = state.currentImageIndex + 1;
+            if (newIndex >= state.images.length) newIndex = 0;
+            
+            // Find the file object for this image
+            const image = state.images[newIndex];
+            const pathParts = image.path.split('/').slice(0, -1);
+            const folderPath = pathParts.join('/') || state.currentFolder;
+            
+            // Navigate to the folder if needed
+            if (state.currentPath !== folderPath) {
+                state.currentPath = folderPath;
+                updateFolderDisplay();
+            }
+            
+            // Select the image after a brief delay to allow DOM update
+            setTimeout(() => {
+                // Find and click the file element
+                const fileElements = document.querySelectorAll('.file-item');
+                fileElements.forEach((el, index) => {
+                    if (el.querySelector('.file-name').textContent === image.name) {
+                        el.click();
+                    }
+                });
+            }, 100);
+        }
+
+        // Collapse all folders
+        function collapseAllFolders() {
+            document.querySelectorAll('.folder-contents.expanded').forEach(el => {
+                el.classList.remove('expanded');
+            });
+            updateStatus('All folders collapsed');
+        }
+
+        // Expand all folders
+        function expandAllFolders() {
+            document.querySelectorAll('.folder-contents').forEach(el => {
+                el.classList.add('expanded');
+            });
+            updateStatus('All folders expanded');
+        }
+
+        // Save last opened folder
+        function saveLastFolder(files) {
+            try {
+                const fileData = files.map(file => ({
+                    name: file.name,
+                    size: file.size,
+                    type: file.type,
+                    webkitRelativePath: file.webkitRelativePath,
+                    lastModified: file.lastModified
+                }));
+                
+                localStorage.setItem('lastFolderData', JSON.stringify({
+                    folderName: state.currentFolder,
+                    files: fileData,
+                    timestamp: Date.now()
+                }));
+            } catch (error) {
+                console.error('Failed to save folder data:', error);
+            }
+        }
+
+        // Load last opened folder
+        function loadLastFolder() {
+            try {
+                const saved = localStorage.getItem('lastFolderData');
+                if (!saved) return;
+                
+                const data = JSON.parse(saved);
+                if (Date.now() - data.timestamp > 24 * 60 * 60 * 1000) {
+                    // Data is older than 24 hours, don't load it
+                    return;
+                }
+                
+                // Convert back to File objects (simulated)
+                const files = data.files.map(fileData => {
+                    return new File([], fileData.name, {
+                        type: fileData.type,
+                        lastModified: fileData.lastModified,
+                        webkitRelativePath: fileData.webkitRelativePath
+                    });
+                });
+                
+                if (files.length > 0) {
+                    state.currentFolder = data.folderName;
+                    state.currentPath = data.folderName;
+                    buildFolderStructure(files);
+                    updateFolderDisplay();
+                    updateStatus(`Loaded last folder: ${data.folderName}`);
+                }
+            } catch (error) {
+                console.error('Failed to load folder data:', error);
+            }
+        }
+
+        // Handle keyboard shortcuts
+        function handleKeyboardShortcuts(e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            
+            switch(e.key.toLowerCase()) {
+                case 'arrowleft':
+                    e.preventDefault();
+                    showPreviousImage();
+                    break;
+                case 'arrowright':
+                    e.preventDefault();
+                    showNextImage();
+                    break;
+                case 'f':
+                    e.preventDefault();
+                    toggleFullscreen();
+                    break;
+                case '+':
+                case '=':
+                    e.preventDefault();
+                    zoomImage(0.1);
+                    break;
+                case '-':
+                case '_':
+                    e.preventDefault();
+                    zoomImage(-0.1);
+                    break;
+                case '0':
+                    e.preventDefault();
+                    resetZoom();
+                    break;
+                case 'r':
+                    if (e.ctrlKey) {
+                        e.preventDefault();
+                        resetAll();
+                    }
+                    break;
+                case 's':
+                    if (e.ctrlKey) {
+                        e.preventDefault();
+                        saveRotatedImage();
+                    }
+                    break;
+                case 'escape':
+                    if (state.isFullscreen) {
+                        e.preventDefault();
+                        toggleFullscreen();
+                    }
+                    customModal.style.display = 'none';
+                    helpModal.style.display = 'none';
+                    break;
+                case 'f5':
+                    e.preventDefault();
+                    refreshFolder();
+                    break;
+                case 'f1':
+                    e.preventDefault();
+                    helpModal.style.display = 'flex';
+                    break;
+            }
+        }
+
+        // Show/hide explorer loader
+        function showExplorerLoader(show) {
+            explorerLoader.style.display = show ? 'block' : 'none';
+        }
+
+        // Show/hide image loader
+        function showImageLoader(show) {
+            imageLoader.style.display = show ? 'block' : 'none';
+        }
+
+        // Update status message
+        function updateStatus(message, type = 'info') {
+            statusText.textContent = message;
+            
+            switch(type) {
+                case 'error':
+                    statusText.style.color = 'var(--danger)';
+                    break;
+                case 'warning':
+                    statusText.style.color = 'var(--warning)';
+                    break;
+                case 'success':
+                    statusText.style.color = 'var(--success)';
+                    break;
+                default:
+                    statusText.style.color = 'var(--accent)';
+            }
+        }
+
+        // Format file size
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        // Initialize the application
+        init();
+    </script>
+</body>
+</html>
