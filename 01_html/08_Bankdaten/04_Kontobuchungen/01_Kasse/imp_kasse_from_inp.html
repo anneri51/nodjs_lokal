@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kasse Entry Form</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .form-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+            border: 1px solid #d6e9c6;
+        }
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+            border: 1px solid #ebccd1;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 10px 0;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #09f;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .step {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .step-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .button-group {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Kasse Management</h1>
+    <div class="form-container">
+        <div class="step">
+            <div class="step-title">Main Data</div>
+            <div class="form-group">
+                <label for="fkInpBelegeAll">FK_INP_BELEGE_ALL:</label>
+                <input type="text" id="fkInpBelegeAll" required>
+            </div>
+            <div class="form-group">
+                <label for="pkKtoKontoAuszug">PK_KTO_KONTO_AUSZUG:</label>
+                <input type="text" id="pkKtoKontoAuszug">
+            </div>
+        </div>
+        
+        <div class="button-group">
+            <button id="createKasseBtn">Create Kasse Entry</button>
+            <button id="createRelationBtn">Create Kontoauszug Relation</button>
+            <button id="createDocRelationBtn">Create Document Relation</button>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processing request...</p>
+        </div>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // Shared variables
+        let lastCreatedFkMainKey = null;
+        const resultDiv = document.getElementById('result');
+        const loadingDiv = document.getElementById('loading');
+        
+        // Helper function to show loading
+        function showLoading() {
+            resultDiv.style.display = 'none';
+            loadingDiv.style.display = 'block';
+        }
+        
+        // Helper function to show result
+        function showResult(isSuccess, message) {
+            resultDiv.className = isSuccess ? 'success' : 'error';
+            resultDiv.innerHTML = message;
+            resultDiv.style.display = 'block';
+            loadingDiv.style.display = 'none';
+        }
+        
+        // Create Kasse Entry
+        document.getElementById('createKasseBtn').addEventListener('click', async function() {
+            const fkInpBelegeAll = document.getElementById('fkInpBelegeAll').value;
+            
+            showLoading();
+            
+            try {
+                if (!fkInpBelegeAll) {
+                    throw new Error('FK_INP_BELEGE_ALL is required');
+                }
+                
+                const response = await fetch('http://localhost:5000/add_kasse_from_inp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        FK_INP_BELEGE_ALL: fkInpBelegeAll
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to create Kasse entry');
+                }
+                
+                lastCreatedFkMainKey = data.data.FK_MAIN_KEY;
+                
+                showResult(true, `
+                    <h3>Success!</h3>
+                    <p>${data.message}</p>
+                    <p>Created Kasse Entry with ID: ${lastCreatedFkMainKey}</p>
+                `);
+            } catch (error) {
+                showResult(false, `
+                    <h3>Error</h3>
+                    <p>${error.message}</p>
+                `);
+            }
+        });
+        
+        // Create Kontoauszug Relation
+        document.getElementById('createRelationBtn').addEventListener('click', async function() {
+            const pkKtoKontoAuszug = document.getElementById('pkKtoKontoAuszug').value;
+            
+            showLoading();
+            
+            try {
+                if (!lastCreatedFkMainKey) {
+                    throw new Error('Please create a Kasse entry first');
+                }
+                
+                if (!pkKtoKontoAuszug) {
+                    throw new Error('PK_KTO_KONTO_AUSZUG is required');
+                }
+                
+                const response = await fetch('http://localhost:5000/buchung/add_rel_kontoauszug', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        fk_main_key: lastCreatedFkMainKey,
+                        fk_kto_konto_auszug: pkKtoKontoAuszug
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to create relation');
+                }
+                
+                showResult(true, `
+                    <h3>Success!</h3>
+                    <p>Created relation to Kontoauszug ${pkKtoKontoAuszug}</p>
+                    <p>For Kasse Entry ID: ${lastCreatedFkMainKey}</p>
+                `);
+            } catch (error) {
+                showResult(false, `
+                    <h3>Error</h3>
+                    <p>${error.message}</p>
+                `);
+            }
+        });
+        
+        // Create Document Relation
+        document.getElementById('createDocRelationBtn').addEventListener('click', async function() {
+            const fkInpBelegeAll = document.getElementById('fkInpBelegeAll').value;
+            
+            showLoading();
+            
+            try {
+                if (!lastCreatedFkMainKey) {
+                    throw new Error('Please create a Kasse entry first');
+                }
+                
+                if (!fkInpBelegeAll) {
+                    throw new Error('FK_INP_BELEGE_ALL is required');
+                }
+                
+                const response = await fetch('http://localhost:5000/document/add_rel', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        fk_main_key: lastCreatedFkMainKey,
+                        fk_inp_belege_all: fkInpBelegeAll
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to create document relation');
+                }
+                
+                showResult(true, `
+                    <h3>Success!</h3>
+                    <p>Created document relation with FK_INP_BELEGE_ALL ${fkInpBelegeAll}</p>
+                    <p>For Kasse Entry ID: ${lastCreatedFkMainKey}</p>
+                `);
+            } catch (error) {
+                showResult(false, `
+                    <h3>Error</h3>
+                    <p>${error.message}</p>
+                `);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,2365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction Browser</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f7f9;
+        }
+        .content-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+        }
+        .search-section {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .search-results {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            position: sticky;
+            top: 0;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .negative {
+            color: red;
+        }
+        .loading {
+            display: none;
+            margin: 20px 0;
+            font-style: italic;
+            color: #666;
+        }
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        .search-box {
+            flex-grow: 1;
+            min-width: 300px;
+        }
+        input[type="text"], select, input[type="date"] {
+            padding: 8px;
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .pagination-info {
+            font-weight: bold;
+            white-space: nowrap;
+            margin: 0 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .page-input {
+            width: 50px;
+            text-align: center;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .results-info {
+            margin-left: auto;
+            font-style: italic;
+            color: #666;
+        }
+        .highlight {
+            background-color: #fffde7;
+        }
+        .main-content {
+            margin-top: 20px;
+        }
+        .search-match {
+            background-color: #fffde7;
+            font-weight: bold;
+        }
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-style: italic;
+        }
+        .reset-region-btn {
+            background-color: #f44336;
+            margin-left: 10px;
+        }
+        .group-header {
+            background-color: #e0e0e0;
+            font-weight: bold;
+        }
+        .group-summary {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+        .group-toggle {
+            cursor: pointer;
+            padding-left: 5px;
+        }
+        .filter-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .filter-control {
+            display: flex;
+            flex-direction: column;
+            min-width: 150px;
+        }
+        .filter-label {
+            font-size: 0.8em;
+            margin-bottom: 3px;
+            color: #666;
+        }
+        .year-filter {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .selected-row {
+            background-color: #d4edff !important;
+        }
+        .account-details {
+            margin-top: 30px;
+            border-top: 2px solid #ddd;
+            padding-top: 20px;
+        }
+        .account-details h3 {
+            margin-bottom: 15px;
+        }
+        .account-loading {
+            font-style: italic;
+            color: #666;
+        }
+        .account-header {
+            background-color: #e3f2fd;
+            font-weight: bold;
+        }
+        .account-summary {
+            background-color: #e8f5e9;
+            font-weight: bold;
+        }
+        .account-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .account-table th {
+            background-color: #f5f5f5;
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .account-table td {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .account-table tr:hover {
+            background-color: #f5f5f5;
+        }
+        .date-range {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .date-range span {
+            font-size: 0.9em;
+            color: #666;
+        }
+        .download-btn {
+            background-color: #2196F3;
+            margin-left: 10px;
+        }
+        .date-group-header {
+            background-color: #d1ecf1;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .month-group-header {
+            background-color: #d4edda;
+            font-weight: bold;
+            padding-left: 20px !important;
+        }
+        .day-group-header {
+            background-color: #e8e8e8;
+            font-weight: bold;
+            padding-left: 40px !important;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        .delete-btn {
+            padding: 6px 10px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        .delete-btn:hover {
+            background-color: #d32f2f;
+        }
+        .delete-btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .status-message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        /* Calendar View Styles */
+        .calendar-view {
+            margin-top: 30px;
+            border-top: 2px solid #ddd;
+            padding-top: 20px;
+            display: none;
+        }
+        .calendar-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+        .calendar-day {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 8px;
+            min-height: 100px;
+            background-color: white;
+        }
+        .calendar-day-header {
+            font-weight: bold;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 5px;
+            padding-bottom: 3px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .day-number {
+            font-size: 1.1em;
+        }
+        .day-total {
+            font-size: 0.9em;
+            color: #666;
+        }
+        .negative-total {
+            color: red;
+        }
+        .calendar-transaction {
+            font-size: 0.8em;
+            margin-bottom: 3px;
+            padding: 2px;
+            border-radius: 2px;
+            background-color: #f8f9fa;
+        }
+        .calendar-transaction:hover {
+            background-color: #e9ecef;
+        }
+        .calendar-month-summary {
+            grid-column: 1 / -1;
+            background-color: #e8f5e9;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .empty-day {
+            background-color: #f8f9fa;
+            border: 1px dashed #ddd;
+        }
+        .calendar-view-toggle {
+            margin-left: 10px;
+            background-color: #2196F3;
+        }
+        .today {
+            background-color: #e3f2fd;
+            border: 2px solid #2196F3;
+        }
+        .has-transactions {
+            background-color: #fff3cd;
+        }
+        .weekday-header {
+            text-align: center;
+            font-weight: bold;
+            padding: 5px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+        }
+        
+        /* Chart View Styles */
+        .chart-view {
+            margin-top: 30px;
+            border-top: 2px solid #ddd;
+            padding-top: 20px;
+            display: none;
+        }
+        .chart-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        .chart-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .chart-control {
+            display: flex;
+            flex-direction: column;
+            min-width: 150px;
+        }
+        .chart-container {
+            width: 100%;
+            height: 400px;
+            background-color: white;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .chart-view-toggle {
+            margin-left: 10px;
+            background-color: #9C27B0;
+        }
+        .chart-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9em;
+        }
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 3px;
+        }
+        .chart-tooltip {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.9);
+            border: 1px solid #ddd;
+            padding: 8px;
+            border-radius: 4px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+        .chart-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-style: italic;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="content-container">
+        <h1>Transactions</h1>
+        
+        <div id="statusMessage" class="status-message" style="display: none;"></div>
+        
+        <div class="search-section">
+            <h3>Filter Transactions</h3>
+            <div class="filter-controls">
+                <div class="filter-control">
+                    <div class="filter-label">Search</div>
+                    <input type="text" id="searchInput" placeholder="Filter by ID, Description, Amount...">
+                </div>
+                <div class="filter-control">
+                    <div class="filter-label">Booking Year</div>
+                    <div class="year-filter">
+                        <select id="yearFilter">
+                            <option value="">All Years</option>
+                        </select>
+                        <button id="clearYearFilter" title="Clear year filter">×</button>
+                    </div>
+                </div>
+                <div class="filter-control">
+                    <div class="filter-label">Amount</div>
+                    <select id="amountFilter">
+                        <option value="">All Amounts</option>
+                        <option value="negative">Negative (< 0)</option>
+                        <option value="zero">Zero (= 0)</option>
+                        <option value="positive">Positive (> 0)</option>
+                    </select>
+                </div>
+                <div class="filter-control">
+                    <div class="filter-label">Account Statement (FK_KTO_KONTOAUSZUG)</div>
+                    <input type="text" id="kontoauszugFilter" placeholder="Filter by account statement ID">
+                </div>
+                <div class="filter-control">
+                    <div class="filter-label">Owner (FK_KON_OWNER_1)</div>
+                    <input type="text" id="ownerFilter" placeholder="Filter by owner ID">
+                </div>
+                <div class="filter-control">
+                    <div class="filter-label">Bank Account (BANKKONTO)</div>
+                    <input type="text" id="bankkontoFilter" placeholder="Filter by bank account ID">
+                </div>
+                <div class="filter-control">
+                    <div class="filter-label">Date Range</div>
+                    <div class="date-range">
+                        <input type="date" id="dateFromFilter">
+                        <span>to</span>
+                        <input type="date" id="dateToFilter">
+                    </div>
+                </div>
+                <div class="filter-control">
+                    <div class="filter-label">Group By</div>
+                    <select id="groupBy">
+                        <option value="">None</option>
+                        <option value="BUCHT_JAHR">Year</option>
+                        <option value="BUCHT_MONAT">Month</option>
+                        <option value="KTO_BEZEICHNUNG">Account</option>
+                        <option value="BANK">Bank</option>
+                        <option value="OWNER1">Owner</option>
+                        <option value="date-hierarchy">Date Hierarchy (Year > Month > Day)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="search-box">
+                <button id="searchBtn">Filter</button>
+                <button id="clearSearchBtn">Clear All Filters</button>
+                <button id="downloadCsvBtn" class="download-btn">Download CSV</button>
+                <button id="toggleCalendarView" class="calendar-view-toggle">Show Calendar View</button>
+                <button id="toggleChartView" class="chart-view-toggle">Show Chart View</button>
+                <span id="filterInfo" style="margin-left: 10px; font-style: italic; color: #666;"></span>
+            </div>
+            
+            <div id="searchResultsContainer" class="search-results" style="display: none;">
+                <h4>Filter Results</h4>
+                <div id="searchStats">Found 0 matching transactions</div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="controls">
+                <div class="pagination-info">
+                    <button id="firstPage" title="First page">«</button>
+                    <button id="prevPage" title="Previous page">‹</button>
+                    <span>Page <input type="number" id="pageInput" class="page-input" min="1" value="1"> 
+                    of <span id="totalPages">1</span></span>
+                    <button id="nextPage" title="Next page">›</button>
+                    <button id="lastPage" title="Last page">»</button>
+                    <button id="resetRegionBtn" class="reset-region-btn" title="Reset filters for this region">Reset Region Filters</button>
+                </div>
+                
+                <div class="results-info" id="resultsInfo">Showing 0 of 0 transactions</div>
+            </div>
+            
+            <div id="loading" class="loading">Loading transactions...</div>
+            
+            <table id="transactionsTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th>Currency</th>
+                        <th>Description</th>
+                        <th>Account</th>
+                        <th>IBAN</th>
+                        <th>Bank</th>
+                        <th>TBL</th>
+                        <th>FK_KTO_BANKKONTO</th>
+                        <th>FK_MAIN_KEY</th>
+                        <th>Delete Action</th>
+                        <th>FK_KTO_KONTO_AUSZUG</th>
+                        <th>Owner</th>
+                        <th>Status</th>
+                        <th>Transaktionscode</th>
+                        <th>Rechnungsnummer</th>
+                        <th>FINAL_CNT</th>
+                        <th>DATUM_ZUORD_KONTOAUSZUG_OK</th>
+                        <th>DATUM_ALL_OK</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Transactions will be loaded here -->
+                </tbody>
+            </table>
+            
+            <!-- Calendar View -->
+            <div id="calendarView" class="calendar-view">
+                <div class="calendar-nav">
+                    <button id="prevMonthBtn">‹ Previous Month</button>
+                    <h3 id="calendarMonthYear">January 2023</h3>
+                    <button id="nextMonthBtn">Next Month ›</button>
+                </div>
+                <div id="calendarGrid" class="calendar-grid">
+                    <!-- Calendar will be rendered here -->
+                </div>
+            </div>
+            
+            <!-- Chart View -->
+            <div id="chartView" class="chart-view">
+                <div class="chart-nav">
+                    <h3>Transaction Trends</h3>
+                    <div>
+                        <button id="prevChartPeriod">‹</button>
+                        <span id="chartPeriod">Jan 2023 - Dec 2023</span>
+                        <button id="nextChartPeriod">›</button>
+                    </div>
+                </div>
+                
+                <div class="chart-controls">
+                    <div class="chart-control">
+                        <div class="filter-label">Chart Type</div>
+                        <select id="chartType">
+                            <option value="line">Line Chart</option>
+                            <option value="bar">Bar Chart</option>
+                        </select>
+                    </div>
+                    <div class="chart-control">
+                        <div class="filter-label">Group By</div>
+                        <select id="chartGroupBy">
+                            <option value="day">Day</option>
+                            <option value="week">Week</option>
+                            <option value="month">Month</option>
+                            <option value="year">Year</option>
+                        </select>
+                    </div>
+                    <div class="chart-control">
+                        <div class="filter-label">Data Type</div>
+                        <select id="chartDataType">
+                            <option value="net">Net Amount</option>
+                            <option value="income">Income Only</option>
+                            <option value="expense">Expenses Only</option>
+                        </select>
+                    </div>
+                    <div class="chart-control">
+                        <div class="filter-label">Accounts/Banks</div>
+                        <select id="chartAccountFilter">
+                            <option value="all">All Accounts</option>
+                            <!-- Will be populated dynamically -->
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <div id="chartLoading" class="chart-loading">Loading chart data...</div>
+                    <canvas id="transactionChart"></canvas>
+                    <div id="chartTooltip" class="chart-tooltip"></div>
+                </div>
+                
+                <div id="chartLegend" class="chart-legend">
+                    <!-- Legend will be populated dynamically -->
+                </div>
+            </div>
+            
+            <div id="accountDetails" class="account-details" style="display: none;">
+                <h3>Account Details</h3>
+                <div id="accountLoading" class="account-loading">Loading account details...</div>
+                <table id="accountTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Account Name</th>
+                            <th>IBAN</th>
+                            <th>Bank</th>
+                            <th>Owner</th>
+                            <th>Currency</th>
+                            <th>Balance</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Account details will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        const state = {
+            currentPage: 1,
+            totalPages: 1,
+            allTransactions: [],
+            filteredTransactions: [],
+            currentSearch: '',
+            currentYearFilter: '',
+            currentAmountFilter: '',
+            currentKontoauszugFilter: '',
+            currentOwnerFilter: '',
+            currentBankkontoFilter: '',
+            currentDateFromFilter: '',
+            currentDateToFilter: '',
+            currentGroupBy: '',
+            groupedTransactions: {},
+            pageSize: 100,
+            collapsedGroups: new Set(),
+            selectedTransactionId: null,
+            calendarView: false,
+            calendarDate: new Date(), // Current month shown in calendar
+            chartView: false,
+            chartData: [],
+            chartPeriod: 'month', // Default grouping for chart
+            chartType: 'line',
+            chartDataType: 'net',
+            chartAccountFilter: 'all',
+            chartCurrentPeriod: 0, // 0 = current period, -1 = previous, etc.
+            chartCanvas: null,
+            chartInstance: null
+        };
+
+        // DOM elements
+        const elements = {
+            loading: document.getElementById('loading'),
+            tableBody: document.querySelector('#transactionsTable tbody'),
+            prevPage: document.getElementById('prevPage'),
+            nextPage: document.getElementById('nextPage'),
+            firstPage: document.getElementById('firstPage'),
+            lastPage: document.getElementById('lastPage'),
+            totalPages: document.getElementById('totalPages'),
+            pageInput: document.getElementById('pageInput'),
+            searchInput: document.getElementById('searchInput'),
+            searchBtn: document.getElementById('searchBtn'),
+            clearSearchBtn: document.getElementById('clearSearchBtn'),
+            downloadCsvBtn: document.getElementById('downloadCsvBtn'),
+            resultsInfo: document.getElementById('resultsInfo'),
+            searchResultsContainer: document.getElementById('searchResultsContainer'),
+            searchStats: document.getElementById('searchStats'),
+            filterInfo: document.getElementById('filterInfo'),
+            resetRegionBtn: document.getElementById('resetRegionBtn'),
+            yearFilter: document.getElementById('yearFilter'),
+            clearYearFilter: document.getElementById('clearYearFilter'),
+            amountFilter: document.getElementById('amountFilter'),
+            kontoauszugFilter: document.getElementById('kontoauszugFilter'),
+            ownerFilter: document.getElementById('ownerFilter'),
+            bankkontoFilter: document.getElementById('bankkontoFilter'),
+            dateFromFilter: document.getElementById('dateFromFilter'),
+            dateToFilter: document.getElementById('dateToFilter'),
+            groupBy: document.getElementById('groupBy'),
+            accountDetails: document.getElementById('accountDetails'),
+            accountLoading: document.getElementById('accountLoading'),
+            accountTable: document.querySelector('#accountTable tbody'),
+            statusMessage: document.getElementById('statusMessage'),
+            calendarView: document.getElementById('calendarView'),
+            calendarGrid: document.getElementById('calendarGrid'),
+            calendarMonthYear: document.getElementById('calendarMonthYear'),
+            prevMonthBtn: document.getElementById('prevMonthBtn'),
+            nextMonthBtn: document.getElementById('nextMonthBtn'),
+            toggleCalendarView: document.getElementById('toggleCalendarView'),
+            chartView: document.getElementById('chartView'),
+            transactionChart: document.getElementById('transactionChart'),
+            chartLoading: document.getElementById('chartLoading'),
+            chartTooltip: document.getElementById('chartTooltip'),
+            chartType: document.getElementById('chartType'),
+            chartGroupBy: document.getElementById('chartGroupBy'),
+            chartDataType: document.getElementById('chartDataType'),
+            chartAccountFilter: document.getElementById('chartAccountFilter'),
+            chartPeriod: document.getElementById('chartPeriod'),
+            prevChartPeriod: document.getElementById('prevChartPeriod'),
+            nextChartPeriod: document.getElementById('nextChartPeriod'),
+            chartLegend: document.getElementById('chartLegend'),
+            toggleChartView: document.getElementById('toggleChartView')
+        };
+
+        // Main functions
+        async function fetchAllTransactions() {
+            try {
+                showLoading(true);
+                
+                // Fetch all transactions from your REST API
+                const response = await fetch('http://localhost:5000/transactions');
+                state.allTransactions = await response.json();
+                
+                // Extract unique years for filter
+                populateYearFilter();
+                
+                // Initialize display
+                applyFilters();
+                
+            } catch (error) {
+                console.error('Error fetching transactions:', error);
+                showStatus('Failed to load transactions. Check console for details.', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Function to show status messages
+        function showStatus(message, type) {
+            elements.statusMessage.textContent = message;
+            elements.statusMessage.className = `status-message ${type}`;
+            elements.statusMessage.style.display = 'block';
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                elements.statusMessage.style.display = 'none';
+            }, 5000);
+        }
+
+        // Function to download filtered transactions as CSV
+        function downloadFilteredCsv() {
+            if (state.filteredTransactions.length === 0) {
+                showStatus('No transactions to download', 'error');
+                return;
+            }
+            
+            // Create CSV content with proper column headers
+            const headers = [
+                'ID', 'Booking Date', 'Amount', 'Currency', 'Description', 
+                'Account Name', 'IBAN', 'Bank', 'TBL', 'Bank Account ID', 
+                'Main Key', 'Account Statement ID', 'Owner', 'Status', 
+                'Transaction Code', 'Invoice Number', 'Final Count', 
+                'Date Account Statement OK', 'Date All OK'
+            ];
+            
+            // Create CSV rows
+            let csvContent = headers.join(';') + '\n';
+            
+            state.filteredTransactions.forEach(transaction => {
+                const row = [
+                    transaction.ID || '',
+                    transaction.BUCHUNGSTAG ? transaction.BUCHUNGSTAG.split('T')[0] : '',
+                    (transaction.BETRAG || 0).toString().replace('.', ','),
+                    transaction.WAEHRUNG || 'EUR',
+                    `"${(transaction.BUCHUNGSTEXT || '').replace(/"/g, '""')}"`, // Escape quotes in description
+                    transaction.KTO_BEZEICHNUNG || '',
+                    transaction.IBAN || '',
+                    transaction.BANK || '',
+                    transaction.TBL || '',
+                    transaction.FK_KTO_BANKKONTO || '',
+                    transaction.FK_MAIN_KEY || '',
+                    transaction.FK_KTO_KONTO_AUSZUG || '',
+                    transaction.OWNER1 || '',
+                    transaction.STATUS || '',
+                    transaction.TRANSAKTIONSCODE || '',
+                    transaction.RECHNUNGSNUMMER || '',
+                    transaction.FINAL_CNT_ZUORD_BELEGE || '',
+                    transaction.DATUM_ZUORD_KTO_AUSZUG_OK || '',
+                    transaction.DATUM_ALL_OK || ''
+                ];
+                
+                csvContent += row.join(';') + '\n';
+            });
+            
+            // Create download link
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            const date = new Date().toISOString().slice(0, 10);
+            
+            // Create filename with current filters
+            let filename = `transactions_${date}`;
+            if (state.currentSearch) filename += `_search-${state.currentSearch.substring(0, 10)}`;
+            if (state.currentYearFilter) filename += `_year-${state.currentYearFilter}`;
+            filename += '.csv';
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showStatus('CSV download started', 'success');
+        }
+
+        // Function to delete a transaction
+        async function deleteTransaction(fkMainKey, type) {
+            if (!fkMainKey || !confirm(`Are you sure you want to delete this ${type} transaction?`)) {
+                return;
+            }
+            
+            try {
+                let endpoint = '';
+                if (type === 'girokonto') {
+                    endpoint = `http://localhost:5000/girokonto/delete/${fkMainKey}`;
+                } else if (type === 'kreditkarte') {
+                    endpoint = `http://localhost:5000/kreditkarte/delete/${fkMainKey}`;
+                } else {
+                    throw new Error('Invalid transaction type');
+                }
+                
+                const response = await fetch(endpoint, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showStatus(`${type.charAt(0).toUpperCase() + type.slice(1)} transaction deleted successfully!`, 'success');
+                    // Refresh the transactions
+                    fetchAllTransactions();
+                } else {
+                    throw new Error(`Failed to delete ${type} transaction`);
+                }
+            } catch (error) {
+                console.error(`Error deleting ${type} transaction:`, error);
+                showStatus(`Failed to delete ${type} transaction. Check console for details.`, 'error');
+            }
+        }
+
+        async function fetchAccountDetails(fkMainKey) {
+            if (!fkMainKey) return;
+            
+            try {
+                elements.accountDetails.style.display = 'block';
+                elements.accountLoading.style.display = 'block';
+                elements.accountTable.innerHTML = '';
+                
+                const response = await fetch(`http://localhost:5000/accounts/abc/${fkMainKey}`);
+                const transactions = await response.json();
+                
+                if (!transactions || transactions.length === 0) {
+                    elements.accountTable.innerHTML = '<tr><td colspan="8">No account details found</td></tr>';
+                    return;
+                }
+                
+                // Display account header with basic info from first transaction
+                const firstTransaction = transactions[0];
+                elements.accountTable.innerHTML = `
+                    <tr class="account-header">
+                        <td colspan="8">
+                            <strong>Transaction ID:</strong> ${firstTransaction.FK_MAIN_KEY || 'Unknown'} | 
+                            <strong>Account:</strong> ${firstTransaction.BEZEICHNUNG || 'Unknown'} | 
+                            <strong>Owner:</strong> ${firstTransaction.OWNER1 || 'Unknown'} | 
+                            <strong>Transactions:</strong> ${transactions.length}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Amount</th>
+                        <th>Type</th>
+                        <th>Transaction Code</th>
+                        <th>Bank Account</th>
+                        <th>LexOffice</th>
+                        <th>PK_REL_LEX_KTO_BEL</th>
+                    </tr>
+                `;
+                
+                // Calculate running balance
+                let balance = 0;
+                
+                // Add each transaction row
+                transactions.forEach(transaction => {
+                    balance += transaction.BETRAG || 0;
+                    const amountClass = transaction.BETRAG < 0 ? 'negative' : '';
+                    const lexOfficeFlag = transaction.FLG_LEXOFFICE_BUCHUNG ? '✓' : '✗';
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${transaction.BUCHUNGSTAG || ''}</td>
+                        <td>${transaction.BUCHUNGSTEXT || ''}</td>
+                        <td class="${amountClass}">${(transaction.BETRAG || 0).toFixed(2)}</td>
+                        <td>${transaction.TBL || ''}</td>
+                        <td>${transaction.TRANSAKTIONSCODE || ''}</td>
+                        <td>${transaction.FK_KTO_BANKKONTO || ''}</td>
+  <td>${transaction.FK_INP_BELEGE_ALL || ''}</td>
+                        <td>${lexOfficeFlag}</td>
+                        <td>${transaction.PK_REL_LEX_KTO_BEL || ''}</td>
+                    `;
+                    elements.accountTable.appendChild(row);
+                });
+                
+                // Add balance summary row
+                const balanceClass = balance < 0 ? 'negative' : '';
+                const summaryRow = document.createElement('tr');
+                summaryRow.className = 'account-summary';
+                summaryRow.innerHTML = `
+                    <td colspan="2"><strong>Final Balance</strong></td>
+                    <td class="${balanceClass}"><strong>${balance.toFixed(2)}</strong></td>
+                    <td colspan="5"></td>
+                `;
+                elements.accountTable.appendChild(summaryRow);
+                
+            } catch (error) {
+                console.error('Error fetching account details:', error);
+                elements.accountTable.innerHTML = '<tr><td colspan="8">Failed to load account details</td></tr>';
+            } finally {
+                elements.accountLoading.style.display = 'none';
+            }
+        }
+
+        function populateYearFilter() {
+            const years = new Set();
+            state.allTransactions.forEach(t => {
+                if (t.BUCHT_JAHR) {
+                    years.add(t.BUCHT_JAHR);
+                }
+            });
+            
+            // Clear and repopulate year filter
+            elements.yearFilter.innerHTML = '<option value="">All Years</option>';
+            Array.from(years).sort((a, b) => b - a).forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                elements.yearFilter.appendChild(option);
+            });
+            
+            // Also populate chart account filter
+            populateChartAccountFilter();
+        }
+        
+        function populateChartAccountFilter() {
+            const accounts = new Set();
+            const banks = new Set();
+            
+            state.allTransactions.forEach(t => {
+                if (t.KTO_BEZEICHNUNG) accounts.add(t.KTO_BEZEICHNUNG);
+                if (t.BANK) banks.add(t.BANK);
+            });
+            
+            // Clear and repopulate account filter
+            elements.chartAccountFilter.innerHTML = '<option value="all">All Accounts</option>';
+            
+            // Add account options
+            accounts.forEach(account => {
+                const option = document.createElement('option');
+                option.value = `account:${account}`;
+                option.textContent = `Account: ${account}`;
+                elements.chartAccountFilter.appendChild(option);
+            });
+            
+            // Add bank options
+            banks.forEach(bank => {
+                const option = document.createElement('option');
+                option.value = `bank:${bank}`;
+                option.textContent = `Bank: ${bank}`;
+                elements.chartAccountFilter.appendChild(option);
+            });
+        }
+
+        function applyFilters() {
+            const searchTerm = elements.searchInput.value.trim();
+            const yearFilter = elements.yearFilter.value;
+            const amountFilter = elements.amountFilter.value;
+            const kontoauszugFilter = elements.kontoauszugFilter.value.trim();
+            const ownerFilter = elements.ownerFilter.value.trim();
+            const bankkontoFilter = elements.bankkontoFilter.value.trim();
+            const dateFromFilter = elements.dateFromFilter.value;
+            const dateToFilter = elements.dateToFilter.value;
+            const groupBy = elements.groupBy.value;
+            
+            state.currentSearch = searchTerm;
+            state.currentYearFilter = yearFilter;
+            state.currentAmountFilter = amountFilter;
+            state.currentKontoauszugFilter = kontoauszugFilter;
+            state.currentOwnerFilter = ownerFilter;
+            state.currentBankkontoFilter = bankkontoFilter;
+            state.currentDateFromFilter = dateFromFilter;
+            state.currentDateToFilter = dateToFilter;
+            state.currentGroupBy = groupBy;
+            
+            // Apply search and year filter
+            let filtered = [...state.allTransactions];
+            
+            if (searchTerm) {
+                const term = searchTerm.toLowerCase();
+                filtered = filtered.filter(transaction => 
+                    (transaction.ID && transaction.ID.toString().includes(term)) ||
+                    (transaction.BUCHUNGSTEXT && transaction.BUCHUNGSTEXT.toLowerCase().includes(term)) ||
+                    (transaction.bookingDate && transaction.bookingDate.toLowerCase().includes(term)) ||
+                    (transaction.KTO_BEZEICHNUNG && transaction.KTO_BEZEICHNUNG.toLowerCase().includes(term)) ||
+                    (transaction.OWNER1 && transaction.OWNER1.toLowerCase().includes(term)) ||
+                    (transaction.BETRAG && transaction.BETRAG.toString().includes(term)) ||
+ (transaction.OFFENER_BETRAG && transaction.OFFENER_BETRAG.toString().includes(term)) ||
+                    (transaction.TBL && transaction.TBL.toString().includes(term)) ||
+                    (transaction.TRANSAKTIONSCODE && transaction.TRANSAKTIONSCODE.toString().includes(term)) ||
+                    (transaction.RECHNUNGSNUMMER && transaction.RECHNUNGSNUMMER.toString().includes(term)) ||
+                    (transaction.FK_MAIN_KEY && transaction.FK_MAIN_KEY.toString().includes(term)) ||
+                    (transaction.FK_KTO_KONTO_AUSZUG && transaction.FK_KTO_KONTO_AUSZUG.toString().includes(term))
+                );
+            }
+            
+            if (yearFilter) {
+                filtered = filtered.filter(transaction => 
+                    transaction.BUCHT_JAHR && transaction.BUCHT_JAHR.toString() === yearFilter
+                );
+            }
+            
+            // Apply amount filter
+            if (amountFilter) {
+                switch (amountFilter) {
+                    case 'negative':
+                        filtered = filtered.filter(transaction => transaction.BETRAG < 0);
+                        break;
+                    case 'zero':
+                        filtered = filtered.filter(transaction => transaction.BETRAG === 0);
+                        break;
+                    case 'positive':
+                        filtered = filtered.filter(transaction => transaction.BETRAG > 0);
+                        break;
+                }
+            }
+            
+            // Apply kontoauszug filter
+            if (kontoauszugFilter) {
+                filtered = filtered.filter(transaction => 
+                    transaction.FK_KTO_KONTO_AUSZUG && 
+                    transaction.FK_KTO_KONTO_AUSZUG.toString().includes(kontoauszugFilter)
+                );
+            }
+            
+            // Apply owner filter
+            if (ownerFilter) {
+                filtered = filtered.filter(transaction => 
+                    transaction.FK_KON_OWNER_1 && 
+                    transaction.FK_KON_OWNER_1.toString().includes(ownerFilter)
+                );
+            }
+            
+            // Apply bankkonto filter
+            if (bankkontoFilter) {
+                filtered = filtered.filter(transaction => 
+                    transaction.FK_KTO_BANKKONTO && 
+                    transaction.FK_KTO_BANKKONTO.toString().includes(bankkontoFilter)
+                );
+            }
+            
+            // Apply date range filter
+            if (dateFromFilter) {
+                filtered = filtered.filter(transaction => {
+                    if (!transaction.BUCHUNGSTAG) return false;
+                    const transactionDate = new Date(transaction.BUCHUNGSTAG.split('T')[0]);
+                    const fromDate = new Date(dateFromFilter);
+                    return transactionDate >= fromDate;
+                });
+            }
+            
+            if (dateToFilter) {
+                filtered = filtered.filter(transaction => {
+                    if (!transaction.BUCHUNGSTAG) return false;
+                    const transactionDate = new Date(transaction.BUCHUNGSTAG.split('T')[0]);
+                    const toDate = new Date(dateToFilter);
+                    toDate.setDate(toDate.getDate() + 1); // Include the entire end date
+                    return transactionDate < toDate;
+                });
+            }
+            
+            state.filteredTransactions = filtered;
+            
+            // Group transactions if needed
+            if (groupBy) {
+                if (groupBy === 'date-hierarchy') {
+                    groupTransactionsByDateHierarchy();
+                } else {
+                    groupTransactions(groupBy);
+                }
+            }
+            
+            // Update filter info
+            updateFilterInfo();
+            
+            // Show search stats
+            elements.searchStats.textContent = `Found ${state.filteredTransactions.length} matching transactions`;
+            elements.searchResultsContainer.style.display = filtered.length !== state.allTransactions.length ? 'block' : 'none';
+            
+            // Always reset to first page
+            state.currentPage = 1;
+            elements.pageInput.value = 1;
+            
+            updatePagination();
+            displayCurrentPage();
+            updateResultsInfo();
+            highlightSearchMatches();
+            
+            // Update calendar if it's visible
+            if (state.calendarView) {
+                renderCalendar();
+            }
+            
+            // Update chart if it's visible
+            if (state.chartView) {
+                prepareChartData();
+                renderChart();
+            }
+        }
+
+        function groupTransactions(groupBy) {
+            state.groupedTransactions = {};
+            
+            state.filteredTransactions.forEach(transaction => {
+                const groupKey = transaction[groupBy] || '(Unknown)';
+                
+                if (!state.groupedTransactions[groupKey]) {
+                    state.groupedTransactions[groupKey] = {
+                        transactions: [],
+                        total: 0,
+                        count: 0
+                    };
+                }
+                
+                state.groupedTransactions[groupKey].transactions.push(transaction);
+                state.groupedTransactions[groupKey].total += (transaction.BETRAG || 0);
+                state.groupedTransactions[groupKey].count++;
+            });
+        }
+
+        function groupTransactionsByDateHierarchy() {
+            state.groupedTransactions = {};
+            
+            // First, sort transactions by date
+            const sortedTransactions = [...state.filteredTransactions].sort((a, b) => {
+                const dateA = a.BUCHUNGSTAG ? new Date(a.BUCHUNGSTAG.split('T')[0]) : new Date(0);
+                const dateB = b.BUCHUNGSTAG ? new Date(b.BUCHUNGSTAG.split('T')[0]) : new Date(0);
+                return dateB - dateA; // Most recent first
+            });
+            
+            // Group by year > month > day
+            sortedTransactions.forEach(transaction => {
+                const date = transaction.BUCHUNGSTAG ? new Date(transaction.BUCHUNGSTAG.split('T')[0]) : null;
+                
+                if (!date || isNaN(date.getTime())) {
+                    // Handle transactions without valid dates
+                    if (!state.groupedTransactions['unknown']) {
+                        state.groupedTransactions['unknown'] = {
+                            transactions: [],
+                            total: 0,
+                            count: 0,
+                            type: 'year',
+                            name: 'Unknown Date'
+                        };
+                    }
+                    state.groupedTransactions['unknown'].transactions.push(transaction);
+                    state.groupedTransactions['unknown'].total += (transaction.BETRAG || 0);
+                    state.groupedTransactions['unknown'].count++;
+                    return;
+                }
+                
+                const year = date.getFullYear();
+                const month = date.getMonth() + 1; // Months are 0-indexed in JS
+                const day = date.getDate();
+                
+                const monthName = date.toLocaleString('default', { month: 'long' });
+                const dayName = date.toLocaleDateString('default', { weekday: 'long' });
+                
+                // Year level
+                if (!state.groupedTransactions[year]) {
+                    state.groupedTransactions[year] = {
+                        transactions: [],
+                        total: 0,
+                        count: 0,
+                        type: 'year',
+                        name: year.toString(),
+                        months: {}
+                    };
+                }
+                
+                // Month level
+                const monthKey = `${year}-${month}`;
+                if (!state.groupedTransactions[year].months[monthKey]) {
+                    state.groupedTransactions[year].months[monthKey] = {
+                        transactions: [],
+                        total: 0,
+                        count: 0,
+                        type: 'month',
+                        name: `${monthName} ${year}`,
+                        days: {}
+                    };
+                }
+                
+                // Day level
+                const dayKey = `${year}-${month}-${day}`;
+                if (!state.groupedTransactions[year].months[monthKey].days[dayKey]) {
+                    state.groupedTransactions[year].months[monthKey].days[dayKey] = {
+                        transactions: [],
+                        total: 0,
+                        count: 0,
+                        type: 'day',
+                        name: `${dayName}, ${day}. ${monthName} ${year}`
+                    };
+                }
+                
+                // Add transaction to day
+                state.groupedTransactions[year].months[monthKey].days[dayKey].transactions.push(transaction);
+                state.groupedTransactions[year].months[monthKey].days[dayKey].total += (transaction.BETRAG || 0);
+                state.groupedTransactions[year].months[monthKey].days[dayKey].count++;
+                
+                // Update month totals
+                state.groupedTransactions[year].months[monthKey].total += (transaction.BETRAG || 0);
+                state.groupedTransactions[year].months[monthKey].count++;
+                
+                // Update year totals
+                state.groupedTransactions[year].total += (transaction.BETRAG || 0);
+                state.groupedTransactions[year].count++;
+            });
+        }
+
+        function updateFilterInfo() {
+            const filters = [];
+            if (state.currentSearch) filters.push(`search: "${state.currentSearch}"`);
+            if (state.currentYearFilter) filters.push(`year: ${state.currentYearFilter}`);
+            if (state.currentAmountFilter) {
+                let amountText = '';
+                switch (state.currentAmountFilter) {
+                    case 'negative': amountText = 'negative amounts'; break;
+                    case 'zero': amountText = 'zero amounts'; break;
+                    case 'positive': amountText = 'positive amounts'; break;
+                }
+                filters.push(`amount: ${amountText}`);
+            }
+            if (state.currentKontoauszugFilter) filters.push(`kontoauszug: ${state.currentKontoauszugFilter}`);
+            if (state.currentOwnerFilter) filters.push(`owner: ${state.currentOwnerFilter}`);
+            if (state.currentBankkontoFilter) filters.push(`bankkonto: ${state.currentBankkontoFilter}`);
+            if (state.currentDateFromFilter || state.currentDateToFilter) {
+                filters.push(`date: ${state.currentDateFromFilter || '...'} to ${state.currentDateToFilter || '...'}`);
+            }
+            if (state.currentGroupBy) filters.push(`grouped by: ${state.currentGroupBy}`);
+            
+            elements.filterInfo.textContent = filters.length ? `Filters: ${filters.join(', ')}` : 'Showing all transactions';
+        }
+
+        function highlightSearchMatches() {
+            if (!state.currentSearch) {
+                // Remove all highlights if no search term
+                document.querySelectorAll('.search-match').forEach(el => {
+                    el.classList.remove('search-match');
+                });
+                document.querySelectorAll('#transactionsTable tbody tr').forEach(row => {
+                    row.style.backgroundColor = '';
+                });
+                return;
+            }
+
+            const term = state.currentSearch.toLowerCase();
+            const rows = document.querySelectorAll('#transactionsTable tbody tr:not(.group-header):not(.group-summary)');
+            
+            rows.forEach(row => {
+                // Remove previous highlights
+                row.querySelectorAll('.search-match').forEach(el => {
+                    el.classList.remove('search-match');
+                });
+                
+                // Check if this row matches the search
+                const cells = row.querySelectorAll('td');
+                let rowMatches = false;
+                
+                cells.forEach((cell, index) => {
+                    // Skip certain columns if needed
+                    if (index > 4) return; // Only check first few columns
+                    
+                    const text = cell.textContent.toLowerCase();
+                    if (text.includes(term)) {
+                        rowMatches = true;
+                        
+                        // Highlight the matching parts
+                        if (index === 4) { // Description column
+                            const fullText = cell.textContent;
+                            const start = fullText.toLowerCase().indexOf(term);
+                            const end = start + term.length;
+                            
+                            const before = fullText.substring(0, start);
+                            const match = fullText.substring(start, end);
+                            const after = fullText.substring(end);
+                            
+                            cell.innerHTML = `${before}<span class="search-match">${match}</span>${after}`;
+                        } else {
+                            cell.classList.add('search-match');
+                        }
+                    }
+                });
+                
+                // Highlight entire row if it matches
+                if (rowMatches) {
+                    row.style.backgroundColor = '#fffde7';
+                } else {
+                    row.style.backgroundColor = '';
+                }
+            });
+        }
+
+        function displayCurrentPage() {
+            elements.tableBody.innerHTML = '';
+            
+            if (state.filteredTransactions.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="21" class="no-results">No transactions found matching your criteria</td>';
+                elements.tableBody.appendChild(row);
+                return;
+            }
+            
+            if (state.currentGroupBy) {
+                if (state.currentGroupBy === 'date-hierarchy') {
+                    displayDateHierarchyTransactions();
+                } else {
+                    displayGroupedTransactions();
+                }
+            } else {
+                displayUngroupedTransactions();
+            }
+        }
+
+        function displayDateHierarchyTransactions() {
+            let transactionsDisplayed = 0;
+            let startIndex = (state.currentPage - 1) * state.pageSize;
+            let endIndex = startIndex + state.pageSize;
+            let currentIndex = 0;
+            
+            // Sort years in descending order (most recent first)
+            const years = Object.keys(state.groupedTransactions)
+                .filter(key => state.groupedTransactions[key].type === 'year')
+                .sort((a, b) => b - a);
+            
+            for (const yearKey of years) {
+                const yearGroup = state.groupedTransactions[yearKey];
+                const yearStartIndex = currentIndex;
+                
+                // Check if we should display the year header
+                if (currentIndex >= startIndex && currentIndex < endIndex) {
+                    const headerRow = document.createElement('tr');
+                    headerRow.className = 'date-group-header';
+                    headerRow.innerHTML = 
+                        `<td colspan="5">
+                            <span class="group-toggle" data-group="${yearKey}">${state.collapsedGroups.has(yearKey) ? '▶' : '▼'}</span>
+                            Year: ${yearKey}
+                        </td>
+                        <td colspan="16">${yearGroup.count} transactions, Total: ${yearGroup.total.toFixed(2)}</td>`;
+                    elements.tableBody.appendChild(headerRow);
+                }
+                currentIndex++;
+                
+                // Display months if year is not collapsed
+                if (!state.collapsedGroups.has(yearKey)) {
+                    // Sort months in descending order
+                    const monthKeys = Object.keys(yearGroup.months)
+                        .sort((a, b) => {
+                            const [aYear, aMonth] = a.split('-').map(Number);
+                            const [bYear, bMonth] = b.split('-').map(Number);
+                            return new Date(bYear, bMonth - 1) - new Date(aYear, aMonth - 1);
+                        });
+                    
+                    for (const monthKey of monthKeys) {
+                        const monthGroup = yearGroup.months[monthKey];
+                        const monthStartIndex = currentIndex;
+                        
+                        // Check if we should display the month header
+                        if (currentIndex >= startIndex && currentIndex < endIndex) {
+                            const headerRow = document.createElement('tr');
+                            headerRow.className = 'month-group-header';
+                            headerRow.innerHTML = 
+                                `<td colspan="5">
+                                    <span class="group-toggle" data-group="${monthKey}">${state.collapsedGroups.has(monthKey) ? '▶' : '▼'}</span>
+                                    Month: ${monthGroup.name}
+                                </td>
+                                <td colspan="16">${monthGroup.count} transactions, Total: ${monthGroup.total.toFixed(2)}</td>`;
+                            elements.tableBody.appendChild(headerRow);
+                        }
+                        currentIndex++;
+                        
+                        // Display days if month is not collapsed
+                        if (!state.collapsedGroups.has(monthKey)) {
+                            // Sort days in descending order
+                            const dayKeys = Object.keys(monthGroup.days)
+                                .sort((a, b) => {
+                                    const [aYear, aMonth, aDay] = a.split('-').map(Number);
+                                    const [bYear, bMonth, bDay] = b.split('-').map(Number);
+                                    return new Date(bYear, bMonth - 1, bDay) - new Date(aYear, aMonth - 1, aDay);
+                                });
+                            
+                            for (const dayKey of dayKeys) {
+                                const dayGroup = monthGroup.days[dayKey];
+                                const dayStartIndex = currentIndex;
+                                
+                                // Check if we should display the day header
+                                if (currentIndex >= startIndex && currentIndex < endIndex) {
+                                    const headerRow = document.createElement('tr');
+                                    headerRow.className = 'day-group-header';
+                                    headerRow.innerHTML = 
+                                        `<td colspan="5">
+                                            <span class="group-toggle" data-group="${dayKey}">${state.collapsedGroups.has(dayKey) ? '▶' : '▼'}</span>
+                                            Day: ${dayGroup.name}
+                                        </td>
+                                        <td colspan="16">${dayGroup.count} transactions, Total: ${dayGroup.total.toFixed(2)}</td>`;
+                                    elements.tableBody.appendChild(headerRow);
+                                }
+                                currentIndex++;
+                                
+                                // Display transactions if day is not collapsed
+                                if (!state.collapsedGroups.has(dayKey)) {
+                                    for (const transaction of dayGroup.transactions) {
+                                        if (currentIndex >= startIndex && currentIndex < endIndex) {
+                                            addTransactionRow(transaction);
+                                        }
+                                        currentIndex++;
+                                    }
+                                }
+                                
+                                if (currentIndex >= endIndex) break;
+                            }
+                        }
+                        
+                        if (currentIndex >= endIndex) break;
+                    }
+                }
+                
+                if (currentIndex >= endIndex) break;
+            }
+            
+            // Handle transactions with unknown dates
+            if (state.groupedTransactions['unknown']) {
+                const unknownGroup = state.groupedTransactions['unknown'];
+                const unknownStartIndex = currentIndex;
+                
+                // Check if we should display the unknown header
+                if (currentIndex >= startIndex && currentIndex < endIndex) {
+                    const headerRow = document.createElement('tr');
+                    headerRow.className = 'date-group-header';
+                    headerRow.innerHTML = 
+                        `<td colspan="5">
+                            <span class="group-toggle" data-group="unknown">${state.collapsedGroups.has('unknown') ? '▶' : '▼'}</span>
+                            Unknown Date
+                        </td>
+                        <td colspan="16">${unknownGroup.count} transactions, Total: ${unknownGroup.total.toFixed(2)}</td>`;
+                    elements.tableBody.appendChild(headerRow);
+                }
+                currentIndex++;
+                
+                // Display transactions if unknown group is not collapsed
+                if (!state.collapsedGroups.has('unknown')) {
+                    for (const transaction of unknownGroup.transactions) {
+                        if (currentIndex >= startIndex && currentIndex < endIndex) {
+                            addTransactionRow(transaction);
+                        }
+                        currentIndex++;
+                    }
+                }
+            }
+        }
+
+        function displayGroupedTransactions() {
+            const groupKeys = Object.keys(state.groupedTransactions).sort();
+            let transactionsDisplayed = 0;
+            let startIndex = (state.currentPage - 1) * state.pageSize;
+            let endIndex = startIndex + state.pageSize;
+            let currentIndex = 0;
+            
+            for (const groupKey of groupKeys) {
+                const group = state.groupedTransactions[groupKey];
+                const groupStartIndex = currentIndex;
+                const groupEndIndex = groupStartIndex + group.count + 2; // +2 for header and summary
+                
+                // Check if this group should be visible on current page
+                if (groupEndIndex > startIndex && groupStartIndex < endIndex) {
+                    // Check if group is collapsed
+                    const isCollapsed = state.collapsedGroups.has(groupKey);
+                    
+                    // Add group header
+                    if (currentIndex >= startIndex && currentIndex < endIndex) {
+                        const headerRow = document.createElement('tr');
+                        headerRow.className = 'group-header';
+                        headerRow.innerHTML = 
+                            `<td colspan="5">
+                                <span class="group-toggle" data-group="${groupKey}">${isCollapsed ? '▶' : '▼'}</span>
+                                ${state.currentGroupBy}: ${groupKey}
+                            </td>
+                            <td colspan="16">${group.count} transactions</td>`;
+                        elements.tableBody.appendChild(headerRow);
+                    }
+                    currentIndex++;
+                    
+                    // Add transactions if group is not collapsed
+                    if (!isCollapsed) {
+                        for (const transaction of group.transactions) {
+                            if (currentIndex >= startIndex && currentIndex < endIndex) {
+                                addTransactionRow(transaction);
+                            }
+                            currentIndex++;
+                        }
+                    } else {
+                        currentIndex += group.count;
+                    }
+                    
+                    // Add group summary
+                    if (currentIndex >= startIndex && currentIndex < endIndex) {
+                        const summaryRow = document.createElement('tr');
+                        summaryRow.className = 'group-summary';
+                        const amountClass = group.total < 0 ? 'negative' : '';
+                        summaryRow.innerHTML = 
+                            `<td colspan="2">Group Total</td>
+                            <td class="${amountClass}">${group.total.toFixed(2)}</td>
+                            <td colspan="18">${group.count} transactions</td>`;
+                        elements.tableBody.appendChild(summaryRow);
+                    }
+                    currentIndex++;
+                } else {
+                    currentIndex = groupEndIndex;
+                }
+                
+                if (currentIndex >= endIndex) break;
+            }
+        }
+
+        function displayUngroupedTransactions() {
+            const startIndex = (state.currentPage - 1) * state.pageSize;
+            const endIndex = Math.min(startIndex + state.pageSize, state.filteredTransactions.length);
+            
+            for (let i = startIndex; i < endIndex; i++) {
+                addTransactionRow(state.filteredTransactions[i]);
+            }
+        }
+
+        function addTransactionRow(transaction) {
+            const row = document.createElement('tr');
+            row.setAttribute('data-id', transaction.ID); // Add this for calendar click handling
+            
+            // Highlight if this is the selected transaction
+            if (transaction.ID === state.selectedTransactionId) {
+                row.classList.add('selected-row');
+            }
+            
+            // Add click handler to select the row
+            row.addEventListener('click', () => {
+                // Remove selection from all rows
+                document.querySelectorAll('#transactionsTable tbody tr').forEach(r => {
+                    r.classList.remove('selected-row');
+                });
+                
+                // Select this row
+                row.classList.add('selected-row');
+                state.selectedTransactionId = transaction.ID;
+                
+                // Fetch account details if FK_MAIN_KEY exists
+                if (transaction.FK_MAIN_KEY) {
+                    fetchAccountDetails(transaction.FK_MAIN_KEY);
+                } else {
+                    elements.accountDetails.style.display = 'none';
+                }
+            });
+            
+            // Format the date (remove time part)
+            const bookingDate = transaction.BUCHUNGSTAG ? 
+                transaction.BUCHUNGSTAG.split('T')[0] : '';
+            
+            // Determine amount class based on sign
+            const amountClass = transaction.BETRAG < 0 ? 'negative' : '';
+            
+            // Create delete buttons based on TBL field
+            const girokontoBtn = transaction.FK_MAIN_KEY && transaction.TBL === 'kto_girokonto' ? 
+                `<button class="delete-btn girokonto-delete" data-id="${transaction.FK_MAIN_KEY}">Delete Girokonto</button>` : 
+                '<button class="delete-btn" disabled>Not Girokonto</button>';
+                
+            const kreditkarteBtn = transaction.FK_MAIN_KEY && transaction.TBL === 'kto_kreditkarte' ? 
+                `<button class="delete-btn kreditkarte-delete" data-id="${transaction.FK_MAIN_KEY}">Delete Kreditkarte</button>` : 
+                '<button class="delete-btn" disabled>Not Kreditkarte</button>';
+            
+            row.innerHTML = `
+                <td>${transaction.ID || ''}</td>
+                <td>${bookingDate}</td>
+                <td class="${amountClass}">${transaction.BETRAG || 0}</td>
+  <td class="${amountClass}">${transaction.OFFENER_BETRAG || 0}</td>
+                <td>${transaction.WAEHRUNG || 'EUR'}</td>
+                <td>${transaction.BUCHUNGSTEXT || ''}</td>
+                <td>${transaction.KTO_BEZEICHNUNG || ''}</td>
+                <td>${transaction.IBAN || ''}</td>
+                <td>${transaction.BANK || ''}</td>
+                <td>${transaction.TBL || ''}</td>
+                <td>${transaction.FK_KTO_BANKKONTO || ''}</td>
+                <td>${transaction.FK_MAIN_KEY || ''}</td>
+                <td class="action-buttons">${girokontoBtn}${kreditkarteBtn}</td>
+                <td>${transaction.FK_KTO_KONTO_AUSZUG || ''}</td>
+                <td>${transaction.OWNER1 || ''}</td>
+                <td>${transaction.STATUS || ''}</td>
+                <td>${transaction.TRANSAKTIONSCODE || ''}</td>
+                <td>${transaction.RECHNUNGSNUMMER || ''}</td>
+                <td>${transaction.FINAL_CNT_ZUORD_BELEGE || ''}</td>
+                <td>${transaction.DATUM_ZUORD_KTO_AUSZUG_OK || ''}</td>
+                <td>${transaction.DATUM_ALL_OK || ''}</td>
+            `;
+            
+            elements.tableBody.appendChild(row);
+            
+            // Add event listeners to the delete buttons if they exist
+            if (transaction.FK_MAIN_KEY) {
+                if (transaction.TBL === 'kto_girokonto') {
+                    const girokontoDeleteBtn = row.querySelector('.girokonto-delete');
+                    girokontoDeleteBtn.addEventListener('click', (e) => {
+                        e.stopPropagation(); // Prevent row selection when clicking the button
+                        deleteTransaction(transaction.FK_MAIN_KEY, 'girokonto');
+                    });
+                }
+                
+                if (transaction.TBL === 'kto_kreditkarte') {
+                    const kreditkarteDeleteBtn = row.querySelector('.kreditkarte-delete');
+                    kreditkarteDeleteBtn.addEventListener('click', (e) => {
+                        e.stopPropagation(); // Prevent row selection when clicking the button
+                        deleteTransaction(transaction.FK_MAIN_KEY, 'kreditkarte');
+                    });
+                }
+            }
+        }
+
+        function updatePagination() {
+            // Calculate total items considering grouping
+            let totalItems = state.filteredTransactions.length;
+            if (state.currentGroupBy) {
+                if (state.currentGroupBy === 'date-hierarchy') {
+                    totalItems = calculateDateHierarchyItemCount();
+                } else {
+                    totalItems = 0;
+                    for (const groupKey in state.groupedTransactions) {
+                        // Each group adds 2 rows (header and summary) plus transactions
+                        totalItems += 2 + state.groupedTransactions[groupKey].transactions.length;
+                    }
+                }
+            }
+            
+            // Always ensure at least 1 page exists, even with no results
+            state.totalPages = Math.max(1, Math.ceil(totalItems / state.pageSize));
+            elements.totalPages.textContent = state.totalPages;
+            elements.pageInput.max = state.totalPages;
+            updatePaginationControls();
+        }
+
+        function calculateDateHierarchyItemCount() {
+            let count = 0;
+            
+            // Count years
+            for (const yearKey in state.groupedTransactions) {
+                if (state.groupedTransactions[yearKey].type === 'year') {
+                    count++; // Year header
+                    
+                    if (!state.collapsedGroups.has(yearKey)) {
+                        const yearGroup = state.groupedTransactions[yearKey];
+                        
+                        // Count months
+                        for (const monthKey in yearGroup.months) {
+                            count++; // Month header
+                            
+                            if (!state.collapsedGroups.has(monthKey)) {
+                                const monthGroup = yearGroup.months[monthKey];
+                                
+                                // Count days
+                                for (const dayKey in monthGroup.days) {
+                                    count++; // Day header
+                                    
+                                    if (!state.collapsedGroups.has(dayKey)) {
+                                        const dayGroup = monthGroup.days[dayKey];
+                                        count += dayGroup.transactions.length; // Transactions
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Count unknown date group
+            if (state.groupedTransactions['unknown']) {
+                count++; // Unknown header
+                
+                if (!state.collapsedGroups.has('unknown')) {
+                    count += state.groupedTransactions['unknown'].transactions.length; // Transactions
+                }
+            }
+            
+            return count;
+        }
+
+        function updatePaginationControls() {
+            // Never disable page controls completely
+            elements.prevPage.disabled = state.currentPage <= 1 || state.filteredTransactions.length === 0;
+            elements.nextPage.disabled = state.currentPage >= state.totalPages || state.filteredTransactions.length === 0;
+            elements.firstPage.disabled = state.currentPage <= 1 || state.filteredTransactions.length === 0;
+            elements.lastPage.disabled = state.currentPage >= state.totalPages || state.filteredTransactions.length === 0;
+            
+            // Keep page input always enabled
+            elements.pageInput.disabled = state.filteredTransactions.length === 0;
+        }
+
+        function updateResultsInfo() {
+            let total = state.filteredTransactions.length;
+            let start = 0;
+            let end = 0;
+            
+            if (state.currentGroupBy) {
+                if (state.currentGroupBy === 'date-hierarchy') {
+                    total = calculateDateHierarchyItemCount();
+                } else {
+                    // For grouped display, count all rows (headers, transactions, summaries)
+                    total = 0;
+                    for (const groupKey in state.groupedTransactions) {
+                        total += 2 + state.groupedTransactions[groupKey].transactions.length;
+                    }
+                }
+                
+                start = Math.min((state.currentPage - 1) * state.pageSize + 1, total);
+                end = Math.min(state.currentPage * state.pageSize, total);
+            } else {
+                // For ungrouped display
+                start = total === 0 ? 0 : Math.min((state.currentPage - 1) * state.pageSize + 1, total);
+                end = total === 0 ? 0 : Math.min(state.currentPage * state.pageSize, total);
+            }
+            
+            elements.resultsInfo.textContent = 
+                total === 0 ? 'No transactions found' : `Showing ${start}-${end} of ${total} items`;
+        }
+
+        function showLoading(show) {
+            elements.loading.style.display = show ? 'block' : 'none';
+        }
+
+        function goToPage(page) {
+            page = Math.max(1, Math.min(page, state.totalPages));
+            if (page !== state.currentPage) {
+                state.currentPage = page;
+                elements.pageInput.value = page;
+                displayCurrentPage();
+                updatePaginationControls();
+                updateResultsInfo();
+                highlightSearchMatches();
+            }
+        }
+
+        function toggleGroup(groupKey) {
+            if (state.collapsedGroups.has(groupKey)) {
+                state.collapsedGroups.delete(groupKey);
+            } else {
+                state.collapsedGroups.add(groupKey);
+            }
+            
+            // Recalculate pagination
+            updatePagination();
+            
+            // If current page would be empty after collapse, go to last page
+            if (state.currentPage > state.totalPages) {
+                goToPage(state.totalPages);
+            } else {
+                // Otherwise just refresh current page
+                displayCurrentPage();
+                updateResultsInfo();
+            }
+        }
+
+        // Reset only the region below (main content) filters
+        function resetRegionFilters() {
+            // Clear any search highlights
+            document.querySelectorAll('.search-match').forEach(el => {
+                el.classList.remove('search-match');
+            });
+            document.querySelectorAll('#transactionsTable tbody tr').forEach(row => {
+                row.style.backgroundColor = '';
+            });
+            
+            // Reset to first page
+            state.currentPage = 1;
+            elements.pageInput.value = 1;
+            
+            updatePagination();
+            displayCurrentPage();
+            updateResultsInfo();
+        }
+
+        // Calendar functions
+        function toggleCalendarView() {
+            state.calendarView = !state.calendarView;
+            elements.calendarView.style.display = state.calendarView ? 'block' : 'none';
+            elements.toggleCalendarView.textContent = state.calendarView ? 'Hide Calendar View' : 'Show Calendar View';
+            
+            if (state.calendarView) {
+                renderCalendar();
+            }
+        }
+
+        function renderCalendar() {
+            const year = state.calendarDate.getFullYear();
+            const month = state.calendarDate.getMonth();
+            
+            // Update calendar header
+            elements.calendarMonthYear.textContent = state.calendarDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+            
+            // Clear previous calendar
+            elements.calendarGrid.innerHTML = '';
+            
+            // Add day headers (Sun, Mon, Tue, etc.)
+            const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            daysOfWeek.forEach(day => {
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'weekday-header';
+                dayHeader.textContent = day;
+                elements.calendarGrid.appendChild(dayHeader);
+            });
+            
+            // Get first day of month and total days
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const today = new Date();
+            
+            // Add empty cells for days before the first day of the month
+            for (let i = 0; i < firstDay; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day empty-day';
+                elements.calendarGrid.appendChild(emptyDay);
+            }
+            
+            // Create transactions by day map
+            const transactionsByDay = {};
+            state.filteredTransactions.forEach(transaction => {
+                if (!transaction.BUCHUNGSTAG) return;
+                
+                const transactionDate = new Date(transaction.BUCHUNGSTAG.split('T')[0]);
+                if (transactionDate.getMonth() === month && transactionDate.getFullYear() === year) {
+                    const day = transactionDate.getDate();
+                    if (!transactionsByDay[day]) {
+                        transactionsByDay[day] = [];
+                    }
+                    transactionsByDay[day].push(transaction);
+                }
+            });
+            
+            // Calculate monthly total
+            let monthlyTotal = 0;
+            
+            // Add cells for each day of the month
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayCell = document.createElement('div');
+                
+                // Check if this day is today
+                const isToday = today.getDate() === day && 
+                               today.getMonth() === month && 
+                               today.getFullYear() === year;
+                
+                dayCell.className = `calendar-day ${isToday ? 'today' : ''} ${transactionsByDay[day] ? 'has-transactions' : ''}`;
+                
+                // Day header with day number
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'calendar-day-header';
+                dayHeader.innerHTML = `<span class="day-number">${day}</span>`;
+                dayCell.appendChild(dayHeader);
+                
+                // Add transactions for this day if they exist
+                if (transactionsByDay[day]) {
+                    let dayTotal = 0;
+                    
+                    transactionsByDay[day].forEach(transaction => {
+                        dayTotal += transaction.BETRAG || 0;
+                        
+                        const transactionEl = document.createElement('div');
+                        transactionEl.className = 'calendar-transaction';
+                        transactionEl.title = `${transaction.BUCHUNGSTEXT || 'No description'} - ${(transaction.BETRAG || 0).toFixed(2)}`;
+                        
+                        // Show FK_MAIN_KEY if available, otherwise show amount
+                        const displayText = transaction.FK_MAIN_KEY 
+                            ? `ID: ${transaction.FK_MAIN_KEY}` 
+                            : `${(transaction.BETRAG || 0).toFixed(2)}`;
+                        
+                        transactionEl.textContent = displayText;
+                        transactionEl.style.color = transaction.BETRAG < 0 ? 'red' : 'green';
+                        
+                        // Add click handler to select this transaction
+                        transactionEl.addEventListener('click', () => {
+                            // Find and select the transaction in the main table
+                            const row = document.querySelector(`#transactionsTable tr[data-id="${transaction.ID}"]`);
+                            if (row) {
+                                row.click(); // Simulate click to select
+                                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        });
+                        
+                        dayCell.appendChild(transactionEl);
+                    });
+                    
+                    // Add day total
+                    const totalEl = document.createElement('div');
+                    totalEl.className = `day-total ${dayTotal < 0 ? 'negative-total' : ''}`;
+                    totalEl.textContent = `Total: ${dayTotal.toFixed(2)}`;
+                    dayCell.appendChild(totalEl);
+                    
+                    monthlyTotal += dayTotal;
+                }
+                
+                elements.calendarGrid.appendChild(dayCell);
+            }
+            
+            // Add empty cells for days after the last day of the month
+            const lastDay = new Date(year, month, daysInMonth).getDay();
+            for (let i = lastDay + 1; i < 7; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day empty-day';
+                elements.calendarGrid.appendChild(emptyDay);
+            }
+            
+            // Add monthly summary
+            const summaryEl = document.createElement('div');
+            summaryEl.className = 'calendar-month-summary';
+            summaryEl.innerHTML = `Monthly Total: <span class="${monthlyTotal < 0 ? 'negative' : ''}">${monthlyTotal.toFixed(2)}</span>`;
+            elements.calendarGrid.appendChild(summaryEl);
+        }
+
+        function changeCalendarMonth(direction) {
+            state.calendarDate.setMonth(state.calendarDate.getMonth() + direction);
+            renderCalendar();
+        }
+
+        // Chart functions
+        function toggleChartView() {
+            state.chartView = !state.chartView;
+            elements.chartView.style.display = state.chartView ? 'block' : 'none';
+            elements.toggleChartView.textContent = state.chartView ? 'Hide Chart View' : 'Show Chart View';
+            
+            if (state.chartView) {
+                prepareChartData();
+                renderChart();
+            } else if (state.chartInstance) {
+                state.chartInstance.destroy();
+                state.chartInstance = null;
+            }
+        }
+
+        function prepareChartData() {
+            // Get chart settings
+            state.chartType = elements.chartType.value;
+            state.chartPeriod = elements.chartGroupBy.value;
+            state.chartDataType = elements.chartDataType.value;
+            state.chartAccountFilter = elements.chartAccountFilter.value;
+            
+            // Filter transactions based on account/bank selection
+            let filteredTransactions = [...state.filteredTransactions];
+            
+            if (state.chartAccountFilter !== 'all') {
+                const [type, value] = state.chartAccountFilter.split(':');
+                if (type === 'account') {
+                    filteredTransactions = filteredTransactions.filter(t => t.KTO_BEZEICHNUNG === value);
+                } else if (type === 'bank') {
+                    filteredTransactions = filteredTransactions.filter(t => t.BANK === value);
+                }
+            }
+            
+            // Group transactions by period
+            const dataByPeriod = {};
+            
+            filteredTransactions.forEach(transaction => {
+                if (!transaction.BUCHUNGSTAG) return;
+                
+                const date = new Date(transaction.BUCHUNGSTAG.split('T')[0]);
+                let periodKey;
+                let periodLabel;
+                
+                // Determine period key based on grouping
+                switch (state.chartPeriod) {
+                    case 'day':
+                        periodKey = date.toISOString().split('T')[0];
+                        periodLabel = date.toLocaleDateString();
+                        break;
+                    case 'week':
+                        // Get week number
+                        const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+                        const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
+                        const weekNumber = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+                        periodKey = `${date.getFullYear()}-W${weekNumber}`;
+                        periodLabel = `Week ${weekNumber}, ${date.getFullYear()}`;
+                        break;
+                    case 'month':
+                        periodKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
+                        periodLabel = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+                        break;
+                    case 'year':
+                        periodKey = `${date.getFullYear()}`;
+                        periodLabel = `${date.getFullYear()}`;
+                        break;
+                }
+                
+                if (!dataByPeriod[periodKey]) {
+                    dataByPeriod[periodKey] = {
+                        label: periodLabel,
+                        date: date,
+                        income: 0,
+                        expenses: 0,
+                        net: 0,
+                        count: 0
+                    };
+                }
+                
+                // Update data based on transaction amount
+                const amount = transaction.BETRAG || 0;
+                dataByPeriod[periodKey].count++;
+                
+                if (amount > 0) {
+                    dataByPeriod[periodKey].income += amount;
+                } else {
+                    dataByPeriod[periodKey].expenses += Math.abs(amount);
+                }
+                
+                dataByPeriod[periodKey].net += amount;
+            });
+            
+            // Convert to array and sort by date
+            state.chartData = Object.values(dataByPeriod).sort((a, b) => a.date - b.date);
+            
+            // Update chart period display
+            updateChartPeriodDisplay();
+        }
+
+        function updateChartPeriodDisplay() {
+            if (state.chartData.length === 0) {
+                elements.chartPeriod.textContent = 'No data available';
+                return;
+            }
+            
+            const firstPeriod = state.chartData[0];
+            const lastPeriod = state.chartData[state.chartData.length - 1];
+            
+            let periodText = '';
+            switch (state.chartPeriod) {
+                case 'day':
+                    periodText = `${firstPeriod.label} - ${lastPeriod.label}`;
+                    break;
+                case 'week':
+                    periodText = `${firstPeriod.label} - ${lastPeriod.label}`;
+                    break;
+                case 'month':
+                    periodText = `${firstPeriod.label} - ${lastPeriod.label}`;
+                    break;
+                case 'year':
+                    periodText = `${firstPeriod.label} - ${lastPeriod.label}`;
+                    break;
+            }
+            
+            elements.chartPeriod.textContent = periodText;
+        }
+
+        function renderChart() {
+            // Show loading indicator
+            elements.chartLoading.style.display = 'block';
+            
+            // Destroy existing chart if it exists
+            if (state.chartInstance) {
+                state.chartInstance.destroy();
+            }
+            
+            // Check if we have data to display
+            if (state.chartData.length === 0) {
+                elements.chartLoading.textContent = 'No data available for the selected filters';
+                return;
+            }
+            
+            // Prepare data for chart
+            const labels = state.chartData.map(item => item.label);
+            let datasets = [];
+            
+            // Determine which data to show based on selection
+            if (state.chartDataType === 'net' || state.chartDataType === 'all') {
+                datasets.push({
+                    label: 'Net Amount',
+                    data: state.chartData.map(item => item.net),
+                    borderColor: 'rgb(54, 162, 235)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    tension: 0.1,
+                    fill: true
+                });
+            }
+            
+            if (state.chartDataType === 'income' || state.chartDataType === 'all') {
+                datasets.push({
+                    label: 'Income',
+                    data: state.chartData.map(item => item.income),
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1,
+                    fill: false
+                });
+            }
+            
+            if (state.chartDataType === 'expense' || state.chartDataType === 'all') {
+                datasets.push({
+                    label: 'Expenses',
+                    data: state.chartData.map(item => item.expenses),
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    tension: 0.1,
+                    fill: false
+                });
+            }
+            
+            // Create chart
+            const ctx = elements.transactionChart.getContext('2d');
+            
+            state.chartInstance = new Chart(ctx, {
+                type: state.chartType,
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Transaction Trends Over Time'
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: €${context.parsed.y.toFixed(2)}`;
+                                }
+                            }
+                        },
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Amount (€)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Time Period'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Hide loading indicator
+            elements.chartLoading.style.display = 'none';
+            
+            // Update legend
+            updateChartLegend();
+        }
+
+        function updateChartLegend() {
+            elements.chartLegend.innerHTML = '';
+            
+            if (!state.chartInstance) return;
+            
+            state.chartInstance.data.datasets.forEach(dataset => {
+                const legendItem = document.createElement('div');
+                legendItem.className = 'legend-item';
+                
+                const colorBox = document.createElement('div');
+                colorBox.className = 'legend-color';
+                colorBox.style.backgroundColor = dataset.borderColor;
+                
+                const label = document.createElement('span');
+                label.textContent = dataset.label;
+                
+                legendItem.appendChild(colorBox);
+                legendItem.appendChild(label);
+                elements.chartLegend.appendChild(legendItem);
+            });
+        }
+
+        function changeChartPeriod(direction) {
+            state.chartCurrentPeriod += direction;
+            prepareChartData();
+            renderChart();
+        }
+
+        // Event listeners
+        elements.prevPage.addEventListener('click', () => goToPage(state.currentPage - 1));
+        elements.nextPage.addEventListener('click', () => goToPage(state.currentPage + 1));
+        elements.firstPage.addEventListener('click', () => goToPage(1));
+        elements.lastPage.addEventListener('click', () => goToPage(state.totalPages));
+
+        elements.pageInput.addEventListener('change', (e) => {
+            const page = parseInt(e.target.value);
+            if (!isNaN(page) && page >= 1 && page <= state.totalPages) {
+                goToPage(page);
+            } else {
+                e.target.value = state.currentPage;
+            }
+        });
+
+        elements.searchBtn.addEventListener('click', () => {
+            applyFilters();
+        });
+
+        elements.clearSearchBtn.addEventListener('click', () => {
+            elements.searchInput.value = '';
+            elements.yearFilter.value = '';
+            elements.amountFilter.value = '';
+            elements.kontoauszugFilter.value = '';
+            elements.ownerFilter.value = '';
+            elements.bankkontoFilter.value = '';
+            elements.dateFromFilter.value = '';
+            elements.dateToFilter.value = '';
+            elements.groupBy.value = '';
+            state.collapsedGroups.clear();
+            applyFilters();
+        });
+
+        elements.downloadCsvBtn.addEventListener('click', () => {
+            downloadFilteredCsv();
+        });
+
+        elements.searchInput.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') {
+                applyFilters();
+            }
+        });
+
+        elements.yearFilter.addEventListener('change', () => {
+            applyFilters();
+        });
+
+        elements.clearYearFilter.addEventListener('click', () => {
+            elements.yearFilter.value = '';
+            applyFilters();
+        });
+
+        elements.amountFilter.addEventListener('change', () => {
+            applyFilters();
+        });
+
+        elements.kontoauszugFilter.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') {
+                applyFilters();
+            }
+        });
+
+        elements.ownerFilter.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') {
+                applyFilters();
+            }
+        });
+
+        elements.bankkontoFilter.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') {
+                applyFilters();
+            }
+        });
+
+        elements.dateFromFilter.addEventListener('change', () => {
+            applyFilters();
+        });
+
+        elements.dateToFilter.addEventListener('change', () => {
+            applyFilters();
+        });
+
+        elements.groupBy.addEventListener('change', () => {
+            state.collapsedGroups.clear();
+            applyFilters();
+        });
+
+        elements.resetRegionBtn.addEventListener('click', resetRegionFilters);
+
+        // Delegated event listener for group toggles
+        elements.tableBody.addEventListener('click', (e) => {
+            if (e.target.classList.contains('group-toggle')) {
+                const groupKey = e.target.getAttribute('data-group');
+                toggleGroup(groupKey);
+            }
+        });
+
+        // Calendar event listeners
+        elements.toggleCalendarView.addEventListener('click', toggleCalendarView);
+        elements.prevMonthBtn.addEventListener('click', () => changeCalendarMonth(-1));
+        elements.nextMonthBtn.addEventListener('click', () => changeCalendarMonth(1));
+
+        // Chart event listeners
+        elements.toggleChartView.addEventListener('click', toggleChartView);
+        elements.chartType.addEventListener('change', () => {
+            prepareChartData();
+            renderChart();
+        });
+        elements.chartGroupBy.addEventListener('change', () => {
+            prepareChartData();
+            renderChart();
+        });
+        elements.chartDataType.addEventListener('change', () => {
+            prepareChartData();
+            renderChart();
+        });
+        elements.chartAccountFilter.addEventListener('change', () => {
+            prepareChartData();
+            renderChart();
+        });
+        elements.prevChartPeriod.addEventListener('click', () => changeChartPeriod(-1));
+        elements.nextChartPeriod.addEventListener('click', () => changeChartPeriod(1));
+
+        // Initial load
+        fetchAllTransactions();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</body>
+</html>

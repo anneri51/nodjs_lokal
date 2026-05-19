@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>KTO / TBL / Buchungsdaten – Matrix</title>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 30px;
+    }
+
+    h1 {
+        margin-bottom: 25px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+
+    th, td {
+        border: 1px solid #ccc;
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+    }
+
+    th {
+        background: #e8e8e8;
+        font-weight: bold;
+        text-align: center;
+    }
+
+    .headline1 {
+        background: #d0e0ff;
+        font-size: 1.1rem;
+    }
+
+    .headline2 {
+        background: #f0f0f0;
+        font-size: 0.95rem;
+    }
+
+    .headline3 {
+        background: #fff3b0;
+        font-size: 0.85rem;
+    }
+
+    .date-col {
+        background: #ffe58a;
+        font-weight: bold;
+        text-align: center;
+        width: 140px;
+    }
+
+    .buchung-item {
+        background: #c8f7c5;
+        padding: 4px 6px;
+        border-radius: 4px;
+        margin-bottom: 4px;
+    }
+
+    /* BOLD FRAMES AROUND KTO GROUPS */
+    .kto-giro {
+        border: 4px solid #4a90e2 !important;
+    }
+
+    .kto-paypal {
+        border: 4px solid #50c878 !important;
+    }
+
+    .kto-kredit {
+        border: 4px solid #e26a6a !important;
+    }
+
+    th.kto-giro, td.kto-giro,
+    th.kto-paypal, td.kto-paypal,
+    th.kto-kredit, td.kto-kredit 
+</style>
+</head>
+
+<body>
+
+<h1>KTO‑Typ / TBL / Buchungsdaten – Matrix</h1>
+
+<div id="tableContainer"></div>
+
+<script>
+// --------------------------------------------------
+// MOCK KTO DETAILS
+// --------------------------------------------------
+const mockKtoDetails = {
+    Giro:   { kto_nr: "DE12345678", iban: "DE12 1111 2222 3333 4444 55" },
+    Kredit: { kto_nr: "KR99887766", iban: "DE98 2222 3333 4444 5555 66" },
+    Paypal: { kto_nr: "PP55667788", iban: "paypal@example.com" }
+};
+
+// --------------------------------------------------
+// MOCK BUCHUNGSDATEN
+// --------------------------------------------------
+const mockData = [
+    { datum: "01.03.2024", text: "Zahlung Kunde A", betrag: 120.50, kto: "Giro",   tbl: "giro" },
+    { datum: "01.03.2024", text: "Paypal Eingang", betrag: 45.90,  kto: "Paypal", tbl: "paypal" },
+    { datum: "05.03.2024", text: "Abschluss Paypal", betrag: -10.00, kto: "Paypal", tbl: "paypal_abgeschl" },
+    { datum: "12.03.2024", text: "Paypal GR", betrag: 19.99, kto: "Paypal", tbl: "paypal_gr" },
+    { datum: "20.03.2024", text: "Kreditkartenbelastung", betrag: -59.99, kto: "Kredit", tbl: "kredit" }
+];
+
+// --------------------------------------------------
+// Distinct lists
+// --------------------------------------------------
+const ktoList = [...new Set(mockData.map(x => x.kto))];
+const tblList = [...new Set(mockData.map(x => x.tbl))];
+const dateList = [...new Set(mockData.map(x => x.datum))];
+
+// --------------------------------------------------
+// Build table
+// --------------------------------------------------
+function buildTable() {
+    const container = document.getElementById("tableContainer");
+
+    let html = `<table>`;
+
+    // -------------------------------
+    // Headline 1: KTO_TYP
+    // -------------------------------
+    html += `<tr><th class="date-col">Buchungsdatum</th>`;
+    ktoList.forEach(kto => {
+        const span = tblList.filter(t => mockData.some(x => x.kto === kto && x.tbl === t)).length;
+        html += `<th class="headline1 kto-${kto.toLowerCase()}" colspan="${span}">${kto}</th>`;
+    });
+    html += `</tr>`;
+
+    // -------------------------------
+    // Headline 2: TBL
+    // -------------------------------
+    html += `<tr><th></th>`;
+    ktoList.forEach(kto => {
+        tblList.forEach(tbl => {
+            if (mockData.some(x => x.kto === kto && x.tbl === tbl)) {
+                html += `<th class="headline2 kto-${kto.toLowerCase()}">${tbl}</th>`;
+            }
+        });
+    });
+    html += `</tr>`;
+
+    // -------------------------------
+    // Headline 3: KTO Details
+    // -------------------------------
+    html += `<tr><th></th>`;
+    ktoList.forEach(kto => {
+        tblList.forEach(tbl => {
+            if (mockData.some(x => x.kto === kto && x.tbl === tbl)) {
+                const d = mockKtoDetails[kto];
+                html += `<th class="headline3 kto-${kto.toLowerCase()}">
+                            KTO_NR: ${d.kto_nr}<br>
+                            IBAN: ${d.iban}
+                         </th>`;
+            }
+        });
+    });
+    html += `</tr>`;
+
+    // -------------------------------
+    // Rows: Buchungsdatum
+    // -------------------------------
+    dateList.forEach(date => {
+        html += `<tr>`;
+        html += `<td class="date-col">${date}</td>`;
+
+        ktoList.forEach(kto => {
+            tblList.forEach(tbl => {
+                if (mockData.some(x => x.kto === kto && x.tbl === tbl)) {
+
+                    const matches = mockData.filter(
+                        x => x.datum === date && x.kto === kto && x.tbl === tbl
+                    );
+
+                    if (matches.length === 0) {
+                        html += `<td class="kto-${kto.toLowerCase()}"></td>`;
+                    } else {
+                        html += `<td class="kto-${kto.toLowerCase()}">`;
+                        matches.forEach(m => {
+                            html += `<div class="buchung-item">
+                                        ${m.text} (${m.betrag.toFixed(2)} €)
+                                     </div>`;
+                        });
+                        html += `</td>`;
+                    }
+                }
+            });
+        });
+
+        html += `</tr>`;
+    });
+
+    html += `</table>`;
+    container.innerHTML = html;
+}
+
+buildTable();
+</script>
+
+</body>
+</html>

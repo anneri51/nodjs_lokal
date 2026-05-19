@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bankkonten – 3 Tab-Filter (Bank, Owner, OrgUnit) + rechte Volltabelle</title>
+    <!-- Pico.css for minimal styling -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <style>
+        .container {
+            margin-top: 1.5rem;
+        }
+        .two-panel {
+            display: flex;
+            gap: 1.5rem;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+        .left-panel {
+            flex: 0 0 360px;
+            background: var(--pico-card-background-color, #f9f9fb);
+            padding: 1rem;
+            border-radius: 16px;
+            border: 1px solid var(--pico-muted-border-color, #e2e4e8);
+            position: sticky;
+            top: 1rem;
+            max-height: calc(100vh - 80px);
+            overflow-y: auto;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+        }
+        .right-panel {
+            flex: 1;
+            min-width: 600px;
+            overflow-x: auto;
+        }
+
+        /* Tabs */
+        .tab-header {
+            display: flex;
+            gap: 0.3rem;
+            background: #eef2f6;
+            padding: 0.25rem;
+            border-radius: 48px;
+            margin-bottom: 1.5rem;
+        }
+        .tab-btn {
+            flex: 1;
+            border: none;
+            background: transparent;
+            border-radius: 40px;
+            padding: 0.5rem 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: #334155;
+            transition: 0.15s;
+            white-space: nowrap;
+        }
+        .tab-btn.active {
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            color: #0f172a;
+        }
+        .tab-pane {
+            display: none;
+        }
+        .tab-pane.active {
+            display: block;
+        }
+
+        /* Filter-Buttons (wie mit/ohne Konten) – nur bei Bank-Tab */
+        .bank-filter-buttons {
+            display: flex;
+            gap: 0.4rem;
+            margin: 1rem 0 0.8rem 0;
+            flex-wrap: wrap;
+        }
+        .bank-filter-buttons button {
+            flex: 1;
+            font-size: 0.75rem;
+            padding: 0.3rem 0.2rem;
+        }
+
+        /* Owner / OrgUnit spezifisch */
+        .sub-filter {
+            margin: 0.8rem 0;
+        }
+        .distinct-list {
+            list-style: none;
+            padding: 0;
+            margin: 1rem 0 0 0;
+            max-height: 350px;
+            overflow-y: auto;
+            border-top: 1px solid #dde3ea;
+        }
+        .distinct-list li {
+            padding: 0.4rem 0.8rem;
+            margin: 4px 0;
+            border-radius: 30px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+        }
+        .distinct-list li:hover {
+            background: #e9eff8;
+            border-color: #9bb5d9;
+        }
+        .distinct-list li.selected {
+            background: var(--pico-primary-hover-background, #1e6bc7);
+            color: white;
+            border-color: #1a5cb0;
+        }
+        .distinct-list li .count-badge {
+            background: #e2e8f0;
+            border-radius: 40px;
+            padding: 0.2rem 0.6rem;
+            font-size: 0.7rem;
+            color: #1e293b;
+        }
+        .distinct-list li.selected .count-badge {
+            background: rgba(255,255,255,0.3);
+            color: white;
+        }
+        .search-small {
+            margin: 0.5rem 0;
+        }
+
+        /* Tabelle rechts */
+        table {
+            font-size: 0.75rem;
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        th {
+            background: #edf2f7;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            white-space: nowrap;
+            padding: 0.7rem 0.3rem;
+        }
+        td {
+            padding: 0.4rem 0.3rem;
+            border-bottom: 1px solid #e0e7ef;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        td:hover {
+            overflow: visible;
+            white-space: normal;
+            word-break: break-word;
+            background-color: #fffae6;
+            position: relative;
+        }
+        .null-pk-row {
+            background-color: #fff2f0;
+        }
+        .badge.primary {
+            background: var(--pico-primary);
+            color: white;
+            padding: 0.3rem 0.9rem;
+            border-radius: 40px;
+        }
+        #rowCounter {
+            background: #d1ddeb;
+            font-weight: normal;
+        }
+        .distinct-info {
+            font-size: 0.75rem;
+            background: #e9edf2;
+            padding: 0.5rem;
+            border-radius: 20px;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <h1>🏦 Konten – Filter (Bank · Owner · OrgUnit) + vollständige Tabelle</h1>
+        <p style="margin-bottom: 0.5rem;">Daten von <code>http://localhost:5000/bankkonten</code></p>
+
+        <div class="two-panel">
+            <!-- LINKE SEITE: 3 TABS -->
+            <div class="left-panel">
+                <!-- Tab-Köpfe -->
+                <div class="tab-header">
+                    <button id="tabBankBtn" class="tab-btn active">🏛️ Bank</button>
+                    <button id="tabOwnerBtn" class="tab-btn">👤 Owner (1 & 2)</button>
+                    <button id="tabOrgBtn" class="tab-btn">🏢 Org-Einheit</button>
+                </div>
+
+                <!-- Tab: BANK -->
+                <div id="tabBank" class="tab-pane active">
+                    <h5 style="margin-bottom:0.5rem;">Banken</h5>
+                    <div class="bank-filter-buttons">
+                        <button id="btnAllBanks" class="secondary">🏦 Alle</button>
+                        <button id="btnWithAccounts" class="secondary">💰 mit Konten</button>
+                        <button id="btnWithoutAccounts" class="secondary">🕳️ ohne Konten</button>
+                    </div>
+                    <!-- PK-Switch (nur für Bank-Tab) -->
+                    <div style="display: flex; gap:0.2rem; background:#eef2f6; padding:0.2rem; border-radius:40px; margin:0.5rem 0;">
+                        <button id="pkBankAll" class="active" style="flex:1; border:none; background:transparent; border-radius:40px; padding:0.3rem;">Alle PK</button>
+                        <button id="pkBankNull" style="flex:1; border:none; background:transparent; border-radius:40px; padding:0.3rem;">PK = null</button>
+                        <button id="pkBankNotNull" style="flex:1; border:none; background:transparent; border-radius:40px; padding:0.3rem;">PK ≠ null</button>
+                    </div>
+                    <input type="text" id="bankSearchInput" placeholder="🔍 Bankname filtern" autocomplete="off" style="margin:0.5rem 0;">
+                    <ul id="bankList" class="distinct-list" style="max-height:300px;"></ul>
+                </div>
+
+                <!-- Tab: OWNER (Owner1 + Owner2 gemeinsam) -->
+                <div id="tabOwner" class="tab-pane">
+                    <h5 style="margin-bottom:0.5rem;">Owner (1 & 2)</h5>
+                    <input type="text" id="ownerSearchInput" placeholder="🔍 Owner Name filtern" autocomplete="off" style="margin:0.5rem 0;">
+                    <!-- Zusätzlich: Auswahl ob Owner1, Owner2 oder beide? Für Einfachheit: wir zeigen vereinigte Liste aus beiden Feldern -->
+                    <p style="font-size:0.7rem; color:#4b5563;">Eindeutige Werte aus Owner1 und Owner2</p>
+                    <ul id="ownerList" class="distinct-list" style="max-height:300px;"></ul>
+                </div>
+
+                <!-- Tab: ORG_EINHEIT -->
+                <div id="tabOrg" class="tab-pane">
+                    <h5 style="margin-bottom:0.5rem;">Org-Einheit</h5>
+                    <input type="text" id="orgSearchInput" placeholder="🔍 Org-Einheit filtern" autocomplete="off" style="margin:0.5rem 0;">
+                    <ul id="orgList" class="distinct-list" style="max-height:300px;"></ul>
+                </div>
+
+                <!-- Gemeinsamer Bereich: Distinct Counts und Auswahl-Info -->
+                <div class="distinct-info" id="distinctCounts">
+                    Gesamt: 0 Einträge
+                </div>
+                <div style="margin-top:0.5rem; font-size:0.8rem;" id="selectedFilterInfo">
+                    ⚡ kein Filter aktiv
+                </div>
+            </div>
+
+            <!-- RECHTE SEITE: Volltabelle -->
+            <div class="right-panel">
+                <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
+                    <div style="flex:1; min-width: 200px;">
+                        <input type="text" id="searchInput" placeholder="🔍 In allen Feldern suchen …" autocomplete="off" style="width:100%;">
+                    </div>
+                    <span id="rowCounter" class="badge primary">0 Einträge</span>
+                </div>
+                <div style="overflow-x: auto; border-radius: 12px; border: 1px solid var(--pico-table-border-color, #cfd9e6);">
+                    <table id="dataTable">
+                        <thead id="tableHeader"></thead>
+                        <tbody id="tableBody">
+                            <tr><td colspan="10" style="text-align:center; padding:3rem;">⏳ Lade Daten …</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="status" class="status-message" style="margin-top:0.5rem;"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        (function() {
+            // ---------- state ----------
+            let allItems = [];                  // alle Rohdaten
+
+            // Für linke Tabs: jeder Tab hat eigene gefilterte Liste und Selektion
+            let currentTab = 'bank';             // 'bank', 'owner', 'org'
+            
+            // --- Bank Tab State ---
+            let masterBankList = [];              // { name, totalCount, nullCount, notNullCount }
+            let bankFilterMode = 'all';            // 'all', 'withAccounts', 'withoutAccounts'
+            let bankSearchTerm = '';
+            let bankPkFilter = 'all';              // 'all', 'null', 'notnull'
+            let selectedBank = null;
+
+            // --- Owner Tab State ---
+            let masterOwnerList = [];              // { value, count } (vereinigt aus Owner1 und Owner2)
+            let ownerSearchTerm = '';
+            let selectedOwner = null;
+
+            // --- Org Unit Tab State ---
+            let masterOrgList = [];                 // { value, count }
+            let orgSearchTerm = '';
+            let selectedOrg = null;
+
+            // Rechte Seite
+            let displayedItems = [];
+            let currentSearchTerm = '';
+
+            // DOM-Elemente
+            const tbody = document.getElementById('tableBody');
+            const thead = document.getElementById('tableHeader');
+            const searchInput = document.getElementById('searchInput');
+            const rowCounter = document.getElementById('rowCounter');
+            const statusDiv = document.getElementById('status');
+            const distinctCountsSpan = document.getElementById('distinctCounts');
+            const selectedFilterInfo = document.getElementById('selectedFilterInfo');
+
+            // Tab-Buttons
+            const tabBankBtn = document.getElementById('tabBankBtn');
+            const tabOwnerBtn = document.getElementById('tabOwnerBtn');
+            const tabOrgBtn = document.getElementById('tabOrgBtn');
+            const tabBankDiv = document.getElementById('tabBank');
+            const tabOwnerDiv = document.getElementById('tabOwner');
+            const tabOrgDiv = document.getElementById('tabOrg');
+
+            // Bank Tab Elemente
+            const bankListEl = document.getElementById('bankList');
+            const bankSearchInput = document.getElementById('bankSearchInput');
+            const btnAllBanks = document.getElementById('btnAllBanks');
+            const btnWith = document.getElementById('btnWithAccounts');
+            const btnWithout = document.getElementById('btnWithoutAccounts');
+            const pkBankAll = document.getElementById('pkBankAll');
+            const pkBankNull = document.getElementById('pkBankNull');
+            const pkBankNotNull = document.getElementById('pkBankNotNull');
+
+            // Owner Tab
+            const ownerSearchInput = document.getElementById('ownerSearchInput');
+            const ownerListEl = document.getElementById('ownerList');
+
+            // Org Tab
+            const orgSearchInput = document.getElementById('orgSearchInput');
+            const orgListEl = document.getElementById('orgList');
+
+            // ---------- Hilfsfunktionen ----------
+            const normalize = s => (s ?? '').toString().toLowerCase().trim();
+
+            // Extrahiere alle Feldnamen
+            function extractAllKeys(items) {
+                const keySet = new Set();
+                items.forEach(item => Object.keys(item).forEach(k => keySet.add(k)));
+                const keys = Array.from(keySet);
+                const priority = ['PK_KTO_BANK', 'BANK'];
+                return keys.sort((a,b) => {
+                    const ai = priority.indexOf(a), bi = priority.indexOf(b);
+                    if (ai>=0 && bi>=0) return ai-bi;
+                    if (ai>=0) return -1;
+                    if (bi>=0) return 1;
+                    return a.localeCompare(b);
+                });
+            }
+
+            // Tabelle rendern
+            function renderTable(keys) {
+                if (!displayedItems || displayedItems.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="${keys.length}" style="text-align:center; padding:2rem;">🔎 Keine Einträge</td></tr>`;
+                    rowCounter.textContent = '0 Einträge';
+                    return;
+                }
+                let html = '';
+                for (const item of displayedItems) {
+                    const isNullPk = (item['PK_KTO_BANK'] === null || item['PK_KTO_BANK'] === undefined || item['PK_KTO_BANK'] === '');
+                    const rowClass = isNullPk ? 'null-pk-row' : '';
+                    html += `<tr class="${rowClass}">`;
+                    keys.forEach(key => {
+                        let val = item[key];
+                        if (val === null || val === undefined) val = '—';
+                        else if (typeof val === 'object') val = JSON.stringify(val);
+                        const strVal = String(val);
+                        const display = strVal.length > 100 ? strVal.substr(0,80)+'…' : strVal;
+                        html += `<td title="${strVal.replace(/"/g, '&quot;')}">${display}</td>`;
+                    });
+                    html += '</tr>';
+                }
+                tbody.innerHTML = html;
+                rowCounter.textContent = `${displayedItems.length} Einträge`;
+            }
+
+            // Rechte Filter anwenden (Kombination aus allen aktiven Selektionskriterien)
+            function applyRightSideFilters() {
+                let filtered = allItems.slice();
+
+                // Bankfilter (wenn eine Bank ausgewählt)
+                if (selectedBank) {
+                    filtered = filtered.filter(item => (item['BANK'] ?? '(keine Bank)') === selectedBank);
+                }
+                // Ownerfilter (wenn Owner ausgewählt) – prüft Owner1 UND Owner2
+                if (selectedOwner) {
+                    filtered = filtered.filter(item => 
+                        (item['Owner1'] !== undefined && String(item['Owner1']) === selectedOwner) ||
+                        (item['Owner2'] !== undefined && String(item['Owner2']) === selectedOwner)
+                    );
+                }
+                // Orgfilter
+                if (selectedOrg) {
+                    filtered = filtered.filter(item => 
+                        (item['ORG_EINHEIT'] !== undefined && String(item['ORG_EINHEIT']) === selectedOrg)
+                    );
+                }
+
+                // Suchbegriff (rechts)
+                const term = currentSearchTerm.trim();
+                if (term !== '') {
+                    const lower = term.toLowerCase();
+                    filtered = filtered.filter(item => JSON.stringify(item).toLowerCase().includes(lower));
+                }
+
+                displayedItems = filtered;
+                if (allItems.length) {
+                    const keys = extractAllKeys(allItems);
+                    renderTable(keys);
+                }
+                updateDistinctCountsAndInfo();
+            }
+
+            // Aktualisiert den unteren Bereich (Gesamt counts und Info)
+            function updateDistinctCountsAndInfo() {
+                const total = allItems.length;
+                const nullPk = allItems.filter(i => {
+                    const pk = i['PK_KTO_BANK'];
+                    return pk === null || pk === undefined || pk === '';
+                }).length;
+                const notNullPk = total - nullPk;
+                distinctCountsSpan.innerHTML = `📊 Gesamt: ${total} Einträge<br> 🔵 PK not null: ${notNullPk}  |  🕳️ PK null: ${nullPk}`;
+
+                let info = '⚡ aktive Filter: ';
+                const filters = [];
+                if (selectedBank) filters.push(`Bank: ${selectedBank}`);
+                if (selectedOwner) filters.push(`Owner: ${selectedOwner}`);
+                if (selectedOrg) filters.push(`Org: ${selectedOrg}`);
+                if (filters.length === 0) info += 'keine';
+                else info += filters.join(' · ');
+                selectedFilterInfo.innerText = info;
+            }
+
+            // --- Bank Tab Logik (ähnlich wie vorher) ---
+            function buildMasterBankList() {
+                const map = new Map();
+                for (const item of allItems) {
+                    const bank = item['BANK'] ?? '(keine Bank)';
+                    if (!map.has(bank)) map.set(bank, { total:0, nullCount:0, notNullCount:0 });
+                    const rec = map.get(bank);
+                    rec.total++;
+                    const pk = item['PK_KTO_BANK'];
+                    if (pk === null || pk === undefined || pk === '') rec.nullCount++;
+                    else rec.notNullCount++;
+                }
+                return Array.from(map.entries()).map(([name,c]) => ({ name, ...c })).sort((a,b) => a.name.localeCompare(b.name));
+            }
+
+            function getFilteredBankList() {
+                let list = masterBankList;
+                if (bankFilterMode === 'withAccounts') list = list.filter(b => b.total > 0);
+                else if (bankFilterMode === 'withoutAccounts') list = list.filter(b => b.total === 0);
+                if (bankSearchTerm) {
+                    const term = normalize(bankSearchTerm);
+                    list = list.filter(b => normalize(b.name).includes(term));
+                }
+                if (bankPkFilter === 'null') list = list.filter(b => b.nullCount > 0);
+                else if (bankPkFilter === 'notnull') list = list.filter(b => b.notNullCount > 0);
+                return list;
+            }
+
+            function renderBankList() {
+                const filtered = getFilteredBankList();
+                if (filtered.length === 0) {
+                    bankListEl.innerHTML = '<li style="justify-content:center;">Keine Banken</li>';
+                } else {
+                    let html = '';
+                    for (const b of filtered) {
+                        const selectedClass = (selectedBank === b.name) ? 'selected' : '';
+                        let countDisplay = `${b.total} total`;
+                        if (bankPkFilter === 'null') countDisplay = `🕳️ ${b.nullCount} null`;
+                        else if (bankPkFilter === 'notnull') countDisplay = `🔵 ${b.notNullCount} not null`;
+                        html += `<li class="${selectedClass}" data-value="${b.name.replace(/"/g, '&quot;')}"><span>${b.name}</span><span class="count-badge">${countDisplay}</span></li>`;
+                    }
+                    bankListEl.innerHTML = html;
+                    bankListEl.querySelectorAll('li').forEach(li => {
+                        li.addEventListener('click', () => {
+                            const val = li.dataset.value;
+                            selectedBank = (selectedBank === val) ? null : val;
+                            renderBankList();
+                            applyRightSideFilters();
+                        });
+                    });
+                }
+            }
+
+            // --- Owner Tab: Master aus Owner1 und Owner2
+            function buildMasterOwnerList() {
+                const countMap = new Map();
+                for (const item of allItems) {
+                    const own1 = item['Owner1'], own2 = item['Owner2'];
+                    if (own1 !== null && own1 !== undefined && own1 !== '') {
+                        const key = String(own1);
+                        countMap.set(key, (countMap.get(key) || 0) + 1);
+                    }
+                    if (own2 !== null && own2 !== undefined && own2 !== '') {
+                        const key = String(own2);
+                        countMap.set(key, (countMap.get(key) || 0) + 1);
+                    }
+                }
+                return Array.from(countMap.entries()).map(([value, count]) => ({ value, count })).sort((a,b) => a.value.localeCompare(b.value));
+            }
+
+            function renderOwnerList() {
+                let list = masterOwnerList;
+                if (ownerSearchTerm) {
+                    const term = normalize(ownerSearchTerm);
+                    list = list.filter(o => normalize(o.value).includes(term));
+                }
+                if (list.length === 0) {
+                    ownerListEl.innerHTML = '<li style="justify-content:center;">Keine Owner</li>';
+                } else {
+                    let html = '';
+                    for (const o of list) {
+                        const selectedClass = (selectedOwner === o.value) ? 'selected' : '';
+                        html += `<li class="${selectedClass}" data-value="${o.value.replace(/"/g, '&quot;')}"><span>${o.value}</span><span class="count-badge">${o.count}</span></li>`;
+                    }
+                    ownerListEl.innerHTML = html;
+                    ownerListEl.querySelectorAll('li').forEach(li => {
+                        li.addEventListener('click', () => {
+                            const val = li.dataset.value;
+                            selectedOwner = (selectedOwner === val) ? null : val;
+                            renderOwnerList();
+                            applyRightSideFilters();
+                        });
+                    });
+                }
+            }
+
+            // --- Org Tab
+            function buildMasterOrgList() {
+                const map = new Map();
+                for (const item of allItems) {
+                    const org = item['ORG_EINHEIT'];
+                    if (org !== null && org !== undefined && org !== '') {
+                        const key = String(org);
+                        map.set(key, (map.get(key) || 0) + 1);
+                    }
+                }
+                return Array.from(map.entries()).map(([value, count]) => ({ value, count })).sort((a,b) => a.value.localeCompare(b.value));
+            }
+
+            function renderOrgList() {
+                let list = masterOrgList;
+                if (orgSearchTerm) {
+                    const term = normalize(orgSearchTerm);
+                    list = list.filter(o => normalize(o.value).includes(term));
+                }
+                if (list.length === 0) {
+                    orgListEl.innerHTML = '<li style="justify-content:center;">Keine Org-Einheiten</li>';
+                } else {
+                    let html = '';
+                    for (const o of list) {
+                        const selectedClass = (selectedOrg === o.value) ? 'selected' : '';
+                        html += `<li class="${selectedClass}" data-value="${o.value.replace(/"/g, '&quot;')}"><span>${o.value}</span><span class="count-badge">${o.count}</span></li>`;
+                    }
+                    orgListEl.innerHTML = html;
+                    orgListEl.querySelectorAll('li').forEach(li => {
+                        li.addEventListener('click', () => {
+                            const val = li.dataset.value;
+                            selectedOrg = (selectedOrg === val) ? null : val;
+                            renderOrgList();
+                            applyRightSideFilters();
+                        });
+                    });
+                }
+            }
+
+            // Tab-Wechsel
+            function setActiveTab(tab) {
+                currentTab = tab;
+                [tabBankBtn, tabOwnerBtn, tabOrgBtn].forEach(b => b.classList.remove('active'));
+                [tabBankDiv, tabOwnerDiv, tabOrgDiv].forEach(d => d.classList.remove('active'));
+                if (tab === 'bank') {
+                    tabBankBtn.classList.add('active');
+                    tabBankDiv.classList.add('active');
+                } else if (tab === 'owner') {
+                    tabOwnerBtn.classList.add('active');
+                    tabOwnerDiv.classList.add('active');
+                    renderOwnerList(); // bei Anzeige frisch rendern
+                } else if (tab === 'org') {
+                    tabOrgBtn.classList.add('active');
+                    tabOrgDiv.classList.add('active');
+                    renderOrgList();
+                }
+            }
+
+            // --- Event Listener ---
+            searchInput.addEventListener('input', () => {
+                clearTimeout(window.rightDeb);
+                window.rightDeb = setTimeout(() => {
+                    currentSearchTerm = searchInput.value;
+                    applyRightSideFilters();
+                }, 200);
+            });
+
+            // Bank-Tab
+            bankSearchInput.addEventListener('input', e => {
+                bankSearchTerm = e.target.value;
+                renderBankList();
+            });
+            btnAllBanks.addEventListener('click', () => { bankFilterMode = 'all'; renderBankList(); });
+            btnWith.addEventListener('click', () => { bankFilterMode = 'withAccounts'; renderBankList(); });
+            btnWithout.addEventListener('click', () => { bankFilterMode = 'withoutAccounts'; renderBankList(); });
+            function setBankPkFilter(f) {
+                bankPkFilter = f;
+                [pkBankAll, pkBankNull, pkBankNotNull].forEach(b => b.classList.remove('active'));
+                if (f==='all') pkBankAll.classList.add('active');
+                else if (f==='null') pkBankNull.classList.add('active');
+                else pkBankNotNull.classList.add('active');
+                renderBankList();
+            }
+            pkBankAll.addEventListener('click', () => setBankPkFilter('all'));
+            pkBankNull.addEventListener('click', () => setBankPkFilter('null'));
+            pkBankNotNull.addEventListener('click', () => setBankPkFilter('notnull'));
+
+            // Owner-Tab
+            ownerSearchInput.addEventListener('input', e => {
+                ownerSearchTerm = e.target.value;
+                renderOwnerList();
+            });
+
+            // Org-Tab
+            orgSearchInput.addEventListener('input', e => {
+                orgSearchTerm = e.target.value;
+                renderOrgList();
+            });
+
+            // Tab-Klicks
+            tabBankBtn.addEventListener('click', () => setActiveTab('bank'));
+            tabOwnerBtn.addEventListener('click', () => setActiveTab('owner'));
+            tabOrgBtn.addEventListener('click', () => setActiveTab('org'));
+
+            // Initial Load
+            async function fetchData() {
+                statusDiv.innerHTML = '⏳ Lade …';
+                try {
+                    const resp = await fetch('http://localhost:5000/bankkonten');
+                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                    const data = await resp.json();
+                    if (Array.isArray(data)) allItems = data;
+                    else if (data?.data) allItems = data.data;
+                    else if (typeof data === 'object') allItems = [data];
+                    else allItems = [];
+
+                    statusDiv.innerHTML = `✅ ${allItems.length} Datensätze`;
+                    
+                    // Masterdaten für Tabs
+                    masterBankList = buildMasterBankList();
+                    masterOwnerList = buildMasterOwnerList();
+                    masterOrgList = buildMasterOrgList();
+
+                    // Tabellenkopf
+                    const keys = extractAllKeys(allItems);
+                    thead.innerHTML = '<tr>' + keys.map(k => `<th>${k}</th>`).join('') + '</tr>';
+
+                    // Initial rendern
+                    setActiveTab('bank');
+                    renderBankList();
+                    renderOwnerList();
+                    renderOrgList();
+                    applyRightSideFilters();
+
+                } catch (err) {
+                    statusDiv.innerHTML = `❌ Fehler: ${err.message}`;
+                }
+            }
+            fetchData();
+        })();
+    </script>
+</body>
+</html>

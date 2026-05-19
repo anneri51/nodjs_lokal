@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kasse · new_girokonto & /kasse/insert</title>
+    <!-- Bootstrap 5 + Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #e9ecf1;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .app-bar {
+            background: #0a2647;
+            color: white;
+            padding: 0.8rem 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+            box-shadow: 0 4px 12px rgba(0,20,30,0.15);
+            flex-shrink: 0;
+        }
+        .app-bar h2 {
+            font-size: 1.6rem;
+            font-weight: 500;
+            margin: 0;
+            letter-spacing: -0.3px;
+        }
+        .app-bar .badge {
+            background: #ffb347;
+            color: #0a2647;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+        .main-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            padding: 20px;
+            gap: 20px;
+        }
+        /* LINKS: KONTOAUSZUG AUSWAHL (identisch für beide Tabs) */
+        .left-panel {
+            width: 380px;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 15px 30px rgba(0,30,50,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            flex-shrink: 0;
+            border: 1px solid rgba(0,50,80,0.05);
+        }
+        .panel-header {
+            background: #f6f9fe;
+            padding: 1.5rem 1.5rem 1rem 1.5rem;
+            border-bottom: 2px solid #dfeaf5;
+        }
+        .panel-header h3 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #103456;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 1.2rem;
+        }
+        .hierarchy-select {
+            margin-bottom: 1.2rem;
+        }
+        .hierarchy-select label {
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: #1f4973;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .required-field::after {
+            content: " *";
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .selection-summary {
+            background: #eaf3fc;
+            padding: 1rem 1.2rem;
+            border-radius: 18px;
+            margin: 0 1.5rem 1.5rem 1.5rem;
+            border-left: 5px solid #0d6efd;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 90px 1fr;
+            gap: 4px 8px;
+            font-size: 0.9rem;
+        }
+        .account-details {
+            background: white;
+            padding: 0.7rem;
+            border-radius: 12px;
+            margin-top: 8px;
+            border: 1px solid #bdd4ec;
+        }
+        /* MITTE/RECHTS: TABBEREICH */
+        .right-tab-panel {
+            flex: 1;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 15px 30px rgba(0,20,40,0.06);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-width: 600px;
+        }
+        .tab-header {
+            display: flex;
+            background: #f3f7fd;
+            padding: 0.2rem 0.2rem 0 0.2rem;
+            border-bottom: 2px solid #cdddec;
+            gap: 4px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 1rem 0.5rem;
+            border: none;
+            background: transparent;
+            font-weight: 700;
+            font-size: 1rem;
+            color: #1e3a5f;
+            border-radius: 24px 24px 0 0;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .tab-btn.active {
+            background: white;
+            color: #0d6efd;
+            box-shadow: 0 -4px 8px rgba(0,60,130,0.05);
+        }
+        .tab-btn i { font-size: 1.2rem; }
+        .tab-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem 2rem 1.5rem 2rem;
+            display: none;
+        }
+        .tab-content.active { display: block; }
+        .section-card {
+            background: #fafcff;
+            border-radius: 26px;
+            padding: 1.5rem;
+            border: 1px solid #e3eefb;
+            margin-bottom: 2rem;
+        }
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #103456;
+            margin-bottom: 1.5rem;
+            border-left: 7px solid #0d6efd;
+            padding-left: 1rem;
+        }
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+        .form-label {
+            font-weight: 600;
+            color: #1e3b5c;
+            font-size: 0.9rem;
+        }
+        .info-line {
+            background: #e5f0fb;
+            padding: 0.7rem 1rem;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+        .btn-special {
+            padding: 0.6rem 1.8rem;
+            border-radius: 40px;
+            font-weight: 600;
+            transition: all 0.2s;
+            border: none;
+        }
+        .btn-primary-custom {
+            background: #0d6efd;
+            color: white;
+            box-shadow: 0 4px 8px rgba(13,110,253,0.3);
+        }
+        .btn-primary-custom:hover { background: #0b5ed7; transform: translateY(-2px); }
+        .btn-outline-custom {
+            background: white;
+            border: 1px solid #a0b8d0;
+            color: #1e3b5a;
+        }
+        .btn-outline-custom:hover { background: #e7f0ff; }
+        .fk-badge {
+            background: #0b2b4f;
+            color: white;
+            font-family: monospace;
+            padding: 0.3rem 1rem;
+            border-radius: 40px;
+        }
+        .response-box {
+            background: #1d2b3f;
+            color: #bcd5ff;
+            border-radius: 20px;
+            padding: 1rem;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.8rem;
+            max-height: 160px;
+            overflow: auto;
+        }
+        .loading-spinner { display: none; }
+        .success-message, .error-message { display: none; border-radius: 30px; padding: 0.7rem 1.2rem; }
+        .step-indicator {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.8rem;
+            background: #ecf3fa;
+            border-radius: 40px;
+            padding: 0.5rem 1rem;
+        }
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #607d9c;
+        }
+        .step.active { color: #0d6efd; font-weight: 600; }
+        .step.completed { color: #198754; }
+        .step-number {
+            width: 26px; height: 26px; border-radius: 26px;
+            background: #cbd6e4; display: inline-flex; align-items: center; justify-content: center;
+            color: white; font-weight: bold;
+        }
+        .active .step-number { background: #0d6efd; }
+        .completed .step-number { background: #198754; }
+        hr { opacity: 0.2; }
+        .footer-note { font-size: 0.75rem; color: #7a98b6; }
+    </style>
+</head>
+<body>
+    <div class="app-bar">
+        <h2><i class="bi bi-cash-stack"></i> Kasse · Zwei Endpunkte</h2>
+        <span class="badge">new_girokonto + /kasse/insert</span>
+        <span style="margin-left: auto; font-size: 0.9rem;"><i class="bi bi-diagram-3"></i> Kontoauszug-Zuordnung in beiden Tabs</span>
+    </div>
+
+    <div class="main-layout">
+        <!-- LINKS: EINHEITLICHE KONTOAUSZUG-AUSWAHL (identisch für beide Tabs) -->
+        <div class="left-panel">
+            <div class="panel-header">
+                <h3><i class="bi bi-journal-text"></i> Kontoauszug wählen</h3>
+                <div class="hierarchy-select">
+                    <label class="required-field">Jahr</label>
+                    <select class="form-select" id="yearSelect" required>
+                        <option value="">-- Jahr --</option>
+                    </select>
+                </div>
+                <div class="hierarchy-select">
+                    <label class="required-field">Kontoinhaber</label>
+                    <select class="form-select" id="ownerSelect" disabled required>
+                        <option value="">-- Inhaber --</option>
+                    </select>
+                </div>
+                <div class="hierarchy-select">
+                    <label class="required-field">IBAN / Konto</label>
+                    <select class="form-select" id="ibanSelect" disabled required>
+                        <option value="">-- IBAN --</option>
+                    </select>
+                </div>
+                <div class="hierarchy-select">
+                    <label class="required-field">Kontoauszug (Statement)</label>
+                    <select class="form-select" id="accountSelect" disabled required>
+                        <option value="">-- Auszug --</option>
+                    </select>
+                </div>
+            </div>
+            <div class="selection-summary" id="selectionSummary">
+                <strong>📌 Ausgewählter Auszug</strong>
+                <div id="selectedAccountInfo" class="summary-grid mt-2">
+                    <span>Kein Auszug</span>
+                </div>
+                <div class="account-details small" id="extraDetails"></div>
+            </div>
+            <div class="px-4 pb-3 text-secondary small">
+                <i class="bi bi-info-circle"></i> FK_KTO_BANKKONTO & Auszug-ID werden übernommen
+            </div>
+        </div>
+
+        <!-- RECHTS: TABS -->
+        <div class="right-tab-panel">
+            <div class="tab-header">
+                <button class="tab-btn active" id="tab1Btn"><i class="bi bi-credit-card"></i> new_girokonto</button>
+                <button class="tab-btn" id="tab2Btn"><i class="bi bi-database-add"></i> /kasse/insert</button>
+            </div>
+
+            <!-- TAB 1: new_girokonto -->
+            <div class="tab-content active" id="tab1Content">
+                <div class="section-card">
+                    <div class="section-title"><i class="bi bi-coin"></i> new_girokonto (Buchung anlegen)</div>
+                    <div class="info-line" id="tab1AuszugInfo">⚡ Bitte links einen Kontoauszug wählen</div>
+
+                    <form id="formGirokonto">
+                        <input type="hidden" id="giroFkBankkonto" name="fk_kto_bankkonto">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label required-field">Buchungsdatum</label>
+                                    <input type="date" class="form-control" id="giroDatum" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label required-field">Betrag (€)</label>
+                                    <input type="number" step="0.01" class="form-control" id="giroBetrag" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label required-field">Buchungstext</label>
+                            <input type="text" class="form-control" id="giroText" required placeholder="z.B. Tankstelle">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Details</label>
+                            <textarea class="form-control" id="giroDetails" rows="2"></textarea>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="giroConfirm" required>
+                            <label class="form-check-label">Daten korrekt</label>
+                        </div>
+                    </form>
+
+                    <!-- Schritt 2 Verknüpfung (wird nach create sichtbar) -->
+                    <div id="giroRelationSection" style="display: none;" class="mt-2">
+                        <hr>
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="fw-bold">FK_MAIN_KEY:</span>
+                            <span id="giroFkMainKey" class="fk-badge">—</span>
+                        </div>
+                        <div class="mt-3 d-flex gap-3">
+                            <button class="btn btn-success btn-special" id="giroLinkBtn"><i class="bi bi-link"></i> mit Auszug verknüpfen</button>
+                            <button class="btn btn-outline-custom btn-special" id="giroSkipBtn">⏭ später</button>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 d-flex gap-3">
+                        <button class="btn btn-primary-custom btn-special" id="giroCreateBtn"><i class="bi bi-send"></i> new_girokonto ausführen</button>
+                        <button class="btn btn-outline-custom btn-special" id="giroResetBtn">↻ zurücksetzen</button>
+                    </div>
+
+                    <div id="giroSuccess" class="success-message mt-3"></div>
+                    <div id="giroError" class="error-message mt-3"></div>
+                    <div id="giroLoading" class="loading-spinner text-center mt-3"><div class="spinner-border text-primary"></div></div>
+
+                    <div class="mt-3">
+                        <div><i class="bi bi-code-slash"></i> Response</div>
+                        <div id="giroResponse" class="response-box mt-1">—</div>
+                    </div>
+                </div>
+                <div id="giroFinalActions" style="display: none;" class="mt-2">
+                    <hr><button class="btn btn-outline-success" id="giroAnother">➕ weitere Buchung</button>
+                </div>
+            </div>
+
+            <!-- TAB 2: /kasse/insert -->
+            <div class="tab-content" id="tab2Content">
+                <div class="section-card">
+                    <div class="section-title"><i class="bi bi-database"></i> /kasse/insert (kas_kasse direkt)</div>
+                    <div class="info-line" id="tab2AuszugInfo">⚡ Bitte links einen Kontoauszug wählen</div>
+
+                    <form id="formKasseInsert">
+                        <input type="hidden" id="insertFkBankkonto" name="fk_kto_bankkonto">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label required-field">Kontotyp (FK_STD_KTO_KONTOTYP)</label>
+                                    <select class="form-select" id="insertKontotyp" required>
+                                        <option value="2">2 (Standard Giro)</option>
+                                        <option value="6">6 (Sparkonto)</option>
+                                        <option value="1">1</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label required-field">Ein/Aus (FK_EIN_AUS)</label>
+                                    <select class="form-select" id="insertEinAus" required>
+                                        <option value="1">1 Einnahme</option>
+                                        <option value="2">2 Ausgabe</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label required-field">Datum</label>
+                                    <input type="date" class="form-control" id="insertDatum" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label required-field">Betrag (€)</label>
+                                    <input type="number" step="0.01" class="form-control" id="insertBetrag" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label required-field">Buchungstext</label>
+                            <input type="text" class="form-control" id="insertText" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Kommentar (COMM)</label>
+                            <textarea class="form-control" id="insertComm" rows="2"></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label required-field">Jahr</label>
+                                    <input type="number" class="form-control" id="insertJahr" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label required-field">FK_KTO_BANKKONTO</label>
+                                    <input type="text" class="form-control" id="insertBankkontoDisplay" readonly disabled style="background:#f0f4fa;">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="insertConfirm" required>
+                            <label class="form-check-label">Daten korrekt</label>
+                        </div>
+                    </form>
+
+                    <!-- Schritt 2 Verknüpfung für insert (nach erfolg) -->
+                    <div id="insertRelationSection" style="display: none;" class="mt-2">
+                        <hr>
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="fw-bold">FK_MAIN_KEY (neu):</span>
+                            <span id="insertFkMainKey" class="fk-badge">—</span>
+                        </div>
+                        <div class="mt-3 d-flex gap-3">
+                            <button class="btn btn-success btn-special" id="insertLinkBtn"><i class="bi bi-link"></i> mit Auszug verknüpfen</button>
+                            <button class="btn btn-outline-custom btn-special" id="insertSkipBtn">⏭ später</button>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 d-flex gap-3">
+                        <button class="btn btn-primary-custom btn-special" id="insertCreateBtn"><i class="bi bi-send"></i> /kasse/insert ausführen</button>
+                        <button class="btn btn-outline-custom btn-special" id="insertResetBtn">↻ zurücksetzen</button>
+                    </div>
+
+                    <div id="insertSuccess" class="success-message mt-3"></div>
+                    <div id="insertError" class="error-message mt-3"></div>
+                    <div id="insertLoading" class="loading-spinner text-center mt-3"><div class="spinner-border text-primary"></div></div>
+
+                    <div class="mt-3">
+                        <div><i class="bi bi-code-slash"></i> Response</div>
+                        <div id="insertResponse" class="response-box mt-1">—</div>
+                    </div>
+                </div>
+                <div id="insertFinalActions" style="display: none;" class="mt-2">
+                    <hr><button class="btn btn-outline-success" id="insertAnother">➕ weitere Buchung</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // ---------- GLOBALE DATEN (Kontoauszug hierarchie) ----------
+            let accountsData = [];
+            let hierarchy = {};
+            let selectedAccountStatementId = null;
+            let selectedAccountInfo = {};
+            let selectedFkBankkonto = null;
+
+            // UI Elemente links
+            const yearSelect = document.getElementById('yearSelect');
+            const ownerSelect = document.getElementById('ownerSelect');
+            const ibanSelect = document.getElementById('ibanSelect');
+            const accountSelect = document.getElementById('accountSelect');
+            const selectedAccountInfoDiv = document.getElementById('selectedAccountInfo');
+            const extraDetailsDiv = document.getElementById('extraDetails');
+
+            // Tabs
+            const tab1Btn = document.getElementById('tab1Btn');
+            const tab2Btn = document.getElementById('tab2Btn');
+            const tab1Content = document.getElementById('tab1Content');
+            const tab2Content = document.getElementById('tab2Content');
+
+            // Tab1 Elemente
+            const tab1AuszugInfo = document.getElementById('tab1AuszugInfo');
+            const giroFkBankkonto = document.getElementById('giroFkBankkonto');
+            const giroDatum = document.getElementById('giroDatum');
+            const giroBetrag = document.getElementById('giroBetrag');
+            const giroText = document.getElementById('giroText');
+            const giroDetails = document.getElementById('giroDetails');
+            const giroConfirm = document.getElementById('giroConfirm');
+            const giroCreateBtn = document.getElementById('giroCreateBtn');
+            const giroResetBtn = document.getElementById('giroResetBtn');
+            const giroRelationSection = document.getElementById('giroRelationSection');
+            const giroFkMainKeySpan = document.getElementById('giroFkMainKey');
+            const giroLinkBtn = document.getElementById('giroLinkBtn');
+            const giroSkipBtn = document.getElementById('giroSkipBtn');
+            const giroSuccess = document.getElementById('giroSuccess');
+            const giroError = document.getElementById('giroError');
+            const giroLoading = document.getElementById('giroLoading');
+            const giroResponse = document.getElementById('giroResponse');
+            const giroFinalActions = document.getElementById('giroFinalActions');
+            const giroAnother = document.getElementById('giroAnother');
+
+            // Tab2 Elemente
+            const tab2AuszugInfo = document.getElementById('tab2AuszugInfo');
+            const insertFkBankkonto = document.getElementById('insertFkBankkonto');
+            const insertBankkontoDisplay = document.getElementById('insertBankkontoDisplay');
+            const insertKontotyp = document.getElementById('insertKontotyp');
+            const insertEinAus = document.getElementById('insertEinAus');
+            const insertDatum = document.getElementById('insertDatum');
+            const insertBetrag = document.getElementById('insertBetrag');
+            const insertText = document.getElementById('insertText');
+            const insertComm = document.getElementById('insertComm');
+            const insertJahr = document.getElementById('insertJahr');
+            const insertConfirm = document.getElementById('insertConfirm');
+            const insertCreateBtn = document.getElementById('insertCreateBtn');
+            const insertResetBtn = document.getElementById('insertResetBtn');
+            const insertRelationSection = document.getElementById('insertRelationSection');
+            const insertFkMainKeySpan = document.getElementById('insertFkMainKey');
+            const insertLinkBtn = document.getElementById('insertLinkBtn');
+            const insertSkipBtn = document.getElementById('insertSkipBtn');
+            const insertSuccess = document.getElementById('insertSuccess');
+            const insertError = document.getElementById('insertError');
+            const insertLoading = document.getElementById('insertLoading');
+            const insertResponse = document.getElementById('insertResponse');
+            const insertFinalActions = document.getElementById('insertFinalActions');
+            const insertAnother = document.getElementById('insertAnother');
+
+            // ---------- HILFSFUNKTIONEN ----------
+            function showLoading(tab) {
+                if (tab === 'giro') giroLoading.style.display = 'block';
+                else insertLoading.style.display = 'block';
+            }
+            function hideLoading(tab) {
+                if (tab === 'giro') giroLoading.style.display = 'none';
+                else insertLoading.style.display = 'none';
+            }
+            function showSuccessMsg(tab, msg) {
+                if (tab === 'giro') {
+                    giroSuccess.innerText = '✅ ' + msg; giroSuccess.style.display = 'block'; giroError.style.display = 'none';
+                    setTimeout(() => giroSuccess.style.display = 'none', 4000);
+                } else {
+                    insertSuccess.innerText = '✅ ' + msg; insertSuccess.style.display = 'block'; insertError.style.display = 'none';
+                    setTimeout(() => insertSuccess.style.display = 'none', 4000);
+                }
+            }
+            function showErrorMsg(tab, msg) {
+                if (tab === 'giro') {
+                    giroError.innerText = '❌ ' + msg; giroError.style.display = 'block'; giroSuccess.style.display = 'none';
+                } else {
+                    insertError.innerText = '❌ ' + msg; insertError.style.display = 'block'; insertSuccess.style.display = 'none';
+                }
+            }
+            function updateResponse(tab, data, status) {
+                const out = (tab === 'giro') ? giroResponse : insertResponse;
+                out.innerText = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+            }
+
+            // ---------- KONTOAUSZUG LOGIK (wie erstes File) ----------
+            async function loadAccountsData() {
+                try {
+                    const res = await fetch('http://localhost:5000/accounts');
+                    if (!res.ok) throw new Error('Netzwerk');
+                    accountsData = await res.json();
+                } catch (e) {
+                    // Mock-Daten für Demo
+                    accountsData = [
+                        { yr: 2025, holder_name: 'Max Muster', account_name: 'DE12 5001 0517 1234 5678', statement_id: 1, statement_date: '2025-02-28', FINAL_AMOUNT: 1250.00, FK_KTO_BANKKONTO: 157, PK_KTO_KONTO_AUSZUG: 1001, FK_KTO_KONTO_AUSZUG: 1001 },
+                        { yr: 2025, holder_name: 'Max Muster', account_name: 'DE12 5001 0517 1234 5678', statement_id: 2, statement_date: '2025-03-15', FINAL_AMOUNT: 890.50, FK_KTO_BANKKONTO: 157, PK_KTO_KONTO_AUSZUG: 1002, FK_KTO_KONTO_AUSZUG: 1002 },
+                        { yr: 2024, holder_name: 'Erika Beispiel', account_name: 'DE89 3704 0044 0532 0130 00', statement_id: 3, statement_date: '2024-12-01', FINAL_AMOUNT: 3200.00, FK_KTO_BANKKONTO: 158, PK_KTO_KONTO_AUSZUG: 2001, FK_KTO_KONTO_AUSZUG: 2001 }
+                    ];
+                }
+                buildHierarchy();
+                populateYearDropdown();
+            }
+
+            function buildHierarchy() {
+                hierarchy = {};
+                accountsData.forEach(s => {
+                    const year = s.yr || '2025';
+                    const owner = s.holder_name || 'Unbekannt';
+                    const iban = s.account_name || 'IBAN';
+                    if (!hierarchy[year]) hierarchy[year] = {};
+                    if (!hierarchy[year][owner]) hierarchy[year][owner] = {};
+                    if (!hierarchy[year][owner][iban]) hierarchy[year][owner][iban] = [];
+                    hierarchy[year][owner][iban].push(s);
+                });
+            }
+
+            function populateYearDropdown() {
+                yearSelect.innerHTML = '<option value="">-- Jahr --</option>';
+                Object.keys(hierarchy).sort().reverse().forEach(y => {
+                    const opt = document.createElement('option');
+                    opt.value = y; opt.textContent = y;
+                    yearSelect.appendChild(opt);
+                });
+            }
+
+            function handleYearChange() {
+                const y = yearSelect.value;
+                ownerSelect.innerHTML = '<option value="">-- Inhaber --</option>';
+                ibanSelect.innerHTML = '<option value="">-- IBAN --</option>';
+                accountSelect.innerHTML = '<option value="">-- Auszug --</option>';
+                ownerSelect.disabled = !y; ibanSelect.disabled = true; accountSelect.disabled = true;
+                if (!y) return;
+                const owners = Object.keys(hierarchy[y] || {}).sort();
+                owners.forEach(o => {
+                    const opt = document.createElement('option'); opt.value = o; opt.textContent = o;
+                    ownerSelect.appendChild(opt);
+                });
+                ownerSelect.disabled = false;
+                updateSummary();
+            }
+
+            function handleOwnerChange() {
+                const y = yearSelect.value, o = ownerSelect.value;
+                ibanSelect.innerHTML = '<option value="">-- IBAN --</option>';
+                accountSelect.innerHTML = '<option value="">-- Auszug --</option>';
+                ibanSelect.disabled = !o; accountSelect.disabled = true;
+                if (!y || !o) return;
+                const ibans = Object.keys(hierarchy[y][o] || {}).sort();
+                ibans.forEach(i => {
+                    const opt = document.createElement('option'); opt.value = i; opt.textContent = i;
+                    ibanSelect.appendChild(opt);
+                });
+                ibanSelect.disabled = false;
+                updateSummary();
+            }
+
+            function handleIbanChange() {
+                const y = yearSelect.value, o = ownerSelect.value, iban = ibanSelect.value;
+                accountSelect.innerHTML = '<option value="">-- Auszug --</option>';
+                accountSelect.disabled = !iban;
+                if (!y || !o || !iban) return;
+                const stmts = hierarchy[y][o][iban] || [];
+                stmts.forEach((s, idx) => {
+                    const opt = document.createElement('option');
+                    opt.value = s.statement_id || idx;
+                    opt.textContent = `Auszug ${idx+1}: ${s.statement_date || ''} Saldo: ${s.FINAL_AMOUNT || '?'}€`;
+                    opt.dataset.statement = JSON.stringify(s);
+                    accountSelect.appendChild(opt);
+                });
+                accountSelect.disabled = false;
+                updateSummary();
+            }
+
+            function handleAccountChange() {
+                const opt = accountSelect.options[accountSelect.selectedIndex];
+                if (!opt || !opt.dataset.statement) {
+                    selectedAccountStatementId = null; selectedAccountInfo = {}; selectedFkBankkonto = null;
+                    giroFkBankkonto.value = ''; insertFkBankkonto.value = ''; insertBankkontoDisplay.value = '';
+                    tab1AuszugInfo.innerHTML = '⚡ Bitte links einen Kontoauszug wählen';
+                    tab2AuszugInfo.innerHTML = '⚡ Bitte links einen Kontoauszug wählen';
+                    return;
+                }
+                const stmt = JSON.parse(opt.dataset.statement);
+                selectedAccountInfo = stmt;
+                selectedAccountStatementId = stmt.PK_KTO_KONTO_AUSZUG || stmt.FK_KTO_KONTO_AUSZUG;
+                selectedFkBankkonto = stmt.FK_KTO_BANKKONTO || null;
+                giroFkBankkonto.value = selectedFkBankkonto;
+                insertFkBankkonto.value = selectedFkBankkonto;
+                insertBankkontoDisplay.value = selectedFkBankkonto;
+                const info = `📌 Auszug: ${stmt.statement_date || ''} — FK_Bankkonto: ${selectedFkBankkonto}  Auszug-ID: ${selectedAccountStatementId}`;
+                tab1AuszugInfo.innerHTML = info;
+                tab2AuszugInfo.innerHTML = info;
+                updateSummary();
+            }
+
+            function updateSummary() {
+                const y = yearSelect.value, o = ownerSelect.value, iban = ibanSelect.value;
+                let html = '';
+                if (y) html += `<span>Jahr: ${y}</span>`;
+                if (o) html += `<span>Inhaber: ${o}</span>`;
+                if (iban) html += `<span>IBAN: ${iban.substring(0,18)}…</span>`;
+                selectedAccountInfoDiv.innerHTML = html || '<span>Kein Auszug</span>';
+                if (selectedAccountInfo?.statement_date) {
+                    extraDetailsDiv.innerHTML = `<div>Datum: ${selectedAccountInfo.statement_date}</div><div>Auszug-ID: ${selectedAccountStatementId}</div>`;
+                } else extraDetailsDiv.innerHTML = '';
+            }
+
+            yearSelect.addEventListener('change', handleYearChange);
+            ownerSelect.addEventListener('change', handleOwnerChange);
+            ibanSelect.addEventListener('change', handleIbanChange);
+            accountSelect.addEventListener('change', handleAccountChange);
+
+            // ---------- GEMEINSAME VERKNÜPFUNG (add_rel_kontoauszug) ----------
+            async function linkToAccountStatement(fkMainKey, tab) {
+                if (!fkMainKey || !selectedAccountStatementId) {
+                    showErrorMsg(tab, 'Keine Auswahl oder fehlender FK_MAIN_KEY');
+                    return;
+                }
+                showLoading(tab);
+                try {
+                    const resp = await fetch('http://localhost:5000/buchung/add_rel_kontoauszug', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ fk_main_key: fkMainKey, fk_kto_konto_auszug: selectedAccountStatementId })
+                    });
+                    const data = await resp.json();
+                    updateResponse(tab, data, resp.status);
+                    if (resp.ok && data.success) {
+                        showSuccessMsg(tab, 'Verknüpfung erfolgreich');
+                        if (tab === 'giro') { giroRelationSection.style.display = 'none'; giroFinalActions.style.display = 'block'; }
+                        else { insertRelationSection.style.display = 'none'; insertFinalActions.style.display = 'block'; }
+                    } else throw new Error(data.error || 'Fehler');
+                } catch (err) {
+                    // Demo: simuliere Erfolg
+                    if (!navigator.onLine) {
+                        showSuccessMsg(tab, '✅ [DEMO] Verknüpfung simuliert');
+                        updateResponse(tab, { success: true, mock: true }, 200);
+                        if (tab === 'giro') { giroRelationSection.style.display = 'none'; giroFinalActions.style.display = 'block'; }
+                        else { insertRelationSection.style.display = 'none'; insertFinalActions.style.display = 'block'; }
+                    } else {
+                        showErrorMsg(tab, err.message);
+                    }
+                } finally { hideLoading(tab); }
+            }
+
+            // ---------- TAB 1: new_girokonto ----------
+            let giroCurrentMainKey = null;
+            giroCreateBtn.addEventListener('click', async () => {
+                if (!selectedFkBankkonto) { showErrorMsg('giro', 'Zuerst Auszug links wählen'); return; }
+                if (!giroDatum.value || !giroBetrag.value || !giroText.value || !giroConfirm.checked) {
+                    showErrorMsg('giro', 'Felder ausfüllen'); return;
+                }
+                const payload = {
+                    fk_kto_bankkonto: selectedFkBankkonto,
+                    buchungsdatum: giroDatum.value,
+                    description: giroText.value,
+                    details: giroDetails.value || '',
+                    amount: parseFloat(giroBetrag.value)
+                };
+                showLoading('giro');
+                try {
+                    const resp = await fetch('http://localhost:5000/new_girokonto', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                    });
+                    const data = await resp.json();
+                    updateResponse('giro', data, resp.status);
+                    if (resp.ok && data.status === 'success') {
+                        giroCurrentMainKey = data.fk_main_key;
+                        giroFkMainKeySpan.innerText = giroCurrentMainKey;
+                        giroRelationSection.style.display = 'block';
+                        showSuccessMsg('giro', 'Buchung erstellt');
+                    } else throw new Error(data.message || 'Fehler');
+                } catch (err) {
+                    if (!navigator.onLine) {
+                        giroCurrentMainKey = Math.floor(Math.random()*90000+10000);
+                        giroFkMainKeySpan.innerText = giroCurrentMainKey;
+                        giroRelationSection.style.display = 'block';
+                        updateResponse('giro', { status: 'success (mock)', fk_main_key: giroCurrentMainKey }, 201);
+                        showSuccessMsg('giro', '✅ [DEMO] Buchung simuliert');
+                    } else { showErrorMsg('giro', err.message); }
+                } finally { hideLoading('giro'); }
+            });
+
+            giroLinkBtn.addEventListener('click', () => linkToAccountStatement(giroCurrentMainKey, 'giro'));
+            giroSkipBtn.addEventListener('click', () => {
+                giroRelationSection.style.display = 'none'; giroFinalActions.style.display = 'block';
+                showSuccessMsg('giro', 'Verknüpfung übersprungen');
+            });
+            giroResetBtn.addEventListener('click', () => {
+                giroDatum.value = new Date().toISOString().slice(0,10);
+                giroBetrag.value = ''; giroText.value = ''; giroDetails.value = ''; giroConfirm.checked = false;
+                giroRelationSection.style.display = 'none'; giroFinalActions.style.display = 'none'; giroCurrentMainKey = null;
+            });
+            giroAnother.addEventListener('click', () => {
+                giroDatum.value = new Date().toISOString().slice(0,10);
+                giroBetrag.value = ''; giroText.value = ''; giroDetails.value = ''; giroConfirm.checked = false;
+                giroRelationSection.style.display = 'none'; giroFinalActions.style.display = 'none'; giroCurrentMainKey = null;
+            });
+
+            // ---------- TAB 2: /kasse/insert ----------
+            let insertCurrentMainKey = null;
+            insertCreateBtn.addEventListener('click', async () => {
+                if (!selectedFkBankkonto) { showErrorMsg('insert', 'Zuerst Auszug links wählen'); return; }
+                if (!insertKontotyp.value || !insertEinAus.value || !insertDatum.value || !insertBetrag.value || !insertText.value || !insertJahr.value || !insertConfirm.checked) {
+                    showErrorMsg('insert', 'Alle Pflichtfelder ausfüllen'); return;
+                }
+                const payload = {
+                    fk_std_kto_kontotyp: parseInt(insertKontotyp.value),
+                    fk_ein_aus: parseInt(insertEinAus.value),
+                    datum: insertDatum.value,
+                    betrag: parseFloat(insertBetrag.value),
+                    buchungstext: insertText.value,
+                    comm: insertComm.value || null,
+                    jahr: parseInt(insertJahr.value),
+                    fk_kto_bankkonto: selectedFkBankkonto,
+                    fk_main_key: Math.floor(Math.random()*90000+10000),   // wird vom Backend oft vergeben, simulieren
+                };
+                showLoading('insert');
+                try {
+                    const resp = await fetch('http://localhost:5000/kasse/insert', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                    });
+                    const data = await resp.json();
+                    updateResponse('insert', data, resp.status);
+                    if (resp.ok) {
+                        insertCurrentMainKey = payload.fk_main_key; // Annahme, ggf aus response
+                        insertFkMainKeySpan.innerText = insertCurrentMainKey;
+                        insertRelationSection.style.display = 'block';
+                        showSuccessMsg('insert', 'Eintrag via /kasse/insert erstellt');
+                    } else throw new Error(data.error || 'Fehler');
+                } catch (err) {
+                    if (!navigator.onLine) {
+                        insertCurrentMainKey = payload.fk_main_key;
+                        insertFkMainKeySpan.innerText = insertCurrentMainKey;
+                        insertRelationSection.style.display = 'block';
+                        updateResponse('insert', { success: true, mock: true, fk_main_key: insertCurrentMainKey }, 201);
+                        showSuccessMsg('insert', '✅ [DEMO] insert simuliert');
+                    } else { showErrorMsg('insert', err.message); }
+                } finally { hideLoading('insert'); }
+            });
+
+            insertLinkBtn.addEventListener('click', () => linkToAccountStatement(insertCurrentMainKey, 'insert'));
+            insertSkipBtn.addEventListener('click', () => {
+                insertRelationSection.style.display = 'none'; insertFinalActions.style.display = 'block';
+                showSuccessMsg('insert', 'Verknüpfung übersprungen');
+            });
+            insertResetBtn.addEventListener('click', () => {
+                insertDatum.value = new Date().toISOString().slice(0,10);
+                insertJahr.value = new Date().getFullYear();
+                insertBetrag.value = ''; insertText.value = ''; insertComm.value = ''; insertConfirm.checked = false;
+                insertRelationSection.style.display = 'none'; insertFinalActions.style.display = 'none'; insertCurrentMainKey = null;
+            });
+            insertAnother.addEventListener('click', insertResetBtn.click);
+
+            // Tabs wechseln
+            tab1Btn.addEventListener('click', () => {
+                tab1Btn.classList.add('active'); tab2Btn.classList.remove('active');
+                tab1Content.classList.add('active'); tab2Content.classList.remove('active');
+            });
+            tab2Btn.addEventListener('click', () => {
+                tab2Btn.classList.add('active'); tab1Btn.classList.remove('active');
+                tab2Content.classList.add('active'); tab1Content.classList.remove('active');
+            });
+
+            // Initialisierung
+            loadAccountsData();
+            giroDatum.value = new Date().toISOString().slice(0,10);
+            insertDatum.value = new Date().toISOString().slice(0,10);
+            insertJahr.value = new Date().getFullYear();
+        })();
+    </script>
+</body>
+</html>

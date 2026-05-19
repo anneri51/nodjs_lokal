@@ -1578,6 +1578,28 @@ app.get("/kal_termine", async (req, res) => {
     }
 });
 
+
+app.get("/belege_count", async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT count(*) cnt
+
+
+                    FROM 
+                        "COMPANY"."T_INP_BELEGE_ALL" kto
+                  `
+        );
+        res.json(result.rows);
+    } catch (error) {
+        console.error("Database error:", error.message);
+        res.status(500).json({ 
+            error: "Failed to fetch accounts",
+            details: process.env.NODE_ENV === "development" ? error.message : undefined
+        });
+    }
+});
+
+
 app.get("/bild_klassfikation_aggr", async (req, res) => {
     try {
         const result = await pool.query(

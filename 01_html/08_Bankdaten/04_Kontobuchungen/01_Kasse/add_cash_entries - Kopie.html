@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Cash Entries</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f5f7f9;
+        }
+        .main-container {
+            display: flex;
+            max-width: 1400px;
+            margin: 50px auto;
+            gap: 20px;
+        }
+        .selection-panel {
+            flex: 0 0 350px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        .form-container {
+            flex: 1;
+            background-color: #f8f9fa;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        .result-alert {
+            display: none;
+            margin-top: 20px;
+        }
+        .loading-spinner {
+            display: none;
+            margin-top: 20px;
+        }
+        .status-text {
+            display: none;
+            margin-top: 10px;
+            font-style: italic;
+            color: #6c757d;
+        }
+        .step2-container {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+        }
+        .step3-container {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #d4edda;
+            border-radius: 5px;
+        }
+        .hierarchy-select {
+            margin-bottom: 15px;
+        }
+        .hierarchy-select:last-child {
+            margin-bottom: 0;
+        }
+        .selection-summary {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .panel-title {
+            border-bottom: 2px solid #0d6efd;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .account-details {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+        .btn-container {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Left Side Selection Panel -->
+        <div class="selection-panel">
+            <h3 class="panel-title">Account Selection</h3>
+            
+            <!-- Year Selection -->
+            <div class="hierarchy-select">
+                <label for="yearSelect" class="form-label">Year</label>
+                <select class="form-select" id="yearSelect">
+                    <option value="">Select Year</option>
+                </select>
+            </div>
+            
+            <!-- Owner Selection -->
+            <div class="hierarchy-select">
+                <label for="ownerSelect" class="form-label">Account Owner</label>
+                <select class="form-select" id="ownerSelect" disabled>
+                    <option value="">Select Owner</option>
+                </select>
+            </div>
+            
+            <!-- IBAN Selection -->
+            <div class="hierarchy-select">
+                <label for="ibanSelect" class="form-label">IBAN</label>
+                <select class="form-select" id="ibanSelect" disabled>
+                    <option value="">Select IBAN</option>
+                </select>
+            </div>
+            
+            <!-- Account Selection -->
+            <div class="hierarchy-select">
+                <label for="accountSelect" class="form-label">Account Statements</label>
+                <select class="form-select" id="accountSelect" disabled>
+                    <option value="">Select Statement</option>
+                </select>
+            </div>
+            
+            <!-- Selection Summary -->
+            <div class="selection-summary">
+                <h5>Selected Account Details</h5>
+                <div id="selectedAccountInfo">
+                    <p class="mb-1">No account selected</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Side Form Container -->
+        <div class="form-container">
+            <h2 class="mb-4">Add Cash Entry</h2>
+            
+            <div class="mb-3">
+                <label for="belegId" class="form-label">Beleg ID</label>
+                <input type="number" class="form-control" id="belegId" placeholder="Enter Beleg ID">
+            </div>
+            
+            <button id="submitBtn" class="btn btn-primary">Create Cash Entry</button>
+            
+            <div id="step2Container" class="step2-container">
+                <h4>Step 2: Create Document Relation</h4>
+                <p>Cash Entry created with FK_MAIN_KEY: <span id="fkMainKeyDisplay"></span></p>
+                <button id="createRelationBtn" class="btn btn-success">Create Document Relation</button>
+            </div>
+            
+            <div id="step3Container" class="step3-container">
+                <h4>Step 3: Create Account Statement Relation</h4>
+                <p>You can now create a relation between the FK_MAIN_KEY and the selected account statement.</p>
+                <div class="btn-container">
+                    <button id="createAccountRelationBtn" class="btn btn-info">Create Account Statement Relation</button>
+                    <small class="text-muted">This will link FK_MAIN_KEY: <span id="fkMainKeyDisplay2"></span> with Account Statement ID: <span id="accountStatementIdDisplay"></span></small>
+                </div>
+            </div>
+            
+            <div id="loadingSpinner" class="loading-spinner text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Processing your request...</p>
+            </div>
+            
+            <div id="statusText" class="status-text"></div>
+            
+            <div id="resultAlert" class="result-alert alert" role="alert"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentFkMainKey = null;
+        let currentBelegId = null;
+        let accountsData = [];
+        let hierarchy = {};
+        let selectedAccountStatementId = null;
+        
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAccountsData();
+            
+            // Set up event listeners for dropdowns
+            document.getElementById('yearSelect').addEventListener('change', handleYearChange);
+            document.getElementById('ownerSelect').addEventListener('change', handleOwnerChange);
+            document.getElementById('ibanSelect').addEventListener('change', handleIbanChange);
+            document.getElementById('accountSelect').addEventListener('change', handleAccountChange);
+            
+            // Set up event listeners for form buttons
+            document.getElementById('submitBtn').addEventListener('click', handleSubmit);
+            document.getElementById('createRelationBtn').addEventListener('click', handleCreateRelation);
+            document.getElementById('createAccountRelationBtn').addEventListener('click', handleCreateAccountRelation);
+        });
+        
+        // Load accounts data from the API
+        async function loadAccountsData() {
+            try {
+                const response = await fetch('http://localhost:5000/accounts');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                accountsData = await response.json();
+                buildHierarchy();
+                populateYearDropdown();
+            } catch (error) {
+                console.error("Error loading accounts:", error);
+                document.getElementById('yearSelect').innerHTML = '<option value="">Error loading data</option>';
+            }
+        }
+        
+        // Build the hierarchy from the data
+        function buildHierarchy() {
+            hierarchy = {};
+            
+            accountsData.forEach(statement => {
+                const year = statement.yr || 'Unknown Year';
+                const owner = statement.holder_name || 'Unknown Owner';
+                const iban = statement.account_name || 'Unknown IBAN';
+                
+                if (!hierarchy[year]) hierarchy[year] = {};
+                if (!hierarchy[year][owner]) hierarchy[year][owner] = {};
+                if (!hierarchy[year][owner][iban]) hierarchy[year][owner][iban] = [];
+                
+                hierarchy[year][owner][iban].push(statement);
+            });
+        }
+        
+        // Populate the year dropdown
+        function populateYearDropdown() {
+            const yearSelect = document.getElementById('yearSelect');
+            const years = Object.keys(hierarchy).sort().reverse();
+            
+            years.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = `${year} (${countAccountsInYear(year)} accounts)`;
+                yearSelect.appendChild(option);
+            });
+        }
+        
+        // Count accounts in a year
+        function countAccountsInYear(year) {
+            let count = 0;
+            const owners = hierarchy[year];
+            
+            for (const owner in owners) {
+                count += Object.keys(owners[owner]).length;
+            }
+            
+            return count;
+        }
+        
+        // Handle year selection change
+        function handleYearChange() {
+            const year = this.value;
+            const ownerSelect = document.getElementById('ownerSelect');
+            const ibanSelect = document.getElementById('ibanSelect');
+            const accountSelect = document.getElementById('accountSelect');
+            
+            // Reset downstream selects
+            ownerSelect.innerHTML = '<option value="">Select Owner</option>';
+            ibanSelect.innerHTML = '<option value="">Select IBAN</option>';
+            accountSelect.innerHTML = '<option value="">Select Statement</option>';
+            
+            ownerSelect.disabled = !year;
+            ibanSelect.disabled = true;
+            accountSelect.disabled = true;
+            
+            // Hide step 3
+            document.getElementById('step3Container').style.display = 'none';
+            
+            if (!year) {
+                updateSelectionSummary();
+                return;
+            }
+            
+            // Populate owner dropdown
+            const owners = Object.keys(hierarchy[year]).sort();
+            owners.forEach(owner => {
+                const option = document.createElement('option');
+                option.value = owner;
+                option.textContent = `${owner} (${Object.keys(hierarchy[year][owner]).length} IBANs)`;
+                ownerSelect.appendChild(option);
+            });
+            
+            ownerSelect.disabled = false;
+            updateSelectionSummary();
+        }
+        
+        // Handle owner selection change
+        function handleOwnerChange() {
+            const year = document.getElementById('yearSelect').value;
+            const owner = this.value;
+            const ibanSelect = document.getElementById('ibanSelect');
+            const accountSelect = document.getElementById('accountSelect');
+            
+            // Reset downstream selects
+            ibanSelect.innerHTML = '<option value="">Select IBAN</option>';
+            accountSelect.innerHTML = '<option value="">Select Statement</option>';
+            
+            ibanSelect.disabled = !owner;
+            accountSelect.disabled = true;
+            
+            // Hide step 3
+            document.getElementById('step3Container').style.display = 'none';
+            
+            if (!year || !owner) {
+                updateSelectionSummary();
+                return;
+            }
+            
+            // Populate IBAN dropdown
+            const ibans = Object.keys(hierarchy[year][owner]).sort();
+            ibans.forEach(iban => {
+                const option = document.createElement('option');
+                option.value = iban;
+                const statementCount = hierarchy[year][owner][iban].length;
+                option.textContent = `${iban} (${statementCount} ${statementCount === 1 ? 'statement' : 'statements'})`;
+                ibanSelect.appendChild(option);
+            });
+            
+            ibanSelect.disabled = false;
+            updateSelectionSummary();
+        }
+        
+        // Handle IBAN selection change
+        function handleIbanChange() {
+            const year = document.getElementById('yearSelect').value;
+            const owner = document.getElementById('ownerSelect').value;
+            const iban = this.value;
+            const accountSelect = document.getElementById('accountSelect');
+            
+            // Reset account select
+            accountSelect.innerHTML = '<option value="">Select Statement</option>';
+            accountSelect.disabled = !iban;
+            
+            // Hide step 3
+            document.getElementById('step3Container').style.display = 'none';
+            
+            if (!year || !owner || !iban) {
+                updateSelectionSummary();
+                return;
+            }
+            
+            // Populate account dropdown
+            const statements = hierarchy[year][owner][iban];
+            statements.forEach((statement, index) => {
+                const option = document.createElement('option');
+                option.value = statement.statement_id || index;
+                
+                // Format the display text
+                const date = statement.statement_date ? new Date(statement.statement_date).toLocaleDateString() : 'No date';
+                const finalAmount = statement.FINAL_AMOUNT ? `Amount: ${statement.FINAL_AMOUNT}` : '';
+                const endBalance = statement.ENDBETRAG ? `End Balance: ${statement.ENDBETRAG}` : '';
+                
+                option.textContent = `Statement ${index + 1} - ${date} ${finalAmount} ${endBalance}`;
+                option.dataset.statement = JSON.stringify(statement);
+                accountSelect.appendChild(option);
+            });
+            
+            accountSelect.disabled = false;
+            updateSelectionSummary();
+        }
+        
+        // Handle account selection change
+        function handleAccountChange() {
+            updateSelectionSummary();
+            
+            // Show step 3 if we have both FK_MAIN_KEY and an account statement
+            if (currentFkMainKey && this.value) {
+                const selectedOption = this.options[this.selectedIndex];
+                if (selectedOption.dataset.statement) {
+                    const statement = JSON.parse(selectedOption.dataset.statement);
+                    selectedAccountStatementId = statement.PK_KTO_KONTO_AUSZUG;
+                    
+                    if (selectedAccountStatementId) {
+                        document.getElementById('fkMainKeyDisplay2').textContent = currentFkMainKey;
+                        document.getElementById('accountStatementIdDisplay').textContent = selectedAccountStatementId;
+                        document.getElementById('step3Container').style.display = 'block';
+                    }
+                }
+            }
+        }
+        
+        // Update the selection summary
+        function updateSelectionSummary() {
+            const summaryElement = document.getElementById('selectedAccountInfo');
+            const year = document.getElementById('yearSelect').value;
+            const owner = document.getElementById('ownerSelect').value;
+            const iban = document.getElementById('ibanSelect').value;
+            const accountSelect = document.getElementById('accountSelect');
+            const selectedOption = accountSelect.options[accountSelect.selectedIndex];
+            
+            if (!year) {
+                summaryElement.innerHTML = '<p class="mb-1">No account selected</p>';
+                return;
+            }
+            
+            let summaryHTML = `
+                <p class="mb-1"><strong>Year:</strong> ${year}</p>
+            `;
+            
+            if (owner) {
+                summaryHTML += `<p class="mb-1"><strong>Owner:</strong> ${owner}</p>`;
+            }
+            
+            if (iban) {
+                summaryHTML += `<p class="mb-1"><strong>IBAN:</strong> ${iban}</p>`;
+            }
+            
+            if (selectedOption && selectedOption.value && selectedOption.dataset.statement) {
+                const statement = JSON.parse(selectedOption.dataset.statement);
+                summaryHTML += `
+                    <div class="account-details">
+                        <p class="mb-1"><strong>Statement Date:</strong> ${statement.statement_date ? new Date(statement.statement_date).toLocaleDateString() : 'N/A'}</p>
+                        ${statement.FINAL_CNT ? `<p class="mb-1"><strong>Final Count:</strong> ${statement.FINAL_CNT}</p>` : ''}
+                        ${statement.FINAL_AMOUNT ? `<p class="mb-1"><strong>Final Amount:</strong> ${statement.FINAL_AMOUNT}</p>` : ''}
+                        ${statement.ANFANGSBETRAG ? `<p class="mb-1"><strong>Starting Balance:</strong> ${statement.ANFANGSBETRAG}</p>` : ''}
+                        ${statement.ENDBETRAG ? `<p class="mb-1"><strong>Ending Balance:</strong> ${statement.ENDBETRAG}</p>` : ''}
+                        ${statement.FK_KTO_KONTO_AUSZUG ? `<p class="mb-1"><strong>Account Extract ID:</strong> ${statement.FK_KTO_KONTO_AUSZUG}</p>` : ''}
+                        ${statement.PK_KTO_KONTO_AUSZUG ? `<p class="mb-1"><strong id="PK_KTO_KONTO_AUSZUG">Primary Key:</strong> ${statement.PK_KTO_KONTO_AUSZUG}</p>` : ''}
+                    </div>
+                `;
+            }
+            
+            summaryElement.innerHTML = summaryHTML;
+        }
+        
+        // Handle form submission
+        async function handleSubmit() {
+            const belegId = document.getElementById('belegId').value;
+            const resultAlert = document.getElementById('resultAlert');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const statusText = document.getElementById('statusText');
+            
+            // Reset UI
+            resultAlert.style.display = 'none';
+            statusText.style.display = 'none';
+            loadingSpinner.style.display = 'block';
+            document.getElementById('step2Container').style.display = 'none';
+            document.getElementById('step3Container').style.display = 'none';
+            
+            if (!belegId) {
+                showResult('Please enter a Beleg ID', 'danger');
+                loadingSpinner.style.display = 'none';
+                return;
+            }
+            
+            try {
+                // First API call to add cash entry
+                showStatus('Adding cash entry...');
+                const response = await fetch('http://localhost:5000/add_kasse_from_inp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ FK_INP_BELEGE_ALL: belegId })
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.message || 'Failed to add cash entry');
+                }
+                
+                // Store values for step 2
+                currentFkMainKey = data.data.FK_MAIN_KEY;
+                currentBelegId = belegId;
+                
+                // Show step 2
+                document.getElementById('fkMainKeyDisplay').textContent = currentFkMainKey;
+                document.getElementById('step2Container').style.display = 'block';
+                
+                // Also show step 3 if we have an account statement selected
+                const accountSelect = document.getElementById('accountSelect');
+                const selectedOption = accountSelect.options[accountSelect.selectedIndex];
+                if (selectedOption && selectedOption.value && selectedOption.dataset.statement) {
+                    const statement = JSON.parse(selectedOption.dataset.statement);
+                    selectedAccountStatementId =  statement.PK_KTO_KONTO_AUSZUG;
+                    
+                    if (selectedAccountStatementId) {
+                        document.getElementById('fkMainKeyDisplay2').textContent = currentFkMainKey;
+                        document.getElementById('accountStatementIdDisplay').textContent = statement.PK_KTO_KONTO_AUSZUG;
+                        document.getElementById('step3Container').style.display = 'block';
+                    }
+                }
+                
+                showResult(`Success! Cash entry created with FK_MAIN_KEY: ${currentFkMainKey}. Now create the document relation.`, 'success');
+            } catch (error) {
+                showResult('An error occurred: ' + error.message, 'danger');
+            } finally {
+                loadingSpinner.style.display = 'none';
+            }
+        }
+        
+        // Handle creating document relation
+        async function handleCreateRelation() {
+            const resultAlert = document.getElementById('resultAlert');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const statusText = document.getElementById('statusText');
+            
+            // Reset UI
+            resultAlert.style.display = 'none';
+            statusText.style.display = 'none';
+            loadingSpinner.style.display = 'block';
+            
+            try {
+                if (!currentFkMainKey || !currentBelegId) {
+                    throw new Error('Missing data for creating relation');
+                }
+                
+                // Call the function to add document relation
+                const relationResult = await addDocumentRelation(currentFkMainKey, currentBelegId);
+                
+                showResult(`Success! Document relation created between FK_MAIN_KEY: ${currentFkMainKey} and Document ID: ${currentBelegId}.`, 'success');
+            } catch (error) {
+                showResult('An error occurred: ' + error.message, 'danger');
+            } finally {
+                loadingSpinner.style.display = 'none';
+            }
+        }
+        
+        // Handle creating account statement relation
+        async function handleCreateAccountRelation() {
+            const resultAlert = document.getElementById('resultAlert');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const statusText = document.getElementById('statusText');
+            
+            // Reset UI
+            resultAlert.style.display = 'none';
+            statusText.style.display = 'none';
+            loadingSpinner.style.display = 'block';
+            
+            try {
+                if (!currentFkMainKey || !selectedAccountStatementId) {
+                    throw new Error('Missing data for creating account statement relation');
+                }
+                
+                // Call the function to add account statement relation
+                const relationResult = await addAccountStatementRelation(currentFkMainKey, selectedAccountStatementId);
+                
+                showResult(`Success! Account statement relation created between FK_MAIN_KEY: ${currentFkMainKey} and Account Statement ID: ${selectedAccountStatementId}.`, 'success');
+            } catch (error) {
+                showResult('An error occurred: ' + error.message, 'danger');
+            } finally {
+                loadingSpinner.style.display = 'none';
+            }
+        }
+        
+        // Add document relation via API
+        async function addDocumentRelation(fkMainKey, documentId) {
+            try {
+                showStatus('Creating document relation...');
+                
+                const response = await fetch('http://localhost:5000/document/add_rel', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        fk_main_key: fkMainKey,
+                        fk_inp_belege_all: documentId
+                    })
+                });
+                
+                if (!response.ok) throw new Error(`Failed to create relation: ${response.status}`);
+                
+                const result = await response.json();
+                if (!result.success) throw new Error('Relation creation failed');
+                
+                return result;
+            } catch (error) {
+                console.error("Relation creation error:", error);
+                throw error;
+            }
+        }
+        
+        // Add account statement relation via API
+        async function addAccountStatementRelation(fkMainKey, accountStatementId) {
+    try {
+        showStatus('Creating account statement relation...');
+        
+        // Convert to number safely
+        const fkKtoKontoAuszug = Number(accountStatementId);
+        
+        // Validate it's a proper number
+        if (isNaN(fkKtoKontoAuszug)) {
+            throw new Error('Invalid account statement ID: ' + accountStatementId);
+        }
+        
+        const response = await fetch('http://localhost:5000/buchung/add_rel_kontoauszug', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                fk_main_key: Number(fkMainKey), // Ensure this is also a number
+                fk_kto_konto_auszug: fkKtoKontoAuszug
+            })
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Failed to create account statement relation: ${response.status} - ${errorText}`);
+        }
+        
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.error || 'Account statement relation creation failed');
+        }
+        
+        return result;
+    } catch (error) {
+        console.error("Account statement relation creation error:", error);
+        throw error;
+    }
+}
+
+
+        // Show result message
+        function showResult(message, type) {
+            const resultAlert = document.getElementById('resultAlert');
+            resultAlert.innerHTML = message;
+            resultAlert.className = `result-alert alert alert-${type}`;
+            resultAlert.style.display = 'block';
+        }
+        
+        // Show status message
+        function showStatus(message) {
+            const statusText = document.getElementById('statusText');
+            statusText.textContent = message;
+            statusText.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

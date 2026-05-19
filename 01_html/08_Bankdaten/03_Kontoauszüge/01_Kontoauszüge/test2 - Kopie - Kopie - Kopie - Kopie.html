@@ -1,0 +1,3000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Statements Viewer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Main Layout */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f7fa;
+            color: #333;
+            display: grid;
+            grid-template-columns: 250px 1fr 350px;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Left Sidebar for Search */
+        .search-sidebar {
+            background-color: #fff;
+            border-right: 1px solid #ddd;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+
+        .search-sidebar h3 {
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .search-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 5px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52,152,219,0.2);
+        }
+
+.keep-btn {
+    background-color: #4caf50;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+}
+
+.unkeep-btn {
+    background-color: #f44336;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+}
+
+.keep-btn:hover { opacity: 0.8; }
+.unkeep-btn:hover { opacity: 0.8; }
+
+
+        .search-btn {
+            padding: 10px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .search-btn:hover {
+            background-color: #2980b9;
+        }
+
+        .reset-btn {
+            padding: 10px;
+            background-color: #f8f9fa;
+            color: #333;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .reset-btn:hover {
+            background-color: #e9ecef;
+        }
+
+        /* Statement Details Panel */
+        .statement-details-panel {
+            position: fixed;
+            left: 250px;
+            top: 0;
+            height: 100vh;
+            width: 400px;
+            background-color: white;
+            padding: 20px;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            z-index: 900;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+            border-right: 1px solid #ddd;
+        }
+
+        .statement-details-panel.visible {
+            transform: translateX(0);
+        }
+
+        .statement-details-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            position: sticky;
+            top: 0;
+            background-color: white;
+            z-index: 1;
+        }
+
+        .close-details-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #7f8c8d;
+            transition: color 0.2s;
+            padding: 5px;
+        }
+
+        .close-details-btn:hover {
+            color: #e74c3c;
+        }
+
+        .statement-details-content {
+            margin-top: 15px;
+        }
+
+        .statement-detail-row {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .statement-detail-label {
+            font-weight: 600;
+            color: #2c3e50;
+            padding-right: 15px;
+        }
+
+        .statement-detail-value {
+            word-break: break-word;
+        }
+
+        .null-value {
+            color: #95a5a6;
+            font-style: italic;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        /* Right Sidebar for Images */
+        .image-sidebar {
+            background-color: #fff;
+            border-left: 1px solid #ddd;
+            padding: 15px;
+            overflow-y: auto;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .image-sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .close-sidebar {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #7f8c8d;
+        }
+
+        /* Right Sidebar Tabs */
+        .sidebar-tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 15px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            border-bottom-color: #3498db;
+            color: #3498db;
+        }
+
+        .tab-btn:hover:not(.active) {
+            background-color: #f5f5f5;
+        }
+
+        .tab-content {
+            display: none;
+            overflow-y: auto;
+            max-height: calc(100vh - 180px);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Images Grid in Sidebar */
+        .images-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .image-card {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+
+        .image-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .image-thumbnail {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+            cursor: pointer;
+        }
+
+        .pdf-thumbnail {
+            width: 100%;
+            height: 80px;
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: #e74c3c;
+            cursor: pointer;
+        }
+
+        .image-info {
+            padding: 8px;
+            font-size: 11px;
+            border-top: 1px solid #eee;
+        }
+
+        .image-info p {
+            margin: 3px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Modal for full-size image */
+        .image-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            max-width: 90%;
+            max-height: 90%;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 30px;
+            cursor: pointer;
+        }
+
+        /* PDF Preview Styles */
+        .pdf-preview {
+            width: 50px;
+            height: 50px;
+            background-color: #f1f1f1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: #e74c3c;
+            cursor: pointer;
+        }
+
+        /* Transaction Tables */
+        .transaction-details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .transaction-details-table th {
+            background-color: #3498db;
+            color: white;
+            padding: 10px;
+            text-align: left;
+            position: sticky;
+            top: 0;
+        }
+
+        .transaction-details-table td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .transaction-details-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .transaction-details-table tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        /* Tree View Styles */
+        .tree-view {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .tree-item {
+            margin-bottom: 5px;
+        }
+
+        .tree-header {
+            padding: 10px 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+
+        .tree-header:hover {
+            background-color: #e9ecef;
+        }
+
+        .tree-header.expanded {
+            background-color: #e2e6ea;
+        }
+
+        .tree-content {
+            padding-left: 20px;
+            display: none;
+        }
+
+        .badge {
+            background-color: #6c757d;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 0.8em;
+        }
+
+        /* Right Panel Styles */
+        .right-panel {
+            position: fixed;
+            right: 350px;
+            top: 0;
+            height: 100vh;
+            width: 40%;
+            background-color: white;
+            padding: 25px;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+        }
+
+        .right-panel.visible {
+            transform: translateX(0);
+        }
+
+        .right-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            position: sticky;
+            top: 0;
+            background-color: white;
+            z-index: 1;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #7f8c8d;
+            transition: color 0.2s;
+            padding: 5px;
+            margin-left: auto;
+        }
+
+        .close-btn:hover {
+            color: #e74c3c;
+        }
+
+        .transaction-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .transaction-table th {
+            position: sticky;
+            top: 0;
+            background-color: #f8f9fa;
+            padding: 10px;
+            text-align: left;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .transaction-table td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .transaction-row {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .transaction-row:hover {
+            background-color: #f0f7ff !important;
+        }
+
+        .selected-transaction {
+            background-color: #e1f0ff !important;
+            font-weight: bold;
+        }
+
+        .amount-positive {
+            color: #27ae60;
+        }
+
+        .amount-negative {
+            color: #e74c3c;
+        }
+
+        .amount-offenerBetrag {
+            color: #c93c20;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .controls button {
+            padding: 8px 16px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .controls button:hover {
+            background-color: #2980b9;
+        }
+
+        .controls button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        /* Loading States */
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .transaction-loading {
+            padding: 20px;
+            text-align: center;
+            color: #666;
+        }
+
+        /* Empty States */
+        .empty-state, .empty-right-panel {
+            text-align: center;
+            color: #7f8c8d;
+            margin-top: 50px;
+            font-style: italic;
+        }
+
+        /* Error States */
+        .error-message {
+            text-align: center;
+            padding: 20px;
+            color: #e74c3c;
+        }
+
+        .error-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        /* Image Table Styles */
+        .image-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+
+        .image-table th {
+            background-color: #f8f9fa;
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            position: sticky;
+            top: 0;
+        }
+
+        .image-table td {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .image-table tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .image-preview {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .image-preview:hover {
+            transform: scale(1.1);
+        }
+
+        .lexoffice-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            color: #3498db;
+            text-decoration: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background-color: #f0f7ff;
+            transition: all 0.2s;
+            border: 1px solid #d0e3ff;
+        }
+
+        .lexoffice-link:hover {
+            background-color: #e1f0ff;
+            text-decoration: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .link-icon {
+            font-size: 0.9em;
+            opacity: 0.7;
+        }
+
+        .field-name {
+            font-weight: 600;
+            color: #2c3e50;
+            white-space: nowrap;
+            padding-right: 20px;
+        }
+
+        .field-value {
+            word-break: break-word;
+        }
+
+        #accounts-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        #accounts-table th {
+            text-align: left;
+            padding: 8px 10px;
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #ddd;
+        }
+
+        #accounts-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #eee;
+            vertical-align: top;
+        }
+
+        #accounts-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        /* Action Buttons */
+        .action-btn {
+            padding: 5px 10px;
+            margin: 2px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background-color 0.2s;
+        }
+        
+        .add-btn {
+            background-color: #27ae60;
+            color: white;
+        }
+        
+        .add-btn:hover {
+            background-color: #219653;
+        }
+        
+        .update-form {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .update-form h3 {
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .form-group {
+            margin-bottom: 10px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            font-size: 13px;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        
+        .form-actions {
+            margin-top: 15px;
+            text-align: right;
+        }
+        
+        .update-btn {
+            background-color: #3498db;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .update-btn:hover {
+            background-color: #2980b9;
+        }
+
+        .edit-btn {
+            background-color: #f39c12;
+            color: white;
+        }
+
+        .edit-btn:hover {
+            background-color: #e67e22;
+        }
+        
+        /* Search Bar for Transactions */
+        .transaction-search {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .transaction-search input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .transaction-search button {
+            padding: 8px 16px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .tbl-group-header { 
+            background: #dfe6e9; 
+            padding: 10px; 
+            margin-top: 20px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            border-radius: 4px; 
+        } 
+        
+        .tbl-group-header:hover { 
+            background: #b2bec3; 
+        } 
+        
+        .tbl-group-content { 
+            display: none; 
+            margin-top: 5px; 
+        }
+
+        /* PayPal Table Styles */
+        .paypal-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .paypal-table th {
+            position: sticky;
+            top: 0;
+            background-color: #f8f9fa;
+            padding: 10px 8px;
+            text-align: left;
+            border-bottom: 2px solid #ddd;
+            font-weight: 600;
+            white-space: nowrap;
+            z-index: 10;
+        }
+
+        .paypal-table td {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .paypal-table tr:hover td {
+            background-color: #f5f5f5;
+        }
+
+        .paypal-table td:hover {
+            overflow: visible;
+            white-space: normal;
+            word-wrap: break-word;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .paypal-summary {
+            background-color: #e8f4f8;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+
+        .paypal-summary-item {
+            display: inline-block;
+            margin-right: 20px;
+        }
+
+        .paypal-summary-label {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .paypal-summary-value {
+            color: #27ae60;
+            font-weight: 600;
+        }
+.dashboard {
+            max-width: 1280px;
+            width: 100%;
+        }
+
+        /* header / top bar */
+        .top-bar {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 60px;
+            padding: 1rem 1.8rem 1rem 2rem;
+            margin-bottom: 2.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 15px 35px -10px rgba(10, 30, 60, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+        }
+
+        .btn-fetch {
+            background: #0f2b4f;
+            color: white;
+            border: none;
+            font-weight: 600;
+            font-size: 1.2rem;
+            padding: 0.9rem 2.5rem;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+            box-shadow: 0 12px 22px -10px #0f2b4f;
+            border: 1px solid #294b79;
+            letter-spacing: 0.3px;
+        }
+
+        .btn-fetch:hover {
+            background: #1a3a62;
+            transform: translateY(-2px);
+            box-shadow: 0 22px 28px -12px #0f2b4f;
+        }
+
+        .btn-fetch:active {
+            transform: translateY(1px);
+            box-shadow: 0 8px 16px -8px #0f2b4f;
+        }
+
+        .timestamp {
+            background: #e9eef3;
+            border-radius: 40px;
+            padding: 0.6rem 1.6rem;
+            font-size: 1rem;
+            color: #1d3a5c;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.03);
+        }
+
+        .timestamp span {
+            font-weight: 700;
+            background: white;
+            padding: 0.2rem 1rem;
+            border-radius: 40px;
+            color: #0a2647;
+            margin-left: 4px;
+        }
+
+        /* cards grid */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 36px;
+            padding: 2rem 1.8rem 1.8rem 1.8rem;
+            box-shadow: 0 30px 40px -25px rgba(8, 25, 48, 0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(255,255,255,0.8);
+            backdrop-filter: blur(4px);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 36px 48px -28px #091c31;
+        }
+
+        .card-icon {
+            background: #ecf3fc;
+            width: 56px;
+            height: 56px;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin-bottom: 1.2rem;
+            color: #143157;
+            box-shadow: 0 6px 12px -8px #102a47;
+        }
+
+        .card-label {
+            font-size: 1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #58749c;
+            margin-bottom: 0.25rem;
+        }
+
+        .card-number {
+            font-size: 3.5rem;
+            font-weight: 800;
+            line-height: 1.1;
+            color: #0b2442;
+            font-family: 'Fira Mono', 'JetBrains Mono', monospace;
+            margin-bottom: 1rem;
+        }
+
+        .card-footer {
+            border-top: 1.5px solid #e6edf6;
+            padding-top: 0.9rem;
+            font-size: 0.9rem;
+            color: #4d658b;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .badge {
+            background: #e2ebf6;
+            padding: 0.25rem 1rem;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: #1e3b64;
+        }
+
+        /* loading skeleton styles */
+        .skeleton {
+            position: relative;
+            background: transparent;
+        }
+        .skeleton .card-number {
+            color: transparent;
+        }
+        .skeleton .card-number::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 3rem;
+            width: 80%;
+            height: 3.2rem;
+            background: linear-gradient(90deg, #ecf1f7 0%, #d9e2ed 40%, #ecf1f7 80%);
+            background-size: 300% 100%;
+            animation: pulse 1.8s infinite;
+            border-radius: 20px;
+            z-index: 1;
+        }
+
+        @keyframes pulse {
+            0% { background-position: 100% 0; }
+            100% { background-position: -100% 0; }
+        }
+
+        /* mobile */
+        @media (max-width: 900px) {
+            .card-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1.5rem;
+            }
+        }
+        @media (max-width: 550px) {
+            .card-grid {
+                grid-template-columns: 1fr;
+            }
+            .top-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+                border-radius: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Left Sidebar for Search -->
+    <div class="search-sidebar">
+        <h3>Search Statements</h3>
+        <form class="search-form" id="searchForm">
+            <div class="form-group">
+                <label for="searchYear">Year</label>
+                <input type="number" id="searchYear" placeholder="Enter year">
+            </div>
+            
+            <div class="form-group">
+                <label for="searchAccountName">Account Name</label>
+                <input type="text" id="searchAccountName" placeholder="Enter account name">
+            </div>
+            
+            <div class="form-group">
+                <label for="searchHolderName">Holder Name</label>
+                <input type="text" id="searchHolderName" placeholder="Enter holder name">
+            </div>
+            
+            <div class="form-group">
+                <label for="searchStatementId">Statement ID</label>
+                <input type="text" id="searchStatementId" placeholder="Enter statement ID">
+            </div>
+            
+            <div class="form-group">
+                <label for="searchStatus">Status</label>
+                <select id="searchStatus">
+                    <option value="">All Statuses</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="pending">Pending</option>
+                </select>
+            </div>
+            
+            <button type="submit" class="search-btn">Search</button>
+            <button type="reset" class="reset-btn">Reset</button>
+        </form>
+    </div>
+
+    <!-- Statement Details Panel -->
+    <div class="statement-details-panel" id="statementDetailsPanel">
+        <div class="statement-details-header">
+            <h3>Statement Details</h3>            
+            <button class="close-details-btn" id="closeDetailsBtn">&times;</button>
+        </div>
+        <div id="datumok" style="background-color: #e8f4f8; padding: 8px; border-radius: 4px; margin-bottom: 10px; font-weight: 600;"></div>
+        <div class="statement-details-content" id="statementDetailsContent">
+            <div class="empty-state">
+                Select a statement to view details
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="main-content">
+        <div class="controls">
+            <button id="fetchDataBtn">Fetch Data</button>
+            <button id="downloadCsvBtn" disabled>Download CSV</button>
+            <button id="expandAllBtn" disabled>Expand All</button>
+            <button id="collapseAllBtn" disabled>Collapse All</button>
+        </div>
+
+<div class="dashboard">
+        <!-- top bar with fetch button and timestamp -->
+        <div class="top-bar">
+            <button class="btn-fetch" id="fetchButton">
+                <span style="font-size: 1.5rem;">📊</span> fetch data
+            </button>
+            <div class="timestamp">
+                <span style="opacity: 0.8;">🕒</span> updated: <span id="timeDisplay">—</span>
+            </div>
+        </div>
+
+        <!-- 4 cards: statements, accounts, DATUM_OK filled, DATUM_OK not filled -->
+        <div class="card-grid" id="cardGrid">
+            <!-- card 1: statements count -->
+            <div class="stat-card" id="cardStatements">
+                <div class="card-icon">📄</div>
+                <div class="card-label">total statements</div>
+                <div class="card-number" id="statementsValue">—</div>
+                <div class="card-footer">
+                    <span class="badge">all records</span> count
+                </div>
+            </div>
+
+            <!-- card 2: accounts count (unique) -->
+            <div class="stat-card" id="cardAccounts">
+                <div class="card-icon">🏦</div>
+                <div class="card-label">accounts</div>
+                <div class="card-number" id="accountsValue">—</div>
+                <div class="card-footer">
+                    <span class="badge">distinct</span> account id
+                </div>
+            </div>
+
+            <!-- card 3: DATUM_OK filled (not null / present) -->
+            <div class="stat-card" id="cardFilled">
+                <div class="card-icon">✅</div>
+                <div class="card-label">DATUM_OK filled</div>
+                <div class="card-number" id="filledValue">—</div>
+                <div class="card-footer">
+                    <span class="badge">with value</span> non‑empty
+                </div>
+            </div>
+
+            <!-- card 4: DATUM_OK missing (null / empty) -->
+            <div class="stat-card" id="cardMissing">
+                <div class="card-icon">⏳</div>
+                <div class="card-label">DATUM_OK empty</div>
+                <div class="card-number" id="missingValue">—</div>
+                <div class="card-footer">
+                    <span class="badge">missing</span> null / blank
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <div id="loading" style="display: none;">
+            <div class="loading-spinner"></div>
+            <div>Loading data...</div>
+        </div>
+        <div id="error" class="error-message" style="display: none;"></div>
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div>🔍</div>
+            <h3>No data found</h3>
+            <p>Try adjusting your search criteria</p>
+        </div>
+
+        <div id="treeView" class="tree-view"></div>
+
+        <!-- Right Panel for Transaction Details -->
+        <div class="right-panel" id="rightPanel">
+            <div class="right-panel-header">
+                <h2>Transaction Details</h2>
+                <button class="close-btn" id="closePanelBtn">&times;</button>
+            </div>
+            
+            <!-- Transaction Search -->
+            <div class="transaction-search">
+                <input type="text" id="transactionSearchInput" placeholder="Search transactions...">
+                <button id="transactionSearchBtn">Search</button>
+            </div>
+            
+            <div id="transactionDetails">
+                <div class="empty-right-panel">
+                    Select a statement to view transactions
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Sidebar for Documents -->
+    <div class="image-sidebar" id="imageSidebar">
+        <div class="image-sidebar-header">
+            <h3>Statement Documents</h3>
+            <button class="close-sidebar" id="closeImageSidebar">&times;</button>
+        </div>
+        <div class="sidebar-tabs">
+            <button class="tab-btn active" data-tab="documents">Documents</button>
+            <button class="tab-btn" data-tab="transactions">Transactions</button>
+            <button class="tab-btn" data-tab="paypal">PayPal Check</button>
+        </div>
+        <div id="documentsTab" class="tab-content active">
+            <div id="statementImagesGrid" class="images-grid"></div>
+        </div>
+        <div id="transactionsTab" class="tab-content">
+            <div id="imageTableContainer">
+                <p>Select a transaction to view related images.</p>
+            </div>
+        </div>
+        <div id="paypalTab" class="tab-content">
+            <div class="empty-state">
+                Select a statement and click the PayPal tab to load data
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div class="image-modal" id="imageModal">
+        <span class="modal-close" id="closeModal">&times;</span>
+        <img class="modal-content" id="modalImage">
+    </div>
+
+    <!-- Update Relation Form (Hidden by default) -->
+    <div id="updateRelationForm" class="update-form" style="display: none;">
+        <h3>Update Lex Office Relation</h3>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>PK_REL_LEX_KTO_BEL</label>
+                <input type="text" id="update-pk-rel-lex-kto-bel" readonly>
+            </div>
+            <div class="form-group">
+                <label>FK_MAIN_KEY</label>
+                <input type="text" id="update-fk-main-key">
+            </div>
+            <div class="form-group">
+                <label>FK_INP_BELEGE_ALL</label>
+                <input type="text" id="update-fk-inp-belege-all">
+            </div>
+            <div class="form-group">
+                <label>OK</label>
+                <select id="update-ok">
+                    <option value="true">True</option>
+                    <option value="false">False</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>COMM</label>
+                <input type="text" id="update-comm">
+            </div>
+            <div class="form-group">
+                <label>FK_REL_LEX_KTO_BEL</label>
+                <input type="text" id="update-fk-rel-lex-kto-bel">
+            </div>
+            <div class="form-group">
+                <label>FK_INP_BELEGE_POS_ALL</label>
+                <input type="text" id="update-fk-inp-belege-pos-all">
+            </div>
+            <div class="form-group">
+                <label>CREATED_BY</label>
+                <input type="text" id="update-created-by">
+            </div>
+            <div class="form-group">
+                <label>MODIFIED_BY</label>
+                <input type="text" id="update-modified-by">
+            </div>
+            <div class="form-group">
+                <label>OK_DATUM_FILLED</label>
+                <input type="text" id="update-ok-datum-filled">
+            </div>
+            <div class="form-group">
+                <label>FK_MDT_MANDANT</label>
+                <input type="text" id="update-fk-mdt-mandant">
+            </div>
+            <div class="form-group">
+                <label>FK_BAS_BAS_VORGANG</label>
+                <input type="text" id="update-fk-bas-bas-vorgang">
+            </div>
+            <div class="form-group">
+                <label>FK_REL_LEX_KTO_BEL_SUB</label>
+                <input type="text" id="update-fk-rel-lex-kto-bel-sub">
+            </div>
+            <div class="form-group">
+                <label>FLG_LEXOFFICE_BUCHUNG</label>
+                <select id="update-flg-lexoffice-buchung">
+                    <option value="true">True</option>
+                    <option value="false">False</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>FLG_LEXOFFICE_MIT_BILD</label>
+                <select id="update-flg-lexoffice-mit-bild">
+                    <option value="true">True</option>
+                    <option value="false">False</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>LINK_LEXOFFICE_BUCHUNG</label>
+                <input type="text" id="update-link-lexoffice-buchung">
+            </div>
+            <div class="form-group">
+                <label>LEXOFFICE_REFERENZ_NR</label>
+                <input type="text" id="update-lexoffice-referenz-nr">
+            </div>
+        </div>
+        <div class="form-actions">
+            <button class="update-btn" onclick="updateLexRelation()">Update Relation</button>
+        </div>
+    </div>
+
+    <script>
+        // Application state
+        const state = {
+            fetchedData: [],
+            currentSelectedStatement: null,
+            currentExpandedItems: [],
+            currentSelectedTransaction: null,
+            currentTransactions: [],
+            currentStatementDetails: null
+        };
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeEventListeners();
+        });
+
+        function initializeEventListeners() {
+            // Main controls
+            document.getElementById('fetchDataBtn').addEventListener('click', fetchAccountData);
+            document.getElementById('downloadCsvBtn').addEventListener('click', downloadAsCsv);
+            document.getElementById('expandAllBtn').addEventListener('click', expandAllItems);
+            document.getElementById('collapseAllBtn').addEventListener('click', collapseAllItems);
+            document.getElementById('closePanelBtn').addEventListener('click', closeRightPanel);
+            
+            // Statement details panel
+            document.getElementById('closeDetailsBtn').addEventListener('click', closeStatementDetailsPanel);
+            
+            // Search form
+            document.getElementById('searchForm').addEventListener('submit', handleSearch);
+            document.getElementById('searchForm').addEventListener('reset', resetSearch);
+            
+            // Image sidebar
+            document.getElementById('closeImageSidebar').addEventListener('click', closeImageSidebar);
+            
+            // Tab switching
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    switchTab(this.dataset.tab);
+                });
+            });
+            
+            // Modal controls
+            document.getElementById('closeModal').addEventListener('click', closeImageModal);
+            document.getElementById('imageModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeImageModal();
+                }
+            });
+            
+            // Transaction search
+            document.getElementById('transactionSearchBtn').addEventListener('click', searchTransactions);
+            document.getElementById('transactionSearchInput').addEventListener('keyup', function(e) {
+                if (e.key === 'Enter') {
+                    searchTransactions();
+                }
+            });
+            
+            // Escape key support
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeRightPanel();
+                    closeImageModal();
+                    closeStatementDetailsPanel();
+                }
+            });
+        }
+
+        function switchTab(tabName) {
+            // Update active tab button
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.tab === tabName) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // Update active tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+                if (content.id === `${tabName}Tab`) {
+                    content.classList.add('active');
+                }
+            });
+            
+            // Special handling for PayPal tab
+            if (tabName === 'paypal') {
+                loadPaypalData();
+            }
+        }
+
+        function closeImageSidebar() {
+            const imageSidebar = document.getElementById('imageSidebar');
+            imageSidebar.style.width = '0';
+            imageSidebar.style.padding = '0';
+            imageSidebar.style.overflow = 'hidden';
+            setTimeout(() => {
+                imageSidebar.style.display = 'none';
+            }, 300);
+        }
+
+        function closeStatementDetailsPanel() {
+            const panel = document.getElementById('statementDetailsPanel');
+            panel.classList.remove('visible');
+        }
+
+        function showStatementDetailsPanel() {
+            const panel = document.getElementById('statementDetailsPanel');
+            panel.classList.add('visible');
+        }
+
+        async function fetchAccountData() {
+            const loadingElement = document.getElementById('loading');
+            const errorElement = document.getElementById('error');
+            const emptyState = document.getElementById('emptyState');
+            
+            // Reset UI
+            errorElement.style.display = 'none';
+            loadingElement.style.display = 'flex';
+            emptyState.style.display = 'none';
+            document.getElementById('treeView').innerHTML = '';
+            document.getElementById('rightPanel').classList.remove('visible');
+            closeStatementDetailsPanel();
+            
+            try {
+                const response = await fetch('http://localhost:5000/accounts', {
+                    headers: {
+                        'Accept': 'application/json',
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Server responded with status ${response.status}`);
+                }
+                
+                const data = await response.json();
+                state.fetchedData = Array.isArray(data) ? data : [data];
+                
+                if (state.fetchedData.length === 0) {
+                    throw new Error('No account statements found in the database');
+                }
+                
+                displayHierarchicalData(state.fetchedData);
+                
+                // Enable buttons
+                document.getElementById('downloadCsvBtn').disabled = false;
+                document.getElementById('expandAllBtn').disabled = false;
+                document.getElementById('collapseAllBtn').disabled = false;
+                
+            } catch (error) {
+                console.error('Error fetching account data:', error);
+                showError(`Error: ${error.message}`);
+                emptyState.style.display = 'block';
+                document.getElementById('treeView').innerHTML = '';
+                
+                // Disable buttons
+                document.getElementById('downloadCsvBtn').disabled = true;
+                document.getElementById('expandAllBtn').disabled = true;
+                document.getElementById('collapseAllBtn').disabled = true;
+            } finally {
+                loadingElement.style.display = 'none';
+            }
+        }
+
+        function displayHierarchicalData(data) {
+            const treeView = document.getElementById('treeView');
+            treeView.innerHTML = '';
+            
+            if (data.length === 0) {
+                treeView.innerHTML = `
+                    <div class="empty-state">
+                        <div>🔍</div>
+                        <h3>No statements found</h3>
+                        <p>No account statements match your criteria</p>
+                    </div>
+                `;
+                return;
+            }
+           document.getElementById('statementsValue').innerHTML = data.length;
+        const grouped = data.reduce((acc, item) => { const account = item.FK_KTO_KONTO_AUSZUG; if (!acc[account]) { acc[account] = { count: 0, sum: 0 }; } acc[account].count += 1; return acc; }, {});
+const accountCount = Object.keys(grouped).length; document.getElementById('accountsValue').innerHTML = accountCount;
+const filtered1 = data.filter(item => item.DATUM_OK === null);
+document.getElementById('filledValue').innerHTML = Object.keys(filtered1).length ;
+const filtered2 = data.filter(item => item.DATUM_OK !== null);
+document.getElementById('missingValue').innerHTML =Object.keys(filtered2).length ;
+            
+            // Organize data hierarchically by year → owner → IBAN
+            const hierarchy = data.reduce((acc, statement) => {
+                const year = statement.yr || 'Unknown Year';
+                const owner = statement.holder_name || 'Unknown Owner';
+                const iban = statement.account_name || 'Unknown IBAN';
+                
+                if (!acc[year]) acc[year] = {};
+                if (!acc[year][owner]) acc[year][owner] = {};
+                if (!acc[year][owner][iban]) acc[year][owner][iban] = [];
+                
+                acc[year][owner][iban].push(statement);
+                return acc;
+            }, {});
+            
+            // Create the tree view
+            for (const [year, owners] of Object.entries(hierarchy)) {
+                const yearItem = document.createElement('div');
+                yearItem.className = 'tree-item';
+                
+                // Count accounts under this year
+                const yearCount = Object.values(owners).reduce((sum, ibans) => sum + Object.keys(ibans).length, 0);
+                const yearHeader = createHeader(
+                    `Year: ${year}`, 
+                    yearCount,
+                    yearCount === 1 ? 'account' : 'accounts'
+                );
+                
+                const yearContent = document.createElement('div');
+                yearContent.className = 'tree-content';
+                
+                for (const [owner, ibans] of Object.entries(owners)) {
+                    const ownerItem = document.createElement('div');
+                    ownerItem.className = 'tree-item';
+                    
+                    // Count IBANs under this owner
+                    const ownerCount = Object.keys(ibans).length;
+                    const ownerHeader = createHeader(
+                        `Owner: ${owner}`, 
+                        ownerCount,
+                        ownerCount === 1 ? 'IBAN' : 'IBANs'
+                    );
+                    
+                    const ownerContent = document.createElement('div');
+                    ownerContent.className = 'tree-content';
+                    
+                    for (const [iban, statements] of Object.entries(ibans)) {
+                        const ibanItem = document.createElement('div');
+                        ibanItem.className = 'tree-item';
+                        
+                        const ibanHeader = createHeader(
+                            `IBAN: ${iban}`, 
+                            statements.length,
+                            statements.length === 1 ? 'statement' : 'statements'
+                        );
+                        
+                        const ibanContent = document.createElement('div');
+                        ibanContent.className = 'tree-content';
+                        
+                        // Add statements under this IBAN
+                        statements.forEach(statement => {
+                            const statementItem = document.createElement('div');
+                            statementItem.className = 'tree-item';
+                            
+       const statementHeader = createHeader(
+    `Statement ID: <strong>${statement.statement_id || 'Unknown'}</strong> (${statement.KOMMENTAR})`,
+    null,
+    formatDate(statement.statement_date),
+    statement.FINAL_CNT,
+    statement.FINAL_AMOUNT,
+    statement.ANFANGSBETRAG,
+    statement.ENDBETRAG,
+    statement.FK_KTO_KONTO_AUSZUG,
+    statement.DATUM_OK ? 'lightgreen' : null // Add conditional highlighting
+);
+                            statementHeader.dataset.statementId = statement.statement_id;
+                            
+                            // Add click handler for statement selection
+                            statementHeader.addEventListener('click', async function(e) {
+                                e.stopPropagation();
+                                await handleStatementSelection(this, statement);
+                            });
+                            
+                            ibanContent.appendChild(statementHeader);
+                        });
+                        
+                        ibanItem.appendChild(ibanHeader);
+                        ibanItem.appendChild(ibanContent);
+                        ownerContent.appendChild(ibanItem);
+                    }
+                    
+                    ownerItem.appendChild(ownerHeader);
+                    ownerItem.appendChild(ownerContent);
+                    yearContent.appendChild(ownerItem);
+                }
+                
+                yearItem.appendChild(yearHeader);
+                yearItem.appendChild(yearContent);
+                treeView.appendChild(yearItem);
+                
+                // Add click handlers for expand/collapse
+                addTreeHandlers(yearHeader, yearContent);
+                yearContent.querySelectorAll('.tree-header').forEach(header => {
+                    addTreeHandlers(header, header.nextElementSibling);
+                });
+            }
+        }
+
+        function createHeader(title, count, label, label1, label2, label3, label4, label5,label6) {
+            const header = document.createElement('div');
+            header.className = 'tree-header';
+            
+            if (count !== null) {
+                header.innerHTML = `
+                    <span>${title}</span>
+                    <span class="badge">${count} ${label} ${label1} ${label2} ${label3} ${label4} ${label5}</span>
+                `;
+            } else {
+                const diff = label4 && label3 ? (parseFloat(label4) - parseFloat(label3)).toFixed(2) : '0.00';
+                header.innerHTML = `
+                    <span>${title}</span>
+                    <span style="background-color:${label6}">${label} (anz: ${label1} sum: ${label2} a: ${label3} e: ${label4} diff: ${diff})</span>
+                `;
+            }
+            return header;
+        }
+
+        async function handleStatementSelection(statementElement, statementData) {
+            // Update selected statement UI
+            if (state.currentSelectedStatement) {
+                state.currentSelectedStatement.classList.remove('active');
+            }
+            
+            statementElement.classList.add('active');
+            state.currentSelectedStatement = statementElement;
+            state.currentStatementDetails = statementData;
+            
+            // Show the statement details panel
+            showStatementDetailsPanel();
+            displayStatementDetails(statementData);
+            
+            // Show the image sidebar
+            showImageSidebar();
+            
+            // Reset PayPal tab content
+            document.getElementById('paypalTab').innerHTML = `
+                <div class="empty-state">
+                    <p>Click the PayPal tab to load data for statement ${statementData.statement_id}</p>
+                </div>
+            `;
+            
+            // Load documents for this statement
+            await loadStatementDocuments(statementElement.dataset.statementId);
+            
+            // Show right panel and load transactions
+            const rightPanel = document.getElementById('rightPanel');
+            rightPanel.classList.add('visible');
+            
+            document.getElementById('transactionDetails').innerHTML = `
+                <div class="transaction-loading">
+                    <div class="loading-spinner"></div>
+                    <div>Loading transactions...</div>
+                    <div style="margin-top:10px;font-size:0.9em">Fetching statement ${statementElement.dataset.statementId}</div>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch(`http://localhost:5000/accounts/test1/${statementElement.dataset.statementId}`);
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        throw new Error(`No transactions found for statement ${statementElement.dataset.statementId}`);
+                    }
+                    throw new Error(`Server responded with status ${response.status}`);
+                }
+                
+                const transactions = await response.json();
+                state.currentTransactions = transactions;
+                displayTransactions(transactions, statementElement.dataset.statementId);
+            } catch (error) {
+                console.error('Error loading transactions:', error);
+                document.getElementById('transactionDetails').innerHTML = `
+                    <div class="error-message">
+                        <div class="error-icon">⚠️</div>
+                        <h4>Could not load transactions</h4>
+                        <p>${error.message}</p>
+                        <small>Endpoint: /accounts/test1/${statementElement.dataset.statementId}</small>
+                    </div>
+                `;
+            }
+        }
+
+        function displayStatementDetails(statementData) {
+            const detailsContainer = document.getElementById('statementDetailsContent');
+            const datumOkElement = document.getElementById('datumok');
+            
+            if (statementData.DATUM_OK) {
+                datumOkElement.innerHTML = `Statement Date: ${formatDate(statementData.DATUM_OK)}`;
+ datumOkElement.style.backgroundColor = "lightgreen"; // Hintergrund grün datumOkElement.style.padding = "4px 8px"; // optional: etwas Abstand datumOkElement.style.borderRadius = "4px"; // optional: abgerundet
+            } else {
+                datumOkElement.innerHTML = 'No date available';
+datumOkElement.style.backgroundColor = "transparent"; // zurücksetzen
+            }
+            
+            if (!statementData) {
+                detailsContainer.innerHTML = `
+                    <div class="empty-state">
+                        No statement data available
+                    </div>
+                `;
+                return;
+            }
+            
+            // Define all the columns we want to display
+            const columns = [
+                'PK_KTO_KONTO_AUSZUG', 'FK_KTO_BANKKONTO','IBAN', 'BANK', 'FK_KTO_KONTO_AUSZUG', 'JAHR', 'MONAT',
+                'ANFANGSDATUM', 'ENDDATUM', 'ABHOLDATUM', 'FK_BEL_BELEG', 'KOMMENTAR',
+              
+                'ANFANGSBETRAG',
+                'ENDBETRAG', 'FK_BAS_KAL_ABHOLDATUM', 'FK_BAS_KAL_ANFANGSDATUM', 'FK_BAS_KAL_ENDDATUM',
+                'DATUM_OK', 'FK_STD_KTO_KONTO_AUSZUG_TYPE', 'BETRAG_VORJAHR', 'DATUM_OK_VORJAHR',
+                'BETRAG_AKTUELLES_JAHR', 'DATUM_OK_AKTUELLES_JAHR', 'BETRAG_FOLGEJAHR',
+                'DATUM_OK_FOLGEJAHR', 'DATUM_STEUERB_UEBERG', 'DATUM_FINANZAMT_UEBERG', 'DUMMY',
+                'FINAL_CNT',  'FINAL_AMOUNT_START', 'FINAL_AMOUNT_END',  'FINAL_AMOUNT','FINAL_AMOUNT_OFFENER_BETRAG', 'FINAL_CNT_PAYPAL_GR', 'FINAL_AMOUNT_PAYPAL_GR', 'FINAL_CNT_PAYPAL',
+                'FINAL_AMOUNT_PAYPAL', 'FINAL_CNT_PAYPAL_ABGSCHL', 'FINAL_AMOUNT_PAYPAL_ABGSCHL', 'FK_KON_OWNER', 'FK_KON_GESCHAEFTSPARTNER', 'FK_ORG_UNIT',
+                'KONTOAUSZUG_BLOB', 'INFO_RUECKSEITE', 'SONSTIGE_TEXTE',  'FK_MDT_MANDANT', 'CREATED_BY', 'CREATED_AT', 'MODIFIED_BY', 'MODIFIED_AT'
+            ];
+            
+            let html = '';
+            
+            // Add each field as a row
+            columns.forEach(column => {
+                const value = statementData[column];
+               
+                html += `
+                    <div class="statement-detail-row">
+                        <div class="statement-detail-label">${column}</div>
+                        <div class="statement-detail-value">
+                            ${value !== null && value !== undefined ? value : '<span class="null-value">null</span>'}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            detailsContainer.innerHTML = html;
+        }
+
+        function showImageSidebar() {
+            const imageSidebar = document.getElementById('imageSidebar');
+            imageSidebar.style.display = 'block';
+            imageSidebar.style.width = '350px';
+            imageSidebar.style.padding = '15px';
+            imageSidebar.style.overflow = 'auto';
+            
+            // Show loading state for documents
+            document.getElementById('statementImagesGrid').innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <div class="loading-spinner"></div>
+                    <div>Loading documents...</div>
+                </div>
+            `;
+            
+            // Activate documents tab by default
+            switchTab('documents');
+        }
+
+        async function loadStatementDocuments(statementId) {
+            try {
+                const response = await fetch(`http://localhost:5000/accounts/bild/1/${statementId}`);
+                
+                if (!response.ok) {
+                    throw new Error(`Server responded with status ${response.status}`);
+                }
+
+                const documents = await response.json();
+                displayStatementDocuments(documents);
+            } catch (error) {
+                console.error('Error loading statement documents:', error);
+                document.getElementById('statementImagesGrid').innerHTML = `
+                    <div class="error-message">
+                        <div class="error-icon">⚠️</div>
+                        <p>Error loading documents: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function displayStatementDocuments(documents) {
+            const container = document.getElementById('statementImagesGrid');
+            
+            if (!documents || documents.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <p>No documents found for this statement</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = '';
+            container.innerHTML += "<p><strong>Anzahl Dokumente: " + documents.length + "</strong></p>";
+            
+            documents.forEach(async (doc) => {
+                const isPDF = doc.FILENAME && doc.FILENAME.toLowerCase().endsWith('.pdf');
+                const card = document.createElement('div');
+                card.className = 'image-card';
+                
+                // Create link for lex_office_buchung if it exists
+                const lexOfficeLink = doc.lex_office_buchung ? 
+                    `<p><a href="${doc.lex_office_buchung}" target="_blank" style="color: #3498db; text-decoration: none;">
+                        View in LexOffice
+                    </a></p>` : 
+                    '<p class="null-value">No LexOffice link</p>';
+
+                // For PDF files, we'll load them and display in iframe
+                if (isPDF) {
+                    try {
+                        const response = await fetch(`http://localhost:5000/accounts/bild/1/1/1/${doc.PK_BILD_BILDER}`);
+                        const blob = await response.blob();
+                        const url = URL.createObjectURL(blob);
+                        
+                        card.innerHTML = `
+                            <div class="pdf-preview-container" data-id="${doc.PK_BILD_BILDER}">
+                                <iframe src="${url}" width="100%" height="150" style="border: none;"></iframe>
+                            </div>
+                            <div class="image-info">
+                                <p><strong>${doc.FILENAME} (${doc.PK_BILD_BILDER})</strong></p>
+                                <p>${new Date(doc.CREATED_AT).toLocaleDateString()}</p>
+                                <div style="text-align: center; margin-top: 10px;">
+                                    <a href="${url}" target="_blank" style="display: inline-block; text-decoration: none; padding: 5px 10px; background-color: #3498db; color: white; border-radius: 4px;">
+                                        Open PDF in new tab
+                                    </a>
+                                </div>
+                                ${lexOfficeLink}
+                            </div>
+                        `;
+                    } catch (error) {
+                        console.error('Error loading PDF:', error);
+                        card.innerHTML = `
+                            <div class="pdf-thumbnail" data-id="${doc.PK_BILD_BILDER}">📄</div>
+                            <div class="image-info">
+                                <p><strong>${doc.FILENAME} (${doc.PK_BILD_BILDER})</strong></p>
+                                <p>${new Date(doc.CREATED_AT).toLocaleDateString()}</p>
+                                <p class="error-message">Failed to load PDF</p>
+                                ${lexOfficeLink}
+                            </div>
+                        `;
+                    }
+                } else {
+                    // For images, use the existing approach
+                    card.innerHTML = `
+                        <img src="http://localhost:5000/accounts/bild/1/1/1/${doc.PK_BILD_BILDER}" 
+                             class="image-thumbnail" 
+                             data-id="${doc.PK_BILD_BILDER}"
+                             alt="${doc.FILENAME}">
+                        <div class="image-info">
+                            <p><strong>${doc.FILENAME} (${doc.PK_BILD_BILDER})</strong></p>
+                            <p>${new Date(doc.CREATED_AT).toLocaleDateString()}</p>
+                            ${lexOfficeLink}
+                        </div>
+                    `;
+                }
+                
+                container.appendChild(card);
+            });
+
+            // Add click handlers for image previews
+            document.querySelectorAll('.image-thumbnail').forEach(img => {
+                img.addEventListener('click', function() {
+                    openImageModal(this.src);
+                });
+            });
+
+            // Add click handlers for PDF previews (fallback)
+            document.querySelectorAll('.pdf-thumbnail').forEach(pdf => {
+                pdf.addEventListener('click', function() {
+                    window.open(`http://localhost:5000/accounts/bild/1/1/${this.dataset.id}`, '_blank');
+                });
+            });
+        }
+
+let keepFilter = "all";
+
+function applyKeepFilter(value) {
+    keepFilter = value;
+    displayTransactions(window._lastTransactions, window._lastStatementId);
+}
+
+function displayTransactions(transactions, statementId) {
+    const transactionDetails = document.getElementById('transactionDetails');
+
+    // Save original data for re-rendering
+    window._lastTransactions = transactions;
+    window._lastStatementId = statementId;
+
+    // Normalize input
+    if (transactions && transactions.transactions) {
+        transactions = transactions.transactions;
+    }
+    if (transactions && !Array.isArray(transactions)) {
+        transactions = [transactions];
+    }
+
+    if (!transactions || transactions.length === 0) {
+        transactionDetails.innerHTML = `
+            <div class="empty-right-panel">
+                No transactions found for statement ${statementId}
+            </div>
+        `;
+        return;
+    }
+
+    // --- APPLY KEEP FILTER ---
+    if (keepFilter === "1") {
+        transactions = transactions.filter(tx => tx.KEEP == 1);
+    }
+    if (keepFilter === "0") {
+        transactions = transactions.filter(tx => tx.KEEP == 0 || tx.KEEP === "0");
+    }
+
+    // --- Gruppieren nach TBL ---
+    const groups = {};
+    transactions.forEach(tx => {
+        const key = tx.TBL || 'UNBEKANNT';
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(tx);
+    });
+
+    // --- Min/Max für das gesamte Statement ---
+    const allDates = transactions
+        .map(tx => new Date(tx.BUCHUNGSTAG))
+        .filter(d => !isNaN(d))
+        .sort((a, b) => a - b);
+
+    const min_date = allDates.length ? formatDate(allDates[0]) : '';
+    const max_date = allDates.length ? formatDate(allDates[allDates.length - 1]) : '';
+
+    function sumField(arr, field) { 
+        return arr.reduce((total, row) => { 
+            const val = parseFloat(row[field]); 
+            return total + (isNaN(val) ? 0 : val); 
+        }, 0); 
+    } 
+
+    const sum_betrag = sumField(transactions, "BETRAG");
+    const sum_offener_betrag = sumField(transactions, "OFFENER_BETRAG");
+
+    // Fixed: Properly defined these variables
+    const sum_flg_lexoffice_buchung = sumField(transactions, "sum_flg_lexoffice_buchung");
+    const sum_flg_lexoffice_mit_bild = sumField(transactions, "sum_flg_lexoffice_mit_bild"); 
+    const cnt_link_lexoffice_buchung = sumField(transactions, "cnt_link_lexoffice_buchung"); 
+    const cnt_lexoffice_referenz_nr = sumField(transactions, "cnt_lexoffice_referenz_nr");
+
+    let html = `
+        <h3>Statement: ${statementId} (${min_date} - ${max_date}) — ${transactions.length} transactions (${sum_betrag.toFixed(2)} ${sum_offener_betrag.toFixed(2)} - ${sum_flg_lexoffice_buchung}  ${sum_flg_lexoffice_mit_bild} ${cnt_link_lexoffice_buchung} ${cnt_lexoffice_referenz_nr})</h3>
+    `;
+
+    // --- KEEP FILTER BUTTONS ---
+    html += `
+        <div class="keep-filter">
+            <button onclick="applyKeepFilter('all')">Show All</button>
+            <button onclick="applyKeepFilter('1')">KEEP = 1</button>
+            <button onclick="applyKeepFilter('0')">KEEP = 0</button>
+        </div>
+    `;
+
+    // --- Für jede TBL-Gruppe ---
+    Object.entries(groups).forEach(([tblName, txList], index) => {
+
+        // DISTINCT FK_MAIN_KEY SUMME
+        const fkGroupsForSum = {};
+        txList.forEach(tx => {
+            const key = tx.FK_MAIN_KEY || 'NO_KEY';
+            if (!fkGroupsForSum[key]) fkGroupsForSum[key] = [];
+            fkGroupsForSum[key].push(tx);
+        });
+
+        const sumBetrag = Object.values(fkGroupsForSum).reduce((sum, group) => {
+            const first = group[0];
+            const val = parseFloat(first.BETRAG);
+            return sum + (isNaN(val) ? 0 : val);
+        }, 0);
+
+        const sumBetrag1 = Object.values(fkGroupsForSum).reduce((sum, group) => {
+            const first = group[0];
+            const val = parseFloat(first.OFFENER_BETRAG);
+            return sum + (isNaN(val) ? 0 : val);
+        }, 0);
+
+        // Fixed: Properly defined these variables
+        const sum_flg_lexoffice_buchung = Object.values(fkGroupsForSum).reduce((sum, group) => { 
+            const first = group[0]; 
+            const val = parseFloat(first.sum_flg_lexoffice_buchung); 
+            return sum + (isNaN(val) ? 0 : val); 
+        }, 0); 
+        
+        const sum_flg_lexoffice_mit_bild = Object.values(fkGroupsForSum).reduce((sum, group) => { 
+            const first = group[0]; 
+            const val = parseFloat(first.sum_flg_lexoffice_mit_bild); 
+            return sum + (isNaN(val) ? 0 : val); 
+        }, 0); 
+        
+        const cnt_link_lexoffice_buchung = Object.values(fkGroupsForSum).reduce((sum, group) => { 
+            const first = group[0]; 
+            const val = parseFloat(first.cnt_link_lexoffice_buchung); 
+            return sum + (isNaN(val) ? 0 : val); 
+        }, 0); 
+        
+        const cnt_lexoffice_referenz_nr = Object.values(fkGroupsForSum).reduce((sum, group) => { 
+            const first = group[0]; 
+            const val = parseFloat(first.cnt_lexoffice_referenz_nr); 
+            return sum + (isNaN(val) ? 0 : val); 
+        }, 0);
+
+        // Min/Max pro TBL-Gruppe
+        const dates = txList
+            .map(tx => new Date(tx.BUCHUNGSTAG))
+            .filter(d => !isNaN(d))
+            .sort((a, b) => a - b);
+
+        const gMin = dates.length ? formatDate(dates[0]) : '';
+        const gMax = dates.length ? formatDate(dates[dates.length - 1]) : '';
+
+        const groupId = `tbl-group-${index}`;
+
+        html += `
+            <div class="tbl-group-header" onclick="toggleGroup('${groupId}')">
+                TBL: ${tblName} (${gMin} – ${gMax}) — ${Object.keys(fkGroupsForSum).length} FK_MAIN_KEY — Summe: ${sumBetrag.toFixed(2)} — Summe: ${sumBetrag1.toFixed(2)} €
+                (${sum_flg_lexoffice_buchung}/${sum_flg_lexoffice_mit_bild}/${cnt_link_lexoffice_buchung}/${cnt_lexoffice_referenz_nr})
+            </div>
+
+            <div id="${groupId}" class="tbl-group-content">
+                <table class="transaction-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>KONTOAUSZUG SEITE</th>
+                            <th>Bankkonto</th>
+                            <th>FK_MAIN_KEY</th>
+                            <th>BUCHUNGSTAG</th>
+                            <th>BETRAG</th>
+                            <th>OFFENER_BETRAG</th>
+                            <th>BUCHUNGSTEXT</th>
+                            <th>TBL</th>
+                            <th>Status</th>
+                            <th>DATUM_ALL_OK</th>
+                            <th>DATUM_ZUORD_KTO_AUSZUG_OK</th>
+                            <th>PK_REL_LEX_KTO_BEL</th>
+                            <th>FK_INP_BELEGE_ALL</th>
+                            <th>FINAL_CNT_ZUORD_BELEGE</th>
+                            <th>PK_REL_KTO_KONTO_AUSZUG_GIR</th>
+                            <th>LINK_LEXOFFICE_BUCHUNG</th>
+                            <th>FLG1</th>
+                            <th>FLG2</th>
+                            <th>DATUM_LOAD</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        // --- Gruppieren nach BELEGDATUM ---
+        const belegGroups = {};
+        txList.forEach(tx => {
+            const key = tx.BUCHUNGSTAG ? formatDate(tx.BUCHUNGSTAG) : 'OHNE_BELEGDATUM';
+            if (!belegGroups[key]) belegGroups[key] = [];
+            belegGroups[key].push(tx);
+        });
+
+        const sortedBelegKeys = Object.keys(belegGroups)
+            .filter(k => k !== "OHNE_BELEGDATUM")
+            .sort((a, b) => new Date(a) - new Date(b));
+
+        if (belegGroups["OHNE_BELEGDATUM"]) {
+            sortedBelegKeys.push("OHNE_BELEGDATUM");
+        }
+
+        // --- Für jedes BELEGDATUM ---
+        sortedBelegKeys.forEach((belegDatum, belegIndex) => {
+            const items = belegGroups[belegDatum];
+
+            // DISTINCT FK_MAIN_KEY SUMME pro BELEGDATUM
+            const fkGroupsForSum2 = {};
+            items.forEach(tx => {
+                const key = tx.FK_MAIN_KEY || 'NO_KEY';
+                if (!fkGroupsForSum2[key]) fkGroupsForSum2[key] = [];
+                fkGroupsForSum2[key].push(tx);
+            });
+
+            const sumBetrag2 = Object.values(fkGroupsForSum2).reduce((sum, group) => {
+                const first = group[0];
+                const val = parseFloat(first.BETRAG);
+                return sum + (isNaN(val) ? 0 : val);
+            }, 0);
+
+            const sum_flg_lexoffice_buchung2 = Object.values(fkGroupsForSum2).reduce((sum, group) => { 
+                const first = group[0]; 
+                const val = parseFloat(first.sum_flg_lexoffice_buchung); 
+                return sum + (isNaN(val) ? 0 : val); 
+            }, 0); 
+            
+            const sum_flg_lexoffice_mit_bild2 = Object.values(fkGroupsForSum2).reduce((sum, group) => { 
+                const first = group[0]; 
+                const val = parseFloat(first.sum_flg_lexoffice_mit_bild); 
+                return sum + (isNaN(val) ? 0 : val); 
+            }, 0); 
+            
+            const cnt_link_lexoffice_buchung2 = Object.values(fkGroupsForSum2).reduce((sum, group) => { 
+                const first = group[0]; 
+                const val = parseFloat(first.cnt_link_lexoffice_buchung); 
+                return sum + (isNaN(val) ? 0 : val); 
+            }, 0); 
+            
+            const cnt_lexoffice_referenz_nr2 = Object.values(fkGroupsForSum2).reduce((sum, group) => { 
+                const first = group[0]; 
+                const val = parseFloat(first.cnt_lexoffice_referenz_nr); 
+                return sum + (isNaN(val) ? 0 : val); 
+            }, 0);
+
+            html += `
+                <tr style="background:#ececec; font-weight:bold;">
+                    <td colspan="22">
+                        BELEGDATUM: ${belegDatum} — ${Object.keys(fkGroupsForSum2).length} FK_MAIN_KEY — Summe: ${sumBetrag2.toFixed(2)} €
+ (${sum_flg_lexoffice_buchung2}/${sum_flg_lexoffice_mit_bild2}/${cnt_link_lexoffice_buchung2}/${cnt_lexoffice_referenz_nr2})
+                    </td>
+                </tr>
+            `;
+
+            // --- FK_MAIN_KEY Untergruppen ---
+            const fkGroups = {};
+            items.forEach(tx => {
+                const key = tx.FK_MAIN_KEY || 'NO_KEY';
+                if (!fkGroups[key]) fkGroups[key] = [];
+                fkGroups[key].push(tx);
+            });
+
+            let id = 0;
+
+            Object.entries(fkGroups).forEach(([fkKey, fkItems], fkIndex) => {
+
+                const first = fkItems[0];
+                const maxAmount = parseFloat(first.BETRAG) || 0;
+                const maxAmountClass = maxAmount >= 0 ? 'amount-positive' : 'amount-negative';
+                id += 1;
+
+                const fkGroupId = `fk-group-${index}-${belegIndex}-${fkIndex}`;
+
+                // MAX ROW
+                html += `
+                    <tr class="fk-main-header"
+                        onclick="toggleFkGroup('${fkGroupId}')"
+                        style="background:#d9eaff; font-weight:bold; cursor:pointer;">
+                        
+                        <td>
+                            <button class="keep-btn" onclick="setKeepStatus('${first.FK_MAIN_KEY}', 1)">KEEP</button>
+                            <button class="unkeep-btn" onclick="setKeepStatus('${first.FK_MAIN_KEY}', 0)">UNKEEP</button>
+                        </td>
+
+                        <td>${id}</td>
+                        <td>${first.SEITE || ''}</td>
+                        <td>${first.FK_KTO_BANKKONTO || ''}</td>
+                        <td>${fkKey}</td>
+                        <td>${formatDate(first.BUCHUNGSTAG) || ''}</td>
+                        <td class="${maxAmountClass}">${formatCurrency(maxAmount)}</td>
+                        <td>${formatCurrency(first.OFFENER_BETRAG)}</td>
+                        <td>${first.WAEHRUNG}</td>
+                        <td>${first.KEEP}</td>
+                        <td>${first.BUCHUNGSTEXT || first.BUCHUNGSTEXT1 || ''}</td>
+                        <td>${first.TBL || ''}</td>
+<td> ${first.cnt_link_lexoffice_buchung > 0 ? '✔️' : '❌'} </td>
+                        <td>${first.STATUS || ''}</td>
+                        <td>${first.DATUM_ALL_OK || ''}</td>
+                        <td>${first.DATUM_ZUORD_KTO_AUSZUG_OK || ''}</td>                      
+                        <td>${first.DATUM_LOAD || ''}</td>
+                        <td>${first.sum_flg_lexoffice_buchung || ''}</td>
+                        <td>${first.sum_flg_lexoffice_mit_bild || ''}</td>
+                        <td>${first.cnt_link_lexoffice_buchung || ''}</td>
+                        <td>${first.cnt_lexoffice_referenz_nr || ''}</td>
+                        <td></td>
+                    </tr>
+
+                    <tbody id="${fkGroupId}" style="display:none;">
+                `;
+
+                let cntSub1 = 0;
+
+                // SUBROWS
+                fkItems.forEach(tx => {
+                    cntSub1++;
+
+                    const amount = parseFloat(tx.BETRAG) || 0;
+                    const amountClass = amount >= 0 ? 'amount-positive' : 'amount-negative';
+
+                    html += `
+                        <tr class="transaction-row"
+                            data-fk-main-key="${tx.FK_MAIN_KEY}"
+                            style="${tx.FLG_LEXOFFICE_BUCHUNG ? 'background-color:#e8f5e9;' : ''}">
+                            
+                            <td>${cntSub1}</td>
+                            <td>${tx.SEITE || ''}</td>
+                            <td>${tx.FK_KTO_BANKKONTO || ''}</td>
+                            <td>${tx.FK_MAIN_KEY || ''}</td>
+                            <td>${formatDate(tx.BUCHUNGSTAG) || ''}</td>
+                            <td class="${amountClass}">${formatCurrency(amount)}</td>
+                            <td>${formatCurrency(tx.OFFENER_BETRAG)}</td>
+                            <td>${tx.BUCHUNGSTEXT || ''}</td>
+                            <td>${tx.TBL || ''}</td>
+                            <td>${tx.STATUS || ''}</td>
+                            <td>${tx.DATUM_ALL_OK || ''}</td>
+                            <td>${tx.DATUM_ZUORD_KTO_AUSZUG_OK || ''}</td>
+                            <td>${tx.PK_REL_LEX_KTO_BEL || ''}</td>
+                            <td>${tx.FK_INP_BELEGE_ALL || ''}</td>
+    <td>${tx.BELEGNUMMER || ''}</td>
+    <td>${tx.TITEL || ''}</td>
+    <td>${tx.BRUTTO_BETRAG || ''}</td>
+                            <td>${tx.FINAL_CNT_ZUORD_BELEGE || ''}</td>
+                            <td>${tx.PK_REL_KTO_KONTO_AUSZUG_GIR || ''}</td>
+                            <td>${tx.LINK_LEXOFFICE_BUCHUNG ? 
+                                `<a href="${tx.LINK_LEXOFFICE_BUCHUNG}" target="_blank" class="lexoffice-link">${tx.LINK_LEXOFFICE_BUCHUNG}</a>` : 
+                                ''}</td>
+                            <td>${tx.FLG_LEXOFFICE_BUCHUNG || ''}</td>
+                            <td>${tx.FLG_LEXOFFICE_MIT_BILD || ''}</td>
+                            <td>${tx.DATUM_LOAD || ''}</td>
+                            <td>
+                                <button class="action-btn add-btn"
+                                        data-fk-main-key="${tx.FK_MAIN_KEY}"
+                                        onclick="insertLexRelation(this)">
+                                    Add Relation
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += `</tbody>`;
+            });
+        });
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+    });
+
+    transactionDetails.innerHTML = html;
+
+    document.querySelectorAll('.transaction-row').forEach(row => {
+        row.addEventListener('click', async function() {
+            const fkMainKey = this.dataset.fkMainKey;
+            await handleTransactionSelection(this, fkMainKey);
+        });
+    });
+}
+        // --- Collapsible Toggle ---
+        function toggleGroup(id) {
+            const el = document.getElementById(id);
+            el.style.display = el.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function toggleFkGroup(id) {
+            const el = document.getElementById(id);
+            el.style.display = el.style.display === 'none' ? 'table-row-group' : 'none';
+        }
+
+
+
+        async function handleTransactionSelection(rowElement, fkMainKey) {
+            // Update selected transaction UI
+            document.querySelectorAll('.transaction-row.selected-transaction').forEach(r => {
+                r.classList.remove('selected-transaction');
+            });
+            rowElement.classList.add('selected-transaction');
+            state.currentSelectedTransaction = rowElement;
+            
+            // Load transaction details
+            await loadTransactionDetails(fkMainKey);
+            
+            // Load related images and switch to transactions tab
+            await loadRelatedImages(fkMainKey);
+            switchTab('transactions');
+        }
+
+        function displayTransactionDetails(details) {
+            const detailsContainer = document.getElementById('transactionDetailsTable');
+            
+            if (!details || Object.keys(details).length === 0) {
+                detailsContainer.innerHTML = '<p>No additional details available for this transaction</p>';
+                document.getElementById('updateRelationForm').style.display = 'none';
+                return;
+            }
+            
+            // Create table header based on the keys in the first item if details is an array
+            const sampleItem = Array.isArray(details) ? details[0] : details;
+            const headers = Object.keys(sampleItem);
+            
+            let html = `
+                <table class="transaction-details-table">
+                    <thead>
+                        <tr>
+                            ${headers.map(header => `<th>${header}</th>`).join('')}
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            // Handle both single object and array responses
+            const itemsToDisplay = Array.isArray(details) ? details : [details];
+            
+            // Add each detail as a row in the table
+            itemsToDisplay.forEach(item => {
+                html += `
+                    <tr>
+                        ${headers.map(header => {
+                            const value = item[header];
+                            
+                            // Special handling for LINK_LEXOFFICE_BUCHUNG
+                            if (header === 'LINK_LEXOFFICE_BUCHUNG' && value) {
+                                return `
+                                    <td>
+                                        <a href="${value}" 
+                                           target="_blank" 
+                                           rel="noopener noreferrer"
+                                           class="lexoffice-link">
+                                           ${value}
+                                        </a>
+                                    </td>
+                                `;
+                            }
+                            
+                            // Default handling for other fields
+                            return `
+                                <td>${value !== null ? value : '<span class="null-value">null</span>'}</td>
+                            `;
+                        }).join('')}
+                        <td>
+                            <button class="action-btn edit-btn" 
+                                    onclick="populateUpdateForm(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                                Edit
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+                <div class="table-footer">
+                    Showing ${itemsToDisplay.length} relation${itemsToDisplay.length !== 1 ? 's' : ''}
+                </div>
+            `;
+            
+            detailsContainer.innerHTML = html;
+            document.getElementById('updateRelationForm').style.display = 'none';
+        }
+
+        async function loadTransactionDetails(fkMainKey) {
+            const detailsContainer = document.getElementById('transactionDetailsTable');
+            
+            // Show loading state
+            detailsContainer.innerHTML = `
+                <div class="transaction-loading">
+                    <div class="loading-spinner"></div>
+                    <div>Loading transaction details...</div>
+                </div>
+            `;
+            
+            try {
+                // Validate input
+                if (!fkMainKey) {
+                    throw new Error('Transaction key is required');
+                }
+
+                // Fetch transaction details from API
+                const response = await fetch(`http://localhost:5000/accounts/1/${fkMainKey}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const transactionDetails = await response.json();
+                
+                // Validate response
+                if (!transactionDetails || typeof transactionDetails !== 'object') {
+                    throw new Error('Invalid transaction details received');
+                }
+
+                // Display the details in a table
+                displayTransactionDetails(transactionDetails);
+                
+            } catch (error) {
+                console.error('Failed to load transaction details:', error);
+                detailsContainer.innerHTML = `
+                    <div class="error-message">
+                        <div class="error-icon">⚠️</div>
+                        <h4>Error loading transaction details</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function loadRelatedImages(fkMainKey) {
+            const container = document.getElementById('imageTableContainer');
+            container.innerHTML = `
+                <div class="transaction-loading">
+                    <div class="loading-spinner"></div>
+                    <div>Loading related images...</div>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch(`http://localhost:5000/accounts/bild/1/1/${fkMainKey}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const images = await response.json();
+                
+                if (!images || images.length === 0) {
+                    container.innerHTML = '<p>No related images found for this transaction</p>';
+                    return;
+                }
+                
+                let html = `
+                    <table class="image-table">
+                        <thead>
+                            <tr>
+                                <th>Preview</th>
+                                <th>Filename</th>
+                                <th>Created At</th>
+                                <th>LexOffice Link</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                images.forEach(image => {
+                    const isPDF = image.FILENAME && image.FILENAME.toLowerCase().endsWith('.pdf');
+                    const lexOfficeLink = image.LINK_LEXOFFICE_BUCHUNG ? 
+                        `<a href="${image.LINK_LEXOFFICE_BUCHUNG}" target="_blank" class="lexoffice-link">View</a>` : 
+                        '<span class="null-value">None</span>';
+                    
+                    html += `
+                        <tr>
+                            <td>
+                                ${isPDF ? 
+                                    '<div class="pdf-preview">📄</div>' : 
+                                    `<img src="http://localhost:5000/accounts/bild/1/1/1/${image.PK_BILD_BILDER}" class="image-preview">`}
+                            </td>
+                            <td>${image.FILENAME}</td>
+                            <td>${formatDate(image.CREATED_AT)}</td>
+                            <td>${lexOfficeLink}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                        </tbody>
+                    </table>
+                `;
+                
+                container.innerHTML = html;
+                
+                // Add click handlers for image previews
+                document.querySelectorAll('.image-preview').forEach(img => {
+                    img.addEventListener('click', function() {
+                        openImageModal(this.src);
+                    });
+                });
+                
+                // Add click handlers for PDF previews
+                document.querySelectorAll('.pdf-preview').forEach(pdf => {
+                    pdf.addEventListener('click', function() {
+                        const pkBildBilder = this.closest('tr').querySelector('img')?.src.split('/').pop() || '';
+                        if (pkBildBilder) {
+                            window.open(`http://localhost:5000/accounts/bild/1/1/${pkBildBilder}`, '_blank');
+                        }
+                    });
+                });
+                
+            } catch (error) {
+                console.error('Failed to load related images:', error);
+                container.innerHTML = `
+                    <div class="error-message">
+                        <div class="error-icon">⚠️</div>
+                        <p>Error loading related images: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // New function to handle insert lex relation
+        async function insertLexRelation(button) {
+            const fkMainKey = button.dataset.fkMainKey;
+            
+            if (!fkMainKey) {
+                alert('No FK_MAIN_KEY found for this transaction');
+                return;
+            }
+            
+            try {
+                const response = await fetch('http://localhost:5000/insert-lex-relation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        fk_main_key: fkMainKey
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    alert(`Successfully created relation with FK_MAIN_KEY: ${result.insertedRecord.fk_main_key}`);
+                    // Refresh the transaction details if we're currently viewing them
+                    if (state.currentSelectedStatement) {
+                        await handleStatementSelection(state.currentSelectedStatement);
+                    }
+                } else {
+                    throw new Error(result.message || 'Failed to insert relation');
+                }
+            } catch (error) {
+                console.error('Error inserting lex relation:', error);
+                alert(`Error: ${error.message}`);
+            }
+        }
+
+        // New function to populate the update form when a relation is selected
+        function populateUpdateForm(relation) {
+            const form = document.getElementById('updateRelationForm');
+            form.style.display = 'block';
+            
+            // Populate all fields
+            document.getElementById('update-pk-rel-lex-kto-bel').value = relation.PK_REL_LEX_KTO_BEL || '';
+            document.getElementById('update-fk-main-key').value = relation.FK_MAIN_KEY || '';
+            document.getElementById('update-fk-inp-belege-all').value = relation.FK_INP_BELEGE_ALL || '';
+            document.getElementById('update-ok').value = relation.OK ? 'true' : 'false';
+            document.getElementById('update-comm').value = relation.COMM || '';
+            document.getElementById('update-fk-rel-lex-kto-bel').value = relation.FK_REL_LEX_KTO_BEL || '';
+            document.getElementById('update-fk-inp-belege-pos-all').value = relation.FK_INP_BELEGE_POS_ALL || '';
+            document.getElementById('update-created-by').value = relation.CREATED_BY || '';
+            document.getElementById('update-modified-by').value = relation.MODIFIED_BY || '';
+            document.getElementById('update-ok-datum-filled').value = relation.OK_DATUM_FILLED || '';
+            document.getElementById('update-fk-mdt-mandant').value = relation.FK_MDT_MANDANT || '';
+            document.getElementById('update-fk-bas-bas-vorgang').value = relation.FK_BAS_BAS_VORGANG || '';
+            document.getElementById('update-fk-rel-lex-kto-bel-sub').value = relation.FK_REL_LEX_KTO_BEL_SUB || '';
+            document.getElementById('update-flg-lexoffice-buchung').value = relation.FLG_LEXOFFICE_BUCHUNG ? 'true' : 'false';
+            document.getElementById('update-flg-lexoffice-mit-bild').value = relation.FLG_LEXOFFICE_MIT_BILD ? 'true' : 'false';
+            document.getElementById('update-link-lexoffice-buchung').value = relation.LINK_LEXOFFICE_BUCHUNG || '';
+            document.getElementById('update-lexoffice-referenz-nr').value = relation.LEXOFFICE_REFERENZ_NR || '';
+        }
+
+        // New function to handle update lex relation
+        async function updateLexRelation() {
+            const pkRelLexKtoBel = document.getElementById('update-pk-rel-lex-kto-bel').value;
+            
+            if (!pkRelLexKtoBel) {
+                alert('No relation selected for update');
+                return;
+            }
+            
+            const updateData = {
+                pk_rel_lex_kto_bel: pkRelLexKtoBel,
+                fk_main_key: document.getElementById('update-fk-main-key').value,
+                fk_inp_belege_all: document.getElementById('update-fk-inp-belege-all').value,
+                ok: document.getElementById('update-ok').value === 'true',
+                comm: document.getElementById('update-comm').value,
+                fk_rel_lex_kto_bel: document.getElementById('update-fk-rel-lex-kto-bel').value,
+                fk_inp_belege_pos_all: document.getElementById('update-fk-inp-belege-pos-all').value,
+                created_by: document.getElementById('update-created-by').value,
+                modified_by: document.getElementById('update-modified-by').value,
+                ok_datum_filled: document.getElementById('update-ok-datum-filled').value,
+                fk_mdt_mandant: document.getElementById('update-fk-mdt-mandant').value,
+                fk_bas_bas_vorgang: document.getElementById('update-fk-bas-bas-vorgang').value,
+                fk_rel_lex_kto_bel_sub: document.getElementById('update-fk-rel-lex-kto-bel-sub').value,
+                flg_lexoffice_buchung: document.getElementById('update-flg-lexoffice-buchung').value === 'true',
+                flg_lexoffice_mit_bild: document.getElementById('update-flg-lexoffice-mit-bild').value === 'true',
+                link_lexoffice_buchung: document.getElementById('update-link-lexoffice-buchung').value,
+                lexoffice_referenz_nr: document.getElementById('update-lexoffice-referenz-nr').value
+            };
+            
+            try {
+                const response = await fetch('http://localhost:5000/update-lex-relation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(updateData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    alert(`Successfully updated relation with PK_REL_LEX_KTO_BEL: ${pkRelLexKtoBel}`);
+                    // Refresh the transaction details if we're currently viewing them
+                    if (state.currentSelectedStatement) {
+                        await handleStatementSelection(state.currentSelectedStatement);
+                    }
+                } else {
+                    throw new Error(result.message || 'Failed to update relation');
+                }
+            } catch (error) {
+                console.error('Error updating lex relation:', error);
+                alert(`Error: ${error.message}`);
+            }
+        }
+
+        function openImageModal(imageUrl) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            
+            modalImg.src = imageUrl;
+            modal.style.display = 'flex';
+        }
+
+        function closeImageModal() {
+            document.getElementById('imageModal').style.display = 'none';
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            try {
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return dateString;
+                return date.toLocaleDateString('de-DE', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                });
+            } catch {
+                return dateString;
+            }
+        }
+
+
+async function setKeepStatus(fkMainKey, value) {
+    console.log("Setting KEEP status:", fkMainKey, value);
+
+    try {
+        const response = await fetch(`http://localhost:5000/paypal_gr/update/${fkMainKey}?keep=${value}`, {
+            method: "POST"
+        });
+
+        if (!response.ok) {
+            throw new Error(`Server returned ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log("Server response:", result);
+
+        // Optional: visuelles Feedback
+        alert(`FK_MAIN_KEY ${fkMainKey} updated to KEEP=${value}`);
+
+    } catch (err) {
+        console.error("Error updating KEEP status:", err);
+        alert(`Error updating KEEP status: ${err.message}`);
+    }
+}
+
+
+
+
+        async function loadPaypalData() {
+            const container = document.getElementById("paypalTab");
+            
+            // Clear container and show loading state
+            container.innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <div class="loading-spinner"></div>
+                    <div>Loading PayPal data…</div>
+                </div>
+            `;
+
+            try {
+                // Get the currently selected statement ID
+                const statementId = state.currentStatementDetails?.PK_KTO_KONTO_AUSZUG || 
+                                   state.currentStatementDetails?.statement_id;
+                
+                if (!statementId) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <p>No statement selected. Please select a statement first.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Use statementId as parameter in the URL
+                const response = await fetch(`http://localhost:5000/accounts_paypal/${statementId}`);
+
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // Normalize: ensure array
+                const rows = Array.isArray(data) ? data : data.data || [];
+
+                if (!rows.length) {
+                    container.innerHTML = `<div class="empty-state">No PayPal records found for statement ${statementId}.</div>`;
+                    return;
+                }
+
+                // Calculate summary statistics
+                const totalAmount = rows.reduce((sum, row) => {
+                    const amount = parseFloat(row.amount) || 0;
+                    
+                    return sum + amount;
+                }, 0);
+
+             const totalAmountEUR = rows.reduce((sum, row) => {
+                 
+                    const amount = parseFloat(row.eur) || 0;
+                    
+                    return sum + amount;
+
+                }, 0);
+
+             const totalAmountUSD = rows.reduce((sum, row) => {
+
+                    const amount = parseFloat(row.usd) || 0;
+                    
+                    return sum + amount;
+
+                }, 0);
+
+                const completedCount = rows.filter(row => row.status === 'completed').length;
+                const pendingCount = rows.filter(row => row.status === 'pending').length;
+
+                // Build table with styling
+                let html = `
+                    <h4>PayPal Data for Statement: ${statementId}</h4>
+                    
+                    <div class="paypal-summary">
+                        <span class="paypal-summary-item">
+                            <span class="paypal-summary-label">Total Records:</span>
+                            <span class="paypal-summary-value">${rows.length}</span>
+                        </span>
+                        <span class="paypal-summary-item">
+                            <span class="paypal-summary-label">Total Amount:</span>
+                            <span class="paypal-summary-value">${formatCurrency(totalAmount)}</span>
+                        </span>
+                        <span class="paypal-summary-item">
+                            <span class="paypal-summary-label">Total Amount (EUR):</span>
+                            <span class="paypal-summary-value">${formatCurrency(totalAmountEUR)}</span>
+                        </span>
+                        <span class="paypal-summary-item">
+                            <span class="paypal-summary-label">Total Amount (USD):</span>
+                            <span class="paypal-summary-value">${formatCurrency(totalAmountUSD)}</span>
+                        </span>
+                        <span class="paypal-summary-item">
+                            <span class="paypal-summary-label">Completed:</span>
+                            <span class="paypal-summary-value">${completedCount}</span>
+                        </span>
+                        <span class="paypal-summary-item">
+                            <span class="paypal-summary-label">Pending:</span>
+                            <span class="paypal-summary-value">${pendingCount}</span>
+                        </span>
+                    </div>
+                    
+                    <div style="overflow-x: auto; max-height: 500px; overflow-y: auto;">
+                        <table class="paypal-table">
+                            <thead style="position: sticky; top: 0; background-color: #f8f9fa; z-index: 1;">
+                                <tr>
+                `;
+
+                // Add table headers
+                const columns = Object.keys(rows[0]);
+                columns.forEach(col => {
+                    html += `<th>${col}</th>`;
+                });
+
+                html += `
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                // Add table rows
+                rows.forEach(row => {
+                    html += '<tr>';
+                    columns.forEach(col => {
+                        const value = row[col];
+                        // Format currency values if they look like numbers and are amount fields
+                        let formattedValue = value !== null && value !== undefined ? value : '';
+                        
+                        if (col.toLowerCase().includes('amount') || col.toLowerCase().includes('betrag')) {
+                            const numValue = parseFloat(value);
+                            if (!isNaN(numValue)) {
+                                formattedValue = formatCurrency(numValue);
+                            }
+                        }
+                        
+                        html += `<td>${formattedValue}</td>`;
+                    });
+                    html += '</tr>';
+                });
+
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+                container.innerHTML = html;
+
+            } catch (err) {
+                container.innerHTML = `
+                    <div class="error-message">
+                        <div class="error-icon">⚠️</div>
+                        <h4>Error loading PayPal data</h4>
+                        <p>${err.message}</p>
+                        <small>Make sure the endpoint /accounts_paypal/:id is implemented on the server</small>
+                    </div>
+                `;
+            }
+        }
+
+        function formatCurrency(amount) {
+            if (amount === undefined || amount === null || isNaN(amount)) return '';
+            return new Intl.NumberFormat('de-DE', {
+                style: 'currency',
+                currency: 'EUR',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(amount);
+        }
+
+        function addTreeHandlers(header, content) {
+            header.addEventListener('click', function(e) {
+                if (!this.dataset.statementId) {
+                    const isExpanded = this.classList.contains('expanded');
+                    if (isExpanded) {
+                        this.classList.remove('expanded');
+                        content.style.display = 'none';
+                        state.currentExpandedItems = state.currentExpandedItems.filter(item => item !== content);
+                    } else {
+                        this.classList.add('expanded');
+                        content.style.display = 'block';
+                        if (!state.currentExpandedItems.includes(content)) {
+                            state.currentExpandedItems.push(content);
+                        }
+                    }
+                }
+            });
+        }
+
+        function downloadAsCsv() {
+            if (state.fetchedData.length === 0) {
+                showError('No data to download. Please fetch data first.');
+                return;
+            }
+            
+            const headers = ['statement_id', 'account_name', 'holder_name', 'yr', 'statement_date', 'balance', 'status'];
+            let csv = headers.join(',') + '\n';
+            
+            state.fetchedData.forEach(account => {
+                const row = headers.map(header => {
+                    let value = account[header] || '';
+                    return `"${value.toString().replace(/"/g, '""')}"`;
+                });
+                csv += row.join(',') + '\n';
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'account_statements.csv');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function expandAllItems() {
+            state.currentExpandedItems = Array.from(document.querySelectorAll('.tree-content'));
+            state.currentExpandedItems.forEach(content => {
+                content.style.display = 'block';
+                content.previousElementSibling.classList.add('expanded');
+            });
+        }
+
+        function collapseAllItems() {
+            state.currentExpandedItems.forEach(content => {
+                content.style.display = 'none';
+                content.previousElementSibling.classList.remove('expanded');
+            });
+            state.currentExpandedItems = [];
+        }
+
+        function closeRightPanel() {
+            const rightPanel = document.getElementById('rightPanel');
+            rightPanel.classList.remove('visible');
+            
+            document.querySelectorAll('.selected-transaction').forEach(el => {
+                el.classList.remove('selected-transaction');
+            });
+            
+            if (state.currentSelectedStatement) {
+                state.currentSelectedStatement.classList.remove('active');
+                state.currentSelectedStatement = null;
+            }
+        }
+
+        function showError(message) {
+            const errorElement = document.getElementById('error');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+        }
+
+        function handleSearch(e) {
+            e.preventDefault();
+            // Implement search functionality here
+            alert('Search functionality to be implemented');
+        }
+
+        function resetSearch() {
+            // Implement reset functionality here
+            document.getElementById('searchYear').value = '';
+            document.getElementById('searchAccountName').value = '';
+            document.getElementById('searchHolderName').value = '';
+            document.getElementById('searchStatementId').value = '';
+            document.getElementById('searchStatus').value = '';
+        }
+        
+        function searchTransactions() {
+            const searchTerm = document.getElementById('transactionSearchInput').value.toLowerCase();
+            
+            if (!searchTerm) {
+                // If search is empty, show all transactions
+                document.querySelectorAll('.transaction-row').forEach(row => {
+                    row.style.display = '';
+                });
+                return;
+            }
+            
+            // Filter transactions based on search term
+            document.querySelectorAll('.transaction-row').forEach(row => {
+                const rowText = row.textContent.toLowerCase();
+                if (rowText.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // Make functions available globally for onclick handlers
+        window.toggleGroup = toggleGroup;
+        window.toggleFkGroup = toggleFkGroup;
+        window.insertLexRelation = insertLexRelation;
+        window.populateUpdateForm = populateUpdateForm;
+        window.updateLexRelation = updateLexRelation;
+    </script>
+</body>
+</html>

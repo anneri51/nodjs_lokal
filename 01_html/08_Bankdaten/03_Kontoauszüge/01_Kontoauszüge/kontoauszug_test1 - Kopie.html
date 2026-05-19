@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kontoauszüge mit Buchungen</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .container {
+            display: flex;
+            height: 100vh;
+            max-width: 100%;
+            margin: 0;
+            background-color: white;
+        }
+        .sidebar {
+            width: 300px;
+            border-right: 1px solid #ddd;
+            background-color: #f9f9f9;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            position: relative;
+            min-height: 200px;
+        }
+        .resize-handle {
+            height: 5px;
+            background-color: #ccc;
+            cursor: ns-resize;
+            position: absolute;
+            left: 0;
+            right: 0;
+            z-index: 10;
+        }
+        .resize-handle.top {
+            top: 0;
+        }
+        .resize-handle.bottom {
+            bottom: 0;
+        }
+        .sidebar-header {
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+            background-color: #eee;
+            font-weight: bold;
+        }
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 20px;
+        }
+        .content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            height: 100%;
+        }
+        .collapsible {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #ddd;
+            background-color: #eee;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .collapsible:hover {
+            background-color: #e0e0e0;
+        }
+        .collapsible:after {
+            content: '\25BC';
+            font-size: 12px;
+            transition: transform 0.2s;
+        }
+        .collapsible.active:after {
+            transform: rotate(180deg);
+        }
+        .collapsible-content {
+            padding: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.2s ease-out;
+        }
+        .kontoauszug {
+            padding: 12px 15px 12px 25px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+        .kontoauszug:hover {
+            background-color: #e9e9e9;
+        }
+        .kontoauszug.active {
+            background-color: #e0e0e0;
+            font-weight: bold;
+        }
+        .kontoauszug-datum {
+            color: #555;
+            font-size: 13px;
+        }
+        .kontoauszug-kontonr {
+            font-size: 12px;
+            color: #777;
+        }
+        .buchungen-header {
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+        }
+        .buchung {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .buchung-datum {
+            width: 100px;
+            color: #555;
+        }
+        .buchung-betrag {
+            width: 120px;
+            text-align: right;
+            font-weight: bold;
+        }
+        .buchung-betrag.positiv {
+            color: green;
+        }
+        .buchung-betrag.negativ {
+            color: red;
+        }
+        .buchung-text {
+            flex: 1;
+            padding: 0 15px;
+        }
+        .saldo {
+            margin-top: 20px;
+            padding-top: 10px;
+            border-top: 2px solid #333;
+            font-weight: bold;
+            text-align: right;
+        }
+        .kontoinhaber {
+            background-color: #e5e5e5;
+            padding-left: 10px;
+        }
+        .konto {
+            background-color: #e0e0e0;
+            padding-left: 20px;
+        }
+        .jahr {
+            padding-left: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="resize-handle top"></div>
+            <div class="sidebar-header">Kontenübersicht</div>
+            <div class="sidebar-content">
+                <div class="collapsible active">Alle Konten</div>
+                <div class="collapsible-content" style="max-height: 1000px;">
+                    <!-- Kontoinhaber 1 -->
+                    <div class="collapsible kontoinhaber active">Max Mustermann</div>
+                    <div class="collapsible-content" style="max-height: 1000px;">
+                        <!-- Konto 1 -->
+                        <div class="collapsible konto active">Girokonto (DE12 3456 7890)</div>
+                        <div class="collapsible-content" style="max-height: 1000px;">
+                            <div class="collapsible jahr active">2023</div>
+                            <div class="collapsible-content" style="max-height: 1000px;">
+                                <div class="kontoauszug active" data-period="dezember-2023">
+                                    <div class="kontoauszug-datum">31.12.2023</div>
+                                    <div>Dezember 2023</div>
+                                </div>
+                                <div class="kontoauszug" data-period="november-2023">
+                                    <div class="kontoauszug-datum">30.11.2023</div>
+                                    <div>November 2023</div>
+                                </div>
+                                <div class="kontoauszug" data-period="oktober-2023">
+                                    <div class="kontoauszug-datum">31.10.2023</div>
+                                    <div>Oktober 2023</div>
+                                </div>
+                            </div>
+                            <div class="collapsible jahr">2022</div>
+                            <div class="collapsible-content">
+                                <div class="kontoauszug" data-period="dezember-2022">
+                                    <div class="kontoauszug-datum">31.12.2022</div>
+                                    <div>Dezember 2022</div>
+                                </div>
+                                <div class="kontoauszug" data-period="november-2022">
+                                    <div class="kontoauszug-datum">30.11.2022</div>
+                                    <div>November 2022</div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Konto 2 -->
+                        <div class="collapsible konto">Sparkonto (DE98 7654 3210)</div>
+                        <div class="collapsible-content">
+                            <div class="collapsible jahr">2023</div>
+                            <div class="collapsible-content">
+                                <div class="kontoauszug" data-period="spar-dezember-2023">
+                                    <div class="kontoauszug-datum">31.12.2023</div>
+                                    <div>Dezember 2023</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Kontoinhaber 2 -->
+                    <div class="collapsible kontoinhaber">Erika Mustermann</div>
+                    <div class="collapsible-content">
+                        <!-- Konto 3 -->
+                        <div class="collapsible konto">Gemeinschaftskonto (DE11 2233 4455)</div>
+                        <div class="collapsible-content">
+                            <div class="collapsible jahr">2023</div>
+                            <div class="collapsible-content">
+                                <div class="kontoauszug" data-period="gemeinschaft-dezember-2023">
+                                    <div class="kontoauszug-datum">31.12.2023</div>
+                                    <div>Dezember 2023</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="resize-handle bottom"></div>
+        </div>
+        
+        <div class="content">
+            <div class="buchungen-header">
+                <h2>Buchungen - Dezember 2023</h2>
+                <div>Max Mustermann - Girokonto (DE12 3456 7890 1234 5678 90)</div>
+                <div>Zeitraum: 01.12.2023 - 31.12.2023</div>
+            </div>
+            
+            <div id="transactions-container">
+                <!-- Transactions will be loaded here -->
+            </div>
+            
+            <div class="saldo">
+                Endsaldo: <span id="balance">2,223.57</span> €
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Transaction data for different periods
+        const transactionData = {
+            'dezember-2023': {
+                title: 'Dezember 2023',
+                account: 'Girokonto (DE12 3456 7890 1234 5678 90)',
+                period: '01.12.2023 - 31.12.2023',
+                balance: '2,223.57',
+                transactions: [
+                    { date: '01.12.2023', text: 'Gehalt Dezember', amount: '+3,450.00', type: 'positiv' },
+                    { date: '05.12.2023', text: 'Miete Dezember', amount: '-850.00', type: 'negativ' },
+                    { date: '07.12.2023', text: 'Stromrechnung', amount: '-78.50', type: 'negativ' },
+                    { date: '10.12.2023', text: 'Amazon Einkauf', amount: '-129.99', type: 'negativ' },
+                    { date: '15.12.2023', text: 'Überweisung von Lisa Schmidt', amount: '+150.00', type: 'positiv' },
+                    { date: '20.12.2023', text: 'Supermarkt Einkauf', amount: '-87.34', type: 'negativ' },
+                    { date: '22.12.2023', text: 'Tankstelle', amount: '-65.20', type: 'negativ' },
+                    { date: '24.12.2023', text: 'Weihnachtsgeschenke', amount: '-235.60', type: 'negativ' },
+                    { date: '28.12.2023', text: 'Restaurantbesuch', amount: '-89.50', type: 'negativ' }
+                ]
+            },
+            'november-2023': {
+                title: 'November 2023',
+                account: 'Girokonto (DE12 3456 7890 1234 5678 90)',
+                period: '01.11.2023 - 30.11.2023',
+                balance: '1,845.23',
+                transactions: [
+                    { date: '01.11.2023', text: 'Gehalt November', amount: '+3,450.00', type: 'positiv' },
+                    { date: '05.11.2023', text: 'Miete November', amount: '-850.00', type: 'negativ' },
+                    { date: '10.11.2023', text: 'Stromrechnung', amount: '-78.50', type: 'negativ' },
+                    { date: '15.11.2023', text: 'Online Shopping', amount: '-210.75', type: 'negativ' },
+                    { date: '20.11.2023', text: 'Supermarkt Einkauf', amount: '-95.20', type: 'negativ' },
+                    { date: '25.11.2023', text: 'Tankstelle', amount: '-70.30', type: 'negativ' }
+                ]
+            },
+            'oktober-2023': {
+                title: 'Oktober 2023',
+                account: 'Girokonto (DE12 3456 7890 1234 5678 90)',
+                period: '01.10.2023 - 31.10.2023',
+                balance: '1,680.45',
+                transactions: [
+                    { date: '01.10.2023', text: 'Gehalt Oktober', amount: '+3,450.00', type: 'positiv' },
+                    { date: '05.10.2023', text: 'Miete Oktober', amount: '-850.00', type: 'negativ' },
+                    { date: '10.10.2023', text: 'Internetrechnung', amount: '-49.99', type: 'negativ' },
+                    { date: '15.10.2023', text: 'Überweisung von Thomas Müller', amount: '+200.00', type: 'positiv' },
+                    { date: '20.10.2023', text: 'Supermarkt Einkauf', amount: '-88.75', type: 'negativ' },
+                    { date: '25.10.2023', text: 'Tankstelle', amount: '-72.30', type: 'negativ' },
+                    { date: '30.10.2023', text: 'Kleidung', amount: '-150.20', type: 'negativ' }
+                ]
+            },
+            'dezember-2022': {
+                title: 'Dezember 2022',
+                account: 'Girokonto (DE12 3456 7890 1234 5678 90)',
+                period: '01.12.2022 - 31.12.2022',
+                balance: '1,950.80',
+                transactions: [
+                    { date: '01.12.2022', text: 'Gehalt Dezember', amount: '+3,200.00', type: 'positiv' },
+                    { date: '05.12.2022', text: 'Miete Dezember', amount: '-800.00', type: 'negativ' },
+                    { date: '10.12.2022', text: 'Stromrechnung', amount: '-75.50', type: 'negativ' },
+                    { date: '15.12.2022', text: 'Weihnachtsgeschenke', amount: '-300.00', type: 'negativ' },
+                    { date: '20.12.2022', text: 'Supermarkt Einkauf', amount: '-85.20', type: 'negativ' },
+                    { date: '25.12.2022', text: 'Tankstelle', amount: '-68.50', type: 'negativ' }
+                ]
+            },
+            'november-2022': {
+                title: 'November 2022',
+                account: 'Girokonto (DE12 3456 7890 1234 5678 90)',
+                period: '01.11.2022 - 30.11.2022',
+                balance: '1,780.30',
+                transactions: [
+                    { date: '01.11.2022', text: 'Gehalt November', amount: '+3,200.00', type: 'positiv' },
+                    { date: '05.11.2022', text: 'Miete November', amount: '-800.00', type: 'negativ' },
+                    { date: '10.11.2022', text: 'Internetrechnung', amount: '-49.99', type: 'negativ' },
+                    { date: '15.11.2022', text: 'Online Shopping', amount: '-180.75', type: 'negativ' },
+                    { date: '20.11.2022', text: 'Supermarkt Einkauf', amount: '-90.20', type: 'negativ' },
+                    { date: '25.11.2022', text: 'Tankstelle', amount: '-65.30', type: 'negativ' }
+                ]
+            },
+            'spar-dezember-2023': {
+                title: 'Dezember 2023',
+                account: 'Sparkonto (DE98 7654 3210 9876 5432 10)',
+                period: '01.12.2023 - 31.12.2023',
+                balance: '12,450.00',
+                transactions: [
+                    { date: '05.12.2023', text: 'Monatliche Einzahlung', amount: '+500.00', type: 'positiv' },
+                    { date: '15.12.2023', text: 'Zinsen', amount: '+12.50', type: 'positiv' }
+                ]
+            },
+            'gemeinschaft-dezember-2023': {
+                title: 'Dezember 2023',
+                account: 'Gemeinschaftskonto (DE11 2233 4455 6677 8899 00)',
+                period: '01.12.2023 - 31.12.2023',
+                balance: '3,780.25',
+                transactions: [
+                    { date: '01.12.2023', text: 'Gehalt Max', amount: '+1,800.00', type: 'positiv' },
+                    { date: '01.12.2023', text: 'Gehalt Erika', amount: '+2,100.00', type: 'positiv' },
+                    { date: '05.12.2023', text: 'Miete Dezember', amount: '-1,200.00', type: 'negativ' },
+                    { date: '10.12.2023', text: 'Stromrechnung', amount: '-120.50', type: 'negativ' },
+                    { date: '15.12.2023', text: 'Lebensmittel', amount: '-350.75', type: 'negativ' },
+                    { date: '20.12.2023', text: 'Weihnachtsgeschenke', amount: '-450.00', type: 'negativ' }
+                ]
+            }
+        };
+
+        // Function to load transactions
+        function loadTransactions(period) {
+            const data = transactionData[period];
+            if (!data) return;
+            
+            // Update header
+            document.querySelector('.buchungen-header h2').textContent = `Buchungen - ${data.title}`;
+            document.querySelector('.buchungen-header div:first-of-type').textContent = 
+                `${period.includes('gemeinschaft') ? 'Max & Erika Mustermann' : period.includes('spar') ? 'Max Mustermann' : 'Max Mustermann'} - ${data.account}`;
+            document.querySelector('.buchungen-header div:last-of-type').textContent = `Zeitraum: ${data.period}`;
+            
+            // Update transactions
+            const container = document.getElementById('transactions-container');
+            container.innerHTML = '';
+            
+            data.transactions.forEach(transaction => {
+                const div = document.createElement('div');
+                div.className = 'buchung';
+                div.innerHTML = `
+                    <div class="buchung-datum">${transaction.date}</div>
+                    <div class="buchung-text">${transaction.text}</div>
+                    <div class="buchung-betrag ${transaction.type}">${transaction.amount} €</div>
+                `;
+                container.appendChild(div);
+            });
+            
+            // Update balance
+            document.getElementById('balance').textContent = data.balance;
+        }
+
+        // Collapsible functionality
+        document.querySelectorAll('.collapsible').forEach(item => {
+            item.addEventListener('click', function() {
+                this.classList.toggle('active');
+                const content = this.nextElementSibling;
+                if (content.style.maxHeight) {
+                    content.style.maxHeight = null;
+                } else {
+                    content.style.maxHeight = content.scrollHeight + 'px';
+                }
+                
+                // Prevent collapsing when clicking on account statement
+                if (!this.classList.contains('kontoauszug')) {
+                    event.stopPropagation();
+                }
+            });
+        });
+        
+        // Account statement selection
+        document.querySelectorAll('.kontoauszug').forEach(item => {
+            item.addEventListener('click', function() {
+                // Remove active class from all statements
+                document.querySelectorAll('.kontoauszug').forEach(i => {
+                    i.classList.remove('active');
+                });
+                // Add active class to clicked statement
+                this.classList.add('active');
+                
+                // Load transactions for selected period
+                const period = this.getAttribute('data-period');
+                loadTransactions(period);
+            });
+        });
+
+        // Resizable sidebar functionality
+        const topHandle = document.querySelector('.resize-handle.top');
+        const bottomHandle = document.querySelector('.resize-handle.bottom');
+        const sidebar = document.querySelector('.sidebar');
+        const sidebarHeader = document.querySelector('.sidebar-header');
+        const sidebarContent = document.querySelector('.sidebar-content');
+        
+        let isResizing = false;
+        let startY, startHeight, startContentHeight;
+        
+        function initResize(e, handle) {
+            isResizing = true;
+            startY = e.clientY;
+            startHeight = parseInt(document.defaultView.getComputedStyle(sidebar).height, 10);
+            startContentHeight = parseInt(document.defaultView.getComputedStyle(sidebarContent).height, 10);
+            document.addEventListener('mousemove', resize);
+            document.addEventListener('mouseup', stopResize);
+            e.preventDefault();
+        }
+        
+        function resize(e) {
+            if (!isResizing) return;
+            
+            const dy = e.clientY - startY;
+            let newHeight = startHeight;
+            
+            if (this === topHandle) {
+                newHeight = Math.max(200, startHeight - dy); // Minimum height 200px
+            } else if (this === bottomHandle) {
+                newHeight = Math.min(window.innerHeight - 50, startHeight + dy); // Maximum height
+            }
+            
+            sidebar.style.height = newHeight + 'px';
+            sidebarContent.style.height = (newHeight - sidebarHeader.offsetHeight - 10) + 'px';
+        }
+        
+        function stopResize() {
+            isResizing = false;
+            document.removeEventListener('mousemove', resize);
+            document.removeEventListener('mouseup', stopResize);
+        }
+        
+        topHandle.addEventListener('mousedown', (e) => initResize(e, topHandle));
+        bottomHandle.addEventListener('mousedown', (e) => initResize(e, bottomHandle));
+
+        // Load initial transactions
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTransactions('dezember-2023');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Transaction Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background: #f1f1f1;
+            border: none;
+            border-right: 1px solid #ddd;
+            outline: none;
+        }
+        .tab:last-child {
+            border-right: none;
+        }
+        .tab.active {
+            background: #4CAF50;
+            color: white;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        input, button {
+            padding: 8px;
+            font-size: 16px;
+        }
+        button {
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 150px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #response {
+            margin-top: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            position: sticky;
+            top: 0;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .error {
+            color: red;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+        .section {
+            margin-top: 30px;
+            border-top: 2px solid #eee;
+            padding-top: 15px;
+        }
+        .section-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .summary {
+            margin: 10px 0;
+            font-style: italic;
+            color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+    <h1>Bank Transaction Viewer</h1>
+    
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('giro')">Giro</button>
+        <button class="tab" onclick="switchTab('kredit')">Kreditkarte</button>
+        <button class="tab" onclick="switchTab('paypal')">PayPal</button>
+        <button class="tab" onclick="switchTab('paypal_gr')">PayPal Gutschriften</button>
+        <button class="tab" onclick="switchTab('paypal_abgschl')">PayPal Abschlüsse</button>
+    </div>
+
+    <div class="container">
+        <label for="idInput">Enter ID:</label>
+        <input type="text" id="idInput" placeholder="Enter ID">
+        <button onclick="makeRequest()">Fetch Data</button>
+    </div>
+
+    <div id="response">
+        <div id="status" class="loading">Enter an ID and click the button to fetch data</div>
+        <div id="summary" class="summary"></div>
+        <div id="dataDisplay"></div>
+    </div>
+
+    <script>
+        let currentTab = 'giro';
+        
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('status').textContent = `Switched to ${tab.toUpperCase()} tab. Enter an ID and click the button to fetch data`;
+            document.getElementById('dataDisplay').innerHTML = '';
+            document.getElementById('summary').innerHTML = '';
+        }
+
+        function makeRequest() {
+            const id = document.getElementById('idInput').value.trim();
+            if (!id) {
+                alert('Please enter an ID');
+                return;
+            }
+
+            let endpoint = '';
+            switch(currentTab) {
+                case 'giro':
+                    endpoint = `http://localhost:5000/giro/${id}`;
+                    break;
+                case 'kredit':
+                    endpoint = `http://localhost:5000/kredit/${id}`;
+                    break;
+                case 'paypal':
+                    endpoint = `http://localhost:5000/paypal/${id}`;
+                    break;
+                case 'paypal_gr':
+                    endpoint = `http://localhost:5000/paypal-gutschriften/${id}`;
+                    break;
+                case 'paypal_abgschl':
+                    endpoint = `http://localhost:5000/paypal-abschlusse/${id}`;
+                    break;
+                default:
+                    endpoint = `http://localhost:5000/giro/${id}`;
+            }
+
+            const statusDiv = document.getElementById('status');
+            const dataDisplayDiv = document.getElementById('dataDisplay');
+            const summaryDiv = document.getElementById('summary');
+            
+            statusDiv.textContent = "Loading...";
+            statusDiv.className = "loading";
+            dataDisplayDiv.innerHTML = "";
+            summaryDiv.innerHTML = "";
+
+            fetch(endpoint)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status} ${endpoint}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    statusDiv.textContent = `${currentTab.toUpperCase()} data loaded successfully`;
+                    statusDiv.className = "";
+                    displayData(data);
+                })
+                .catch(error => {
+                    statusDiv.textContent = `Error: ${error.message}`;
+                    statusDiv.className = "error";
+                    dataDisplayDiv.innerHTML = "";
+                    summaryDiv.innerHTML = "";
+                });
+        }
+
+        function displayData(data) {
+            if (!data || data.length === 0) {
+                document.getElementById('dataDisplay').innerHTML = "<p>No data found for this ID</p>";
+                return;
+            }
+
+            const container = document.getElementById('dataDisplay');
+            const summaryDiv = document.getElementById('summary');
+            
+            // Calculate summary information
+            const totalAmount = data.reduce((sum, item) => sum + (parseFloat(item.BETRAG) || 0), 0);
+            summaryDiv.innerHTML = `Showing ${data.length} transactions | Total Amount: ${totalAmount.toFixed(2)} €`;
+            
+            // Generate HTML based on the current tab
+            let html = '';
+            
+            if (currentTab === 'giro' || currentTab === 'kredit') {
+                html = generateGiroKreditHtml(data[0]);
+            } else if (currentTab === 'paypal' || currentTab === 'paypal_gr') {
+                html = generatePaypalHtml(data[0]);
+            } else if (currentTab === 'paypal_abgschl') {
+                html = generatePaypalAbschlussHtml(data[0]);
+            }
+
+            container.innerHTML = html;
+        }
+
+        function generateGiroKreditHtml(data) {
+            return `
+                <div class="section">
+                    <div class="section-title">Transaction Information</div>
+                    <table>
+                        <tr>
+                            <th>Field</th>
+                            <th>Value</th>
+                        </tr>
+                        <tr><td>ID</td><td>${data.ID || ''}</td></tr>
+                        <tr><td>BUCHUNGSTAG</td><td>${data.BUCHUNGSTAG || ''}</td></tr>
+                        <tr><td>WERTSTELLUNG</td><td>${data.WERTSTELLUNG || ''}</td></tr>
+                        <tr><td>UMSATZART</td><td>${data.UMSATZART || ''}</td></tr>
+                        <tr><td>BUCHUNGSTEXT</td><td>${data.BUCHUNGSTEXT || ''}</td></tr>
+                        <tr><td>BUCHUNGSTEXT1</td><td>${data.BUCHUNGSTEXT1 || ''}</td></tr>
+                        <tr><td>BETRAG</td><td>${data.BETRAG || ''}</td></tr>
+                        <tr><td>WAEHRUNG</td><td>${data.WAEHRUNG || ''}</td></tr>
+                    </table>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Account Details</div>
+                    <table>
+                        <tr>
+                            <th>Field</th>
+                            <th>Value</th>
+                        </tr>
+                        <tr><td>AUFTRAGGEBER</td><td>${data.AUFTRAGGEBER || ''}</td></tr>
+                        <tr><td>AUFTRAGGEBERKONTO</td><td>${data.AUFTRAGGEBERKONTO || ''}</td></tr>
+                        <tr><td>IBAN_AUFTRAGGEBERKONTO</td><td>${data.IBAN_AUFTRAGGEBERKONTO || ''}</td></tr>
+                        <tr><td>EMPFAENGER</td><td>${data.EMPFAENGER || ''}</td></tr>
+                        <tr><td>BIC</td><td>${data.BIC || ''}</td></tr>
+                    </table>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Additional Information</div>
+                    <table>
+                        <tr>
+                            <th>Field</th>
+                            <th>Value</th>
+                        </tr>
+                        <tr><td>KATEGORIE</td><td>${data.KATEGORIE || ''}</td></tr>
+                        <tr><td>BEMERKUNGEN</td><td>${data.BEMERKUNGEN || ''}</td></tr>
+                        <tr><td>MANDATSREFERENZ</td><td>${data.MANDATSREFERENZ || ''}</td></tr>
+                    </table>
+                </div>
+            `;
+        }
+
+        function generatePaypalHtml(data) {
+            return `
+                <div class="section">
+                    <div class="section-title">PayPal Transaction</div>
+                    <table>
+                        <tr>
+                            <th>Field</th>
+                            <th>Value</th>
+                        </tr>
+                        <tr><td>Transaction ID</td><td>${data.TRANSACTION_ID || ''}</td></tr>
+                        <tr><td>Date</td><td>${data.DATE || ''}</td></tr>
+                        <tr><td>Time</td><td>${data.TIME || ''}</td></tr>
+                        <tr><td>Amount</td><td>${data.AMOUNT || ''}</td></tr>
+                        <tr><td>Currency</td><td>${data.CURRENCY || ''}</td></tr>
+                        <tr><td>Type</td><td>${data.TYPE || ''}</td></tr>
+                        <tr><td>Status</td><td>${data.STATUS || ''}</td></tr>
+                    </table>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Parties</div>
+                    <table>
+                        <tr>
+                            <th>Field</th>
+                            <th>Value</th>
+                        </tr>
+                        <tr><td>From</td><td>${data.FROM_EMAIL || ''}</td></tr>
+                        <tr><td>To</td><td>${data.TO_EMAIL || ''}</td></tr>
+                        <tr><td>Name</td><td>${data.NAME || ''}</td></tr>
+                    </table>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Details</div>
+                    <table>
+                        <tr>
+                            <th>Field</th>
+                            <th>Value</th>
+                        </tr>
+                        <tr><td>Subject</td><td>${data.SUBJECT || ''}</td></tr>
+                        <tr><td>Note</td><td>${data.NOTE || ''}</td></tr>
+                        <tr><td>Reference</td><td>${data.REFERENCE || ''}</td></tr>
+                    </table>
+                </div>
+            `;
+        }
+
+        function generatePaypalAbschlussHtml(data) {
+            return `
+                <div class="section">
+                    <div class="section-title">PayPal Settlement</div>
+                    <table>
+                        <tr>
+                            <th>Field</th>
+                            <th>Value</th>
+                        </tr>
+                        <tr><td>Settlement ID</td><td>${data.SETTLEMENT_ID || ''}</td></tr>
+                        <tr><td>Date</td><td>${data.DATE || ''}</td></tr>
+                        <tr><td>Currency</td><td>${data.CURRENCY || ''}</td></tr>
+                        <tr><td>Total Amount</td><td>${data.TOTAL_AMOUNT || ''}</td></tr>
+                        <tr><td>Fee Amount</td><td>${data.FEE_AMOUNT || ''}</td></tr>
+                        <tr><td>Net Amount</td><td>${data.NET_AMOUNT || ''}</td></tr>
+                    </table>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Transactions</div>
+                    <table>
+                        <tr>
+                            <th>Field</th>
+                            <th>Value</th>
+                        </tr>
+                        <tr><td>Transaction Count</td><td>${data.TRANSACTION_COUNT || ''}</td></tr>
+                        <tr><td>First Transaction</td><td>${data.FIRST_TRANSACTION || ''}</td></tr>
+                        <tr><td>Last Transaction</td><td>${data.LAST_TRANSACTION || ''}</td></tr>
+                    </table>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Bank Details</div>
+                    <table>
+                        <tr>
+                            <th>Field</th>
+                            <th>Value</th>
+                        </tr>
+                        <tr><td>Bank Name</td><td>${data.BANK_NAME || ''}</td></tr>
+                        <tr><td>IBAN</td><td>${data.IBAN || ''}</td></tr>
+                        <tr><td>BIC</td><td>${data.BIC || ''}</td></tr>
+                    </table>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Statement Import</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .step {
+            margin-bottom: 30px;
+            padding: 20px;
+            border-left: 4px solid #3498db;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .step-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .step-number {
+            background-color: #3498db;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-weight: bold;
+        }
+        .step-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .progress-container {
+            margin: 30px 0;
+            height: 10px;
+            background-color: #ecf0f1;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: #3498db;
+            width: 0%;
+            transition: width 0.5s;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="number"], input[type="text"], textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea {
+            min-height: 80px;
+            font-family: monospace;
+        }
+        .keys-display {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .key-item {
+            display: inline-block;
+            background-color: #e8f4fc;
+            padding: 3px 8px;
+            margin: 3px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .records-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        .records-table th, .records-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .records-table th {
+            background-color: #f2f2f2;
+        }
+        .records-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .tab-buttons {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        .tab-button {
+            padding: 8px 15px;
+            background-color: #e0e0e0;
+            border: none;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        .tab-button.active {
+            background-color: #3498db;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Bank Statement Import Process</h1>
+        
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        
+        <!-- Step 1: Import Records -->
+        <div class="step" id="step1">
+            <div class="step-header">
+                <div class="step-number">1</div>
+                <div class="step-title">Import Bank Statements</div>
+            </div>
+            <p>Import new bank statements from the import table to the main girokonto table.</p>
+            <button id="importBtn">Import Records</button>
+            <div class="result" id="importResult"></div>
+            <div class="keys-display" id="importedRecordsDisplay" style="display: none;">
+                <h4>Imported Records (FK_MAIN_KEY values):</h4>
+                <table class="records-table" id="importedRecordsTable">
+                    <thead>
+                        <tr>
+                            <th>FK_MAIN_KEY</th>
+                            <th>Buchungstag</th>
+                            <th>Verwendungszweck</th>
+                            <th>Betrag</th>
+                        </tr>
+                    </thead>
+                    <tbody id="importedRecordsList"></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Step 2: Assign Main Keys -->
+        <div class="step" id="step2">
+            <div class="step-header">
+                <div class="step-number">2</div>
+                <div class="step-title">Assign Main Keys</div>
+            </div>
+            <p>Assign unique FK_MAIN_KEY values to the newly imported records.</p>
+            <button id="assignKeysBtn" disabled>Assign Main Keys</button>
+            <div class="result" id="assignKeysResult"></div>
+            <div class="keys-display" id="assignedKeysDisplay" style="display: none;">
+                <h4>Assigned Keys:</h4>
+                <div id="assignedKeysList"></div>
+            </div>
+        </div>
+        
+        <!-- Step 3: Create Relations -->
+        <div class="step" id="step3">
+            <div class="step-header">
+                <div class="step-number">3</div>
+                <div class="step-title">Create Relations</div>
+            </div>
+            <p>Connect records to a bank statement document by providing FK_MAIN_KEY values.</p>
+            
+            <div class="tab-buttons">
+                <button class="tab-button active" data-tab="auto-tab">Use Imported Keys</button>
+                <button class="tab-button" data-tab="manual-tab">Enter Keys Manually</button>
+            </div>
+            
+            <div class="tab-content active" id="auto-tab">
+                <p>Keys from imported records will be used automatically.</p>
+                <div class="keys-display" id="autoKeysDisplay">
+                    <p>No keys available yet. Import records first or use manual entry.</p>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="manual-tab">
+                <div class="form-group">
+                    <label for="manualKeys">Enter FK_MAIN_KEY values (comma separated):</label>
+                    <textarea id="manualKeys" placeholder="12345, 67890, 54321"></textarea>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="fkAuszug">Bank Statement ID:</label>
+                <input type="number" id="fkAuszug" value="117">
+            </div>
+            <div class="form-group">
+                <label for="seite">Page Number:</label>
+                <input type="number" id="seite" placeholder="Optional page number">
+            </div>
+            <button id="createRelationsBtn">Create Relations</button>
+            <div class="result" id="createRelationsResult"></div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let assignedKeys = [];
+        let importedRecords = [];
+        
+        // DOM elements
+        const importBtn = document.getElementById('importBtn');
+        const assignKeysBtn = document.getElementById('assignKeysBtn');
+        const createRelationsBtn = document.getElementById('createRelationsBtn');
+        const progressBar = document.getElementById('progressBar');
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        // Initialize tabs
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const tabId = button.getAttribute('data-tab');
+                
+                // Update active tab button
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                // Show corresponding tab content
+                tabContents.forEach(content => content.classList.remove('active'));
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+        
+        // Step 1: Import Records
+        importBtn.addEventListener('click', async () => {
+            const resultDiv = document.getElementById('importResult');
+            resultDiv.className = '';
+            resultDiv.textContent = 'Importing records...';
+            importBtn.disabled = true;
+            
+            try {
+                const response = await fetch('http://localhost:5000/insert-girokonto-records', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    resultDiv.className = 'success';
+                    resultDiv.innerHTML = `✅ ${data.message}<br>Imported ${data.inserted_count} records`;
+                    
+                    // Store imported records data
+                    importedRecords = data.imported_records || [];
+                    
+                    // Display imported records
+                    displayImportedRecords();
+                    
+                    // Update auto keys display
+                    updateAutoKeysDisplay();
+                    
+                    // Enable next step
+                    assignKeysBtn.disabled = false;
+                    progressBar.style.width = '33%';
+                } else {
+                    throw new Error(data.message || 'Import failed');
+                }
+            } catch (error) {
+                resultDiv.className = 'error';
+                resultDiv.textContent = `❌ Error: ${error.message}`;
+                console.error('Import error:', error);
+            } finally {
+                importBtn.disabled = false;
+            }
+        });
+        
+        // Step 2: Assign Main Keys
+        assignKeysBtn.addEventListener('click', async () => {
+            const resultDiv = document.getElementById('assignKeysResult');
+            resultDiv.className = '';
+            resultDiv.textContent = 'Assigning main keys...';
+            assignKeysBtn.disabled = true;
+            
+            try {
+                const response = await fetch('http://localhost:5000/update-main-keys', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    resultDiv.className = 'success';
+                    resultDiv.innerHTML = `✅ ${data.message}<br>Assigned ${data.assigned_keys.length} keys`;
+                    
+                    // Store and display assigned keys
+                    assignedKeys = data.assigned_keys;
+                    displayAssignedKeys();
+                    
+                    // Update auto keys display
+                    updateAutoKeysDisplay();
+                    
+                    // Progress update
+                    progressBar.style.width = '66%';
+                } else {
+                    throw new Error(data.message || 'Key assignment failed');
+                }
+            } catch (error) {
+                resultDiv.className = 'error';
+                resultDiv.textContent = `❌ Error: ${error.message}`;
+                console.error('Key assignment error:', error);
+            } finally {
+                assignKeysBtn.disabled = false;
+            }
+        });
+        
+        // Step 3: Create Relations
+        createRelationsBtn.addEventListener('click', async () => {
+            const resultDiv = document.getElementById('createRelationsResult');
+            resultDiv.className = '';
+            resultDiv.textContent = 'Creating relations...';
+            createRelationsBtn.disabled = true;
+            
+            const fkAuszug = document.getElementById('fkAuszug').value;
+            const seite = document.getElementById('seite').value;
+            
+            // Determine which keys to use based on active tab
+            let keysToUse = [];
+            const activeTab = document.querySelector('.tab-button.active').getAttribute('data-tab');
+            
+            if (activeTab === 'auto-tab') {
+                // Use keys from imported records or assigned keys
+                keysToUse = assignedKeys.length > 0 ? assignedKeys : 
+                           importedRecords.map(r => r.FK_MAIN_KEY).filter(k => k);
+            } else {
+                // Use manually entered keys
+                const manualKeysInput = document.getElementById('manualKeys').value;
+                keysToUse = manualKeysInput.split(',')
+                    .map(k => k.trim())
+                    .filter(k => k.length > 0);
+            }
+            
+            if (keysToUse.length === 0) {
+                resultDiv.className = 'error';
+                resultDiv.textContent = '❌ Error: No keys provided for relation creation';
+                createRelationsBtn.disabled = false;
+                return;
+            }
+            
+            try {
+                const response = await fetch('http://localhost:5000/create-relations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        keys: keysToUse,
+                        fk_konto_auszug: fkAuszug,
+                        seite: seite || undefined
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    resultDiv.className = 'success';
+                    resultDiv.innerHTML = `✅ ${data.message}<br>
+                        Created relations for bank statement ${data.fk_konto_auszug}<br>
+                        ${data.related_keys.length} records processed`;
+                    
+                    // Complete progress
+                    progressBar.style.width = '100%';
+                } else {
+                    throw new Error(data.message || 'Relation creation failed');
+                }
+            } catch (error) {
+                resultDiv.className = 'error';
+                resultDiv.textContent = `❌ Error: ${error.message}`;
+                console.error('Relation creation error:', error);
+            } finally {
+                createRelationsBtn.disabled = false;
+            }
+        });
+        
+        // Helper function to display imported records
+        function displayImportedRecords() {
+            const container = document.getElementById('importedRecordsDisplay');
+            const tableBody = document.getElementById('importedRecordsList');
+            
+            if (importedRecords.length > 0) {
+                container.style.display = 'block';
+                tableBody.innerHTML = '';
+                
+                importedRecords.forEach(record => {
+                    const row = document.createElement('tr');
+                    
+                    const keyCell = document.createElement('td');
+                    keyCell.textContent = record.FK_MAIN_KEY || 'Pending';
+                    row.appendChild(keyCell);
+                    
+                    const dateCell = document.createElement('td');
+                    dateCell.textContent = record.Buchungstag || '';
+                    row.appendChild(dateCell);
+                    
+                    const purposeCell = document.createElement('td');
+                    purposeCell.textContent = record.Verwendungszweck || '';
+                    row.appendChild(purposeCell);
+                    
+                    const amountCell = document.createElement('td');
+                    amountCell.textContent = record.Betrag || '';
+                    row.appendChild(amountCell);
+                    
+                    tableBody.appendChild(row);
+                });
+            } else {
+                container.style.display = 'none';
+            }
+        }
+        
+        // Helper function to display assigned keys
+        function displayAssignedKeys() {
+            const container = document.getElementById('assignedKeysDisplay');
+            const list = document.getElementById('assignedKeysList');
+            
+            container.style.display = 'block';
+            list.innerHTML = '';
+            
+            assignedKeys.forEach(key => {
+                const keyElement = document.createElement('span');
+                keyElement.className = 'key-item';
+                keyElement.textContent = key;
+                list.appendChild(keyElement);
+            });
+        }
+        
+        // Helper function to update the auto keys display
+        function updateAutoKeysDisplay() {
+            const autoKeysDisplay = document.getElementById('autoKeysDisplay');
+            
+            // Use assigned keys if available, otherwise use imported records' keys
+            const keys = assignedKeys.length > 0 ? assignedKeys : 
+                         importedRecords.map(r => r.FK_MAIN_KEY).filter(k => k);
+            
+            if (keys.length > 0) {
+                autoKeysDisplay.innerHTML = `
+                    <h4>Keys to be used:</h4>
+                    <div class="keys-list">${keys.map(k => `<span class="key-item">${k}</span>`).join('')}</div>
+                    <p>Total keys: ${keys.length}</p>
+                `;
+            } else {
+                autoKeysDisplay.innerHTML = '<p>No keys available yet. Import records first or use manual entry.</p>';
+            }
+        }
+    </script>
+</body>
+</html>

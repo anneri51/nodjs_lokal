@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kontoauszüge Übersicht</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+        }
+        .sidebar {
+            width: 350px;
+            background-color: #f5f5f5;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+            padding: 15px;
+        }
+        .content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .account-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .account-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid #ddd;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .account-item:hover {
+            background-color: #e9e9e9;
+        }
+        .account-item.active {
+            background-color: #d4e6f1;
+            font-weight: bold;
+        }
+        .account-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .account-iban {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 3px;
+        }
+        .account-images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 8px;
+        }
+        .account-image-thumb {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .account-image-thumb:hover {
+            transform: scale(1.05);
+            border-color: #999;
+        }
+        .account-image-thumb.active {
+            border: 2px solid #2c3e50;
+        }
+        .loading {
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .load-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .load-btn:hover {
+            background-color: #2980b9;
+        }
+        .image-preview {
+            max-width: 100%;
+            max-height: 500px;
+            border: 1px solid #ddd;
+            margin-top: 10px;
+        }
+        .thumbnail-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .thumbnail {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border: 2px solid #ddd;
+            cursor: pointer;
+        }
+        .thumbnail:hover {
+            border-color: #3498db;
+        }
+        .thumbnail.active {
+            border-color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Kontoauszüge</h2>
+        <button class="load-btn" id="loadStatements">Kontoauszüge laden</button>
+        <div id="accounts-loading" class="loading">Bitte laden Sie die Kontoauszüge</div>
+        <div id="accounts-error" class="error" style="display: none;"></div>
+        <ul class="account-list" id="account-list">
+            <!-- Accounts will be loaded here -->
+        </ul>
+    </div>
+
+    <div class="content">
+        <div id="content-loading" class="loading">Bitte wählen Sie einen Kontoauszug aus</div>
+        <div id="content-error" class="error" style="display: none;"></div>
+        <div id="account-details" style="display: none;">
+            <!-- Details will be loaded here when an account is selected -->
+        </div>
+    </div>
+
+    <script>
+        // Global variable to store accounts data
+        let accountsData = [];
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('loadStatements').addEventListener('click', loadAccounts);
+        });
+
+        async function loadAccounts() {
+            const loadingElement = document.getElementById('accounts-loading');
+            const errorElement = document.getElementById('accounts-error');
+            const accountListElement = document.getElementById('account-list');
+            
+            try {
+                loadingElement.textContent = 'Lade Kontoauszüge...';
+                errorElement.style.display = 'none';
+                accountListElement.innerHTML = '';
+                
+                // Fetch account data - Changed to /bild/1/ as requested
+                const response = await fetch('http://localhost:5000/accounts/bild/2/');
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                
+                accountsData = await response.json();
+                
+                if (accountsData.length === 0) {
+                    loadingElement.textContent = 'Keine Kontoauszüge gefunden';
+                    return;
+                }
+                
+                // Display accounts in the sidebar
+                displayAccounts(accountsData);
+                
+                loadingElement.style.display = 'none';
+            } catch (error) {
+                loadingElement.style.display = 'none';
+                errorElement.style.display = 'block';
+                errorElement.textContent = `Fehler beim Laden: ${error.message}`;
+                console.error('Error:', error);
+            }
+        }
+
+        function displayAccounts(accounts) {
+            const accountList = document.getElementById('account-list');
+            
+            accounts.forEach(account => {
+                const li = document.createElement('li');
+                li.className = 'account-item';
+                li.dataset.id = account.PK_KTO_KONTO_AUSZUG;
+                
+                li.innerHTML = `
+                    <div class="account-header">
+                        <div>
+                            <div>${account.PK_KTO_KONTO_AUSZUG}</div>
+                            <div class="account-iban">${account.IBAN || 'Keine IBAN'}</div>
+                        </div>
+                        <div>${account.images?.length > 0 ? '📷' : ''}</div>
+                    </div>
+                  
+                `;
+                
+                // Set up click handler for the account item
+                li.addEventListener('click', function() {
+                    //selectAccount(account.PK_KTO_KONTO_AUSZUG);
+                    selectItems(account.PK_KTO_KONTO_AUSZUG);
+                });
+                
+                accountList.appendChild(li);
+            });
+        }
+        
+        function selectAccount(accountId, imageId = null) {
+            // Highlight selected account
+            document.querySelectorAll('.account-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.id === accountId) {
+                    item.classList.add('active');
+                }
+            });
+            
+            // Find the selected account
+            const account = accountsData.find(acc => acc.PK_KTO_KONTO_AUSZUG == accountId);
+            if (!account) return;
+            
+            // Display account details
+            displayAccountDetails(account, imageId);
+        }
+function selectItems(accountId) {
+  const url = `http://localhost:5000/accounts/bild/1/${accountId}`;
+
+  fetch(url)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      // Process the data here
+      console.log(data);
+      
+      // Extract specific fields
+      const extractedData = {
+        PK_KTO_KONTO_AUSZUG: data.PK_KTO_KONTO_AUSZUG,
+        FK_KTO_BANKKONTO: data.FK_KTO_BANKKONTO,
+        FK_KTO_KONTO_AUSZUG: data.FK_KTO_KONTO_AUSZUG,
+        JAHR: data.JAHR,
+        MONAT: data.MONAT,
+        ANFANGSDATUM: data.ANFANGSDATUM,
+        ENDDATUM: data.ENDDATUM,
+        ABHOLDATUM: data.ABHOLDATUM,
+        FK_BEL_BELEG: data.FK_BEL_BELEG,
+        KOMMENTAR: data.KOMMENTAR,
+        CREATED_BY: data.CREATED_BY,
+        CREATED_AT: data.CREATED_AT,
+        MODIFIED_BY: data.MODIFIED_BY,
+        MODIFIED_AT: data.MODIFIED_AT,
+        ANFANGSBETRAG: data.ANFANGSBETRAG,
+        ENDBETRAG: data.ENDBETRAG,
+        FK_BAS_KAL_ABHOLDATUM: data.FK_BAS_KAL_ABHOLDATUM,
+        FK_BAS_KAL_ANFANGSDATUM: data.FK_BAS_KAL_ANFANGSDATUM,
+        FK_BAS_KAL_ENDDATUM: data.FK_BAS_KAL_ENDDATUM,
+        DATUM_OK: data.DATUM_OK,
+        FK_STD_KTO_KONTO_AUSZUG_TYPE: data.FK_STD_KTO_KONTO_AUSZUG_TYPE,
+        BETRAG_VORJAHR: data.BETRAG_VORJAHR,
+        DATUM_OK_VORJAHR: data.DATUM_OK_VORJAHR,
+        BETRAG_AKTUELLES_JAHR: data.BETRAG_AKTUELLES_JAHR,
+        DATUM_OK_AKTUELLES_JAHR: data.DATUM_OK_AKTUELLES_JAHR,
+        BETRAG_FOLGEJAHR: data.BETRAG_FOLGEJAHR,
+        DATUM_OK_FOLGEJAHR: data.DATUM_OK_FOLGEJAHR,
+        DATUM_STEUERB_UEBERG: data.DATUM_STEUERB_UEBERG,
+        DATUM_FINANZAMT_UEBERG: data.DATUM_FINANZAMT_UEBERG,
+        DUMMY: data.DUMMY,
+        FINAL_CNT: data.FINAL_CNT,
+        FINAL_AMOUNT: data.FINAL_AMOUNT,
+        FINAL_AMOUNT_START: data.FINAL_AMOUNT_START,
+        FINAL_AMOUNT_END: data.FINAL_AMOUNT_END,
+        KONTOAUSZUG_BLOB: data.KONTOAUSZUG_BLOB,
+        INFO_RUECKSEITE: data.INFO_RUECKSEITE,
+        SONSTIGE_TEXTE: data.SONSTIGE_TEXTE,
+        FK_KON_OWNER: data.FK_KON_OWNER,
+        FK_MDT_MANDANT: data.FK_MDT_MANDANT,
+        PK_BILD_BILDER: data.PK_BILD_BILDER,
+        FILECONTENT: data.FILECONTENT,
+        FILENAME: data.FILENAME,
+        SEITE: data.SEITE,
+        IBAN: data.IBAN
+      };
+      
+      console.log(extractedData);
+      return extractedData; // Return the data if needed
+    })
+    .catch(error => {
+      console.error('Error fetching data:', error);
+      throw error; // Re-throw if you want calling code to handle it
+    });
+}        function selectImage(accountId, imageId) {
+            // Update the selected image in the account details
+            selectAccount(accountId, imageId);
+        }
+
+        function displayAccountDetails(account, selectedImageId = null) {
+            const content = document.getElementById('account-details');
+            content.style.display = 'block';
+            document.getElementById('content-loading').style.display = 'none';
+            
+            // Default to first image if none selected
+            const imageToShow = selectedImageId 
+                ? account.images?.find(img => img.id == selectedImageId) 
+                : account.images?.[0];
+            
+            content.innerHTML = `
+                <h1>Kontoauszug ${account.PK_KTO_KONTO_AUSZUG}</h1>
+                <div class="detail-section">
+                    <h2>Kontoinformationen</h2>
+                    <p><strong>Konto-ID:</strong> ${account.PK_KTO_KONTO_AUSZUG}</p>
+                    <p><strong>IBAN:</strong> ${account.IBAN || 'N/A'}</p>
+                </div>
+                
+                ${account.images?.length > 0 ? `
+                <div class="detail-section">
+                    <h2>Bilder (${account.images.length})</h2>
+                    
+                    ${imageToShow ? `
+                    <div class="image-preview-container">
+                        <img src="${imageToShow.url || 'https://via.placeholder.com/600x400?text=Kontoauszug'}" 
+                             class="image-preview" 
+                             alt="${imageToShow.filename || 'Kontoauszug Bild'}">
+                        <p><strong>Dateiname:</strong> ${imageToShow.filename || 'N/A'}</p>
+                        <p><strong>Größe:</strong> ${imageToShow.size ? (imageToShow.size / 1024).toFixed(2) + ' KB' : 'N/A'}</p>
+                    </div>
+                    ` : '<p>Kein Bild ausgewählt</p>'}
+                    
+                    <div class="thumbnail-container">
+                        ${account.images.map(image => `
+                            <img src="${image.url}" 
+                                 class="thumbnail ${image.id == (selectedImageId || (imageToShow?.id)) ? 'active' : ''}" 
+                                 alt="Thumbnail"
+                                 onclick="selectImage(${account.PK_KTO_KONTO_AUSZUG}, ${image.id})">
+                        `).join('')}
+                    </div>
+                </div>
+                ` : '<p>Keine Bilder für diesen Kontoauszug vorhanden</p>'}
+            `;
+        }
+    </script>
+</body>
+</html>

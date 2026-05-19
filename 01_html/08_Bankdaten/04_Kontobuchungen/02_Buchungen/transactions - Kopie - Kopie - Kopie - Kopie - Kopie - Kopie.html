@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Erweiterte Transaktionsanalyse | Multiselect & Verlaufsdiagramme</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #f1f5f9;
+            padding: 24px 20px;
+            color: #0a2540;
+        }
+        .dashboard { max-width: 1600px; margin: 0 auto; }
+        .main-card { background: white; border-radius: 32px; box-shadow: 0 20px 35px -12px rgba(0,0,0,0.1); overflow: hidden; }
+        .tabs-header {
+            display: flex; flex-wrap: wrap; background: #fff; border-bottom: 1px solid #e6edf4;
+            padding: 8px 24px 0 24px; gap: 6px;
+        }
+        .tab-btn {
+            background: transparent; border: none; padding: 12px 20px; font-weight: 600;
+            color: #4a5b7a; cursor: pointer; border-radius: 40px; transition: 0.2s;
+        }
+        .tab-btn.active { background: #eef2ff; color: #1f4fcf; box-shadow: inset 0 -2px 0 #1f4fcf; }
+        .tab-pane { display: none; padding: 24px 28px 32px; animation: fade 0.2s ease; }
+        .tab-pane.active-pane { display: block; }
+        @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Filterbereiche */
+        .multiselect-group {
+            background: #fafdff; border-radius: 28px; padding: 20px 24px;
+            margin-bottom: 28px; border: 1px solid #e9f0f5;
+        }
+        .multiselect-row {
+            display: flex; flex-wrap: wrap; gap: 24px; margin-bottom: 20px;
+        }
+        .multiselect-item { flex: 1; min-width: 200px; }
+        .multiselect-item label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #2c456e; display: block; margin-bottom: 6px; }
+        .searchable-select { position: relative; }
+        .search-input {
+            width: 100%; padding: 10px 14px; border-radius: 32px; border: 1px solid #d4e0ec;
+            background: white; font-size: 0.85rem; cursor: pointer;
+        }
+        .dropdown-list {
+            position: absolute; top: 100%; left: 0; right: 0; max-height: 240px;
+            overflow-y: auto; background: white; border: 1px solid #d4e0ec; border-radius: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1); z-index: 100; display: none; margin-top: 4px;
+        }
+        .dropdown-list.show { display: block; }
+        .dropdown-search { padding: 8px 12px; border-bottom: 1px solid #eef2f8; position: sticky; top:0; background: white; }
+        .dropdown-search input { width: 100%; padding: 6px 10px; border-radius: 30px; border: 1px solid #dce3ec; font-size: 0.75rem; }
+        .dropdown-option { padding: 8px 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.8rem; }
+        .dropdown-option:hover { background: #eef2ff; }
+        .dropdown-option input { margin: 0; width: 16px; height: 16px; }
+        .selected-badge {
+            display: inline-flex; background: #eef2ff; padding: 4px 10px; border-radius: 30px;
+            font-size: 0.7rem; margin: 4px 4px 0 0; align-items: center; gap: 6px;
+        }
+        .remove-badge { cursor: pointer; font-weight: bold; color: #1f4fcf; }
+        .filter-actions { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+        button { background: #1f4fcf; border: none; padding: 8px 22px; border-radius: 40px; font-weight: 500; color: white; cursor: pointer; font-size: 0.8rem; }
+        button.secondary { background: #eef2ff; color: #1f2b48; border: 1px solid #cddfef; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin: 24px 0; }
+        .chart-card { background: #ffffff; border-radius: 24px; padding: 16px; border: 1px solid #eef2fa; }
+        .chart-title { font-size: 0.9rem; font-weight: 700; margin-bottom: 12px; padding-left: 8px; border-left: 3px solid #1f4fcf; }
+        canvas { max-height: 220px; width: 100%; }
+        .kpi-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+        .kpi-card { background: #f8fafd; border-radius: 24px; padding: 12px 16px; flex: 1; text-align: center; min-width: 110px; }
+        .kpi-value { font-size: 1.5rem; font-weight: 800; }
+        .trend-chart-container { background: #ffffff; border-radius: 24px; padding: 16px; margin: 20px 0 24px; border: 1px solid #eef2fa; }
+        .table-wrapper { overflow-x: auto; border-radius: 24px; border: 1px solid #edf2f9; margin-top: 16px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+        th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #eff3f8; }
+        th { background: #f8fbfe; font-weight: 700; }
+        .positive { color: #2b7e3a; font-weight: 600; }
+        .negative { color: #c2410c; }
+        .subnote { font-size: 0.7rem; color: #6f7c91; text-align: center; margin-top: 16px; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .filter-bar { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; background: #f8fafd; padding: 16px; border-radius: 28px; align-items: flex-end; }
+        .filter-bar .filter-group { display: flex; flex-direction: column; min-width: 140px; }
+        .filter-bar label { font-size: 0.7rem; font-weight: 600; color: #2c456e; margin-bottom: 4px; }
+        select, input { padding: 8px 12px; border-radius: 40px; border: 1px solid #d4e0ec; background: white; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <div class="main-card">
+        <div class="tabs-header">
+            <button class="tab-btn active" data-tab="filter">🔍 Multiselect & Filter</button>
+            <button class="tab-btn" data-tab="trends">📈 Verlaufsdiagramme</button>
+            <button class="tab-btn" data-tab="transactions">📋 Transaktionsliste</button>
+        </div>
+
+        <!-- PANEL 1: Multiselect + Owner/Konto Filter -->
+        <div id="filterPane" class="tab-pane active-pane">
+            <div class="multiselect-group">
+                <div class="multiselect-row">
+                    <div class="multiselect-item"><label>📆 Jahre (mehrfach)</label><div class="searchable-select" id="yearSelect"><div class="search-input" id="yearSearchInput">Jahre auswählen...</div><div class="dropdown-list" id="yearDropdown"><div class="dropdown-search"><input type="text" id="yearSearch" placeholder="Suchen..."></div><div id="yearOptions"></div></div></div><div id="selectedYears" class="selected-badges" style="margin-top: 8px;"></div></div>
+                    <div class="multiselect-item"><label>📅 Jahr-Monat (YYYY-MM)</label><div class="searchable-select" id="monthSelect"><div class="search-input" id="monthSearchInput">Monate auswählen...</div><div class="dropdown-list" id="monthDropdown"><div class="dropdown-search"><input type="text" id="monthSearch" placeholder="Suchen..."></div><div id="monthOptions"></div></div></div><div id="selectedMonths" class="selected-badges" style="margin-top: 8px;"></div></div>
+                    <div class="multiselect-item"><label>🌞 Einzelner Tag (YYYY-MM-DD)</label><div class="searchable-select" id="daySelect"><div class="search-input" id="daySearchInput">Tage auswählen...</div><div class="dropdown-list" id="dayDropdown"><div class="dropdown-search"><input type="text" id="daySearch" placeholder="Suchen..."></div><div id="dayOptions"></div></div></div><div id="selectedDays" class="selected-badges" style="margin-top: 8px;"></div></div>
+                </div>
+                <div class="filter-bar">
+                    <div class="filter-group"><label>Besitzer (Owner)</label><select id="ownerFilterSelect"><option value="">Alle</option></select></div>
+                    <div class="filter-group"><label>Konto / Bankbezeichnung</label><select id="accountFilterSelect"><option value="">Alle Konten</option></select></div>
+                    <div class="filter-group"><label>Kontotyp (TBL)</label><select id="tblFilterSelect"><option value="">Alle</option><option value="kto_girokonto">Girokonto</option><option value="kto_kreditkarte">Kreditkarte</option></select></div>
+                    <div class="filter-group"><label>Betragsrichtung</label><select id="amountDirection"><option value="">Alle</option><option value="positive">Einnahmen (>0)</option><option value="negative">Ausgaben (<0)</option></select></div>
+                    <button id="applyExtFilter" style="margin-top: 20px;">Filter anwenden</button>
+                    <button id="clearAllSelections" class="secondary">Alle zurücksetzen</button>
+                </div>
+            </div>
+            <div class="kpi-row" id="filterKpis"></div>
+            <div class="stats-grid">
+                <div class="chart-card"><div class="chart-title">📊 Einnahmen / Ausgaben</div><canvas id="filterIncomeExpenseChart"></canvas></div>
+                <div class="chart-card"><div class="chart-title">💰 Betrag vs. Offener Betrag</div><canvas id="filterAmountOpenChart"></canvas></div>
+                <div class="chart-card"><div class="chart-title">🏦 Top Konten</div><canvas id="filterAccountChart"></canvas></div>
+            </div>
+            <div class="subnote">✅ Mehrfachauswahl (ODER pro Kategorie) + Owner/Konto/Typ-Filter. Klick auf "Filter anwenden" aktualisiert alle Ansichten.</div>
+        </div>
+
+        <!-- PANEL 2: Verlaufsdiagramme (Zeitreihen) -->
+        <div id="trendsPane" class="tab-pane">
+            <div class="flex-between"><h3 style="font-size:1.2rem;">📈 Zeitliche Entwicklung (Verlauf)</h3>
+                <div style="display: flex; gap: 10px;">
+                    <select id="trendGroupBy"><option value="month">Monatlich</option><option value="year">Jährlich</option><option value="week">Wöchentlich</option></select>
+                    <select id="trendMetric"><option value="net">Netto (Einnahmen - Ausgaben)</option><option value="income">Nur Einnahmen</option><option value="expense">Nur Ausgaben</option></select>
+                    <button id="refreshTrendsBtn" class="secondary">Aktualisieren</button>
+                </div>
+            </div>
+            <div class="trend-chart-container"><canvas id="trendLineChart" style="max-height: 320px;"></canvas></div>
+            <div class="stats-grid">
+                <div class="chart-card"><div class="chart-title">📅 Top 5 Monate (Netto)</div><canvas id="topMonthsChart"></canvas></div>
+                <div class="chart-card"><div class="chart-title">👥 Owner-Verteilung (Summe)</div><canvas id="ownerPieChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- PANEL 3: Transaktionsliste -->
+        <div id="transactionsPane" class="tab-pane">
+            <div class="table-wrapper"><table id="txListTable"><thead><tr><th>Datum</th><th>Betrag</th><th>Offen</th><th>Konto</th><th>Owner</th><th>TBL</th><th>Beschreibung</th></tr></thead><tbody id="txListBody"></tbody></table></div>
+            <div class="subnote">Max. 200 Einträge angezeigt. Nutze Filter für präzise Auswahl.</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ---------- GLOBALE DATEN ----------
+    let allTransactions = [];
+    let filteredData = [];
+    // Multiselect Sets
+    let selectedYears = new Set();
+    let selectedMonths = new Set();
+    let selectedDays = new Set();
+    let availableYears = [], availableMonths = [], availableDays = [];
+    // Zusätzliche Filter
+    let extraOwner = "", extraAccount = "", extraTbl = "", extraAmountDir = "";
+    
+    // Chart Instanzen
+    let filterIncomeChart, filterAmountChart, filterAccountChart, trendChart, topMonthsChart, ownerChart;
+
+    // ---------- Daten laden (Fallback Demo) ----------
+    async function fetchTransactions() {
+        try {
+            const res = await fetch('http://localhost:5000/transactions');
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            let data = await res.json();
+            allTransactions = data.map(normalizeTransaction);
+        } catch (err) {
+            console.warn("Webservice nicht verfügbar, generiere Demo-Daten", err);
+            allTransactions = generateDemoData();
+        }
+        extractAvailableOptions();
+        populateOwnerAccountFilters();
+        renderDropdowns();
+        applyAllFilters();
+    }
+
+    function normalizeTransaction(t) {
+        return {
+            ...t,
+            BUCHUNGSTAG: t.BUCHUNGSTAG ? t.BUCHUNGSTAG.split('T')[0] : null,
+            BETRAG: t.BETRAG !== undefined ? parseFloat(t.BETRAG) : 0,
+            OFFENER_BETRAG: t.OFFENER_BETRAG !== undefined ? parseFloat(t.OFFENER_BETRAG) : (t.BETRAG || 0),
+            KTO_BEZEICHNUNG: t.KTO_BEZEICHNUNG || "Unbekannt",
+            OWNER1: t.OWNER1 || "Standard",
+            TBL: t.TBL || "kto_girokonto",
+            BUCHUNGSTEXT: t.BUCHUNGSTEXT || t.BESCHREIBUNG || "-"
+        };
+    }
+
+    function generateDemoData() {
+        const demo = [];
+        const owners = ["Alpha GmbH", "Beta KG", "Gamma e.U."];
+        const accounts = ["Girokonto", "Business Account", "Tagesgeld", "Firmenkonto"];
+        const tbls = ["kto_girokonto", "kto_kreditkarte"];
+        for (let i = 1; i <= 380; i++) {
+            const year = 2022 + (i % 3);
+            const month = 1 + (i % 12);
+            const day = 1 + (i % 28);
+            const dateStr = `${year}-${month.toString().padStart(2,'0')}-${day.toString().padStart(2,'0')}`;
+            let amount = (Math.random() * 1800 - 700).toFixed(2);
+            let open = (amount * (0.1 + Math.random() * 0.6)).toFixed(2);
+            demo.push({
+                ID: i, BUCHUNGSTAG: dateStr, BETRAG: parseFloat(amount), OFFENER_BETRAG: parseFloat(open),
+                BUCHUNGSTEXT: `Transaktion ${i}`, KTO_BEZEICHNUNG: accounts[i % accounts.length],
+                OWNER1: owners[i % owners.length], BANK: "DemoBank", TBL: tbls[i % 2],
+                WAEHRUNG: "EUR"
+            });
+        }
+        return demo.map(normalizeTransaction);
+    }
+
+    function extractAvailableOptions() {
+        let yearsSet = new Set(), monthsSet = new Set(), daysSet = new Set();
+        allTransactions.forEach(t => {
+            if (t.BUCHUNGSTAG) {
+                yearsSet.add(t.BUCHUNGSTAG.slice(0,4));
+                monthsSet.add(t.BUCHUNGSTAG.slice(0,7));
+                daysSet.add(t.BUCHUNGSTAG);
+            }
+        });
+        availableYears = Array.from(yearsSet).sort((a,b)=>b-a);
+        availableMonths = Array.from(monthsSet).sort().reverse();
+        availableDays = Array.from(daysSet).sort().reverse();
+    }
+
+    function populateOwnerAccountFilters() {
+        const owners = new Set(), accounts = new Set();
+        allTransactions.forEach(t => { if(t.OWNER1) owners.add(t.OWNER1); if(t.KTO_BEZEICHNUNG) accounts.add(t.KTO_BEZEICHNUNG); });
+        let ownerSel = document.getElementById('ownerFilterSelect');
+        ownerSel.innerHTML = '<option value="">Alle Besitzer</option>';
+        Array.from(owners).sort().forEach(o => { let opt = document.createElement('option'); opt.value = o; opt.textContent = o; ownerSel.appendChild(opt); });
+        let accSel = document.getElementById('accountFilterSelect');
+        accSel.innerHTML = '<option value="">Alle Konten</option>';
+        Array.from(accounts).sort().forEach(a => { let opt = document.createElement('option'); opt.value = a; opt.textContent = a; accSel.appendChild(opt); });
+    }
+
+    // --- Multiselect Rendering ---
+    function renderDropdowns() { renderYearDD(); renderMonthDD(); renderDayDD(); updateBadges(); }
+    function renderYearDD() { let container = document.getElementById('yearOptions'); if(!container) return; container.innerHTML = availableYears.map(y => `<div class="dropdown-option" data-value="${y}"><input type="checkbox" value="${y}" ${selectedYears.has(y) ? 'checked' : ''}> ${y}</div>`).join(''); attachEvents('yearOptions', selectedYears, ()=>{renderYearDD(); updateBadges(); applyAllFilters();}); document.getElementById('yearSearch').oninput = (e) => filterDrop('yearOptions', e.target.value); }
+    function renderMonthDD() { let container = document.getElementById('monthOptions'); container.innerHTML = availableMonths.map(m => `<div class="dropdown-option" data-value="${m}"><input type="checkbox" value="${m}" ${selectedMonths.has(m) ? 'checked' : ''}> ${m}</div>`).join(''); attachEvents('monthOptions', selectedMonths, ()=>{renderMonthDD(); updateBadges(); applyAllFilters();}); document.getElementById('monthSearch').oninput = (e) => filterDrop('monthOptions', e.target.value); }
+    function renderDayDD() { let container = document.getElementById('dayOptions'); container.innerHTML = availableDays.slice(0,200).map(d => `<div class="dropdown-option" data-value="${d}"><input type="checkbox" value="${d}" ${selectedDays.has(d) ? 'checked' : ''}> ${d}</div>`).join(''); attachEvents('dayOptions', selectedDays, ()=>{renderDayDD(); updateBadges(); applyAllFilters();}); document.getElementById('daySearch').oninput = (e) => filterDrop('dayOptions', e.target.value); }
+    function attachEvents(containerId, set, rerender) { let container = document.getElementById(containerId); if(!container) return; container.querySelectorAll('.dropdown-option').forEach(opt => { let cb = opt.querySelector('input'); let val = opt.getAttribute('data-value'); cb.onchange = () => { if(cb.checked) set.add(val); else set.delete(val); rerender(); }; }); }
+    function filterDrop(containerId, term) { let container = document.getElementById(containerId); let options = container.querySelectorAll('.dropdown-option'); options.forEach(opt => { opt.style.display = opt.innerText.toLowerCase().includes(term.toLowerCase()) ? 'flex' : 'none'; }); }
+    function updateBadges() {
+        let yearsDiv = document.getElementById('selectedYears'); yearsDiv.innerHTML = Array.from(selectedYears).map(y => `<span class="selected-badge">${y} <span class="remove-badge" data-type="year" data-val="${y}">✖</span></span>`).join('');
+        let monthsDiv = document.getElementById('selectedMonths'); monthsDiv.innerHTML = Array.from(selectedMonths).map(m => `<span class="selected-badge">${m} <span class="remove-badge" data-type="month" data-val="${m}">✖</span></span>`).join('');
+        let daysDiv = document.getElementById('selectedDays'); daysDiv.innerHTML = Array.from(selectedDays).map(d => `<span class="selected-badge">${d} <span class="remove-badge" data-type="day" data-val="${d}">✖</span></span>`).join('');
+        document.querySelectorAll('.remove-badge').forEach(el => { el.onclick = (e) => { let type = el.getAttribute('data-type'), val = el.getAttribute('data-val'); if(type==='year') { selectedYears.delete(val); renderYearDD(); } if(type==='month') { selectedMonths.delete(val); renderMonthDD(); } if(type==='day') { selectedDays.delete(val); renderDayDD(); } updateBadges(); applyAllFilters(); }; });
+    }
+
+    // Hauptfilterlogik (Kombination Multiselect + Owner/Konto/TBL/Betragsrichtung)
+    function applyAllFilters() {
+        let filtered = [...allTransactions];
+        // Multiselect (ODER)
+        if(selectedYears.size) filtered = filtered.filter(t => t.BUCHUNGSTAG && selectedYears.has(t.BUCHUNGSTAG.slice(0,4)));
+        if(selectedMonths.size) filtered = filtered.filter(t => t.BUCHUNGSTAG && selectedMonths.has(t.BUCHUNGSTAG.slice(0,7)));
+        if(selectedDays.size) filtered = filtered.filter(t => t.BUCHUNGSTAG && selectedDays.has(t.BUCHUNGSTAG));
+        // Extrafilter
+        if(extraOwner) filtered = filtered.filter(t => t.OWNER1 === extraOwner);
+        if(extraAccount) filtered = filtered.filter(t => t.KTO_BEZEICHNUNG === extraAccount);
+        if(extraTbl) filtered = filtered.filter(t => t.TBL === extraTbl);
+        if(extraAmountDir === 'positive') filtered = filtered.filter(t => t.BETRAG > 0);
+        if(extraAmountDir === 'negative') filtered = filtered.filter(t => t.BETRAG < 0);
+        
+        filteredData = filtered;
+        renderFilterStatistics();
+        renderTransactionList();
+        renderTrendCharts();
+        renderTopMonthsAndOwner();
+    }
+
+    function renderFilterStatistics() {
+        let totalSum = filteredData.reduce((s,t)=>s+(t.BETRAG||0),0);
+        let totalOpen = filteredData.reduce((s,t)=>s+(t.OFFENER_BETRAG||0),0);
+        let income = filteredData.reduce((s,t)=>s+(t.BETRAG>0?t.BETRAG:0),0);
+        let expense = filteredData.reduce((s,t)=>s+(t.BETRAG<0?Math.abs(t.BETRAG):0),0);
+        let net = income - expense;
+        document.getElementById('filterKpis').innerHTML = `
+            <div class="kpi-card"><div class="kpi-label">Summe Betrag</div><div class="kpi-value">${totalSum.toFixed(2)} €</div></div>
+            <div class="kpi-card"><div class="kpi-label">Offener Betrag</div><div class="kpi-value">${totalOpen.toFixed(2)} €</div></div>
+            <div class="kpi-card"><div class="kpi-label positive">Einnahmen</div><div class="kpi-value positive">${income.toFixed(2)} €</div></div>
+            <div class="kpi-card"><div class="kpi-label negative">Ausgaben</div><div class="kpi-value negative">${expense.toFixed(2)} €</div></div>
+            <div class="kpi-card"><div class="kpi-label">Differenz</div><div class="kpi-value ${net>=0?'positive':'negative'}">${net.toFixed(2)} €</div></div>
+        `;
+        if(filterIncomeChart) filterIncomeChart.destroy();
+        filterIncomeChart = new Chart(document.getElementById('filterIncomeExpenseChart'), { type:'bar', data:{ labels:['Einnahmen','Ausgaben'], datasets:[{ data:[income,expense], backgroundColor:['#2b7e3a','#c2410c'] }] } });
+        if(filterAmountChart) filterAmountChart.destroy();
+        filterAmountChart = new Chart(document.getElementById('filterAmountOpenChart'), { type:'bar', data:{ labels:['Summe Betrag','Offener Betrag'], datasets:[{ data:[totalSum,totalOpen], backgroundColor:['#1f4fcf','#f4a261'] }] } });
+        let accMap = new Map();
+        filteredData.forEach(t => { let acc = t.KTO_BEZEICHNUNG; accMap.set(acc, (accMap.get(acc)||0) + (t.BETRAG||0)); });
+        let sortedAcc = Array.from(accMap.entries()).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).slice(0,5);
+        if(filterAccountChart) filterAccountChart.destroy();
+        filterAccountChart = new Chart(document.getElementById('filterAccountChart'), { type:'bar', data:{ labels:sortedAcc.map(a=>a[0]), datasets:[{ label:'Summe Betrag', data:sortedAcc.map(a=>a[1]), backgroundColor:'#1f4fcf' }] } });
+    }
+
+    function renderTransactionList() {
+        let tbody = document.getElementById('txListBody');
+        tbody.innerHTML = filteredData.slice(0, 200).map(t => `<tr><td>${t.FK_MAIN_KEY||''}</td><td>${t.BUCHUNGSTAG||''}</td><td class="${t.BETRAG<0?'negative':'positive'}">${(t.BETRAG||0).toFixed(2)} €</td><td>${(t.OFFENER_BETRAG||0).toFixed(2)} €</td><td>${t.KTO_BEZEICHNUNG}</td><td>${t.OWNER1}</td><td>${t.TBL||'-'}</td><td>${t.BUCHUNGSTEXT||''}</td></tr>`).join('');
+    }
+
+    // Verlaufsdiagramme (Zeitreihe)
+    function renderTrendCharts() {
+        let groupBy = document.getElementById('trendGroupBy').value;
+        let metric = document.getElementById('trendMetric').value;
+        let trendMap = new Map();
+        filteredData.forEach(t => {
+            if(!t.BUCHUNGSTAG) return;
+            let date = new Date(t.BUCHUNGSTAG);
+            let key;
+            if(groupBy === 'year') key = date.getFullYear().toString();
+            else if(groupBy === 'month') key = `${date.getFullYear()}-${date.getMonth()+1}`;
+            else { // week
+                let oneJan = new Date(date.getFullYear(),0,1);
+                let week = Math.ceil(((date - oneJan) / 86400000 + oneJan.getDay())/7);
+                key = `${date.getFullYear()}-W${week}`;
+            }
+            if(!trendMap.has(key)) trendMap.set(key, {income:0, expense:0, net:0, label: key});
+            let entry = trendMap.get(key);
+            let amt = t.BETRAG || 0;
+            if(amt>0) entry.income += amt;
+            else entry.expense += Math.abs(amt);
+            entry.net += amt;
+        });
+        let sorted = Array.from(trendMap.values()).sort((a,b)=>a.label.localeCompare(b.label));
+        let labels = sorted.map(v=>v.label);
+        let dataVals = sorted.map(v=> metric==='income' ? v.income : (metric==='expense' ? v.expense : v.net));
+        let color = metric==='income' ? '#2b7e3a' : (metric==='expense' ? '#c2410c' : '#1f4fcf');
+        if(trendChart) trendChart.destroy();
+        trendChart = new Chart(document.getElementById('trendLineChart'), { type:'line', data:{ labels, datasets:[{ label: metric==='income'?'Einnahmen':(metric==='expense'?'Ausgaben':'Netto'), data:dataVals, borderColor:color, backgroundColor:'rgba(31,79,207,0.05)', tension:0.2, fill:true }] }, options:{ responsive:true, maintainAspectRatio:true } });
+    }
+
+    function renderTopMonthsAndOwner() {
+        // Top 5 Monate Netto
+        let monthMap = new Map();
+        filteredData.forEach(t => {
+            if(!t.BUCHUNGSTAG) return;
+            let ym = t.BUCHUNGSTAG.slice(0,7);
+            let amt = t.BETRAG||0;
+            monthMap.set(ym, (monthMap.get(ym)||0) + amt);
+        });
+        let sortedMonths = Array.from(monthMap.entries()).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).slice(0,5);
+        if(topMonthsChart) topMonthsChart.destroy();
+        topMonthsChart = new Chart(document.getElementById('topMonthsChart'), { type:'bar', data:{ labels:sortedMonths.map(m=>m[0]), datasets:[{ label:'Netto', data:sortedMonths.map(m=>m[1]), backgroundColor:'#3b82f6' }] } });
+        // Owner Verteilung
+        let ownerMap = new Map();
+        filteredData.forEach(t => { let o = t.OWNER1 || 'Unbekannt'; ownerMap.set(o, (ownerMap.get(o)||0) + (t.BETRAG||0)); });
+        let ownerArr = Array.from(ownerMap.entries()).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1]));
+        if(ownerChart) ownerChart.destroy();
+        ownerChart = new Chart(document.getElementById('ownerPieChart'), { type:'pie', data:{ labels:ownerArr.map(o=>o[0]), datasets:[{ data:ownerArr.map(o=>o[1]), backgroundColor:['#1f4fcf','#f4a261','#2ecc71','#e67e22','#9b59b6'] }] } });
+    }
+
+    // Extrafilter abholen & anwenden
+    function gatherExtraFilters() {
+        extraOwner = document.getElementById('ownerFilterSelect').value;
+        extraAccount = document.getElementById('accountFilterSelect').value;
+        extraTbl = document.getElementById('tblFilterSelect').value;
+        extraAmountDir = document.getElementById('amountDirection').value;
+        applyAllFilters();
+    }
+
+    function resetAll() {
+        selectedYears.clear(); selectedMonths.clear(); selectedDays.clear();
+        document.getElementById('ownerFilterSelect').value = "";
+        document.getElementById('accountFilterSelect').value = "";
+        document.getElementById('tblFilterSelect').value = "";
+        document.getElementById('amountDirection').value = "";
+        extraOwner = extraAccount = extraTbl = extraAmountDir = "";
+        renderYearDD(); renderMonthDD(); renderDayDD();
+        updateBadges();
+        applyAllFilters();
+    }
+
+    // Dropdown Toggle
+    function initDropdowns() {
+        let setups = ['year','month','day'];
+        setups.forEach(id => {
+            let selDiv = document.getElementById(`${id}Select`);
+            let dd = document.getElementById(`${id}Dropdown`);
+            let inp = document.getElementById(`${id}SearchInput`);
+            if(inp) inp.onclick = (e) => { e.stopPropagation(); dd.classList.toggle('show'); };
+            document.addEventListener('click', (e) => { if(selDiv && !selDiv.contains(e.target)) dd.classList.remove('show'); });
+        });
+    }
+
+    // Tabs
+    function initTabs() {
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.onclick = () => {
+                let id = btn.getAttribute('data-tab');
+                document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+                btn.classList.add('active');
+                document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active-pane'));
+                document.getElementById(`${id}Pane`).classList.add('active-pane');
+                if(id === 'trends') { renderTrendCharts(); renderTopMonthsAndOwner(); }
+                if(id === 'transactions') renderTransactionList();
+            };
+        });
+    }
+
+    // Event binding
+    document.getElementById('applyMultiselectFilter')?.addEventListener('click', applyAllFilters);
+    document.getElementById('applyExtFilter')?.addEventListener('click', gatherExtraFilters);
+    document.getElementById('clearAllSelections')?.addEventListener('click', resetAll);
+    document.getElementById('refreshTrendsBtn')?.addEventListener('click', () => { renderTrendCharts(); renderTopMonthsAndOwner(); });
+    
+    fetchTransactions().then(() => {
+        initDropdowns();
+        initTabs();
+        applyAllFilters();
+    });
+</script>
+</body>
+</html>

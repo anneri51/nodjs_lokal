@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction Analyzer · Relationen ohne Parameter</title>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ========== EXISTING STYLES (KEPT FULLY) ========== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(145deg, #0a0f1c 0%, #0f1a2f 100%);
+            min-height: 100vh;
+            padding: 25px;
+            color: #1e293b;
+        }
+        .dashboard { max-width: 2000px; margin: 0 auto; }
+        .header {
+            background: linear-gradient(145deg, #0b1e33, #0f2a44, #1a3f5c);
+            color: white;
+            border-radius: 32px;
+            padding: 40px 45px;
+            margin-bottom: 30px;
+            box-shadow: 0 25px 40px -15px rgba(0,0,0,0.4);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -20%;
+            width: 140%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            transform: rotate(25deg);
+        }
+        .header h1 {
+            font-size: 3.2rem;
+            font-weight: 800;
+            letter-spacing: -1.5px;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 2;
+            text-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .header h1 i {
+            margin-right: 15px;
+            color: #ffd966;
+            text-shadow: 0 0 20px #ffb347;
+        }
+        .header p {
+            font-size: 1.3rem;
+            opacity: 0.95;
+            font-weight: 500;
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .header-badge {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(8px);
+            padding: 12px 28px;
+            border-radius: 60px;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 25px;
+            border: 1px solid rgba(255,255,255,0.25);
+            font-weight: 600;
+            font-size: 1rem;
+            position: relative;
+            z-index: 2;
+        }
+        .filter-section {
+            background: rgba(255,255,255,0.98);
+            backdrop-filter: blur(10px);
+            border-radius: 32px;
+            padding: 35px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 35px -10px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+        .filter-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #0b1e33;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border-bottom: 3px solid #e6edf5;
+            padding-bottom: 20px;
+        }
+        .filter-title i {
+            color: #2563eb;
+            background: #eef2ff;
+            padding: 12px;
+            border-radius: 16px;
+        }
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .filter-group label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #334155;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .filter-group label i {
+            color: #2563eb;
+            width: 18px;
+            text-align: center;
+        }
+        .filter-select {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid #e2e8f0;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            color: #0f172a;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23334155' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 18px center;
+            background-size: 18px;
+        }
+        .filter-select:hover {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+        }
+        .filter-actions {
+            display: flex;
+            gap: 18px;
+            align-items: center;
+            justify-content: flex-end;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 30px;
+        }
+        .btn {
+            padding: 14px 32px;
+            border-radius: 60px;
+            font-size: 1rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+        .btn-primary {
+            background: linear-gradient(145deg, #2563eb, #1d4ed8);
+            color: white;
+            box-shadow: 0 8px 18px rgba(37,99,235,0.3);
+        }
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 25px rgba(37,99,235,0.4);
+        }
+        .btn-secondary {
+            background: white;
+            color: #334155;
+            border: 2px solid #e2e8f0;
+        }
+        .btn-secondary:hover {
+            background: #f8fafc;
+            border-color: #2563eb;
+        }
+        .active-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 1px dashed #cbd5e1;
+        }
+        .filter-tag {
+            background: linear-gradient(145deg, #eef2ff, #e6edfe);
+            color: #1e40af;
+            padding: 10px 20px;
+            border-radius: 60px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+            border: 1px solid rgba(37,99,235,0.2);
+        }
+        .filter-tag .remove {
+            margin-left: 6px;
+            color: #64748b;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+        .filter-tag .remove:hover {
+            background: rgba(220,38,38,0.1);
+            color: #dc2626;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 25px;
+            margin-bottom: 35px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 28px;
+            padding: 28px;
+            display: flex;
+            align-items: center;
+            gap: 22px;
+            box-shadow: 0 15px 30px -8px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.6);
+            transition: all 0.3s;
+        }
+        .stat-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 25px 45px -10px rgba(0,0,0,0.2);
+        }
+        .stat-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(145deg, #2563eb, #1e40af);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2.2rem;
+            box-shadow: 0 10px 20px -5px rgba(37,99,235,0.4);
+        }
+        .stat-content h3 {
+            font-size: 0.9rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        .stat-number {
+            font-size: 2.4rem;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1;
+        }
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(550px, 1fr));
+            gap: 30px;
+            margin-bottom: 35px;
+        }
+        .chart-card {
+            background: white;
+            border-radius: 28px;
+            padding: 28px;
+            box-shadow: 0 15px 30px -8px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.6);
+            transition: all 0.3s;
+        }
+        .chart-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 45px -10px rgba(0,0,0,0.2);
+        }
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 18px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+        .chart-header h3 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .chart-header h3 i {
+            color: #2563eb;
+            background: #eef2ff;
+            padding: 10px;
+            border-radius: 16px;
+        }
+        .chart-container {
+            position: relative;
+            height: 340px;
+            width: 100%;
+        }
+        .badge {
+            background: linear-gradient(145deg, #2563eb, #1e40af);
+            color: white;
+            padding: 8px 22px;
+            border-radius: 60px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 10px rgba(37,99,235,0.3);
+        }
+        .badge-orange {
+            background: linear-gradient(145deg, #f59e0b, #b45309);
+        }
+        .badge-purple {
+            background: linear-gradient(145deg, #8b5cf6, #6d28d9);
+        }
+        .table-container {
+            background: white;
+            border-radius: 28px;
+            padding: 28px;
+            overflow-x: auto;
+            margin-top: 25px;
+            box-shadow: 0 20px 35px -10px rgba(0,0,0,0.15);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+        }
+        th {
+            background: linear-gradient(145deg, #0f2a44, #0b1e33);
+            color: white;
+            font-weight: 600;
+            padding: 18px 16px;
+            font-size: 0.9rem;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            white-space: nowrap;
+        }
+        th:hover {
+            background: linear-gradient(145deg, #1a3f5c, #0f2a44);
+        }
+        th i {
+            margin-left: 8px;
+            opacity: 0.9;
+        }
+        th:first-child {
+            border-radius: 20px 0 0 20px;
+        }
+        th:last-child {
+            border-radius: 0 20px 20px 0;
+        }
+        td {
+            padding: 16px 16px;
+            border-bottom: 1px solid #eef2f6;
+            color: #1e293b;
+            vertical-align: middle;
+        }
+        tr:hover td {
+            background: #f8fafc;
+        }
+        .sort-asc::after {
+            content: '↑';
+            margin-left: 8px;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        .sort-desc::after {
+            content: '↓';
+            margin-left: 8px;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        .fortlaufende-nr {
+            font-weight: 700;
+            color: #0f2a44;
+            background: #eef2ff;
+            display: inline-block;
+            width: 36px;
+            height: 36px;
+            line-height: 36px;
+            text-align: center;
+            border-radius: 50%;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        .amount-positive {
+            color: #059669;
+            font-weight: 700;
+            background: #ecfdf5;
+            padding: 6px 14px;
+            border-radius: 40px;
+            display: inline-block;
+        }
+        .amount-negative {
+            color: #b91c1c;
+            font-weight: 700;
+            background: #fef2f2;
+            padding: 6px 14px;
+            border-radius: 40px;
+            display: inline-block;
+        }
+        .konto-tag {
+            background: linear-gradient(145deg, #dbeafe, #c7d9fe);
+            color: #1e40af;
+            padding: 8px 16px;
+            border-radius: 60px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid rgba(37,99,235,0.2);
+        }
+        .tbl-tag {
+            background: linear-gradient(145deg, #f3e8ff, #edd9ff);
+            color: #7e22ce;
+            padding: 8px 16px;
+            border-radius: 60px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .year-badge {
+            background: linear-gradient(145deg, #0f2a44, #1a3f5c);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 60px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-right: 10px;
+            letter-spacing: 0.3px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .pagination {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 18px;
+            margin-top: 30px;
+        }
+        .pagination button {
+            padding: 14px 28px;
+            border: none;
+            background: linear-gradient(145deg, #2563eb, #1d4ed8);
+            color: white;
+            border-radius: 60px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95rem;
+            box-shadow: 0 8px 16px rgba(37,99,235,0.25);
+        }
+        .pagination button:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 16px 25px rgba(37,99,235,0.35);
+        }
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #94a3b8;
+            box-shadow: none;
+        }
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 90px;
+            background: white;
+            border-radius: 40px;
+            box-shadow: 0 25px 40px -15px rgba(0,0,0,0.2);
+        }
+        .loading i {
+            font-size: 4.5rem;
+            color: #2563eb;
+            margin-bottom: 25px;
+        }
+        .loading p {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #0f172a;
+        }
+        /* ========== MODAL / POPUP ========== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.75);
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            backdrop-filter: blur(8px);
+        }
+        .modal-content {
+            background: white;
+            border-radius: 36px;
+            width: 90%;
+            max-width: 1500px;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 35px 40px;
+            box-shadow: 0 40px 70px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.3);
+            animation: modalFadeIn 0.3s ease;
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.96); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #eef2f6;
+        }
+        .modal-header h2 {
+            font-size: 1.9rem;
+            font-weight: 700;
+            color: #0f2a44;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .modal-header h2 i {
+            color: #2563eb;
+            background: #eef2ff;
+            padding: 14px;
+            border-radius: 20px;
+        }
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 2.6rem;
+            cursor: pointer;
+            color: #64748b;
+            transition: all 0.2s;
+            line-height: 1;
+            padding: 0 12px;
+        }
+        .close-modal:hover {
+            color: #b91c1c;
+            transform: scale(1.2);
+        }
+        .modal-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .modal-table th {
+            background: linear-gradient(145deg, #1e3a5a, #0b1e33);
+            font-size: 0.85rem;
+            padding: 16px 12px;
+            white-space: nowrap;
+            color: white;
+        }
+        .modal-table td {
+            padding: 14px 12px;
+            font-size: 0.9rem;
+            border-bottom: 1px solid #edf2f7;
+        }
+        .fk-main-link {
+            font-weight: 700;
+            color: #1e40af;
+            background: #e6edfe;
+            padding: 8px 18px;
+            border-radius: 60px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #b7d0f8;
+        }
+        .fk-main-link:hover {
+            background: #2563eb;
+            color: white;
+            border-color: #2563eb;
+        }
+        .fk-main-link i {
+            font-size: 0.8rem;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeInUp 0.7s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+        }
+        @media (max-width: 1200px) {
+            .chart-grid { grid-template-columns: 1fr; }
+            .header h1 { font-size: 2.5rem; }
+        }
+        @media (max-width: 768px) {
+            body { padding: 15px; }
+            .header { padding: 30px; }
+            .header h1 { font-size: 1.9rem; }
+            .filter-grid { grid-template-columns: 1fr; }
+            .stat-card { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Header -->
+        <div class="header fade-in">
+            <h1><i class="fas fa-chart-scatter"></i> Transaction Analyzer Ultimate</h1>
+            <p>
+                <i class="fas fa-calendar-check"></i> BUCHUNGSTAG Jahres-Charts 
+                <span style="background: rgba(255,255,255,0.2); padding: 8px 18px; border-radius: 60px; font-size: 0.9rem;">
+                    <i class="fas fa-filter"></i> 4D Filter · Relationen ohne Parameter
+                </span>
+            </p>
+            <div class="header-badge">
+                <i class="fas fa-database"></i> Gesamt: <span id="total-count-badge">0</span> Transaktionen • 
+                <i class="fas fa-code-branch"></i> FK_MAIN_KEY ➔ lokaler Relationen-Cache
+            </div>
+        </div>
+
+        <!-- Main App Container -->
+        <div id="app">
+            <div class="loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Lade Transaktionen und Relationen (2 Services) …</p>
+                <span style="color: #64748b; margin-top: 15px;">/transactions & /relations_buchungen (ohne Parameter)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL für Relationen (Popup) -->
+    <div id="relationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>
+                    <i class="fas fa-code-branch"></i> 
+                    Verknüpfte Buchungen · <span id="modal-main-key-display">FK_MAIN_KEY</span>
+                </h2>
+                <button class="close-modal" onclick="closeRelationModal()">&times;</button>
+            </div>
+            <div id="modal-table-container" style="max-height: 60vh; overflow-y: auto;">
+                <table class="modal-table" id="modal-relation-table">
+                    <thead>
+                        <tr>
+                            <th>FK_MAIN_KEY</th>
+                            <th>BUCHUNGSTAG</th>
+                            <th>BELEGDATUM</th>
+                            <th>KONTO_AUSZUG</th>
+                            <th>BANKKONTO</th>
+                            <th>TBL</th>
+                            <th>BETRAG</th>
+                            <th>OFFENER</th>
+                            <th>KOMMENTAR</th>
+                            <th>BUCHUNGSTEXT</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modal-table-body">
+                        <tr><td colspan="10" style="text-align:center; padding:50px;"><i class="fas fa-spinner fa-spin"></i> Lade Relationen …</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top: 25px; display: flex; justify-content: flex-end;">
+                <span class="badge" id="relation-count-badge">0 Einträge</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (async function() {
+            const API_URL = 'http://localhost:5000/transactions';
+            // NEU: WebService ohne Parameter – liefert ALLE Relationen auf einmal
+            const RELATION_API_URL = 'http://localhost:5000/relations_buchungen';  // KEIN Query-Parameter
+
+            // ============ STATE MANAGEMENT ============
+            let allTransactions = [];
+            let filteredTransactions = [];
+            let currentPage = 1;
+            const PAGE_SIZE = 20;
+            
+            // ---------- NEU: Relationen komplett vorladen ----------
+            let allRelations = [];          // gesamtes Array von /relations_buchungen
+            let relationsLoaded = false;    // Flag
+
+            // Filter state (4 dimensions)
+            let filterState = {
+                year: 'all',
+                kontoAuszug: 'all',
+                bankkonto: 'all',
+                tbl: 'all'
+            };
+            
+            // Sorting state
+            let sortColumn = 'buchungstag';
+            let sortDirection = 'desc';
+            
+            // Chart instances
+            let betragYearChart = null;
+            let offenYearChart = null;
+            let combinedYearChart = null;   // <-- NEU: combined chart instance
+
+            // ============ GLOBALE MODAL FUNKTIONEN ============
+            window.closeRelationModal = function() {
+                document.getElementById('relationModal').style.display = 'none';
+            };
+
+            // ---------- NEU: KEIN FETCH MEHR, NUR FILTER IM VORGELADENEN allRelations ----------
+            window.openRelationPopup = function(fkMainKey) {
+                if (!fkMainKey) return;
+                const modal = document.getElementById('relationModal');
+                const mainKeySpan = document.getElementById('modal-main-key-display');
+                const tbody = document.getElementById('modal-table-body');
+                const countBadge = document.getElementById('relation-count-badge');
+                
+                mainKeySpan.textContent = fkMainKey;
+                
+                // Prüfen: sind Relationen geladen?
+                if (!relationsLoaded) {
+                    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:40px; color:#b45309;"><i class="fas fa-exclamation-triangle fa-2x"></i><br>Relationsdaten noch nicht verfügbar.<br>Bitte Seite neu laden.</td></tr>';
+                    countBadge.textContent = 'Fehler';
+                    modal.style.display = 'flex';
+                    return;
+                }
+
+                // Filtern: alle Relationen mit gleichem FK_MAIN_KEY
+                const filteredRelations = allRelations.filter(rel => String(rel.FK_MAIN_KEY) === String(fkMainKey));
+                
+                if (filteredRelations.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:40px; color:#64748b;"><i class="fas fa-info-circle fa-2x"></i><br>Keine verknüpften Buchungen gefunden.</td></tr>';
+                    countBadge.textContent = '0 Einträge';
+                } else {
+                    // Tabelle rendern
+                    let rows = '';
+                    filteredRelations.forEach(rel => {
+                        const buchungstagFormatted = formatDateTime(rel.BUCHUNGSTAG);
+                        const beleghdrFormatted = formatDate(rel.BELEGDATUM);
+                        const betrag = Number(rel.BETRAG) || 0;
+                        const offen = Number(rel.OFFENER_BETRAG) || 0;
+                        const betragClass = betrag >= 0 ? 'amount-positive' : 'amount-negative';
+                        const offenClass = offen >= 0 ? 'amount-positive' : 'amount-negative';
+                        
+                        rows += `<tr>
+                            <td style="font-family: monospace; font-weight:600;">${rel.FK_MAIN_KEY || '—'}</td>
+                            <td><span class="year-badge" style="padding:4px 12px;">${extractYearFromBUCHUNGSTAG(rel.BUCHUNGSTAG)}</span> ${buchungstagFormatted}</td>
+                            <td>${beleghdrFormatted}</td>
+                            <td>${rel.FK_KTO_KONTO_AUSZUG || '—'}</td>
+                            <td style="font-family: monospace;">${rel.FK_KTO_BANKKONTO || '—'}</td>
+                            <td><span class="tbl-tag" style="background:#edd9ff;">${rel.TBL || '—'}</span></td>
+                            <td><span class="${betragClass}">€ ${formatAmount(betrag)}</span></td>
+                            <td><span class="${offenClass}">€ ${formatAmount(offen)}</span></td>
+                            <td>${rel.KOMMENTAR || '—'}</td>
+                            <td>${rel.BUCHUNGSTEXT || '—'}</td>
+                        </tr>`;
+                    });
+                    tbody.innerHTML = rows;
+                    countBadge.textContent = `${filteredRelations.length} Einträge`;
+                }
+                
+                modal.style.display = 'flex';
+            };
+
+            // ============ HELPER FUNCTIONS (identisch) ============
+            function extractYearFromBUCHUNGSTAG(buchungstag) {
+                if (!buchungstag) return 'Unbekannt';
+                try {
+                    const dateStr = String(buchungstag).trim();
+                    if (dateStr.includes('T')) {
+                        const year = dateStr.split('T')[0].split('-')[0];
+                        if (year && year.length === 4 && !isNaN(parseInt(year))) return year;
+                    }
+                    if (dateStr.includes('-')) {
+                        const year = dateStr.split('-')[0];
+                        if (year && year.length === 4 && !isNaN(parseInt(year))) return year;
+                    }
+                    const date = new Date(dateStr);
+                    if (!isNaN(date.getFullYear()) && date.getFullYear() > 1900) return date.getFullYear().toString();
+                } catch (e) {}
+                return 'Unbekannt';
+            }
+
+            function formatAmount(amount) {
+                if (amount === undefined || amount === null) return '0,00';
+                const num = Number(amount);
+                return num.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            function getAmountClass(amount) {
+                const num = Number(amount);
+                return num >= 0 ? 'amount-positive' : 'amount-negative';
+            }
+
+            function formatDate(dateStr) {
+                if (!dateStr) return '—';
+                try {
+                    const date = new Date(dateStr);
+                    return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                } catch (e) {
+                    return dateStr;
+                }
+            }
+
+            function formatDateTime(dateStr) {
+                if (!dateStr) return '—';
+                try {
+                    const date = new Date(dateStr);
+                    return date.toLocaleDateString('de-DE', {
+                        day: '2-digit', month: '2-digit', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit'
+                    });
+                } catch (e) {
+                    return dateStr;
+                }
+            }
+
+            // ============ FILTER LOGIC ============
+            function applyFilters() {
+                if (!allTransactions.length) return;
+                
+                filteredTransactions = allTransactions.filter(tx => {
+                    if (filterState.year !== 'all') {
+                        const txYear = extractYearFromBUCHUNGSTAG(tx.BUCHUNGSTAG);
+                        if (txYear !== filterState.year) return false;
+                    }
+                    if (filterState.kontoAuszug !== 'all') {
+                        if (String(tx.FK_KTO_KONTO_AUSZUG || '') !== filterState.kontoAuszug) return false;
+                    }
+                    if (filterState.bankkonto !== 'all') {
+                        if (String(tx.FK_KTO_BANKKONTO || '') !== filterState.bankkonto) return false;
+                    }
+                    if (filterState.tbl !== 'all') {
+                        if (String(tx.TBL || '') !== filterState.tbl) return false;
+                    }
+                    return true;
+                });
+                
+                sortTransactions(sortColumn, sortDirection);
+                currentPage = 1;
+                updateActiveFilters();
+                updateStatistics();
+                updateYearCharts();      // <-- now includes combined chart
+                renderTransactionsTable();
+                updateHeaderBadge();
+            }
+
+            function clearFilters() {
+                filterState = { year: 'all', kontoAuszug: 'all', bankkonto: 'all', tbl: 'all' };
+                const yearSelect = document.getElementById('filter-year');
+                const kontoSelect = document.getElementById('filter-konto-auszug');
+                const bankSelect = document.getElementById('filter-bankkonto');
+                const tblSelect = document.getElementById('filter-tbl');
+                if (yearSelect) yearSelect.value = 'all';
+                if (kontoSelect) kontoSelect.value = 'all';
+                if (bankSelect) bankSelect.value = 'all';
+                if (tblSelect) tblSelect.value = 'all';
+                
+                filteredTransactions = [...allTransactions];
+                sortTransactions(sortColumn, sortDirection);
+                currentPage = 1;
+                updateActiveFilters();
+                updateStatistics();
+                updateYearCharts();
+                renderTransactionsTable();
+                updateHeaderBadge();
+            }
+
+            function updateActiveFilters() {
+                const container = document.getElementById('active-filters');
+                if (!container) return;
+                const filters = [];
+                if (filterState.year !== 'all') filters.push(`<span class="filter-tag"><i class="fas fa-calendar"></i> Jahr: ${filterState.year}<span class="remove" onclick="window.removeFilter('year')">&times;</span></span>`);
+                if (filterState.kontoAuszug !== 'all') filters.push(`<span class="filter-tag"><i class="fas fa-bookmark"></i> Konto Auszug: ${filterState.kontoAuszug}<span class="remove" onclick="window.removeFilter('kontoAuszug')">&times;</span></span>`);
+                if (filterState.bankkonto !== 'all') filters.push(`<span class="filter-tag"><i class="fas fa-university"></i> Bankkonto: ${filterState.bankkonto}<span class="remove" onclick="window.removeFilter('bankkonto')">&times;</span></span>`);
+                if (filterState.tbl !== 'all') filters.push(`<span class="filter-tag"><i class="fas fa-table"></i> TBL: ${filterState.tbl}<span class="remove" onclick="window.removeFilter('tbl')">&times;</span></span>`);
+                
+                container.innerHTML = filters.length ? filters.join('') : '<span style="color:#64748b; font-style: italic;"><i class="fas fa-info-circle"></i> Keine aktiven Filter – alle Transaktionen werden angezeigt</span>';
+            }
+
+            window.removeFilter = function(filterName) {
+                filterState[filterName] = 'all';
+                if (filterName === 'year') { const s = document.getElementById('filter-year'); if(s) s.value = 'all'; }
+                if (filterName === 'kontoAuszug') { const s = document.getElementById('filter-konto-auszug'); if(s) s.value = 'all'; }
+                if (filterName === 'bankkonto') { const s = document.getElementById('filter-bankkonto'); if(s) s.value = 'all'; }
+                if (filterName === 'tbl') { const s = document.getElementById('filter-tbl'); if(s) s.value = 'all'; }
+                applyFilters();
+            };
+
+            function populateFilterDropdowns() {
+                const years = new Set();
+                const kontoAuszuege = new Set();
+                const bankkonten = new Set();
+                const tbls = new Set();
+                
+                allTransactions.forEach(tx => {
+                    years.add(extractYearFromBUCHUNGSTAG(tx.BUCHUNGSTAG));
+                    if (tx.FK_KTO_KONTO_AUSZUG) kontoAuszuege.add(String(tx.FK_KTO_KONTO_AUSZUG));
+                    if (tx.FK_KTO_BANKKONTO) bankkonten.add(String(tx.FK_KTO_BANKKONTO));
+                    if (tx.TBL) tbls.add(String(tx.TBL));
+                });
+                
+                const sortedYears = Array.from(years).sort((a,b) => {
+                    if (a === 'Unbekannt') return 1; if (b === 'Unbekannt') return -1; return parseInt(b)-parseInt(a);
+                });
+                
+                const yearSelect = document.getElementById('filter-year');
+                if (yearSelect) {
+                    yearSelect.innerHTML = '<option value="all">📅 Alle Jahre</option>';
+                    sortedYears.forEach(y => yearSelect.appendChild(new Option(`${y} ${y==='Unbekannt'?'(Kein Datum)':''}`, y)));
+                }
+                const kontoSelect = document.getElementById('filter-konto-auszug');
+                if (kontoSelect) {
+                    kontoSelect.innerHTML = '<option value="all">🏦 Alle Konten</option>';
+                    Array.from(kontoAuszuege).sort().forEach(k => kontoSelect.appendChild(new Option(k, k)));
+                }
+                const bankSelect = document.getElementById('filter-bankkonto');
+                if (bankSelect) {
+                    bankSelect.innerHTML = '<option value="all">🏛️ Alle Bankkonten</option>';
+                    Array.from(bankkonten).sort().forEach(b => bankSelect.appendChild(new Option(b, b)));
+                }
+                const tblSelect = document.getElementById('filter-tbl');
+                if (tblSelect) {
+                    tblSelect.innerHTML = '<option value="all">📋 Alle Tabellen</option>';
+                    Array.from(tbls).sort().forEach(t => tblSelect.appendChild(new Option(t, t)));
+                }
+            }
+
+            function sortTransactions(column, direction) {
+                if (!filteredTransactions.length) return;
+                const sorted = [...filteredTransactions];
+                sorted.sort((a, b) => {
+                    let valA, valB;
+                    switch(column) {
+                        case 'buchungstag': 
+                            valA = a.BUCHUNGSTAG ? new Date(a.BUCHUNGSTAG).getTime() : 0;
+                            valB = b.BUCHUNGSTAG ? new Date(b.BUCHUNGSTAG).getTime() : 0; break;
+                        case 'beleghdr':
+                            valA = a.BELEGDATUM ? new Date(a.BELEGDATUM).getTime() : 0;
+                            valB = b.BELEGDATUM ? new Date(b.BELEGDATUM).getTime() : 0; break;
+                        case 'betrag': valA = Number(a.BETRAG)||0; valB = Number(b.BETRAG)||0; break;
+                        case 'offener_betrag': valA = Number(a.OFFENER_BETRAG)||0; valB = Number(b.OFFENER_BETRAG)||0; break;
+                        case 'konto': valA = a.FK_KTO_KONTO_AUSZUG || ''; valB = b.FK_KTO_KONTO_AUSZUG || ''; break;
+                        case 'bankkonto': valA = a.FK_KTO_BANKKONTO || ''; valB = b.FK_KTO_BANKKONTO || ''; break;
+                        case 'tbl': valA = a.TBL || ''; valB = b.TBL || ''; break;
+                        case 'fkmainkey': valA = a.FK_MAIN_KEY || ''; valB = b.FK_MAIN_KEY || ''; break;
+                        default: return 0;
+                    }
+                    if (direction === 'asc') return valA > valB ? 1 : (valA < valB ? -1 : 0);
+                    else return valA < valB ? 1 : (valA > valB ? -1 : 0);
+                });
+                filteredTransactions = sorted;
+            }
+
+            window.sortTable = function(column) {
+                if (sortColumn === column) sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                else { sortColumn = column; sortDirection = (column === 'buchungstag' || column === 'fkmainkey') ? 'desc' : 'asc'; }
+                sortTransactions(sortColumn, sortDirection);
+                currentPage = 1;
+                renderTransactionsTable();
+                updateSortIndicators();
+            };
+
+            function updateSortIndicators() {
+                document.querySelectorAll('th').forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
+                if (sortColumn) {
+                    const th = document.getElementById(`sort-${sortColumn}`);
+                    if (th) th.classList.add(`sort-${sortDirection}`);
+                }
+            }
+
+            function calculateStatistics() {
+                let totalBetrag=0,totalOffen=0,totalPositive=0,totalNegative=0,totalPositiveOffen=0,totalNegativeOffen=0,totalBetragall=0,totalBetragallPositive=0,totalBetragallNegative=0;
+                filteredTransactions.forEach(tx => {
+                    const b=Number(tx.BETRAG)||0; const o=Number(tx.OFFENER_BETRAG)||0;
+                    totalBetrag+=b; totalOffen+=o;totalBetragall +=b+o;
+                    if(b>0) {totalPositive+=b;totalBetragallPositive+=b;} else if(b<0) {totalNegative+=b; totalBetragallNegative+=b;}
+                    if(o>0) {totalPositiveOffen+=o;totalBetragallPositive+=o;} else if(o<0) {totalNegativeOffen+=o;totalBetragallNegative+=o;}
+                });
+                return {
+                    totalTransactions: filteredTransactions.length,
+                    totalBetrag,totalOffen,totalPositive,totalNegative,
+                    totalPositiveOffen,totalNegativeOffen,totalBetragallPositive, totalBetragallNegative,
+                    averageBetrag: filteredTransactions.length>0? totalBetrag/filteredTransactions.length:0
+                };
+            }
+
+            function getYearDataFromBUCHUNGSTAG() {
+                const betragByYear={}, offenByYear={}, combinedByYear={};
+                filteredTransactions.forEach(tx => {
+                    const y=extractYearFromBUCHUNGSTAG(tx.BUCHUNGSTAG);
+                    const b=Number(tx.BETRAG)||0, o=Number(tx.OFFENER_BETRAG)||0;
+                    betragByYear[y]=(betragByYear[y]||0)+b;
+                    offenByYear[y]=(offenByYear[y]||0)+o;
+                    combinedByYear[y]=(combinedByYear[y]||0)+b+o;   // <-- NEU: combine
+                });
+                const sortedYears = Object.keys(betragByYear).sort((a,b)=>{
+                    if(a==='Unbekannt') return 1; if(b==='Unbekannt') return -1; return parseInt(a)-parseInt(b);
+                });
+                return { 
+                    years: sortedYears, 
+                    betragData: sortedYears.map(y=>betragByYear[y]), 
+                    offenData: sortedYears.map(y=>offenByYear[y]),
+                    combinedData: sortedYears.map(y=>combinedByYear[y])   // <-- NEU
+                };
+            }
+
+            function updateHeaderBadge() {
+                const badge = document.getElementById('total-count-badge');
+                if (badge) badge.textContent = allTransactions.length.toLocaleString('de-DE');
+            }
+
+            function updateStatistics() {
+                const cont = document.getElementById('stats-container'); if(!cont) return;
+                const s = calculateStatistics();
+                cont.innerHTML = `
+                    <div class="stat-card fade-in"><div class="stat-icon"><i class="fas fa-exchange-alt"></i></div><div class="stat-content"><h3>Transaktionen</h3><div class="stat-number">${s.totalTransactions.toLocaleString('de-DE')}</div><span style="font-size:0.85rem;color:#64748b;">von ${allTransactions.length.toLocaleString('de-DE')} gesamt</span></div></div>
+                    <div class="stat-card fade-in"><div class="stat-icon"><i class="fas fa-euro-sign"></i></div><div class="stat-content"><h3>Summe BETRAG</h3><div class="stat-number">€ ${formatAmount(s.totalBetrag)}</div><span style="font-size:0.8rem;"><span style="color:#059669;">+€ ${formatAmount(s.totalPositive)}</span> • <span style="color:#b91c1c;">€ ${formatAmount(s.totalNegative)}</span></span></div></div>
+                    <div class="stat-card fade-in"><div class="stat-icon"><i class="fas fa-clock"></i></div><div class="stat-content"><h3>Summe OFFENER</h3><div class="stat-number">€ ${formatAmount(s.totalOffen)}</div><span style="font-size:0.8rem;"><span style="color:#059669;">Offen: € ${formatAmount(s.totalPositiveOffen)}</span> • <span style="color:#b45309;">Überz.: € ${formatAmount(Math.abs(s.totalNegativeOffen))}</span></span></div></div>
+                    <div class="stat-card fade-in"><div class="stat-icon"><i class="fas fa-chart-line"></i></div><div class="stat-content"><h3>Durchschnitt</h3><div class="stat-number">€ ${formatAmount(s.averageBetrag)}</div><span style="font-size:0.85rem;color:#64748b;">pro Transaktion</span></div></div>
+                `;
+            }
+
+            function updateYearCharts() {
+                const container = document.getElementById('charts-container'); if(!container) return;
+                const yd = getYearDataFromBUCHUNGSTAG();
+                // NEU: drei Charts nebeneinander
+                container.innerHTML = `
+                    <div class="chart-card fade-in"><div class="chart-header"><h3><i class="fas fa-euro-sign" style="color:#059669;"></i> BETRAG pro Jahr</h3><span class="badge">${yd.years.length} Jahre</span></div><div class="chart-container"><canvas id="betragYearChart"></canvas></div></div>
+                    <div class="chart-card fade-in"><div class="chart-header"><h3><i class="fas fa-clock" style="color:#f59e0b;"></i> OFFENER_BETRAG pro Jahr</h3><span class="badge badge-orange">${yd.years.length} Jahre</span></div><div class="chart-container"><canvas id="offenYearChart"></canvas></div></div>
+                    <div class="chart-card fade-in"><div class="chart-header"><h3><i class="fas fa-layer-group" style="color:#8b5cf6;"></i> BETRAG + OFFENER kombiniert</h3><span class="badge badge-purple">${yd.years.length} Jahre</span></div><div class="chart-container"><canvas id="combinedYearChart"></canvas></div></div>
+                `;
+                setTimeout(() => {
+                    const bCtx = document.getElementById('betragYearChart')?.getContext('2d');
+                    if (bCtx) { if(betragYearChart) betragYearChart.destroy(); betragYearChart = new Chart(bCtx, { type:'bar', data:{ labels:yd.years, datasets:[{ label:'BETRAG (€)', data:yd.betragData, backgroundColor:'rgba(16,185,129,0.8)', borderColor:'#059669', borderRadius:10 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ tooltip:{ callbacks:{ label:(ctx)=>'€ '+ctx.raw.toLocaleString('de-DE',{minimumFractionDigits:2}) } } }, scales:{ y:{ beginAtZero:true, ticks:{ callback:(v)=>'€ '+v.toLocaleString('de-DE') } } } } }); }
+                    const oCtx = document.getElementById('offenYearChart')?.getContext('2d');
+                    if (oCtx) { if(offenYearChart) offenYearChart.destroy(); offenYearChart = new Chart(oCtx, { type:'bar', data:{ labels:yd.years, datasets:[{ label:'OFFENER_BETRAG (€)', data:yd.offenData, backgroundColor:'rgba(245,158,11,0.8)', borderColor:'#b45309', borderRadius:10 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ tooltip:{ callbacks:{ label:(ctx)=>'€ '+ctx.raw.toLocaleString('de-DE',{minimumFractionDigits:2}) } } }, scales:{ y:{ beginAtZero:true, ticks:{ callback:(v)=>'€ '+v.toLocaleString('de-DE') } } } } }); }
+                    // NEU: Combined chart
+                    const cCtx = document.getElementById('combinedYearChart')?.getContext('2d');
+                    if (cCtx) { if(combinedYearChart) combinedYearChart.destroy(); combinedYearChart = new Chart(cCtx, { type:'bar', data:{ labels:yd.years, datasets:[{ label:'BETRAG+OFFENER (€)', data:yd.combinedData, backgroundColor:'rgba(139,92,246,0.8)', borderColor:'#6d28d9', borderRadius:10 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ tooltip:{ callbacks:{ label:(ctx)=>'€ '+ctx.raw.toLocaleString('de-DE',{minimumFractionDigits:2}) } } }, scales:{ y:{ beginAtZero:true, ticks:{ callback:(v)=>'€ '+v.toLocaleString('de-DE') } } } } }); }
+                }, 80);
+            }
+
+            function renderTransactionsTable() {
+                const container = document.getElementById('transactions-container'); if(!container) return;
+                const start = (currentPage-1)*PAGE_SIZE;
+                const pageData = filteredTransactions.slice(start, start+PAGE_SIZE);
+                const totalPages = Math.ceil(filteredTransactions.length/PAGE_SIZE);
+                
+                let html = `<div class="table-container fade-in"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px;"><h2 style="font-size:1.6rem; font-weight:700;"><i class="fas fa-list-ol" style="color:#2563eb; margin-right:14px;"></i> Buchungen im Detail <span style="font-size:0.9rem; background:#eef2ff; color:#1e40af; padding:8px 18px; border-radius:60px; margin-left:15px;"><i class="fas fa-code-branch"></i> FK_MAIN_KEY (Popup mit Cache)</span></h2><div><span class="badge" style="background:#1e293b;"><i class="fas fa-filter"></i> ${filteredTransactions.length} angezeigt</span></div></div>
+                <table><thead><tr>
+                    <th id="sort-fortlaufende" onclick="sortTable('fortlaufende')"><i class="fas fa-hashtag"></i> Nr.<i class="fas fa-sort"></i></th>
+                    <th id="sort-fkmainkey" onclick="sortTable('fkmainkey')"><i class="fas fa-code-branch"></i> FK_MAIN_KEY<i class="fas fa-sort"></i></th>
+                    <th id="sort-buchungstag" onclick="sortTable('buchungstag')"><i class="fas fa-calendar-alt"></i> BUCHUNGSTAG<i class="fas fa-sort"></i></th>
+                    <th id="sort-beleghdr" onclick="sortTable('beleghdr')"><i class="fas fa-file-invoice"></i> BELEGDATUM<i class="fas fa-sort"></i></th>
+                    <th id="sort-konto" onclick="sortTable('konto')"><i class="fas fa-bookmark"></i> KONTO_AUSZUG<i class="fas fa-sort"></i></th>
+                    <th><i class="fas fa-bookmark"></i> KOMMENTAR</th>
+                    <th><i class="fas fa-university"></i> BUCHUNGSTEXT</th>
+                    <th id="sort-bankkonto" onclick="sortTable('bankkonto')"><i class="fas fa-university"></i> BANKKONTO<i class="fas fa-sort"></i></th>
+                    <th id="sort-tbl" onclick="sortTable('tbl')"><i class="fas fa-table"></i> TBL<i class="fas fa-sort"></i></th>
+                    <th id="sort-betrag" onclick="sortTable('betrag')"><i class="fas fa-euro-sign"></i> BETRAG<i class="fas fa-sort"></i></th>
+                    <th id="sort-offener_betrag" onclick="sortTable('offener_betrag')"><i class="fas fa-clock"></i> OFFENER<i class="fas fa-sort"></i></th>
+                </tr></thead><tbody>`;
+                
+                pageData.forEach((tx, idx) => {
+                    const nr = start+idx+1;
+                    const bet = Number(tx.BETRAG)||0;  const off = Number(tx.OFFENER_BETRAG)||0;
+                    const jahr = extractYearFromBUCHUNGSTAG(tx.BUCHUNGSTAG);
+                    html += `<tr>
+                        <td style="text-align:center;"><span class="fortlaufende-nr">${nr}</span></td>
+                        <td><span class="fk-main-link" onclick="openRelationPopup('${tx.FK_MAIN_KEY}')"><i class="fas fa-code-branch"></i> ${tx.FK_MAIN_KEY || '—'}</span></td>
+                        <td><span class="year-badge"><i class="fas fa-calendar"></i> ${jahr}</span> ${formatDateTime(tx.BUCHUNGSTAG)}</td>
+                        <td>${formatDate(tx.BELEGDATUM)}</td>
+                        <td><span class="konto-tag"><i class="fas fa-bookmark"></i> ${tx.FK_KTO_KONTO_AUSZUG || '—'}</span></td>
+                        <td style="font-family: monospace;">${tx.KOMMENTAR || '—'}</td>
+                        <td style="font-family: monospace;">${tx.BUCHUNGSTEXT || '—'}</td>
+                        <td style="font-family: monospace;">${tx.FK_KTO_BANKKONTO || '—'}</td>
+                        <td><span class="tbl-tag"><i class="fas fa-table"></i> ${tx.TBL || '—'}</span></td>
+                        <td><span class="${getAmountClass(bet)}">€ ${formatAmount(bet)}</span></td>
+                        <td><span class="${getAmountClass(off)}">€ ${formatAmount(off)}</span></td>
+                    </tr>`;
+                });
+                html += `</tbody></table>`;
+                
+                if (filteredTransactions.length > PAGE_SIZE) {
+                    html += `<div class="pagination"><button onclick="changePage(${currentPage-1})" ${currentPage===1?'disabled':''}><i class="fas fa-chevron-left"></i> Vorherige</button>
+                            <span style="background:#f1f5f9; padding:10px 24px; border-radius:60px;">Seite ${currentPage} / ${totalPages}</span>
+                            <button onclick="changePage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>Nächste <i class="fas fa-chevron-right"></i></button></div>`;
+                }
+                html += `</div>`;
+                container.innerHTML = html;
+                updateSortIndicators();
+            }
+
+            window.changePage = function(page) {
+                if (page<1 || page>Math.ceil(filteredTransactions.length/PAGE_SIZE)) return;
+                currentPage = page;
+                renderTransactionsTable();
+                window.scrollTo({ top: document.getElementById('transactions-container').offsetTop-30, behavior:'smooth' });
+            };
+
+            function initEventListeners() {
+                const applyBtn = document.getElementById('apply-filters');
+                const clearBtn = document.getElementById('clear-filters');
+                if (applyBtn) applyBtn.addEventListener('click', ()=>{
+                    filterState = {
+                        year: document.getElementById('filter-year')?.value || 'all',
+                        kontoAuszug: document.getElementById('filter-konto-auszug')?.value || 'all',
+                        bankkonto: document.getElementById('filter-bankkonto')?.value || 'all',
+                        tbl: document.getElementById('filter-tbl')?.value || 'all'
+                    }; applyFilters();
+                });
+                if (clearBtn) clearBtn.addEventListener('click', clearFilters);
+                
+                window.addEventListener('click', (e) => {
+                    const modal = document.getElementById('relationModal');
+                    if (e.target === modal) modal.style.display = 'none';
+                });
+            }
+
+            // ============ HAUPTPROGRAMM mit 2 PARALLELEN FETCHES ============
+            try {
+                const app = document.getElementById('app');
+                
+                // 1. Transaktionen laden
+                const [transactionsResponse, relationsResponse] = await Promise.all([
+                    fetch(API_URL),
+                    fetch(RELATION_API_URL)  // KEIN Parameter – liefert alle Relationen
+                ]);
+
+                if (!transactionsResponse.ok) throw new Error(`Transactions: HTTP ${transactionsResponse.status}`);
+                if (!relationsResponse.ok) throw new Error(`Relations: HTTP ${relationsResponse.status}`);
+                
+                const transactions = await transactionsResponse.json();
+                const relations = await relationsResponse.json();  // komplettes Array
+                
+                if (!Array.isArray(transactions)) throw new Error('Transaktionen kein Array');
+                if (!Array.isArray(relations)) {
+                    console.warn('Relations ist kein Array, setze leeres Array');
+                    allRelations = [];
+                } else {
+                    allRelations = relations;
+                }
+                relationsLoaded = true;
+                
+                allTransactions = transactions;
+                filteredTransactions = [...allTransactions];
+                sortTransactions('buchungstag','desc');
+                
+                // UI aufbauen
+                app.innerHTML = `
+                    <div class="filter-section fade-in">
+                        <div class="filter-title"><i class="fas fa-sliders-h"></i> Kombinierbare 4-Filter Dimensionen</div>
+                        <div class="filter-grid">
+                            <div class="filter-group"><label><i class="fas fa-calendar"></i> Jahr (BUCHUNGSTAG)</label><select id="filter-year" class="filter-select"><option value="all">📅 Alle Jahre</option></select></div>
+                            <div class="filter-group"><label><i class="fas fa-bookmark"></i> FK_KTO_KONTO_AUSZUG</label><select id="filter-konto-auszug" class="filter-select"><option value="all">🏦 Alle Konten</option></select></div>
+                            <div class="filter-group"><label><i class="fas fa-university"></i> FK_KTO_BANKKONTO</label><select id="filter-bankkonto" class="filter-select"><option value="all">🏛️ Alle Bankkonten</option></select></div>
+                            <div class="filter-group"><label><i class="fas fa-table"></i> TBL</label><select id="filter-tbl" class="filter-select"><option value="all">📋 Alle Tabellen</option></select></div>
+                        </div>
+                        <div class="filter-actions"><button id="apply-filters" class="btn btn-primary"><i class="fas fa-check-circle"></i> Filter anwenden</button><button id="clear-filters" class="btn btn-secondary"><i class="fas fa-eraser"></i> Alle zurücksetzen</button></div>
+                        <div id="active-filters" class="active-filters"></div>
+                    </div>
+                    <div id="stats-container" class="stats-grid"></div>
+                    <div id="charts-container" class="chart-grid"></div>
+                    <div id="transactions-container"></div>
+                `;
+                
+                populateFilterDropdowns();
+                initEventListeners();
+                updateHeaderBadge();
+                updateStatistics();
+                updateYearCharts();   // <-- now includes combined
+                renderTransactionsTable();
+                updateActiveFilters();
+                
+                console.log(`✅ Transaktionen: ${allTransactions.length}, Relationen geladen: ${allRelations.length}`);
+                
+            } catch (error) {
+                console.error('Fataler Fehler:', error);
+                document.getElementById('app').innerHTML = `<div style="background:white; border-radius:32px; padding:70px; text-align:center;"><i class="fas fa-exclamation-triangle" style="font-size:5rem; color:#dc2626;"></i><h2 style="font-size:2.2rem;">Verbindungsfehler</h2><p style="font-size:1.2rem;">Transaktionen oder Relationen nicht geladen.</p><pre style="background:#fee2e2; padding:20px; border-radius:20px; margin-top:30px;">${error.message}</pre></div>`;
+            }
+        })();
+    </script>
+</body>
+</html>

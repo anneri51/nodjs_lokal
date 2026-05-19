@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LexOffice-Link Analyse · Beleg-Jahr & LINK_LEXOFFICE_BUCHUNG</title>
+    <!-- Chart.js für Diagramme -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- day.js für Datumsmanipulation -->
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.9/dayjs.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            background: #f4f9fc;
+            margin: 0;
+            min-height: 100vh;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #153e51;
+        }
+        .container {
+            max-width: 1600px;
+            width: 100%;
+        }
+        header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+        }
+        h1 {
+            font-weight: 700;
+            font-size: 2rem;
+            letter-spacing: -0.01em;
+            margin: 0;
+            background: linear-gradient(145deg, #0b4f6c, #1f6e8a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .webservice-badge {
+            background: #0a3144;
+            color: white;
+            padding: 0.5rem 1.8rem;
+            border-radius: 60px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 8px 20px rgba(8,40,60,0.12);
+        }
+        .filter-panel {
+            background: white;
+            border-radius: 40px;
+            padding: 1.8rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 12px 30px rgba(0,20,40,0.04);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 2rem;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            min-width: 220px;
+        }
+        .filter-group label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #2a5f72;
+            font-weight: 700;
+        }
+        .filter-select {
+            background: #f0f7fa;
+            border: 1px solid #c2d8e2;
+            border-radius: 30px;
+            padding: 0.7rem 1.3rem;
+            font-size: 0.95rem;
+            color: #0a3b4c;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .btn {
+            background: #1a6c86;
+            border: none;
+            color: white;
+            padding: 0.7rem 2rem;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: 0.1s;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .btn:hover {
+            background: #0e556b;
+            transform: scale(0.98);
+        }
+        .stats-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.2rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: white;
+            padding: 1.4rem 1.8rem;
+            border-radius: 30px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.02);
+            border: 1px solid #ecf3f7;
+            flex: 1 1 160px;
+        }
+        .stat-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            color: #467586;
+            letter-spacing: 0.06em;
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #0b3c4f;
+            line-height: 1.2;
+        }
+        .chart-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+            margin-bottom: 2.5rem;
+        }
+        .chart-container {
+            background: white;
+            border-radius: 32px;
+            padding: 1.8rem 1.8rem;
+            box-shadow: 0 14px 32px rgba(0,20,40,0.04);
+            flex: 1 1 400px;
+        }
+        .chart-container h3 {
+            margin-top: 0;
+            margin-bottom: 1.2rem;
+            font-weight: 650;
+            font-size: 1.2rem;
+            color: #145d72;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 2px dashed #cce3eb;
+            padding-bottom: 0.7rem;
+        }
+        canvas {
+            max-height: 280px;
+            width: 100% !important;
+        }
+        .lex-highlight {
+            background: #eff7fa;
+            border-radius: 24px;
+            padding: 0.3rem 1rem;
+            font-size: 0.8rem;
+            color: #0a5066;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .table-section {
+            background: white;
+            border-radius: 32px;
+            padding: 1.8rem 1.8rem;
+            margin-top: 1rem;
+            box-shadow: 0 14px 32px rgba(0,20,40,0.04);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        th {
+            text-align: left;
+            padding: 0.9rem 0.6rem;
+            background: #eef5f9;
+            color: #0c4e63;
+            font-weight: 600;
+        }
+        td {
+            padding: 0.8rem 0.6rem;
+            border-bottom: 1px solid #e0ecf2;
+        }
+        .lex-badge {
+            background: #c2dde9;
+            padding: 0.2rem 1rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #024257;
+            display: inline-block;
+        }
+        .lex-badge-empty {
+            background: #e1e9ee;
+            color: #3b5c6b;
+        }
+        .beleg-badge {
+            background: #d4e7ed;
+            padding: 0.2rem 0.9rem;
+            border-radius: 40px;
+            font-size: 0.75rem;
+        }
+        .betrag-pos { color: #0f6a47; font-weight: 600; }
+        .betrag-neg { color: #b13e3e; font-weight: 600; }
+        .link-present { 
+            background: #a1d2e0; 
+            color: #022c38; 
+            padding: 0.2rem 0.8rem; 
+            border-radius: 40px;
+            font-weight: 600;
+        }
+        .link-absent {
+            background: #dbdfe5;
+            color: #2a4956;
+            padding: 0.2rem 0.8rem;
+            border-radius: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>
+                <span>📎 LexOffice-Link & Beleg-Jahr</span>
+            </h1>
+            <div class="webservice-badge">
+                <span style="background:#4cc9f0; width:12px; height:12px; border-radius:50%;"></span>
+                http://localhost:5000/transactions
+            </div>
+        </header>
+
+        <!-- Filter-Panel (zusätzlich zu bestehenden Filtern) -->
+        <div class="filter-panel">
+            <div class="filter-group">
+                <label>🔗 LINK_LEXOFFICE_BUCHUNG</label>
+                <select id="filterLexLink" class="filter-select">
+                    <option value="__all__">📂 Alle (mit/ohne Link)</option>
+                    <option value="has_value">✅ Hat Link-Wert</option>
+                    <option value="no_value">❌ Kein Link (null/leer)</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>📅 Beleg-Jahr Filter</label>
+                <select id="filterBelegJahr" class="filter-select">
+                    <option value="__all__">🗂️ Alle Beleg-Jahre</option>
+                </select>
+            </div>
+            <button id="applyFiltersBtn" class="btn">
+                <span>↻</span> Filter anwenden
+            </button>
+            <button id="resetFiltersBtn" class="btn" style="background:#4e6a78;">
+                ✕ Zurücksetzen
+            </button>
+            <div id="activeFilterInfo" style="margin-left:auto; color:#1a6a7f; font-size:0.9rem;"></div>
+        </div>
+
+        <!-- Statistik-Karten -->
+        <div id="statsPanel" class="stats-grid"></div>
+
+        <!-- NEUE DIAGRAMM-ZEILE: Fokus auf LINK_LEXOFFICE_BUCHUNG + Beleg-Jahr -->
+        <div class="chart-row">
+            <!-- Diagramm 1: Link vorhanden vs. kein Link (Gruppierung) -->
+            <div class="chart-container">
+                <h3>🔗 LINK_LEXOFFICE_BUCHUNG · Gruppierung</h3>
+                <canvas id="lexLinkChart"></canvas>
+                <p style="color:#3c6e80; margin-top:0.7rem; font-size:0.8rem;">
+                    <span class="lex-highlight">📎 Hat Link-Wert</span> vs. <span class="lex-highlight" style="background:#dde5ea;">🚫 Kein Link</span> (Anzahl Transaktionen)
+                </p>
+            </div>
+            <!-- Diagramm 2: Beleg-Jahr (aus BUCHUNGSTAG extrahiert) – Balken -->
+            <div class="chart-container">
+                <h3>📆 Beleg-Jahr (aus BUCHUNGSTAG)</h3>
+                <canvas id="belegJahrChart"></canvas>
+                <p style="color:#3c6e80; margin-top:0.7rem; font-size:0.8rem;">
+                    Summe Betrag pro Beleg-Jahr (Jahreszahl aus Buchungstag)
+                </p>
+            </div>
+        </div>
+
+        <!-- Zweite Diagramm-Zeile: Zusätzliche Analyse -->
+        <div class="chart-row">
+            <!-- Diagramm 3: Kombination: Link-Status + Betrag pro Jahr (optional) -->
+            <div class="chart-container">
+                <h3>📊 Beleg-Jahr · aufgeteilt nach Link-Status</h3>
+                <canvas id="jahrLinkChart"></canvas>
+                <p style="color:#3c6e80; font-size:0.8rem;">Betragssumme · gruppiert nach Link vorhanden/fehlend</p>
+            </div>
+            <!-- Diagramm 4: FK_KTO_KONTO_AUSZUG (bereits bekannt, aber für Kontext) -->
+            <div class="chart-container">
+                <h3>🏦 FK_KTO_KONTO_AUSZUG</h3>
+                <canvas id="kontoChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Detaillierte Tabelle mit allen Feldern + LINK_LEXOFFICE_BUCHUNG und Beleg-Jahr -->
+        <div class="table-section">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                <h3 style="margin:0; color:#0d536a;">📋 Transaktionen · mit LexOffice-Link & Beleg-Jahr</h3>
+                <div id="filterTags" style="display:flex; gap:8px;"></div>
+            </div>
+            <div style="overflow-x: auto;">
+                <table id="transactionTable">
+                    <thead>
+                        <tr>
+                            <th>Beleg-Jahr</th>
+                            <th>BUCHUNGSTAG</th>
+                            <th>Betrag (€)</th>
+                            <th>Offener Betrag</th>
+                            <th>FK_KTO_KONTO_AUSZUG</th>
+                            <th>FK_KTO_BANKKONTO</th>
+                            <th>TBL</th>
+                            <th>LINK_LEXOFFICE_BUCHUNG 🆕</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td colspan="8" style="text-align:center; padding:2rem;">Lade Daten …</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (async function() {
+            const WS_URL = 'http://localhost:5000/transactions';
+            
+            // Globale Daten
+            let rawTransactions = [];
+            let filteredTransactions = [];
+
+            // Filter-Elemente
+            const filterLexLink = document.getElementById('filterLexLink');
+            const filterBelegJahr = document.getElementById('filterBelegJahr');
+            const applyBtn = document.getElementById('applyFiltersBtn');
+            const resetBtn = document.getElementById('resetFiltersBtn');
+            const activeFilterInfo = document.getElementById('activeFilterInfo');
+            const filterTags = document.getElementById('filterTags');
+
+            // Chart-Instanzen
+            let lexLinkChart, belegJahrChart, jahrLinkChart, kontoChart;
+
+            // ---------------------------------------------------------
+            // 1. Daten holen (mit LINK_LEXOFFICE_BUCHUNG + Beleg-Jahr Demo)
+            // ---------------------------------------------------------
+            async function fetchTransactions() {
+                try {
+                    const resp = await fetch(WS_URL);
+                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                    return await resp.json();
+                } catch (error) {
+                    console.warn('Server nicht erreichbar, verwende Demo-Daten mit LINK_LEXOFFICE_BUCHUNG', error);
+                    return generateDemoTransactions();
+                }
+            }
+
+            // Erweiterte Demo-Daten mit LINK_LEXOFFICE_BUCHUNG (mal mit Wert, mal null/leer)
+            function generateDemoTransactions() {
+                return [
+                    // 1899 - mit Link-Werten und ohne
+                    { "BUCHUNGSTAG": "1899-12-29T23:00:00.000Z", "Betrag": 1250.00, "offener Betrag": 200.50, "FK_KTO_KONTO_AUSZUG": 1001, "FK_KTO_BANKKONTO": 5001, "TBL": "Umsatz", "LINK_LEXOFFICE_BUCHUNG": "https://lexoffice.de/invoice/123" },
+                    { "BUCHUNGSTAG": "1899-12-30T01:00:00.000Z", "Betrag": 780.30, "offener Betrag": 0.00, "FK_KTO_KONTO_AUSZUG": 1002, "FK_KTO_BANKKONTO": 5001, "TBL": "Umsatz", "LINK_LEXOFFICE_BUCHUNG": null },
+                    { "BUCHUNGSTAG": "1899-12-31T22:00:00.000Z", "Betrag": -120.90, "offener Betrag": 0.00, "FK_KTO_KONTO_AUSZUG": 1001, "FK_KTO_BANKKONTO": 5002, "TBL": "Gebühren", "LINK_LEXOFFICE_BUCHUNG": "" },
+                    // 1900
+                    { "BUCHUNGSTAG": "1900-01-15T12:00:00.000Z", "Betrag": 2340.00, "offener Betrag": 340.00, "FK_KTO_KONTO_AUSZUG": 1003, "FK_KTO_BANKKONTO": 5001, "TBL": "Umsatz", "LINK_LEXOFFICE_BUCHUNG": "https://lexoffice.de/invoice/456" },
+                    { "BUCHUNGSTAG": "1900-06-22T08:30:00.000Z", "Betrag": 525.50, "offener Betrag": 0.00, "FK_KTO_KONTO_AUSZUG": 1001, "FK_KTO_BANKKONTO": 5003, "TBL": "Zinsen", "LINK_LEXOFFICE_BUCHUNG": null },
+                    // 2023
+                    { "BUCHUNGSTAG": "2023-11-12T10:15:00.000Z", "Betrag": 899.95, "offener Betrag": 99.95, "FK_KTO_KONTO_AUSZUG": 1004, "FK_KTO_BANKKONTO": 5002, "TBL": "Umsatz", "LINK_LEXOFFICE_BUCHUNG": "https://lexoffice.de/invoice/789" },
+                    { "BUCHUNGSTAG": "2023-12-01T23:00:00.000Z", "Betrag": 134.20, "offener Betrag": 0.00, "FK_KTO_KONTO_AUSZUG": 1002, "FK_KTO_BANKKONTO": 5001, "TBL": "Lastschrift", "LINK_LEXOFFICE_BUCHUNG": "" },
+                    // 2024
+                    { "BUCHUNGSTAG": "2024-01-20T09:45:00.000Z", "Betrag": 612.80, "offener Betrag": 12.80, "FK_KTO_KONTO_AUSZUG": 1005, "FK_KTO_BANKKONTO": 5003, "TBL": "Umsatz", "LINK_LEXOFFICE_BUCHUNG": "https://lexoffice.de/invoice/101" },
+                    { "BUCHUNGSTAG": "2024-02-05T14:20:00.000Z", "Betrag": -45.00, "offener Betrag": 0.00, "FK_KTO_KONTO_AUSZUG": 1001, "FK_KTO_BANKKONTO": 5001, "TBL": "Gebühren", "LINK_LEXOFFICE_BUCHUNG": null },
+                    { "BUCHUNGSTAG": "2024-03-18T19:00:00.000Z", "Betrag": 1234.00, "offener Betrag": 234.00, "FK_KTO_KONTO_AUSZUG": 1003, "FK_KTO_BANKKONTO": 5004, "TBL": "Zinsen", "LINK_LEXOFFICE_BUCHUNG": "https://lexoffice.de/invoice/202" },
+                    { "BUCHUNGSTAG": "1888-07-07T02:00:00.000Z", "Betrag": 9999.99, "offener Betrag": 9999.99, "FK_KTO_KONTO_AUSZUG": 1006, "FK_KTO_BANKKONTO": 5005, "TBL": "Eröffnung", "LINK_LEXOFFICE_BUCHUNG": null },
+                    // extra mit Link aber leerem String – wird als "kein Wert" gewertet
+                    { "BUCHUNGSTAG": "2025-01-01T12:00:00.000Z", "Betrag": 333.33, "offener Betrag": 0.00, "FK_KTO_KONTO_AUSZUG": 1007, "FK_KTO_BANKKONTO": 5006, "TBL": "Test", "LINK_LEXOFFICE_BUCHUNG": "" },
+                ];
+            }
+
+            // Hilfsfunktion: Prüft ob Link vorhanden (nicht null, nicht undefined, nicht leerer String)
+            function hasLexLink(linkValue) {
+                if (linkValue === undefined || linkValue === null) return false;
+                if (typeof linkValue === 'string' && linkValue.trim() === '') return false;
+                return true;
+            }
+
+            // Extrahiere eindeutige Beleg-Jahre für Dropdown
+            function extractBelegJahre(transactions) {
+                const jahreSet = new Set();
+                transactions.forEach(t => {
+                    const jahr = extractYearFromDate(t.BUCHUNGSTAG);
+                    jahreSet.add(String(jahr));
+                });
+                const sorted = Array.from(jahreSet).sort((a,b) => parseInt(a) - parseInt(b));
+                
+                let options = '<option value="__all__">🗂️ Alle Beleg-Jahre</option>';
+                sorted.forEach(j => {
+                    options += `<option value="${j}">Beleg-Jahr ${j}</option>`;
+                });
+                filterBelegJahr.innerHTML = options;
+            }
+
+            // Jahresextraktion sicher
+            function extractYearFromDate(dateStr) {
+                if (!dateStr) return 1970;
+                const date = dayjs(dateStr);
+                let year = date.year();
+                if (isNaN(year)) {
+                    const match = String(dateStr).match(/^(\d{4})/);
+                    year = match ? parseInt(match[1], 10) : 1970;
+                }
+                return year;
+            }
+
+            // ---------------------------------------------------------
+            // 2. Filter-Logik (inkl. LexLink und Beleg-Jahr)
+            // ---------------------------------------------------------
+            function applyFilters() {
+                const linkFilter = filterLexLink.value;
+                const jahrFilter = filterBelegJahr.value;
+
+                filteredTransactions = rawTransactions.filter(t => {
+                    // Link-Filter
+                    if (linkFilter !== '__all__') {
+                        const linkHas = hasLexLink(t.LINK_LEXOFFICE_BUCHUNG);
+                        if (linkFilter === 'has_value' && !linkHas) return false;
+                        if (linkFilter === 'no_value' && linkHas) return false;
+                    }
+                    // Beleg-Jahr Filter
+                    if (jahrFilter !== '__all__') {
+                        const jahr = String(extractYearFromDate(t.BUCHUNGSTAG));
+                        if (jahr !== jahrFilter) return false;
+                    }
+                    return true;
+                });
+
+                // Aktive Filter anzeigen
+                let active = [];
+                if (linkFilter === 'has_value') active.push('🔗 Hat LexOffice-Link');
+                if (linkFilter === 'no_value') active.push('🚫 Kein LexOffice-Link');
+                if (jahrFilter !== '__all__') active.push(`📅 Beleg-Jahr ${jahrFilter}`);
+                
+                activeFilterInfo.innerHTML = active.length ? `⚡ Filter: ${active.join(' · ')}` : '⚡ keine aktiven Filter';
+                
+                let tagsHtml = '';
+                if (linkFilter === 'has_value') tagsHtml += '<span class="link-present">✅ Hat Link</span>';
+                if (linkFilter === 'no_value') tagsHtml += '<span class="link-absent">❌ Kein Link</span>';
+                if (jahrFilter !== '__all__') tagsHtml += `<span class="beleg-badge">Jahr ${jahrFilter}</span>`;
+                filterTags.innerHTML = tagsHtml;
+
+                renderDashboard(filteredTransactions);
+            }
+
+            function resetFilters() {
+                filterLexLink.value = '__all__';
+                filterBelegJahr.value = '__all__';
+                filteredTransactions = [...rawTransactions];
+                activeFilterInfo.innerHTML = '⚡ keine aktiven Filter';
+                filterTags.innerHTML = '';
+                renderDashboard(rawTransactions);
+            }
+
+            // ---------------------------------------------------------
+            // 3. Datenverarbeitung für Diagramme
+            // ---------------------------------------------------------
+            function processTransactions(transactions) {
+                // 1. LexLink Gruppierung (Anzahl)
+                let lexLinkPresent = 0, lexLinkAbsent = 0;
+                // 2. Beleg-Jahr -> Summe Betrag
+                const belegJahrMap = new Map();
+                // 3. Kombination: Jahr + Link-Status
+                const jahrLinkMap = new Map(); // Key: "jahr|hasLink"
+                
+                // Für Konto-Diagramm
+                const kontoMap = new Map();
+                
+                // Stats
+                let sumBetrag = 0, sumOffen = 0;
+                const bankkontoSet = new Set();
+                const tblSet = new Set();
+
+                const enhanced = [];
+
+                transactions.forEach(t => {
+                    const betrag = typeof t.Betrag === 'number' ? t.Betrag : parseFloat(t.Betrag) || 0;
+                    const offen = typeof t['offener Betrag'] === 'number' ? t['offener Betrag'] : parseFloat(t['offener Betrag']) || 0;
+                    const kontoAuszug = t.FK_KTO_KONTO_AUSZUG ?? 0;
+                    const bankkonto = t.FK_KTO_BANKKONTO ?? '—';
+                    const tbl = t.TBL ?? '—';
+                    const rawDate = t.BUCHUNGSTAG || '1970-01-01';
+                    const jahr = extractYearFromDate(rawDate);
+                    
+                    // LexLink vorhanden?
+                    const linkHasValue = hasLexLink(t.LINK_LEXOFFICE_BUCHUNG);
+                    if (linkHasValue) lexLinkPresent++; else lexLinkAbsent++;
+
+                    // Beleg-Jahr Summe
+                    const belegJahrKey = jahr;
+                    belegJahrMap.set(belegJahrKey, (belegJahrMap.get(belegJahrKey) || 0) + betrag);
+
+                    // Jahr + Link-Kombo
+                    const comboKey = `${jahr}|${linkHasValue ? 'has' : 'no'}`;
+                    jahrLinkMap.set(comboKey, (jahrLinkMap.get(comboKey) || 0) + betrag);
+
+                    // Kontoauszug
+                    const kKey = String(kontoAuszug);
+                    kontoMap.set(kKey, (kontoMap.get(kKey) || 0) + betrag);
+
+                    // Summen
+                    sumBetrag += betrag;
+                    sumOffen += offen;
+                    bankkontoSet.add(String(bankkonto));
+                    tblSet.add(String(tbl));
+
+                    // Für Tabelle
+                    enhanced.push({
+                        belegJahr: jahr,
+                        buchungstagRaw: rawDate,
+                        betrag,
+                        offenerBetrag: offen,
+                        kontoAuszug,
+                        bankkonto,
+                        tbl,
+                        lexLink: t.LINK_LEXOFFICE_BUCHUNG,
+                        linkHasValue
+                    });
+                });
+
+                // Sortierte Beleg-Jahre
+                const sortedBelegJahre = Array.from(belegJahrMap.keys()).sort((a,b) => a - b);
+                const belegSummen = sortedBelegJahre.map(j => belegJahrMap.get(j));
+
+                // Kombination für gestapeltes Balkendiagramm (Jahre + Link-Status)
+                const uniqueJahre = [...new Set(enhanced.map(e => e.belegJahr))].sort((a,b) => a - b);
+                const hasLinkData = uniqueJahre.map(j => {
+                    return jahrLinkMap.get(`${j}|has`) || 0;
+                });
+                const noLinkData = uniqueJahre.map(j => {
+                    return jahrLinkMap.get(`${j}|no`) || 0;
+                });
+
+                // Kontoauszug sortiert
+                const sortedKontos = Array.from(kontoMap.entries())
+                    .map(([k,v]) => ({ konto: k, sum: v }))
+                    .sort((a,b) => (a.konto > b.konto ? 1 : -1));
+                const kontoLabels = sortedKontos.map(k => `Kto. ${k.konto}`);
+                const kontoValues = sortedKontos.map(k => k.sum);
+
+                // Tabelle sortieren
+                enhanced.sort((a,b) => dayjs(a.buchungstagRaw).unix() - dayjs(b.buchungstagRaw).unix());
+
+                return {
+                    lexLinkCounts: [lexLinkPresent, lexLinkAbsent],
+                    belegJahre: sortedBelegJahre,
+                    belegSummen,
+                    jahrLinkUnique: uniqueJahre,
+                    hasLinkData,
+                    noLinkData,
+                    kontoLabels,
+                    kontoValues,
+                    transactions: enhanced,
+                    stats: {
+                        total: enhanced.length,
+                        sumBetrag,
+                        sumOffen,
+                        uniqueBank: bankkontoSet.size,
+                        uniqueTbl: tblSet.size,
+                        linkPresent: lexLinkPresent,
+                        linkAbsent: lexLinkAbsent
+                    }
+                };
+            }
+
+            // ---------------------------------------------------------
+            // 4. Rendern
+            // ---------------------------------------------------------
+            function renderDashboard(transactions) {
+                const p = processTransactions(transactions);
+
+                // Stats
+                const statsHtml = `
+                    <div class="stat-card">
+                        <div class="stat-label">Transaktionen</div>
+                        <div class="stat-number">${p.stats.total}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Summe Betrag</div>
+                        <div class="stat-number">${p.stats.sumBetrag.toFixed(2)} €</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Offene Beträge</div>
+                        <div class="stat-number">${p.stats.sumOffen.toFixed(2)} €</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">✅ Hat LexLink</div>
+                        <div class="stat-number">${p.stats.linkPresent}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">❌ Kein Link</div>
+                        <div class="stat-number">${p.stats.linkAbsent}</div>
+                    </div>
+                `;
+                document.getElementById('statsPanel').innerHTML = statsHtml;
+
+                // 1. LexLink Donut / Pie (Anzahl)
+                if (lexLinkChart) lexLinkChart.destroy();
+                lexLinkChart = new Chart(document.getElementById('lexLinkChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['✅ Hat LexOffice-Link', '❌ Kein Link / leer'],
+                        datasets: [{
+                            data: p.lexLinkCounts,
+                            backgroundColor: ['#2e8b9c', '#a1b9c4'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: { plugins: { legend: { position: 'bottom' } } }
+                });
+
+                // 2. Beleg-Jahr Balkendiagramm
+                if (belegJahrChart) belegJahrChart.destroy();
+                belegJahrChart = new Chart(document.getElementById('belegJahrChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: p.belegJahre,
+                        datasets: [{
+                            label: 'Betrag (€) pro Beleg-Jahr',
+                            data: p.belegSummen,
+                            backgroundColor: '#3a7e94',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: { scales: { y: { beginAtZero: true } } }
+                });
+
+                // 3. Kombinationsdiagramm (Jahre + Link-Status) - gestapelt
+                if (jahrLinkChart) jahrLinkChart.destroy();
+                jahrLinkChart = new Chart(document.getElementById('jahrLinkChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: p.jahrLinkUnique,
+                        datasets: [
+                            { label: 'Betrag · mit Link', data: p.hasLinkData, backgroundColor: '#1f8d6b' },
+                            { label: 'Betrag · ohne Link', data: p.noLinkData, backgroundColor: '#b0bcc7' }
+                        ]
+                    },
+                    options: { 
+                        scales: { y: { beginAtZero: true } },
+                        plugins: { tooltip: { mode: 'index' } }
+                    }
+                });
+
+                // 4. Kontoauszug-Chart
+                if (kontoChart) kontoChart.destroy();
+                kontoChart = new Chart(document.getElementById('kontoChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: p.kontoLabels,
+                        datasets: [{
+                            data: p.kontoValues,
+                            backgroundColor: ['#26648c','#3c8d99','#4aa3b5','#5f7f95','#2d7086','#5498b9'],
+                        }]
+                    }
+                });
+
+                // Tabelle
+                const tbody = document.getElementById('tableBody');
+                if (p.transactions.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;">Keine Transaktionen gefunden.</td></tr>`;
+                } else {
+                    let rows = '';
+                    p.transactions.forEach(tx => {
+                        const betragClass = tx.betrag >= 0 ? 'betrag-pos' : 'betrag-neg';
+                        const linkDisplay = tx.linkHasValue 
+                            ? `<span class="link-present">🔗 ${tx.lexLink?.substring(0,25) || 'Link'}</span>` 
+                            : `<span class="link-absent">🚫 kein Link</span>`;
+                        rows += `<tr>
+                            <td><span class="beleg-badge">${tx.belegJahr}</span></td>
+                            <td style="font-family:monospace;">${tx.buchungstagRaw}</td>
+                            <td class="${betragClass}">${tx.betrag.toFixed(2)} €</td>
+                            <td>${tx.offenerBetrag.toFixed(2)} €</td>
+                            <td><span class="lex-badge">${tx.kontoAuszug}</span></td>
+                            <td>${tx.bankkonto}</td>
+                            <td>${tx.tbl}</td>
+                            <td>${linkDisplay}</td>
+                        </tr>`;
+                    });
+                    tbody.innerHTML = rows;
+                }
+            }
+
+            // ---------------------------------------------------------
+            // 5. INIT
+            // ---------------------------------------------------------
+            try {
+                rawTransactions = await fetchTransactions();
+                filteredTransactions = [...rawTransactions];
+                
+                extractBelegJahre(rawTransactions);
+                renderDashboard(rawTransactions);
+
+                applyBtn.addEventListener('click', applyFilters);
+                resetBtn.addEventListener('click', resetFilters);
+            } catch (err) {
+                console.error(err);
+                const fallback = generateDemoTransactions();
+                rawTransactions = fallback;
+                filteredTransactions = fallback;
+                extractBelegJahre(fallback);
+                renderDashboard(fallback);
+                document.getElementById('statsPanel').innerHTML += '<div style="color:#885500;">⚠️ Demo-Daten mit LexOffice-Link</div>';
+                
+                applyBtn.addEventListener('click', applyFilters);
+                resetBtn.addEventListener('click', resetFilters);
+            }
+        })();
+    </script>
+</body>
+</html>

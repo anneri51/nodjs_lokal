@@ -1,0 +1,3489 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kasse Management System - Complete Integration</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Tree Sidebars */
+        .tree-sidebar {
+            width: 400px;
+            background: #2c3e50;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #34495e;
+        }
+
+        .tree-sidebar-right {
+            width: 400px;
+            background: #34495e;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid #2c3e50;
+        }
+
+        .tree-header {
+            padding: 20px;
+            background: #34495e;
+            border-bottom: 1px solid #3c5a78;
+            flex-shrink: 0;
+        }
+
+        .tree-header-right {
+            padding: 20px;
+            background: #2c3e50;
+            border-bottom: 1px solid #3c5a78;
+            flex-shrink: 0;
+        }
+
+        .tree-header h2 {
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .tree-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .tree-controls button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            background: #3498db;
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background-color 0.2s;
+        }
+
+        .tree-controls button:hover {
+            background: #2980b9;
+        }
+
+        .tree-filters {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(52, 152, 219, 0.1);
+            border-radius: 4px;
+            border: 1px solid rgba(52, 152, 219, 0.3);
+        }
+
+        .filter-group {
+            margin-bottom: 10px;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #bdc3c7;
+            font-weight: 600;
+        }
+
+        .filter-select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #4a6572;
+            border-radius: 4px;
+            background: #2c3e50;
+            color: white;
+            font-size: 12px;
+        }
+
+        .tree-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .tree {
+            list-style: none;
+        }
+
+        .tree ul {
+            list-style: none;
+            margin-left: 20px;
+            border-left: 1px solid #4a6572;
+            padding-left: 10px;
+        }
+
+        .tree-node {
+            margin: 3px 0;
+        }
+
+        .tree-node-content {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            transition: background-color 0.2s;
+            position: relative;
+        }
+
+        .tree-node-content:hover {
+            background: #34495e;
+        }
+
+        .tree-node-content.selected {
+            background: #3498db;
+        }
+
+        .tree-node-content.transaction-item {
+            background: rgba(52, 152, 219, 0.2);
+            border: 1px solid rgba(52, 152, 219, 0.3);
+        }
+
+        .tree-node-content.transaction-item:hover {
+            background: rgba(52, 152, 219, 0.3);
+        }
+
+        .tree-node-content.transaction-item.selected {
+            background: #3498db;
+            border-color: #2980b9;
+        }
+
+        .tree-node-content.account-item {
+            background: rgba(46, 204, 113, 0.2);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+        }
+
+        .tree-node-content.account-item:hover {
+            background: rgba(46, 204, 113, 0.3);
+        }
+
+        .tree-node-content.account-item.selected {
+            background: #27ae60;
+            border-color: #219a52;
+        }
+
+        .tree-node-icon {
+            margin-right: 8px;
+            width: 16px;
+            text-align: center;
+            font-size: 12px;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+
+        .tree-node-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .tree-node-text {
+            flex: 1;
+            font-size: 14px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .tree-node-details {
+            font-size: 11px;
+            color: #bdc3c7;
+            margin-top: 2px;
+        }
+
+        .tree-node-count {
+            background: #7f8c8d;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 11px;
+            margin-left: 8px;
+        }
+
+        .tree-loading {
+            padding: 20px;
+            text-align: center;
+            color: #bdc3c7;
+        }
+
+        .tree-error {
+            padding: 20px;
+            text-align: center;
+            color: #e74c3c;
+            background: rgba(231, 76, 60, 0.1);
+            border-radius: 4px;
+            margin: 10px;
+        }
+
+        .tree-empty {
+            padding: 20px;
+            text-align: center;
+            color: #bdc3c7;
+            font-style: italic;
+        }
+
+        .tree-node-children {
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .tree-node-children.collapsed {
+            max-height: 0;
+        }
+
+        .tree-node.has-children > .tree-node-content .tree-node-icon {
+            cursor: pointer;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-width: 0;
+        }
+
+        .content-header {
+            background: white;
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            flex-shrink: 0;
+        }
+
+        .content-body {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Tabs - Horizontal Scrollable */
+        .tabs-container {
+            background: #34495e;
+            border-bottom: 1px solid #2c3e50;
+            flex-shrink: 0;
+            overflow-x: auto;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .tabs-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tabs {
+            display: inline-flex;
+            min-width: max-content;
+        }
+
+        .tab {
+            padding: 15px 30px;
+            color: white;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 16px;
+            transition: background-color 0.3s;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .tab:hover {
+            background: #3c5a78;
+        }
+
+        .tab.active {
+            background: #3498db;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Form Styles */
+        .form-section, .response-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            margin-bottom: 20px;
+        }
+
+        .form-section {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 500px;
+        }
+
+        .response-section {
+            flex-shrink: 0;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #495057;
+            font-size: 14px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #4dabf7;
+            box-shadow: 0 0 0 2px rgba(77, 171, 247, 0.2);
+        }
+
+        .required::after {
+            content: " *";
+            color: #e74c3c;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #e67e22;
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #219a52;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: #138496;
+        }
+
+        .response-section h3 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        #responseOutput {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .field-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 20px 0 15px 0;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .toggle-advanced {
+            background: none;
+            border: none;
+            color: #3498db;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 10px;
+            text-decoration: underline;
+        }
+
+        .advanced-fields {
+            display: none;
+        }
+
+        .advanced-fields.show {
+            display: block;
+        }
+
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .search-section {
+            background: #e8f4fc;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border: 1px solid #b8daff;
+        }
+
+        .search-form {
+            display: flex;
+            gap: 10px;
+            align-items: end;
+        }
+
+        .search-form .form-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .selected-record {
+            background: #e8f4fc;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #b8daff;
+            margin-bottom: 20px;
+            flex-shrink: 0;
+        }
+
+        .selected-record h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .selected-record-info {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 10px 20px;
+            font-size: 14px;
+        }
+
+        .selected-record-label {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .selected-record-value {
+            color: #2c3e50;
+        }
+
+        .auto-fill-notice {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px 15px;
+            border-radius: 4px;
+            border: 1px solid #c3e6cb;
+            margin-bottom: 15px;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .filter-info {
+            background: #fff3cd;
+            color: #856404;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #ffeaa7;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+
+        .status-message {
+            padding: 10px 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            display: block;
+        }
+
+        .debug-info {
+            background: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #ffeaa7;
+            margin-bottom: 20px;
+        }
+
+        .search-results-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .search-result-item {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .search-result-item:hover {
+            border-color: #3498db;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .search-result-item h4 {
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+
+        .search-result-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 14px;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+            padding: 20px;
+        }
+
+        .relation-status {
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin: 5px 0;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .relation-exists {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .relation-missing {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        /* Enhanced Relation Search Styles */
+        .relation-search-tabs {
+            display: flex;
+            border-bottom: 1px solid #34495e;
+            margin-bottom: 15px;
+        }
+
+        .relation-search-tab {
+            padding: 10px 20px;
+            background: #2c3e50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .relation-search-tab.active {
+            background: #3498db;
+            border-bottom-color: #2980b9;
+        }
+
+        .relation-search-content {
+            display: none;
+        }
+
+        .relation-search-content.active {
+            display: block;
+        }
+
+        .relation-details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .relation-section {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+
+        .relation-section h4 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+            border-bottom: 1px solid #3498db;
+            padding-bottom: 5px;
+        }
+
+        .relation-item {
+            padding: 8px;
+            margin-bottom: 5px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border-left: 3px solid #3498db;
+        }
+
+        .relation-item-header {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 3px;
+        }
+
+        .relation-item-details {
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .no-relations {
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .relation-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid #e9ecef;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #3498db;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            body {
+                flex-direction: column;
+                height: auto;
+                overflow: auto;
+            }
+            
+            .tree-sidebar, .tree-sidebar-right {
+                width: 100%;
+                height: 300px;
+            }
+            
+            .field-group {
+                grid-template-columns: 1fr;
+            }
+
+            .relation-details-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .tabs-container {
+                padding: 0 10px;
+            }
+            
+            .tab {
+                padding: 12px 20px;
+                font-size: 14px;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+            }
+            
+            .form-actions button {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            
+            .search-form {
+                flex-direction: column;
+            }
+
+            .relation-search-tabs {
+                flex-direction: column;
+            }
+
+            .relation-search-tab {
+                width: 100%;
+                margin-bottom: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Left Tree Sidebar - Transactions -->
+    <div class="tree-sidebar">
+        <div class="tree-header">
+            <h2>Transaktions Baum</h2>
+            
+            <div class="tree-filters">
+                <div class="filter-group">
+                    <label for="tableFilter">Tabelle filtern:</label>
+                    <select id="tableFilter" class="filter-select">
+                        <option value="all">Alle Tabellen</option>
+                        <option value="kas_kasse" selected>kas_kasse</option>
+                    </select>
+                </div>
+                <div class="filter-info" id="filterInfo">
+                    Filter: kas_kasse aktiv
+                </div>
+            </div>
+
+            <div class="tree-controls">
+                <button id="refreshTree">Aktualisieren</button>
+                <button id="expandAll">Alle aufklappen</button>
+                <button id="collapseAll">Alle zuklappen</button>
+            </div>
+        </div>
+        <div class="tree-container">
+            <div id="treeLoading" class="tree-loading">
+                <div class="spinner"></div>Lade Transaktionen...
+            </div>
+            <div id="treeError" class="tree-error" style="display: none;"></div>
+            <div id="treeEmpty" class="tree-empty" style="display: none;">Keine Transaktionen gefunden</div>
+            <div id="treeContent" class="tree" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="content-header">
+            <h1>Kasse Management System</h1>
+            <p id="selectedPath">Wählen Sie einen Eintrag aus dem Baum</p>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="statusMessage" class="status-message"></div>
+
+        <!-- Horizontal Scrollable Tabs -->
+        <div class="tabs-container">
+            <div class="tabs">
+                <button class="tab active" data-tab="insert">Neuen Record erstellen</button>
+                <button class="tab" data-tab="update">Record aktualisieren</button>
+                <button class="tab" data-tab="search">Daten durchsuchen</button>
+                <button class="tab" data-tab="delete">Record löschen</button>
+                <button class="tab" data-tab="relation">Kontoauszug Relation</button>
+                <button class="tab" data-tab="procedure">Prozedur Ausführung</button>
+                <button class="tab" data-tab="batch">Batch Operationen</button>
+                <button class="tab" data-tab="reports">Berichte</button>
+            </div>
+        </div>
+
+        <!-- Selected Record Info -->
+        <div id="selectedRecordInfo" class="selected-record" style="display: none;">
+            <h4>Ausgewählter Eintrag</h4>
+            <div class="selected-record-info" id="selectedRecordDetails"></div>
+            <div id="relationStatus" class="relation-status" style="display: none;"></div>
+        </div>
+
+        <!-- Auto-fill Notice -->
+        <div id="autoFillNotice" class="auto-fill-notice" style="display: none;">
+            ✓ Transaktionsdaten wurden automatisch übernommen
+        </div>
+
+        <!-- INSERT TAB -->
+        <div class="tab-content active" id="insertTab">
+            <div class="form-section">
+                <form id="insertForm">
+                    <div class="debug-info">
+                        <h4>✅ Backend-Kompatibilität aktiviert</h4>
+                        <p>Dieses Formular sendet nur definierte Felder an das Backend (undefined Felder werden gefiltert).</p>
+                    </div>
+                    
+                    <h3 class="section-title">Grundinformationen</h3>
+                    
+                    <div class="field-group">
+                        <div class="form-group">
+                            <label for="fk_std_kto_kontotyp" class="required">Kontotyp</label>
+                            <select id="fk_std_kto_kontotyp" name="fk_std_kto_kontotyp" required>
+                                <option value="">Bitte wählen</option>
+                                <option value="1">Kontotyp 1</option>
+                                <option value="2">Kontotyp 2</option>
+                                <option value="3">Kontotyp 3</option>
+                                <option value="6">Kontotyp 6</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="fk_ein_aus" class="required">Ein/Aus</label>
+                            <select id="fk_ein_aus" name="fk_ein_aus" required>
+                                <option value="">Bitte wählen</option>
+                                <option value="1">Einnahme</option>
+                                <option value="2">Ausgabe</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <div class="form-group">
+                            <label for="datum" class="required">Datum</label>
+                            <input type="date" id="datum" name="datum" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="betrag" class="required">Betrag (€)</label>
+                            <input type="number" id="betrag" name="betrag" step="0.01" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="buchungstext" class="required">Buchungstext</label>
+                        <input type="text" id="buchungstext" name="buchungstext" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="comm">Kommentar</label>
+                        <textarea id="comm" name="comm" rows="3"></textarea>
+                    </div>
+
+                    <div class="field-group">
+                        <div class="form-group">
+                            <label for="jahr" class="required">Jahr</label>
+                            <input type="number" id="jahr" name="jahr" min="2000" max="2100" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="fk_kto_bankkonto" class="required">Bankkonto ID</label>
+                            <input type="number" id="fk_kto_bankkonto" name="fk_kto_bankkonto" required>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary" id="insertBtn">
+                            <span class="spinner" id="insertSpinner" style="display: none;"></span>
+                            Record erstellen
+                        </button>
+                        <button type="button" class="btn-success" id="insertTestBtn">Test mit Beispieldaten</button>
+                        <button type="button" class="btn-info" id="debugDataBtn">Daten anzeigen</button>
+                        <button type="button" class="btn-secondary" id="insertResetBtn">Formular zurücksetzen</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="response-section">
+                <h3>API Response</h3>
+                <div id="insertResponseOutput">Warten auf Eingabe...</div>
+                
+                <div class="form-actions" style="margin-top: 15px;">
+                    <button type="button" class="btn-secondary" id="clearInsertResponseBtn">Response löschen</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- UPDATE TAB -->
+        <div class="tab-content" id="updateTab">
+            <div class="form-section">
+                <div class="search-section">
+                    <h3 class="section-title">Record suchen</h3>
+                    <div class="search-form">
+                        <div class="form-group">
+                            <label for="searchId">Record ID (PK_KTO_KAS_KASSE)</label>
+                            <input type="number" id="searchId" placeholder="Geben Sie die Record ID ein">
+                        </div>
+                        <button type="button" class="btn-primary" id="searchBtn">
+                            <span class="spinner" id="searchSpinner" style="display: none;"></span>
+                            Record laden
+                        </button>
+                    </div>
+                </div>
+
+                <form id="updateForm" style="display: none;">
+                    <h3 class="section-title">Record bearbeiten</h3>
+                    
+                    <div class="form-group">
+                        <label>Record ID</label>
+                        <input type="text" id="updateIdDisplay" disabled style="background: #e9ecef;">
+                        <input type="hidden" id="updateId" name="id">
+                    </div>
+                    
+                    <div class="field-group">
+                        <div class="form-group">
+                            <label for="update_fk_std_kto_kontotyp">Kontotyp</label>
+                            <select id="update_fk_std_kto_kontotyp" name="fk_std_kto_kontotyp">
+                                <option value="">Bitte wählen</option>
+                                <option value="1">Kontotyp 1</option>
+                                <option value="2">Kontotyp 2</option>
+                                <option value="3">Kontotyp 3</option>
+                                <option value="6">Kontotyp 6</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="update_fk_ein_aus">Ein/Aus</label>
+                            <select id="update_fk_ein_aus" name="fk_ein_aus">
+                                <option value="">Bitte wählen</option>
+                                <option value="1">Einnahme</option>
+                                <option value="2">Ausgabe</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <div class="form-group">
+                            <label for="update_datum">Datum</label>
+                            <input type="date" id="update_datum" name="datum">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="update_betrag">Betrag (€)</label>
+                            <input type="number" id="update_betrag" name="betrag" step="0.01">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="update_buchungstext">Buchungstext</label>
+                        <input type="text" id="update_buchungstext" name="buchungstext">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="update_comm">Kommentar</label>
+                        <textarea id="update_comm" name="comm" rows="3"></textarea>
+                    </div>
+
+                    <div class="field-group">
+                        <div class="form-group">
+                            <label for="update_jahr">Jahr</label>
+                            <input type="number" id="update_jahr" name="jahr" min="2000" max="2100">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="update_fk_kto_bankkonto">Bankkonto ID</label>
+                            <input type="number" id="update_fk_kto_bankkonto" name="fk_kto_bankkonto">
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn-warning" id="updateBtn">
+                            <span class="spinner" id="updateSpinner" style="display: none;"></span>
+                            Record aktualisieren
+                        </button>
+                        <button type="button" class="btn-secondary" id="updateResetBtn">Änderungen zurücksetzen</button>
+                        <button type="button" class="btn-danger" id="cancelUpdateBtn">Abbrechen</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="response-section">
+                <h3>API Response</h3>
+                <div id="updateResponseOutput">Geben Sie eine Record ID ein und klicken Sie auf "Record laden"...</div>
+                
+                <div class="form-actions" style="margin-top: 15px;">
+                    <button type="button" class="btn-secondary" id="clearUpdateResponseBtn">Response löschen</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEARCH TAB -->
+        <div class="tab-content" id="searchTab">
+            <div class="form-section">
+                <div class="search-section">
+                    <h3 class="section-title">Transaktionen durchsuchen</h3>
+                    <div class="search-form">
+                        <div class="form-group">
+                            <label for="searchQuery">Suchbegriff</label>
+                            <input type="text" id="searchQuery" placeholder="Buchungstext, Kommentar...">
+                        </div>
+                        <button type="button" class="btn-primary" id="searchDataBtn">
+                            <span class="spinner" id="searchDataSpinner" style="display: none;"></span>
+                            Suchen
+                        </button>
+                    </div>
+                </div>
+
+                <div class="search-results" id="searchResults" style="display: none;">
+                    <h3 class="section-title">Suchergebnisse</h3>
+                    <div class="search-results-list" id="resultsContainer"></div>
+                </div>
+            </div>
+
+            <div class="response-section">
+                <h3>Such Response</h3>
+                <div id="searchResponseOutput">Geben Sie einen Suchbegriff ein...</div>
+                
+                <div class="form-actions" style="margin-top: 15px;">
+                    <button type="button" class="btn-secondary" id="clearSearchResponseBtn">Response löschen</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- DELETE TAB -->
+        <div class="tab-content" id="deleteTab">
+            <div class="form-section">
+                <div class="search-section">
+                    <h3 class="section-title">Record löschen</h3>
+                    <div class="search-form">
+                        <div class="form-group">
+                            <label for="deleteSearchId">Record ID (PK_KTO_KAS_KASSE)</label>
+                            <input type="number" id="deleteSearchId" placeholder="Geben Sie die Record ID ein">
+                        </div>
+                        <button type="button" class="btn-primary" id="deleteSearchBtn">
+                            <span class="spinner" id="deleteSearchSpinner" style="display: none;"></span>
+                            Record laden
+                        </button>
+                    </div>
+                </div>
+
+                <div id="deleteRecordInfo" class="selected-record" style="display: none;">
+                    <h4>Zu löschender Eintrag</h4>
+                    <div class="selected-record-info" id="deleteRecordDetails"></div>
+                    
+                    <div class="form-actions" style="margin-top: 15px;">
+                        <button type="button" class="btn-danger" id="confirmDeleteBtn">
+                            <span class="spinner" id="deleteSpinner" style="display: none;"></span>
+                            Record endgültig löschen
+                        </button>
+                        <button type="button" class="btn-secondary" id="cancelDeleteBtn">Abbrechen</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="response-section">
+                <h3>API Response</h3>
+                <div id="deleteResponseOutput">Geben Sie eine Record ID ein und klicken Sie auf "Record laden"...</div>
+                
+                <div class="form-actions" style="margin-top: 15px;">
+                    <button type="button" class="btn-secondary" id="clearDeleteResponseBtn">Response löschen</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- RELATION TAB - Enhanced -->
+        <div class="tab-content" id="relationTab">
+            <div class="form-section">
+                <div class="debug-info">
+                    <h4>📊 Kontoauszug Relation Management</h4>
+                    <p>Verknüpfen Sie Transaktionen mit Kontoauszügen für bessere Übersicht.</p>
+                </div>
+
+                <!-- Current Selection Info -->
+                <div id="currentSelectionInfo" class="selected-record" style="display: none;">
+                    <h4>Aktuelle Auswahl</h4>
+                    <div class="selected-record-info" id="currentSelectionDetails"></div>
+                    <div id="currentRelationStatus" class="relation-status" style="display: none;"></div>
+                </div>
+
+                <!-- Relation Status Check -->
+                <div class="search-section">
+                    <h3 class="section-title">Relation Status prüfen</h3>
+                    <div class="search-form">
+                        <div class="form-group">
+                            <label for="checkMainKey">Main Key (FK_MAIN_KEY)</label>
+                            <input type="number" id="checkMainKey" placeholder="Main Key der Transaktion">
+                        </div>
+                        <button type="button" class="btn-info" id="checkRelationBtn">
+                            <span class="spinner" id="checkRelationSpinner" style="display: none;"></span>
+                            Relation prüfen
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Create Relation -->
+                <div class="search-section">
+                    <h3 class="section-title">Neue Relation erstellen</h3>
+                    <div class="search-form">
+                        <div class="form-group">
+                            <label for="relation_fk_main_key" class="required">Main Key (Transaktion)</label>
+                            <input type="number" id="relation_fk_main_key" placeholder="Main Key der Transaktion" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="relation_fk_kto_konto_auszug" class="required">Kontoauszug ID</label>
+                            <input type="number" id="relation_fk_kto_konto_auszug" placeholder="Kontoauszug ID" required>
+                        </div>
+                        <button type="button" class="btn-success" id="addRelationBtn">
+                            <span class="spinner" id="relationSpinner" style="display: none;"></span>
+                            Relation erstellen
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Enhanced Relation Search -->
+                <div class="search-section">
+                    <h3 class="section-title">Relationen durchsuchen</h3>
+                    
+                    <!-- Search Tabs -->
+                    <div class="relation-search-tabs">
+                        <button class="relation-search-tab active" data-search-type="mainkey">Nach Main Key suchen</button>
+                        <button class="relation-search-tab" data-search-type="kontoauszug">Nach Kontoauszug suchen</button>
+                        <button class="relation-search-tab" data-search-type="all">Alle Relationen anzeigen</button>
+                    </div>
+
+                    <!-- Main Key Search -->
+                    <div class="relation-search-content active" id="mainkeySearch">
+                        <div class="search-form">
+                            <div class="form-group">
+                                <label for="searchMainKey">Main Key (FK_MAIN_KEY)</label>
+                                <input type="number" id="searchMainKey" placeholder="Geben Sie einen Main Key ein">
+                            </div>
+                            <button type="button" class="btn-primary" id="searchByMainKeyBtn">
+                                <span class="spinner" id="searchMainKeySpinner" style="display: none;"></span>
+                                Nach Main Key suchen
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Kontoauszug Search -->
+                    <div class="relation-search-content" id="kontoauszugSearch">
+                        <div class="search-form">
+                            <div class="form-group">
+                                <label for="searchKontoauszug">Kontoauszug ID</label>
+                                <input type="number" id="searchKontoauszug" placeholder="Geben Sie eine Kontoauszug ID ein">
+                            </div>
+                            <button type="button" class="btn-primary" id="searchByKontoauszugBtn">
+                                <span class="spinner" id="searchKontoauszugSpinner" style="display: none;"></span>
+                                Nach Kontoauszug suchen
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- All Relations -->
+                    <div class="relation-search-content" id="allRelationsSearch">
+                        <div class="search-form">
+                            <button type="button" class="btn-info" id="showAllRelationsBtn">
+                                <span class="spinner" id="showAllRelationsSpinner" style="display: none;"></span>
+                                Alle Relationen laden
+                            </button>
+                            <button type="button" class="btn-secondary" id="showRelationStatsBtn">Statistiken anzeigen</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Relation Statistics -->
+                <div id="relationStats" class="search-section" style="display: none;">
+                    <h3 class="section-title">Relation Statistiken</h3>
+                    <div class="relation-stats" id="relationStatsContainer"></div>
+                </div>
+
+                <!-- Search Results -->
+                <div class="search-results" id="relationResults" style="display: none;">
+                    <h3 class="section-title">Gefundene Relationen</h3>
+                    
+                    <!-- Relation Details -->
+                    <div id="relationDetails" class="relation-details-grid" style="display: none;">
+                        <div class="relation-section">
+                            <h4>💳 Transaktions Details</h4>
+                            <div id="transactionDetails"></div>
+                        </div>
+                        <div class="relation-section">
+                            <h4>🏦 Kontoauszug Details</h4>
+                            <div id="kontoauszugDetails"></div>
+                        </div>
+                    </div>
+
+                    <!-- Relations List -->
+                    <div class="search-results-list" id="relationResultsContainer"></div>
+                </div>
+            </div>
+
+            <div class="response-section">
+                <h3>API Response</h3>
+                <div id="relationResponseOutput">Wählen Sie eine Aktion aus...</div>
+                
+                <div class="form-actions" style="margin-top: 15px;">
+                    <button type="button" class="btn-secondary" id="clearRelationResponseBtn">Response löschen</button>
+                    <button type="button" class="btn-info" id="testRelationBtn">Test Relation</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PROCEDURE TAB -->
+        <div class="tab-content" id="procedureTab">
+            <div class="form-section">
+                <div class="debug-info">
+                    <h4>⚙️ PostgreSQL Prozedur Ausführung</h4>
+                    <p>Führen Sie die gespeicherte Prozedur P_INP_ADD_INP_BELEGE_ALL_FROM_ZUS_1 aus.</p>
+                </div>
+
+                <div class="search-section">
+                    <h3 class="section-title">Prozedur Parameter</h3>
+                    <div class="field-group">
+                        <div class="form-group">
+                            <label for="procedure_fk_abl_ordner_page" class="required">FK ABL Ordner Page</label>
+                            <input type="number" id="procedure_fk_abl_ordner_page" placeholder="Ordner Page ID (bigint)" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="procedure_fk_main_key" class="required">FK Main Key</label>
+                            <input type="number" id="procedure_fk_main_key" placeholder="Main Key ID (bigint)" required>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn-primary" id="executeProcedureBtn">
+                            <span class="spinner" id="procedureSpinner" style="display: none;"></span>
+                            Prozedur ausführen
+                        </button>
+                        <button type="button" class="btn-success" id="checkProcedureBtn">
+                            <span class="spinner" id="checkProcedureSpinner" style="display: none;"></span>
+                            Prozedur prüfen
+                        </button>
+                        <button type="button" class="btn-info" id="testProcedureBtn">Testdaten</button>
+                        <button type="button" class="btn-warning" id="directInsertBtn">Direkter INSERT</button>
+                    </div>
+                </div>
+
+                <div class="search-section" style="margin-top: 20px;">
+                    <h3 class="section-title">Prozedur Details</h3>
+                    <div class="selected-record">
+                        <h4>P_INP_ADD_INP_BELEGE_ALL_FROM_ZUS_1</h4>
+                        <div class="selected-record-info">
+                            <div class="selected-record-label">Zweck:</div>
+                            <div class="selected-record-value">Daten von V_KTO_KONTEN_ZUS in T_INP_BELEGE_ALL übertragen</div>
+                            <div class="selected-record-label">Quelle:</div>
+                            <div class="selected-record-value">View V_KTO_KONTEN_ZUS</div>
+                            <div class="selected-record-label">Ziel:</div>
+                            <div class="selected-record-value">Tabelle T_INP_BELEGE_ALL</div>
+                            <div class="selected-record-label">Parameter:</div>
+                            <div class="selected-record-value">p_fk_abl_ordner_page (bigint), p_fk_main_key (bigint)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="response-section">
+                <h3>API Response</h3>
+                <div id="procedureResponseOutput">Wählen Sie eine Aktion aus...</div>
+                
+                <div class="form-actions" style="margin-top: 15px;">
+                    <button type="button" class="btn-secondary" id="clearProcedureResponseBtn">Response löschen</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- BATCH TAB -->
+        <div class="tab-content" id="batchTab">
+            <div class="form-section">
+                <h3>Batch Operationen</h3>
+                <p>Massenoperationen für Transaktionen werden hier implementiert.</p>
+                <div class="debug-info">
+                    <h4>🔄 Kommende Funktionen</h4>
+                    <ul>
+                        <li>Massenupdates von Transaktionen</li>
+                        <li>Import von CSV-Dateien</li>
+                        <li>Automatische Kategorisierung</li>
+                        <li>Stapelverarbeitung</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- REPORTS TAB -->
+        <div class="tab-content" id="reportsTab">
+            <div class="form-section">
+                <h3>Berichte</h3>
+                <p>Finanzberichte und Analysen werden hier angezeigt.</p>
+                <div class="debug-info">
+                    <h4>📈 Kommende Funktionen</h4>
+                    <ul>
+                        <li>Monatliche Umsatzberichte</li>
+                        <li>Kategorie-Analyse</li>
+                        <li>Jahresabschlüsse</li>
+                        <li>Export nach Excel/PDF</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Tree Sidebar - Accounts -->
+    <div class="tree-sidebar-right">
+        <div class="tree-header-right">
+            <h2>Konten Baum</h2>
+
+            <div class="tree-controls">
+                <button id="refreshAccountsTree">Aktualisieren</button>
+                <button id="expandAllAccounts">Alle aufklappen</button>
+                <button id="collapseAllAccounts">Alle zuklappen</button>
+            </div>
+        </div>
+        <div class="tree-container">
+            <div id="accountsTreeLoading" class="tree-loading">
+                <div class="spinner"></div>Lade Konten...
+            </div>
+            <div id="accountsTreeError" class="tree-error" style="display: none;"></div>
+            <div id="accountsTreeEmpty" class="tree-empty" style="display: none;">Keine Konten gefunden</div>
+            <div id="accountsTreeContent" class="tree" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        class KasseService {
+            constructor() {
+                this.baseUrl = 'http://localhost:5000/kasse';
+                this.transactionsUrl = 'http://localhost:5000/transactions';
+                this.accountsUrl = 'http://localhost:5000/accounts';
+                this.searchUrl = 'http://localhost:5000/search';
+                this.relationUrl = 'http://localhost:5000/buchung/add_rel_kontoauszug';
+                this.checkRelationUrl = 'http://localhost:5000/accounts/test1';
+                this.procedureUrl = 'http://localhost:5000/procedure';
+                
+                this.initializeEventListeners();
+                this.setDefaultDate();
+                this.currentRecord = null;
+                this.currentTransaction = null;
+                this.currentAccount = null;
+                this.transactionsTreeData = null;
+                this.accountsTreeData = null;
+                this.filterTable = 'kas_kasse';
+                this.collapsedNodes = new Set();
+                this.collapsedAccountsNodes = new Set();
+                
+                // Load initial data
+                this.loadTransactionsTree();
+                this.loadAccountsTree();
+            }
+
+            initializeEventListeners() {
+                // Tab functionality
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.addEventListener('click', (e) => this.switchTab(e.target.dataset.tab));
+                });
+
+                // Tree controls
+                document.getElementById('refreshTree').addEventListener('click', () => this.loadTransactionsTree());
+                document.getElementById('expandAll').addEventListener('click', () => this.expandAll());
+                document.getElementById('collapseAll').addEventListener('click', () => this.collapseAll());
+                document.getElementById('refreshAccountsTree').addEventListener('click', () => this.loadAccountsTree());
+                document.getElementById('expandAllAccounts').addEventListener('click', () => this.expandAllAccounts());
+                document.getElementById('collapseAllAccounts').addEventListener('click', () => this.collapseAllAccounts());
+
+                // Filter
+                document.getElementById('tableFilter').addEventListener('change', (e) => {
+                    this.filterTable = e.target.value;
+                    this.updateFilterInfo();
+                    this.loadTransactionsTree();
+                });
+
+                // Insert form
+                document.getElementById('insertForm').addEventListener('submit', (e) => this.handleInsert(e));
+                document.getElementById('insertResetBtn').addEventListener('click', () => this.resetInsertForm());
+                document.getElementById('insertTestBtn').addEventListener('click', () => this.fillTestData());
+                document.getElementById('debugDataBtn').addEventListener('click', () => this.showDebugData());
+                document.getElementById('clearInsertResponseBtn').addEventListener('click', () => this.clearInsertResponse());
+
+                // Update form
+                document.getElementById('searchBtn').addEventListener('click', () => this.searchRecord());
+                document.getElementById('updateForm').addEventListener('submit', (e) => this.handleUpdate(e));
+                document.getElementById('updateResetBtn').addEventListener('click', () => this.resetUpdateForm());
+                document.getElementById('cancelUpdateBtn').addEventListener('click', () => this.cancelUpdate());
+                document.getElementById('clearUpdateResponseBtn').addEventListener('click', () => this.clearUpdateResponse());
+
+                // Search form
+                document.getElementById('searchDataBtn').addEventListener('click', () => this.searchData());
+                document.getElementById('clearSearchResponseBtn').addEventListener('click', () => this.clearSearchResponse());
+
+                // Delete form
+                document.getElementById('deleteSearchBtn').addEventListener('click', () => this.searchRecordForDelete());
+                document.getElementById('confirmDeleteBtn').addEventListener('click', () => this.deleteRecord());
+                document.getElementById('cancelDeleteBtn').addEventListener('click', () => this.cancelDelete());
+                document.getElementById('clearDeleteResponseBtn').addEventListener('click', () => this.clearDeleteResponse());
+
+                // Relation form
+                document.getElementById('addRelationBtn').addEventListener('click', () => this.addRelation());
+                document.getElementById('checkRelationBtn').addEventListener('click', () => this.checkRelation());
+                document.getElementById('clearRelationResponseBtn').addEventListener('click', () => this.clearRelationResponse());
+                document.getElementById('testRelationBtn').addEventListener('click', () => this.testRelation());
+
+                // Enhanced relation search
+                document.querySelectorAll('.relation-search-tab').forEach(tab => {
+                    tab.addEventListener('click', (e) => this.switchRelationSearchTab(e.target.dataset.searchType));
+                });
+
+                document.getElementById('searchByMainKeyBtn').addEventListener('click', () => this.searchByMainKey());
+                document.getElementById('searchByKontoauszugBtn').addEventListener('click', () => this.searchByKontoauszug());
+                document.getElementById('showAllRelationsBtn').addEventListener('click', () => this.showAllRelations());
+                document.getElementById('showRelationStatsBtn').addEventListener('click', () => this.showRelationStats());
+
+                // Procedure form
+                document.getElementById('executeProcedureBtn').addEventListener('click', () => this.executeProcedure());
+                document.getElementById('checkProcedureBtn').addEventListener('click', () => this.checkProcedure());
+                document.getElementById('testProcedureBtn').addEventListener('click', () => this.testProcedure());
+                document.getElementById('directInsertBtn').addEventListener('click', () => this.directInsert());
+                document.getElementById('clearProcedureResponseBtn').addEventListener('click', () => this.clearProcedureResponse());
+            }
+
+            // DATA LOADING METHODS
+            async loadTransactionsTree() {
+                const loadingEl = document.getElementById('treeLoading');
+                const errorEl = document.getElementById('treeError');
+                const contentEl = document.getElementById('treeContent');
+                const emptyEl = document.getElementById('treeEmpty');
+
+                loadingEl.style.display = 'block';
+                errorEl.style.display = 'none';
+                contentEl.style.display = 'none';
+                emptyEl.style.display = 'none';
+
+                try {
+                    const response = await fetch(this.transactionsUrl);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    
+                    const data = await response.json();
+                    const filteredData = this.filterTable === 'all' ? data : data.filter(item => item.TBL === 'kas_kasse');
+
+                    if (filteredData.length === 0) {
+                        loadingEl.style.display = 'none';
+                        emptyEl.style.display = 'block';
+                        return;
+                    }
+
+                    this.transactionsTreeData = this.buildTransactionsTreeStructure(filteredData);
+                    this.renderTransactionsTree(this.transactionsTreeData);
+                    
+                    loadingEl.style.display = 'none';
+                    contentEl.style.display = 'block';
+                } catch (error) {
+                    loadingEl.style.display = 'none';
+                    errorEl.style.display = 'block';
+                    errorEl.textContent = `Fehler beim Laden: ${error.message}`;
+                }
+            }
+
+            async loadAccountsTree() {
+                const loadingEl = document.getElementById('accountsTreeLoading');
+                const errorEl = document.getElementById('accountsTreeError');
+                const contentEl = document.getElementById('accountsTreeContent');
+                const emptyEl = document.getElementById('accountsTreeEmpty');
+
+                loadingEl.style.display = 'block';
+                errorEl.style.display = 'none';
+                contentEl.style.display = 'none';
+                emptyEl.style.display = 'none';
+
+                try {
+                    const response = await fetch(this.accountsUrl);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    
+                    const data = await response.json();
+
+                    if (data.length === 0) {
+                        loadingEl.style.display = 'none';
+                        emptyEl.style.display = 'block';
+                        return;
+                    }
+
+                    this.accountsTreeData = this.buildAccountsTreeStructure(data);
+                    this.renderAccountsTree(this.accountsTreeData);
+                    
+                    loadingEl.style.display = 'none';
+                    contentEl.style.display = 'block';
+                } catch (error) {
+                    loadingEl.style.display = 'none';
+                    errorEl.style.display = 'block';
+                    errorEl.textContent = `Fehler beim Laden: ${error.message}`;
+                }
+            }
+
+            // TREE STRUCTURE METHODS
+            buildTransactionsTreeStructure(data) {
+                const tree = [];
+                const years = {};
+                
+                data.forEach(item => {
+                    const year = item.BUCHT_JAHR || 'Ohne Jahr';
+                    if (!years[year]) {
+                        years[year] = {
+                            id: `year-${year}`,
+                            name: `Jahr ${year}`,
+                            type: 'year',
+                            count: 0,
+                            children: {},
+                            collapsed: this.collapsedNodes.has(`year-${year}`)
+                        };
+                    }
+                    years[year].count++;
+                    
+                    const ownerKey = `${item.FK_KON_OWNER1}-${item.OWNER1}`;
+                    const ownerName = item.OWNER1 || `Owner ${item.FK_KON_OWNER1}`;
+                    
+                    if (!years[year].children[ownerKey]) {
+                        years[year].children[ownerKey] = {
+                            id: `owner-${ownerKey}`,
+                            name: ownerName,
+                            type: 'owner',
+                            count: 0,
+                            children: {},
+                            collapsed: this.collapsedNodes.has(`owner-${ownerKey}`)
+                        };
+                    }
+                    years[year].children[ownerKey].count++;
+
+                    const transactionKey = `${item.ID}-${item.FK_MAIN_KEY}`;
+                    const transactionName = item.BUCHUNGSTEXT || `Transaction ${item.ID}`;
+                    
+                    if (!years[year].children[ownerKey].children[transactionKey]) {
+                        years[year].children[ownerKey].children[transactionKey] = {
+                            id: `transaction-${item.ID}`,
+                            name: transactionName,
+                            type: 'transaction',
+                            transactionData: item,
+                            details: `ID: ${item.ID} | Betrag: ${item.BETRAG || 'N/A'} € | Datum: ${item.DATUM || 'N/A'}`,
+                            hasChildren: false
+                        };
+                    }
+                });
+
+                Object.values(years).forEach(year => {
+                    year.children = Object.values(year.children);
+                    year.hasChildren = year.children.length > 0;
+                    year.children.forEach(owner => {
+                        owner.children = Object.values(owner.children);
+                        owner.hasChildren = owner.children.length > 0;
+                    });
+                    tree.push(year);
+                });
+
+                return tree;
+            }
+
+            buildAccountsTreeStructure(data) {
+                const tree = [];
+                const years = {};
+                
+                data.forEach(item => {
+                    const year = item.JAHR || 'Ohne Jahr';
+                    if (!years[year]) {
+                        years[year] = {
+                            id: `account-year-${year}`,
+                            name: `Jahr ${year}`,
+                            type: 'account-year',
+                            count: 0,
+                            children: {},
+                            collapsed: this.collapsedAccountsNodes.has(`account-year-${year}`)
+                        };
+                    }
+                    years[year].count++;
+                    
+                    const ownerKey = `${item.FK_KON_OWNER}-${item.OWN1_VORNAME}-${item.OWN1_NACHNAME}`;
+                    const ownerName = `${item.OWN1_VORNAME || ''} ${item.OWN1_NACHNAME || ''}`.trim() || `Owner ${item.FK_KON_OWNER}`;
+                    
+                    if (!years[year].children[ownerKey]) {
+                        years[year].children[ownerKey] = {
+                            id: `account-owner-${ownerKey}`,
+                            name: ownerName,
+                            type: 'account-owner',
+                            count: 0,
+                            children: {},
+                            collapsed: this.collapsedAccountsNodes.has(`account-owner-${ownerKey}`)
+                        };
+                    }
+                    years[year].children[ownerKey].count++;
+
+                    const accountKey = item.PK_KTO_KONTO_AUSZUG;
+                    const accountName = `Konto ${item.IBAN || item.PK_KTO_KONTO_AUSZUG}`;
+                    
+                    if (!years[year].children[ownerKey].children[accountKey]) {
+                        years[year].children[ownerKey].children[accountKey] = {
+                            id: `account-${item.PK_KTO_KONTO_AUSZUG}`,
+                            name: accountName,
+                            type: 'account',
+                            accountData: item,
+                            details: `IBAN: ${item.IBAN || 'N/A'} | Kontotyp: ${item.FK_STD_KTO_KONTOTYP || 'N/A'}`,
+                            hasChildren: false
+                        };
+                    }
+                });
+
+                Object.values(years).forEach(year => {
+                    year.children = Object.values(year.children);
+                    year.hasChildren = year.children.length > 0;
+                    year.children.forEach(owner => {
+                        owner.children = Object.values(owner.children);
+                        owner.hasChildren = owner.children.length > 0;
+                    });
+                    tree.push(year);
+                });
+
+                return tree;
+            }
+
+            renderTransactionsTree(treeData) {
+                const treeContainer = document.getElementById('treeContent');
+                treeContainer.innerHTML = this.buildTreeHTML(treeData, 0, 'transactions');
+                
+                treeContainer.querySelectorAll('.tree-node-content').forEach(node => {
+                    node.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.handleTransactionsTreeNodeClick(node);
+                    });
+                });
+
+                treeContainer.querySelectorAll('.tree-node.has-children .tree-node-icon').forEach(icon => {
+                    icon.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.toggleNodeCollapse(icon.closest('.tree-node'), 'transactions');
+                    });
+                });
+            }
+
+            renderAccountsTree(treeData) {
+                const treeContainer = document.getElementById('accountsTreeContent');
+                treeContainer.innerHTML = this.buildTreeHTML(treeData, 0, 'accounts');
+                
+                treeContainer.querySelectorAll('.tree-node-content').forEach(node => {
+                    node.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.handleAccountsTreeNodeClick(node);
+                    });
+                });
+
+                treeContainer.querySelectorAll('.tree-node.has-children .tree-node-icon').forEach(icon => {
+                    icon.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.toggleNodeCollapse(icon.closest('.tree-node'), 'accounts');
+                    });
+                });
+            }
+
+            buildTreeHTML(nodes, level, treeType) {
+                if (!nodes || nodes.length === 0) return '';
+                
+                let html = '';
+                nodes.forEach(node => {
+                    const hasChildren = node.children && node.children.length > 0;
+                    const isCollapsed = node.collapsed;
+                    const icon = this.getNodeIcon(node.type, hasChildren, isCollapsed, treeType);
+                    const isTransaction = node.type === 'transaction';
+                    const isAccount = node.type === 'account';
+                    
+                    html += `
+                        <li class="tree-node tree-level-${level} ${hasChildren ? 'has-children' : ''}">
+                            <div class="tree-node-content ${isTransaction ? 'transaction-item' : ''} ${isAccount ? 'account-item' : ''}" 
+                                 data-node-id="${node.id}" 
+                                 data-node-type="${node.type}" 
+                                 data-node-data='${JSON.stringify(node)}'>
+                                <span class="tree-node-icon ${isCollapsed ? 'collapsed' : ''}">${icon}</span>
+                                <div style="flex: 1; min-width: 0;">
+                                    <div class="tree-node-text">${node.name}</div>
+                                    ${node.details ? `<div class="tree-node-details">${node.details}</div>` : ''}
+                                </div>
+                                ${node.count ? `<span class="tree-node-count">${node.count}</span>` : ''}
+                            </div>
+                            ${hasChildren ? `
+                                <div class="tree-node-children ${isCollapsed ? 'collapsed' : ''}">
+                                    <ul>${this.buildTreeHTML(node.children, level + 1, treeType)}</ul>
+                                </div>
+                            ` : ''}
+                        </li>
+                    `;
+                });
+                return html;
+            }
+
+            getNodeIcon(type, hasChildren = false, isCollapsed = false, treeType = 'transactions') {
+                if (hasChildren) return isCollapsed ? '▶' : '▼';
+                
+                const icons = {
+                    'transactions': {
+                        'year': '📅',
+                        'owner': '👤',
+                        'transaction': '💰'
+                    },
+                    'accounts': {
+                        'account-year': '📅',
+                        'account-owner': '👤',
+                        'account': '💳'
+                    }
+                };
+                
+                return icons[treeType][type] || '📄';
+            }
+
+            // EVENT HANDLERS
+            handleTransactionsTreeNodeClick(nodeElement) {
+                document.querySelectorAll('#treeContent .tree-node-content.selected').forEach(el => {
+                    el.classList.remove('selected');
+                });
+                nodeElement.classList.add('selected');
+
+                const nodeData = JSON.parse(nodeElement.dataset.nodeData);
+                this.displaySelectedNode(nodeData);
+
+                if (nodeData.type === 'transaction') {
+                    this.currentTransaction = nodeData.transactionData;
+                    this.autoFillUpdateForm(nodeData.transactionData);
+                    this.updateCurrentSelectionInfo();
+                    this.checkRelationForCurrentSelection();
+                }
+            }
+
+            handleAccountsTreeNodeClick(nodeElement) {
+                document.querySelectorAll('#accountsTreeContent .tree-node-content.selected').forEach(el => {
+                    el.classList.remove('selected');
+                });
+                nodeElement.classList.add('selected');
+
+                const nodeData = JSON.parse(nodeElement.dataset.nodeData);
+                this.displaySelectedAccount(nodeData);
+
+                if (nodeData.type === 'account') {
+                    this.currentAccount = nodeData.accountData;
+                    this.updateCurrentSelectionInfo();
+                }
+            }
+
+            displaySelectedNode(nodeData) {
+                const selectedPath = document.getElementById('selectedPath');
+                const selectedRecordInfo = document.getElementById('selectedRecordInfo');
+                const selectedRecordDetails = document.getElementById('selectedRecordDetails');
+
+                let path = '';
+                let detailsHTML = '';
+
+                switch (nodeData.type) {
+                    case 'year':
+                        path = `Jahr: ${nodeData.name}`;
+                        detailsHTML = `
+                            <div class="selected-record-label">Typ:</div>
+                            <div class="selected-record-value">Jahr</div>
+                            <div class="selected-record-label">Jahr:</div>
+                            <div class="selected-record-value">${nodeData.name}</div>
+                            <div class="selected-record-label">Anzahl Einträge:</div>
+                            <div class="selected-record-value">${nodeData.count}</div>
+                        `;
+                        break;
+                    case 'owner':
+                        path = `Jahr → ${nodeData.name}`;
+                        detailsHTML = `
+                            <div class="selected-record-label">Typ:</div>
+                            <div class="selected-record-value">Owner</div>
+                            <div class="selected-record-label">Name:</div>
+                            <div class="selected-record-value">${nodeData.name}</div>
+                            <div class="selected-record-label">Anzahl Einträge:</div>
+                            <div class="selected-record-value">${nodeData.count}</div>
+                        `;
+                        break;
+                    case 'transaction':
+                        const t = nodeData.transactionData;
+                        path = `Jahr → Owner → ${nodeData.name}`;
+                        detailsHTML = `
+                            <div class="selected-record-label">Typ:</div>
+                            <div class="selected-record-value">Transaktion</div>
+                            <div class="selected-record-label">ID:</div>
+                            <div class="selected-record-value">${t.ID}</div>
+                            <div class="selected-record-label">Main Key:</div>
+                            <div class="selected-record-value">${t.FK_MAIN_KEY || t.ID}</div>
+                            <div class="selected-record-label">Buchungstext:</div>
+                            <div class="selected-record-value">${t.BUCHUNGSTEXT || 'N/A'}</div>
+                            <div class="selected-record-label">Betrag:</div>
+                            <div class="selected-record-value">${t.BETRAG || 'N/A'} €</div>
+                            <div class="selected-record-label">Datum:</div>
+                            <div class="selected-record-value">${t.DATUM || 'N/A'}</div>
+                            <div class="selected-record-label">Kontotyp:</div>
+                            <div class="selected-record-value">${t.FK_STD_KTO_KONTOTYP || 'N/A'}</div>
+                        `;
+                        break;
+                }
+
+                selectedPath.textContent = path;
+                selectedRecordDetails.innerHTML = detailsHTML;
+                selectedRecordInfo.style.display = 'block';
+            }
+
+            displaySelectedAccount(nodeData) {
+                const selectedPath = document.getElementById('selectedPath');
+                const selectedRecordInfo = document.getElementById('selectedRecordInfo');
+                const selectedRecordDetails = document.getElementById('selectedRecordDetails');
+
+                let path = '';
+                let detailsHTML = '';
+
+                switch (nodeData.type) {
+                    case 'account-year':
+                        path = `Jahr: ${nodeData.name}`;
+                        detailsHTML = `
+                            <div class="selected-record-label">Typ:</div>
+                            <div class="selected-record-value">Jahr (Konten)</div>
+                            <div class="selected-record-label">Jahr:</div>
+                            <div class="selected-record-value">${nodeData.name}</div>
+                            <div class="selected-record-label">Anzahl Konten:</div>
+                            <div class="selected-record-value">${nodeData.count}</div>
+                        `;
+                        break;
+                    case 'account-owner':
+                        path = `Jahr → ${nodeData.name}`;
+                        detailsHTML = `
+                            <div class="selected-record-label">Typ:</div>
+                            <div class="selected-record-value">Owner (Konten)</div>
+                            <div class="selected-record-label">Name:</div>
+                            <div class="selected-record-value">${nodeData.name}</div>
+                            <div class="selected-record-label">Anzahl Konten:</div>
+                            <div class="selected-record-value">${nodeData.count}</div>
+                        `;
+                        break;
+                    case 'account':
+                        const a = nodeData.accountData;
+                        path = `Jahr → Owner → ${nodeData.name}`;
+                        detailsHTML = `
+                            <div class="selected-record-label">Typ:</div>
+                            <div class="selected-record-value">Konto</div>
+                            <div class="selected-record-label">ID:</div>
+                            <div class="selected-record-value">${a.PK_KTO_KONTO_AUSZUG}</div>
+                            <div class="selected-record-label">IBAN:</div>
+                            <div class="selected-record-value">${a.IBAN || 'N/A'}</div>
+                            <div class="selected-record-label">Owner:</div>
+                            <div class="selected-record-value">${a.OWN1_VORNAME || 'N/A'} ${a.OWN1_NACHNAME || 'N/A'}</div>
+                            <div class="selected-record-label">Kontotyp:</div>
+                            <div class="selected-record-value">${a.FK_STD_KTO_KONTOTYP || 'N/A'}</div>
+                        `;
+                        break;
+                }
+
+                selectedPath.textContent = path;
+                selectedRecordDetails.innerHTML = detailsHTML;
+                selectedRecordInfo.style.display = 'block';
+            }
+
+            updateCurrentSelectionInfo() {
+                const infoDiv = document.getElementById('currentSelectionInfo');
+                const detailsDiv = document.getElementById('currentSelectionDetails');
+                
+                if (!this.currentTransaction && !this.currentAccount) {
+                    infoDiv.style.display = 'none';
+                    return;
+                }
+
+                let detailsHTML = '';
+                
+                if (this.currentTransaction) {
+                    detailsHTML += `
+                        <div class="selected-record-label">Transaktion:</div>
+                        <div class="selected-record-value">${this.currentTransaction.BUCHUNGSTEXT || 'Unbenannt'}</div>
+                        <div class="selected-record-label">Main Key:</div>
+                        <div class="selected-record-value">${this.currentTransaction.FK_MAIN_KEY || this.currentTransaction.ID}</div>
+                        <div class="selected-record-label">Betrag:</div>
+                        <div class="selected-record-value">${this.currentTransaction.BETRAG || 'N/A'} €</div>
+                    `;
+                    
+                    // Auto-fill the relation form
+                    document.getElementById('relation_fk_main_key').value = this.currentTransaction.FK_MAIN_KEY || this.currentTransaction.ID;
+                    document.getElementById('checkMainKey').value = this.currentTransaction.FK_MAIN_KEY || this.currentTransaction.ID;
+                }
+                
+                if (this.currentAccount) {
+                    detailsHTML += `
+                        <div class="selected-record-label">Kontoauszug:</div>
+                        <div class="selected-record-value">${this.currentAccount.IBAN || 'Konto ' + this.currentAccount.PK_KTO_KONTO_AUSZUG}</div>
+                        <div class="selected-record-label">Kontoauszug ID:</div>
+                        <div class="selected-record-value">${this.currentAccount.PK_KTO_KONTO_AUSZUG}</div>
+                    `;
+                    
+                    // Auto-fill the relation form
+                    document.getElementById('relation_fk_kto_konto_auszug').value = this.currentAccount.PK_KTO_KONTO_AUSZUG;
+                }
+
+                detailsDiv.innerHTML = detailsHTML;
+                infoDiv.style.display = 'block';
+            }
+
+            // ENHANCED RELATION METHODS
+            switchRelationSearchTab(searchType) {
+                // Update tabs
+                document.querySelectorAll('.relation-search-tab').forEach(tab => {
+                    tab.classList.toggle('active', tab.dataset.searchType === searchType);
+                });
+
+                // Update content
+                document.querySelectorAll('.relation-search-content').forEach(content => {
+                    content.classList.toggle('active', content.id === searchType + 'Search');
+                });
+
+                // Clear previous results
+                this.clearRelationResults();
+            }
+
+            async searchByMainKey() {
+                const mainKey = document.getElementById('searchMainKey').value;
+                if (!mainKey) {
+                    this.showRelationResponse({ error: 'Bitte geben Sie einen Main Key ein' });
+                    return;
+                }
+
+                await this.setLoading('searchMainKey', true);
+                this.clearRelationResults();
+
+                try {
+                    // Search for relations by main key
+                    const relations = await this.searchRelationsByMainKey(mainKey);
+                    
+                    if (relations.length === 0) {
+                        this.showNoRelationsFound(mainKey, 'Main Key');
+                        return;
+                    }
+
+                    // Display detailed information
+                    await this.displayRelationDetails(relations);
+                    
+                    this.showRelationResponse({
+                        success: true,
+                        message: `Gefunden: ${relations.length} Relation(en) für Main Key ${mainKey}`,
+                        mainKey: mainKey,
+                        relations: relations
+                    });
+
+                } catch (error) {
+                    this.showRelationResponse({ error: 'Suchfehler: ' + error.message });
+                } finally {
+                    await this.setLoading('searchMainKey', false);
+                }
+            }
+
+            async searchByKontoauszug() {
+                const kontoauszugId = document.getElementById('searchKontoauszug').value;
+                if (!kontoauszugId) {
+                    this.showRelationResponse({ error: 'Bitte geben Sie eine Kontoauszug ID ein' });
+                    return;
+                }
+
+                await this.setLoading('searchKontoauszug', true);
+                this.clearRelationResults();
+
+                try {
+                    // Search for relations by kontoauszug
+                    const relations = await this.searchRelationsByKontoauszug(kontoauszugId);
+                    
+                    if (relations.length === 0) {
+                        this.showNoRelationsFound(kontoauszugId, 'Kontoauszug');
+                        return;
+                    }
+
+                    // Display detailed information
+                    await this.displayRelationDetails(relations);
+                    
+                    this.showRelationResponse({
+                        success: true,
+                        message: `Gefunden: ${relations.length} Relation(en) für Kontoauszug ${kontoauszugId}`,
+                        kontoauszugId: kontoauszugId,
+                        relations: relations
+                    });
+
+                } catch (error) {
+                    this.showRelationResponse({ error: 'Suchfehler: ' + error.message });
+                } finally {
+                    await this.setLoading('searchKontoauszug', false);
+                }
+            }
+
+            async showAllRelations() {
+                await this.setLoading('showAllRelations', true);
+                this.clearRelationResults();
+
+                try {
+                    // Get all relations
+                    const allRelations = await this.getAllRelations();
+                    
+                    if (allRelations.length === 0) {
+                        this.showNoRelationsFound('all', 'Alle');
+                        return;
+                    }
+
+                    // Display all relations
+                    this.displayAllRelations(allRelations);
+                    
+                    this.showRelationResponse({
+                        success: true,
+                        message: `Gefunden: ${allRelations.length} Relation(en) insgesamt`,
+                        totalCount: allRelations.length,
+                        relations: allRelations.slice(0, 10) // Show first 10 in response
+                    });
+
+                } catch (error) {
+                    this.showRelationResponse({ error: 'Fehler beim Laden: ' + error.message });
+                } finally {
+                    await this.setLoading('showAllRelations', false);
+                }
+            }
+
+            async showRelationStats() {
+                const statsContainer = document.getElementById('relationStatsContainer');
+                const relationStats = document.getElementById('relationStats');
+                
+                await this.setLoading('showRelationStats', true);
+
+                try {
+                    const stats = await this.getRelationStatistics();
+                    
+                    statsContainer.innerHTML = `
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.totalRelations}</div>
+                            <div class="stat-label">Total Relations</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.uniqueMainKeys}</div>
+                            <div class="stat-label">Unique Main Keys</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.uniqueKontoauszuege}</div>
+                            <div class="stat-label">Unique Kontoauszüge</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.avgRelationsPerMainKey.toFixed(1)}</div>
+                            <div class="stat-label">Avg per Main Key</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.recentRelations}</div>
+                            <div class="stat-label">Recent (30d)</div>
+                        </div>
+                    `;
+                    
+                    relationStats.style.display = 'block';
+                    
+                    this.showRelationResponse({
+                        success: true,
+                        message: 'Relation Statistiken geladen',
+                        statistics: stats
+                    });
+
+                } catch (error) {
+                    this.showRelationResponse({ error: 'Fehler beim Laden der Statistiken: ' + error.message });
+                } finally {
+                    await this.setLoading('showRelationStats', false);
+                }
+            }
+
+            // KONTOAUSZUG RELATION METHODS
+            async checkRelationForCurrentSelection() {
+                if (!this.currentTransaction) return;
+                
+                const mainKey = this.currentTransaction.FK_MAIN_KEY || this.currentTransaction.ID;
+                await this.checkRelation(mainKey);
+            }
+
+            async checkRelation(mainKey) {
+                if (!mainKey) {
+                    this.showRelationResponse({ error: 'Bitte geben Sie einen Main Key ein' });
+                    return;
+                }
+
+                await this.setLoading('checkRelation', true);
+
+                try {
+                    // Using the original endpoint logic
+                    const response = await fetch(`${this.checkRelationUrl}?kontoauszug=true&mainkey=${mainKey}`);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const result = await response.json();
+                    
+                    this.displayRelationStatus(result, mainKey);
+                    this.showRelationResponse(result, response.status);
+
+                } catch (error) {
+                    const errorResponse = {
+                        success: false,
+                        error: 'Network error',
+                        details: error.message
+                    };
+                    this.showRelationResponse(errorResponse);
+                    this.showStatus('❌ Netzwerkfehler: ' + error.message, 'error');
+                } finally {
+                    await this.setLoading('checkRelation', false);
+                }
+            }
+
+            displayRelationStatus(result, mainKey) {
+                const statusDiv = document.getElementById('currentRelationStatus');
+                const globalStatusDiv = document.getElementById('relationStatus');
+                
+                if (result.exists) {
+                    statusDiv.innerHTML = `✅ Diese Transaktion (Main Key: ${mainKey}) ist mit Kontoauszug verknüpft`;
+                    statusDiv.className = 'relation-status relation-exists';
+                    statusDiv.style.display = 'block';
+                    
+                    globalStatusDiv.innerHTML = `✅ Verknüpft mit Kontoauszug`;
+                    globalStatusDiv.className = 'relation-status relation-exists';
+                    globalStatusDiv.style.display = 'block';
+                } else {
+                    statusDiv.innerHTML = `❌ Diese Transaktion (Main Key: ${mainKey}) ist NICHT mit einem Kontoauszug verknüpft`;
+                    statusDiv.className = 'relation-status relation-missing';
+                    statusDiv.style.display = 'block';
+                    
+                    globalStatusDiv.innerHTML = `❌ Nicht verknüpft`;
+                    globalStatusDiv.className = 'relation-status relation-missing';
+                    globalStatusDiv.style.display = 'block';
+                }
+            }
+
+            async addRelation() {
+                const fk_main_key = document.getElementById('relation_fk_main_key').value;
+                const fk_kto_konto_auszug = document.getElementById('relation_fk_kto_konto_auszug').value;
+
+                if (!fk_main_key || !fk_kto_konto_auszug) {
+                    this.showRelationResponse({ 
+                        error: 'Bitte füllen Sie beide Felder aus'
+                    });
+                    return;
+                }
+
+                await this.setLoading('relation', true);
+
+                try {
+                    const relationData = {
+                        fk_main_key: parseInt(fk_main_key),
+                        fk_kto_konto_auszug: parseInt(fk_kto_konto_auszug)
+                    };
+
+                    const response = await fetch(this.relationUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(relationData)
+                    });
+
+                    const result = await response.json();
+                    
+                    this.showRelationResponse(result, response.status);
+                    
+                    if (response.status === 201) {
+                        this.showStatus('✅ Relation erfolgreich erstellt', 'success');
+                        
+                        // Clear form
+                        document.getElementById('relation_fk_main_key').value = '';
+                        document.getElementById('relation_fk_kto_konto_auszug').value = '';
+                        
+                        // Refresh status if this is the current transaction
+                        if (this.currentTransaction && 
+                            (this.currentTransaction.FK_MAIN_KEY == fk_main_key || 
+                             this.currentTransaction.ID == fk_main_key)) {
+                            this.checkRelationForCurrentSelection();
+                        }
+                    } else {
+                        this.showStatus('❌ Fehler beim Erstellen der Relation', 'error');
+                    }
+
+                } catch (error) {
+                    const errorResponse = {
+                        success: false,
+                        error: 'Network error',
+                        details: error.message
+                    };
+                    this.showRelationResponse(errorResponse);
+                    this.showStatus('❌ Netzwerkfehler: ' + error.message, 'error');
+                } finally {
+                    await this.setLoading('relation', false);
+                }
+            }
+
+            // BACKEND INTEGRATION METHODS
+            async searchRelationsByMainKey(mainKey) {
+                // Replace with actual backend call
+                return new Promise((resolve) => {
+                    setTimeout(async () => {
+                        // Simulate API response
+                        const mockRelations = [
+                            {
+                                id: 1,
+                                fk_main_key: parseInt(mainKey),
+                                fk_kto_konto_auszug: 67890,
+                                created_at: '2024-01-15 10:30:00',
+                                status: 'Aktiv'
+                            }
+                        ];
+
+                        // Enhance with transaction and kontoauszug details
+                        for (let relation of mockRelations) {
+                            relation.transaction = await this.getTransactionDetails(relation.fk_main_key);
+                            relation.kontoauszug = await this.getKontoauszugDetails(relation.fk_kto_konto_auszug);
+                        }
+
+                        resolve(mockRelations);
+                    }, 1000);
+                });
+            }
+
+            async searchRelationsByKontoauszug(kontoauszugId) {
+                // Replace with actual backend call
+                return new Promise((resolve) => {
+                    setTimeout(async () => {
+                        // Simulate API response - one kontoauszug can have multiple transactions
+                        const mockRelations = [
+                            {
+                                id: 1,
+                                fk_main_key: 12345,
+                                fk_kto_konto_auszug: parseInt(kontoauszugId),
+                                created_at: '2024-01-15 10:30:00',
+                                status: 'Aktiv'
+                            },
+                            {
+                                id: 2,
+                                fk_main_key: 12346,
+                                fk_kto_konto_auszug: parseInt(kontoauszugId),
+                                created_at: '2024-01-16 14:20:00',
+                                status: 'Aktiv'
+                            }
+                        ];
+
+                        // Enhance with transaction and kontoauszug details
+                        for (let relation of mockRelations) {
+                            relation.transaction = await this.getTransactionDetails(relation.fk_main_key);
+                            relation.kontoauszug = await this.getKontoauszugDetails(relation.fk_kto_konto_auszug);
+                        }
+
+                        resolve(mockRelations);
+                    }, 1000);
+                });
+            }
+
+            async getAllRelations() {
+                // Replace with actual backend call
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        resolve([
+                            {
+                                id: 1,
+                                fk_main_key: 12345,
+                                fk_kto_konto_auszug: 67890,
+                                buchungstext: 'Starbucks Einkauf',
+                                iban: 'DE89 3704 0044 0532 0130 00',
+                                betrag: 4.90,
+                                created_at: '2024-01-15 10:30:00',
+                                status: 'Aktiv'
+                            },
+                            {
+                                id: 2,
+                                fk_main_key: 12346,
+                                fk_kto_konto_auszug: 67891,
+                                buchungstext: 'Amazon Einkauf',
+                                iban: 'DE89 3704 0044 0532 0130 00',
+                                betrag: 49.99,
+                                created_at: '2024-01-16 14:20:00',
+                                status: 'Aktiv'
+                            },
+                            {
+                                id: 3,
+                                fk_main_key: 12347,
+                                fk_kto_konto_auszug: 67890,
+                                buchungstext: 'Tankstelle',
+                                iban: 'DE89 3704 0044 0532 0130 00',
+                                betrag: 65.00,
+                                created_at: '2024-01-17 08:15:00',
+                                status: 'Aktiv'
+                            }
+                        ]);
+                    }, 1500);
+                });
+            }
+
+            async getRelationStatistics() {
+                // Replace with actual backend call
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        resolve({
+                            totalRelations: 156,
+                            uniqueMainKeys: 142,
+                            uniqueKontoauszuege: 23,
+                            avgRelationsPerMainKey: 1.1,
+                            recentRelations: 15
+                        });
+                    }, 800);
+                });
+            }
+
+            async getTransactionDetails(mainKey) {
+                // Replace with actual backend call
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        resolve({
+                            id: mainKey,
+                            buchungstext: `Transaktion ${mainKey}`,
+                            betrag: (Math.random() * 100).toFixed(2),
+                            datum: '2024-01-15',
+                            kontotyp: 'Girokonto',
+                            owner: 'Max Mustermann'
+                        });
+                    }, 300);
+                });
+            }
+
+            async getKontoauszugDetails(kontoauszugId) {
+                // Replace with actual backend call
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        resolve({
+                            id: kontoauszugId,
+                            iban: 'DE89 3704 0044 0532 0130 00',
+                            kontostand: (Math.random() * 5000).toFixed(2),
+                            bank: 'Commerzbank',
+                            owner: 'Max Mustermann',
+                            kontotyp: 'Girokonto'
+                        });
+                    }, 300);
+                });
+            }
+
+            // DISPLAY METHODS
+            async displayRelationDetails(relations) {
+                const detailsContainer = document.getElementById('relationDetails');
+                const transactionDetails = document.getElementById('transactionDetails');
+                const kontoauszugDetails = document.getElementById('kontoauszugDetails');
+                const resultsContainer = document.getElementById('relationResultsContainer');
+                const relationResults = document.getElementById('relationResults');
+
+                // Show details grid
+                detailsContainer.style.display = 'grid';
+
+                // Display transaction details (first relation's transaction)
+                if (relations[0].transaction) {
+                    const t = relations[0].transaction;
+                    transactionDetails.innerHTML = `
+                        <div class="relation-item">
+                            <div class="relation-item-header">${t.buchungstext}</div>
+                            <div class="relation-item-details">
+                                Betrag: ${t.betrag} €<br>
+                                Datum: ${t.datum}<br>
+                                Kontotyp: ${t.kontotyp}<br>
+                                Owner: ${t.owner}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Display kontoauszug details (first relation's kontoauszug)
+                if (relations[0].kontoauszug) {
+                    const k = relations[0].kontoauszug;
+                    kontoauszugDetails.innerHTML = `
+                        <div class="relation-item">
+                            <div class="relation-item-header">Konto ${k.id}</div>
+                            <div class="relation-item-details">
+                                IBAN: ${k.iban}<br>
+                                Kontostand: ${k.kontostand} €<br>
+                                Bank: ${k.bank}<br>
+                                Owner: ${k.owner}<br>
+                                Kontotyp: ${k.kontotyp}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Display relations list
+                let html = '<h4>🔗 Verknüpfte Relationen</h4>';
+                relations.forEach(relation => {
+                    html += `
+                        <div class="search-result-item" onclick="kasseService.selectRelationForDetails(${relation.fk_main_key}, ${relation.fk_kto_konto_auszug})">
+                            <h4>Relation #${relation.id}</h4>
+                            <div class="search-result-grid">
+                                <div><strong>Main Key:</strong> ${relation.fk_main_key}</div>
+                                <div><strong>Kontoauszug ID:</strong> ${relation.fk_kto_konto_auszug}</div>
+                                <div><strong>Erstellt am:</strong> ${relation.created_at}</div>
+                                <div><strong>Status:</strong> <span style="color: #27ae60;">${relation.status}</span></div>
+                                ${relation.buchungstext ? `<div><strong>Buchungstext:</strong> ${relation.buchungstext}</div>` : ''}
+                                ${relation.betrag ? `<div><strong>Betrag:</strong> ${relation.betrag} €</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                resultsContainer.innerHTML = html;
+                relationResults.style.display = 'block';
+            }
+
+            displayAllRelations(relations) {
+                const resultsContainer = document.getElementById('relationResultsContainer');
+                const relationResults = document.getElementById('relationResults');
+                const detailsContainer = document.getElementById('relationDetails');
+
+                // Hide details grid for all relations view
+                detailsContainer.style.display = 'none';
+
+                let html = '<h4>📋 Alle Relationen</h4>';
+                
+                if (relations.length === 0) {
+                    html += '<p class="no-data">Keine Relationen gefunden</p>';
+                } else {
+                    relations.forEach(relation => {
+                        html += `
+                            <div class="search-result-item" onclick="kasseService.selectRelationForDetails(${relation.fk_main_key}, ${relation.fk_kto_konto_auszug})">
+                                <h4>Relation #${relation.id}</h4>
+                                <div class="search-result-grid">
+                                    <div><strong>Main Key:</strong> ${relation.fk_main_key}</div>
+                                    <div><strong>Kontoauszug ID:</strong> ${relation.fk_kto_konto_auszug}</div>
+                                    <div><strong>Buchungstext:</strong> ${relation.buchungstext}</div>
+                                    <div><strong>Betrag:</strong> ${relation.betrag} €</div>
+                                    <div><strong>IBAN:</strong> ${relation.iban}</div>
+                                    <div><strong>Erstellt am:</strong> ${relation.created_at}</div>
+                                    <div><strong>Status:</strong> <span style="color: #27ae60;">${relation.status}</span></div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                
+                resultsContainer.innerHTML = html;
+                relationResults.style.display = 'block';
+            }
+
+            showNoRelationsFound(value, type) {
+                const resultsContainer = document.getElementById('relationResultsContainer');
+                const relationResults = document.getElementById('relationResults');
+                const detailsContainer = document.getElementById('relationDetails');
+
+                detailsContainer.style.display = 'none';
+                
+                resultsContainer.innerHTML = `
+                    <div class="no-relations">
+                        <h4>❌ Keine Relationen gefunden</h4>
+                        <p>Für ${type} <strong>${value}</strong> wurden keine Relationen gefunden.</p>
+                        <p>Möchten Sie eine neue Relation erstellen?</p>
+                        <button type="button" class="btn-success" onclick="kasseService.prepareNewRelation('${type}', '${value}')">
+                            Neue Relation erstellen
+                        </button>
+                    </div>
+                `;
+                
+                relationResults.style.display = 'block';
+            }
+
+            clearRelationResults() {
+                document.getElementById('relationDetails').style.display = 'none';
+                document.getElementById('relationResults').style.display = 'none';
+                document.getElementById('relationResultsContainer').innerHTML = '';
+                document.getElementById('relationStats').style.display = 'none';
+            }
+
+            // UTILITY METHODS
+            selectRelationForDetails(mainKey, kontoauszugId) {
+                // Fill the check form
+                document.getElementById('checkMainKey').value = mainKey;
+                document.getElementById('relation_fk_main_key').value = mainKey;
+                document.getElementById('relation_fk_kto_konto_auszug').value = kontoauszugId;
+                
+                // Check the relation status
+                this.checkRelation(mainKey);
+                
+                this.showRelationResponse({
+                    message: `Relation ausgewählt: Main Key ${mainKey}, Kontoauszug ${kontoauszugId}`,
+                    selected: { mainKey, kontoauszugId }
+                });
+            }
+
+            prepareNewRelation(type, value) {
+                if (type === 'Main Key') {
+                    document.getElementById('relation_fk_main_key').value = value;
+                    document.getElementById('searchMainKey').value = value;
+                } else if (type === 'Kontoauszug') {
+                    document.getElementById('relation_fk_kto_konto_auszug').value = value;
+                    document.getElementById('searchKontoauszug').value = value;
+                }
+                
+                this.showRelationResponse({
+                    message: `Formular für neue Relation vorbereitet`,
+                    autoFilled: { type, value }
+                });
+            }
+
+            testRelation() {
+                // Fill with test data
+                document.getElementById('relation_fk_main_key').value = '12345';
+                document.getElementById('relation_fk_kto_konto_auszug').value = '67890';
+                document.getElementById('checkMainKey').value = '12345';
+                document.getElementById('searchMainKey').value = '12345';
+                document.getElementById('searchKontoauszug').value = '67890';
+                
+                this.showRelationResponse({
+                    message: 'Testdaten wurden eingefügt',
+                    testData: {
+                        fk_main_key: 12345,
+                        fk_kto_konto_auszug: 67890
+                    }
+                });
+            }
+
+            // UPDATE FUNCTIONALITY
+            async searchRecord() {
+                const recordId = document.getElementById('searchId').value;
+                if (!recordId) {
+                    this.showUpdateResponse({ error: 'Bitte geben Sie eine Record ID ein' });
+                    return;
+                }
+
+                await this.setLoading('search', true);
+
+                try {
+                    const response = await fetch(`${this.baseUrl}/${recordId}`);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    
+                    const record = await response.json();
+                    
+                    this.fillUpdateForm(record);
+                    document.getElementById('updateForm').style.display = 'block';
+                    
+                    this.showUpdateResponse({
+                        success: true,
+                        message: `Record ${recordId} erfolgreich geladen`,
+                        record: record
+                    });
+
+                } catch (error) {
+                    this.showUpdateResponse({ 
+                        error: 'Fehler beim Laden des Records',
+                        details: error.message
+                    });
+                } finally {
+                    await this.setLoading('search', false);
+                }
+            }
+
+            fillUpdateForm(record) {
+                document.getElementById('updateId').value = record.ID || record.PK_KTO_KAS_KASSE;
+                document.getElementById('updateIdDisplay').value = record.ID || record.PK_KTO_KAS_KASSE;
+                
+                if (record.FK_STD_KTO_KONTOTYP) document.getElementById('update_fk_std_kto_kontotyp').value = record.FK_STD_KTO_KONTOTYP;
+                if (record.FK_EIN_AUS) document.getElementById('update_fk_ein_aus').value = record.FK_EIN_AUS;
+                if (record.DATUM) document.getElementById('update_datum').value = record.DATUM;
+                if (record.BETRAG) document.getElementById('update_betrag').value = record.BETRAG;
+                if (record.BUCHUNGSTEXT) document.getElementById('update_buchungstext').value = record.BUCHUNGSTEXT;
+                if (record.COMM) document.getElementById('update_comm').value = record.COMM;
+                if (record.JAHR) document.getElementById('update_jahr').value = record.JAHR;
+                if (record.FK_KTO_BANKKONTO) document.getElementById('update_fk_kto_bankkonto').value = record.FK_KTO_BANKKONTO;
+            }
+
+            async handleUpdate(e) {
+                e.preventDefault();
+                
+                const recordId = document.getElementById('updateId').value;
+                const formData = this.getUpdateFormData();
+                
+                if (Object.keys(formData).length === 0) {
+                    this.showUpdateResponse({ error: 'Keine Änderungen erkannt' });
+                    return;
+                }
+
+                await this.setLoading('update', true);
+
+                try {
+                    const response = await fetch(`${this.baseUrl}/${recordId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(formData)
+                    });
+
+                    const result = await response.json();
+                    
+                    this.showUpdateResponse(result, response.status);
+                    
+                    if (response.status === 200) {
+                        this.showStatus('✅ Record erfolgreich aktualisiert', 'success');
+                        this.loadTransactionsTree();
+                    } else {
+                        this.showStatus('❌ Fehler beim Aktualisieren', 'error');
+                    }
+
+                } catch (error) {
+                    this.showUpdateResponse({ 
+                        error: 'Network error',
+                        details: error.message
+                    });
+                    this.showStatus('❌ Netzwerkfehler', 'error');
+                } finally {
+                    await this.setLoading('update', false);
+                }
+            }
+
+            getUpdateFormData() {
+                const form = document.getElementById('updateForm');
+                const formData = new FormData(form);
+                const data = {};
+                
+                for (let [key, value] of formData.entries()) {
+                    if (value !== '' && key !== 'id') {
+                        data[key] = value === '' ? null : value;
+                    }
+                }
+                
+                return data;
+            }
+
+            resetUpdateForm() {
+                const recordId = document.getElementById('updateId').value;
+                this.searchRecord(); // Reload original data
+                this.showUpdateResponse({ message: 'Änderungen wurden zurückgesetzt' });
+            }
+
+            cancelUpdate() {
+                document.getElementById('updateForm').style.display = 'none';
+                document.getElementById('searchId').value = '';
+                this.showUpdateResponse({ message: 'Update abgebrochen' });
+            }
+
+            // SEARCH FUNCTIONALITY
+            async searchData() {
+                const query = document.getElementById('searchQuery').value;
+                if (!query) {
+                    this.showSearchResponse({ error: 'Bitte geben Sie einen Suchbegriff ein' });
+                    return;
+                }
+
+                await this.setLoading('searchData', true);
+
+                try {
+                    const response = await fetch(`${this.searchUrl}?q=${encodeURIComponent(query)}`);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    
+                    const results = await response.json();
+                    
+                    this.displaySearchResults(results);
+                    
+                    this.showSearchResponse({
+                        success: true,
+                        message: `Gefunden: ${results.length} Ergebnisse`,
+                        results: results.slice(0, 5) // Show first 5 in response
+                    });
+
+                } catch (error) {
+                    this.showSearchResponse({ 
+                        error: 'Suchfehler',
+                        details: error.message
+                    });
+                } finally {
+                    await this.setLoading('searchData', false);
+                }
+            }
+
+            displaySearchResults(results) {
+                const resultsContainer = document.getElementById('resultsContainer');
+                const searchResults = document.getElementById('searchResults');
+                
+                if (!results || results.length === 0) {
+                    resultsContainer.innerHTML = '<p class="no-data">Keine Ergebnisse gefunden</p>';
+                    searchResults.style.display = 'block';
+                    return;
+                }
+
+                let html = '';
+                results.forEach(result => {
+                    html += `
+                        <div class="search-result-item" onclick="kasseService.selectSearchResult(${result.ID})">
+                            <h4>${result.BUCHUNGSTEXT || 'Unbenannt'}</h4>
+                            <div class="search-result-grid">
+                                <div><strong>ID:</strong> ${result.ID}</div>
+                                <div><strong>Betrag:</strong> ${result.BETRAG || 'N/A'} €</div>
+                                <div><strong>Datum:</strong> ${result.DATUM || 'N/A'}</div>
+                                <div><strong>Kontotyp:</strong> ${result.FK_STD_KTO_KONTOTYP || 'N/A'}</div>
+                                <div><strong>Kommentar:</strong> ${result.COMM || 'N/A'}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                resultsContainer.innerHTML = html;
+                searchResults.style.display = 'block';
+            }
+
+            selectSearchResult(recordId) {
+                document.getElementById('searchId').value = recordId;
+                this.switchTab('update');
+                this.searchRecord();
+            }
+
+            // DELETE FUNCTIONALITY
+            async searchRecordForDelete() {
+                const recordId = document.getElementById('deleteSearchId').value;
+                if (!recordId) {
+                    this.showDeleteResponse({ error: 'Bitte geben Sie eine Record ID ein' });
+                    return;
+                }
+
+                await this.setLoading('deleteSearch', true);
+
+                try {
+                    const response = await fetch(`${this.baseUrl}/${recordId}`);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    
+                    const record = await response.json();
+                    
+                    this.displayDeleteRecordInfo(record);
+                    
+                    this.showDeleteResponse({
+                        success: true,
+                        message: `Record ${recordId} zum Löschen geladen`,
+                        record: record
+                    });
+
+                } catch (error) {
+                    this.showDeleteResponse({ 
+                        error: 'Fehler beim Laden des Records',
+                        details: error.message
+                    });
+                } finally {
+                    await this.setLoading('deleteSearch', false);
+                }
+            }
+
+            displayDeleteRecordInfo(record) {
+                const deleteRecordInfo = document.getElementById('deleteRecordInfo');
+                const deleteRecordDetails = document.getElementById('deleteRecordDetails');
+                
+                deleteRecordDetails.innerHTML = `
+                    <div class="selected-record-label">ID:</div>
+                    <div class="selected-record-value">${record.ID || record.PK_KTO_KAS_KASSE}</div>
+                    <div class="selected-record-label">Buchungstext:</div>
+                    <div class="selected-record-value">${record.BUCHUNGSTEXT || 'N/A'}</div>
+                    <div class="selected-record-label">Betrag:</div>
+                    <div class="selected-record-value">${record.BETRAG || 'N/A'} €</div>
+                    <div class="selected-record-label">Datum:</div>
+                    <div class="selected-record-value">${record.DATUM || 'N/A'}</div>
+                    <div class="selected-record-label">Kontotyp:</div>
+                    <div class="selected-record-value">${record.FK_STD_KTO_KONTOTYP || 'N/A'}</div>
+                `;
+                
+                deleteRecordInfo.style.display = 'block';
+            }
+
+            async deleteRecord() {
+                const recordId = document.getElementById('deleteSearchId').value;
+                if (!recordId) {
+                    this.showDeleteResponse({ error: 'Keine Record ID angegeben' });
+                    return;
+                }
+
+                await this.setLoading('delete', true);
+
+                try {
+                    const response = await fetch(`${this.baseUrl}/${recordId}`, {
+                        method: 'DELETE'
+                    });
+
+                    const result = await response.json();
+                    
+                    this.showDeleteResponse(result, response.status);
+                    
+                    if (response.status === 200) {
+                        this.showStatus('✅ Record erfolgreich gelöscht', 'success');
+                        document.getElementById('deleteRecordInfo').style.display = 'none';
+                        document.getElementById('deleteSearchId').value = '';
+                        this.loadTransactionsTree();
+                    } else {
+                        this.showStatus('❌ Fehler beim Löschen', 'error');
+                    }
+
+                } catch (error) {
+                    this.showDeleteResponse({ 
+                        error: 'Network error',
+                        details: error.message
+                    });
+                    this.showStatus('❌ Netzwerkfehler', 'error');
+                } finally {
+                    await this.setLoading('delete', false);
+                }
+            }
+
+            cancelDelete() {
+                document.getElementById('deleteRecordInfo').style.display = 'none';
+                document.getElementById('deleteSearchId').value = '';
+                this.showDeleteResponse({ message: 'Löschen abgebrochen' });
+            }
+
+            // PROCEDURE FUNCTIONALITY
+            async executeProcedure() {
+                const fk_abl_ordner_page = document.getElementById('procedure_fk_abl_ordner_page').value;
+                const fk_main_key = document.getElementById('procedure_fk_main_key').value;
+
+                if (!fk_abl_ordner_page || !fk_main_key) {
+                    this.showProcedureResponse({ error: 'Bitte füllen Sie beide Parameter aus' });
+                    return;
+                }
+
+                await this.setLoading('procedure', true);
+
+                try {
+                    const procedureData = {
+                        fk_abl_ordner_page: parseInt(fk_abl_ordner_page),
+                        fk_main_key: parseInt(fk_main_key)
+                    };
+
+                    const response = await fetch(this.procedureUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(procedureData)
+                    });
+
+                    const result = await response.json();
+                    
+                    this.showProcedureResponse(result, response.status);
+                    
+                    if (response.status === 200) {
+                        this.showStatus('✅ Prozedur erfolgreich ausgeführt', 'success');
+                    } else {
+                        this.showStatus('❌ Fehler bei der Prozedur-Ausführung', 'error');
+                    }
+
+                } catch (error) {
+                    this.showProcedureResponse({ 
+                        error: 'Network error',
+                        details: error.message
+                    });
+                    this.showStatus('❌ Netzwerkfehler', 'error');
+                } finally {
+                    await this.setLoading('procedure', false);
+                }
+            }
+
+            async checkProcedure() {
+                await this.setLoading('checkProcedure', true);
+
+                try {
+                    const response = await fetch(`${this.procedureUrl}/status`);
+                    const result = await response.json();
+                    
+                    this.showProcedureResponse(result, response.status);
+                    
+                } catch (error) {
+                    this.showProcedureResponse({ 
+                        error: 'Network error',
+                        details: error.message
+                    });
+                } finally {
+                    await this.setLoading('checkProcedure', false);
+                }
+            }
+
+            testProcedure() {
+                document.getElementById('procedure_fk_abl_ordner_page').value = '1001';
+                document.getElementById('procedure_fk_main_key').value = '2001';
+                
+                this.showProcedureResponse({
+                    message: 'Testdaten wurden eingefügt',
+                    testData: {
+                        fk_abl_ordner_page: 1001,
+                        fk_main_key: 2001
+                    }
+                });
+            }
+
+            async directInsert() {
+                // Implement direct INSERT functionality
+                this.showProcedureResponse({
+                    message: 'Direkter INSERT wird ausgeführt...',
+                    note: 'Diese Funktion würde einen direkten INSERT in die Datenbank durchführen'
+                });
+            }
+
+            // ... (all the other original methods for insert would be here)
+            // FORM METHODS
+            async handleInsert(e) {
+                e.preventDefault();
+                
+                const formData = this.getFormData();
+                const errors = this.validateFormData(formData);
+                
+                if (errors.length > 0) {
+                    this.showInsertResponse({
+                        success: false,
+                        error: 'Validierungsfehler',
+                        details: errors
+                    });
+                    return;
+                }
+
+                const submitData = this.getCompleteInsertData(formData);
+                
+                this.showInsertResponse({
+                    message: 'Sende Daten an Server...',
+                    dataSize: Object.keys(submitData).length + ' Felder',
+                    preview: this.getDataPreview(submitData)
+                });
+
+                await this.submitData(submitData);
+            }
+
+            getFormData() {
+                const form = document.getElementById('insertForm');
+                const formData = new FormData(form);
+                const data = {};
+                
+                for (let [key, value] of formData.entries()) {
+                    data[key] = value === '' ? null : value;
+                }
+                
+                return data;
+            }
+
+            getCompleteInsertData(formData) {
+                const fk_main_key = Math.floor(Math.random() * 90000) + 10000;
+                const now = new Date().toISOString();
+                
+                return {
+                    // Required fields from form
+                    fk_std_kto_kontotyp: parseInt(formData.fk_std_kto_kontotyp) || null,
+                    fk_ein_aus: parseInt(formData.fk_ein_aus) || null,
+                    datum: formData.datum || null,
+                    betrag: parseFloat(formData.betrag) || null,
+                    buchungstext: formData.buchungstext || null,
+                    comm: formData.comm || null,
+                    jahr: parseInt(formData.jahr) || null,
+                    fk_kto_bankkonto: parseInt(formData.fk_kto_bankkonto) || null,
+                    
+                    // System fields with defaults
+                    fk_main_key: fk_main_key,
+                    created_by: 'webapp',
+                    modified_by: 'webapp',
+                    modified_at: now,
+                    fk_mdt_mandant: 1,
+                    datum_load: now.split('T')[0],
+                    
+                    // All other fields with undefined (will be filtered out)
+                    fremdwaehrungsbetrag: undefined,
+                    fk_bas_mon_fremdwaehrung: undefined,
+                    fk_bas_kal_arbeitstag: undefined,
+                    fk_bas_kat_kategorie: undefined,
+                    fk_std_verw_verwendungszweck: undefined,
+                    fk_inv_inventar: undefined,
+                    fk_loc_location: undefined,
+                    fk_main_key_bankkonto: undefined,
+                    datum_dupl_ok: undefined,
+                    dupl_bemerkung: undefined,
+                    fk_contr_dupl_status: undefined,
+                    fk_steu_steuer_monat: undefined,
+                    fk_steu_steuer_voranmeldg: undefined,
+                    datum_steuerb_ueberg: undefined,
+                    datum_finanzamt_ueberg: undefined,
+                    gesamt_betrag: parseFloat(formData.betrag) || undefined,
+                    gebuehren: undefined,
+                    datum_lex_buchung_ok: undefined,
+                    datum_var: undefined,
+                    fk_std_contr_status_kat: undefined,
+                    fk_std_contr_status_verw: undefined,
+                    datum_status_verw: undefined,
+                    datum_status_kat: undefined,
+                    kontostand_eur: undefined,
+                    fk_bas_steu_steuer_satz_frmdw: undefined,
+                    frmdw_netto_betrag: undefined,
+                    frmdw_mwst_betrag: undefined,
+                    frmdw_brutto_betrag: undefined,
+                    frmdw_brutto_incl_trinkg: undefined,
+                    fk_bas_mon_frmdw: undefined,
+                    fk_bas_mon_frmdw_mwst_satz: undefined,
+                    dummy: undefined,
+                    fk_kon_im_auftrag_von: undefined,
+                    offener_betrag_check: undefined,
+                    offener_betrag_datum: undefined,
+                    offener_betrag_bemerkung: undefined,
+                    sort1: undefined,
+                    text_buchungsdatum: undefined,
+                    text_buchungsdatum_date: undefined,
+                    text_buchungsdatum_time: undefined,
+                    text_buchungsdatum_char: undefined,
+                    datum_all_ok: undefined,
+                    datum_zuord_kto_auszug_ok: undefined,
+                    final_cnt_zuord_belege: undefined,
+                    fk_kto_bankkonto_ziel: undefined,
+                    fk_kto_bankkonto_herkunft: undefined
+                };
+            }
+
+            validateFormData(data) {
+                const errors = [];
+                
+                if (!data.fk_std_kto_kontotyp) errors.push('Kontotyp ist erforderlich');
+                if (!data.fk_ein_aus) errors.push('Ein/Aus ist erforderlich');
+                if (!data.datum) errors.push('Datum ist erforderlich');
+                if (!data.betrag) errors.push('Betrag ist erforderlich');
+                if (!data.buchungstext) errors.push('Buchungstext ist erforderlich');
+                if (!data.jahr) errors.push('Jahr ist erforderlich');
+                if (!data.fk_kto_bankkonto) errors.push('Bankkonto ist erforderlich');
+                
+                return errors;
+            }
+
+            async submitData(data) {
+                await this.setLoading('insert', true);
+                this.showStatus('Sende Daten an die Datenbank...', 'info');
+
+                try {
+                    const filteredData = {};
+                    Object.keys(data).forEach(key => {
+                        if (data[key] !== undefined) {
+                            filteredData[key] = data[key];
+                        }
+                    });
+
+                    const response = await fetch(this.baseUrl + '/insert', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(filteredData)
+                    });
+
+                    const result = await response.json();
+                    
+                    this.showInsertResponse(result, response.status);
+                    
+                    if (response.status === 201) {
+                        this.showStatus('✅ Erfolg! Transaktion wurde erstellt.', 'success');
+                        this.resetInsertForm();
+                        this.loadTransactionsTree();
+                    } else {
+                        this.showStatus('❌ Fehler: ' + (result.error || 'Unbekannter Fehler'), 'error');
+                    }
+
+                } catch (error) {
+                    const errorResponse = {
+                        success: false,
+                        error: 'Network error',
+                        details: error.message
+                    };
+                    this.showInsertResponse(errorResponse);
+                    this.showStatus('❌ Netzwerkfehler: ' + error.message, 'error');
+                } finally {
+                    await this.setLoading('insert', false);
+                }
+            }
+
+            fillTestData() {
+                document.getElementById('fk_std_kto_kontotyp').value = 2;
+                document.getElementById('fk_ein_aus').value = 2;
+                document.getElementById('betrag').value = '4.9';
+                document.getElementById('buchungstext').value = '1 VT English Breakfast Tea - Starbucks';
+                document.getElementById('comm').value = 'Test transaction from web interface';
+                document.getElementById('jahr').value = new Date().getFullYear();
+                document.getElementById('fk_kto_bankkonto').value = 157;
+                
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('datum').value = today;
+                
+                this.showInsertResponse({ 
+                    message: 'Testdaten wurden eingefügt',
+                    note: 'Klicken Sie auf "Daten anzeigen" um alle Felder zu sehen'
+                });
+            }
+
+            showDebugData() {
+                const formData = this.getFormData();
+                const completeData = this.getCompleteInsertData(formData);
+                const filteredData = {};
+                
+                Object.keys(completeData).forEach(key => {
+                    if (completeData[key] !== undefined) {
+                        filteredData[key] = completeData[key];
+                    }
+                });
+                
+                this.showInsertResponse({
+                    message: 'Komplette Datenstruktur',
+                    fieldCount: {
+                        total: Object.keys(completeData).length,
+                        filtered: Object.keys(filteredData).length,
+                        omitted: Object.keys(completeData).length - Object.keys(filteredData).length
+                    },
+                    completeData: completeData,
+                    filteredData: filteredData,
+                    omittedFields: Object.keys(completeData).filter(key => completeData[key] === undefined)
+                });
+            }
+
+            getDataPreview(data) {
+                const preview = {};
+                Object.keys(data).slice(0, 15).forEach(key => {
+                    preview[key] = data[key];
+                });
+                if (Object.keys(data).length > 15) {
+                    preview['...'] = `und ${Object.keys(data).length - 15} weitere Felder`;
+                }
+                return preview;
+            }
+
+            resetInsertForm() {
+                document.getElementById('insertForm').reset();
+                this.setDefaultDate();
+                this.showInsertResponse({ message: 'Formular wurde zurückgesetzt' });
+            }
+
+            autoFillUpdateForm(transactionData) {
+                this.switchTab('update');
+                
+                const notice = document.getElementById('autoFillNotice');
+                notice.style.display = 'block';
+                setTimeout(() => {
+                    notice.style.display = 'none';
+                }, 5000);
+
+                document.getElementById('searchId').value = transactionData.ID;
+                document.getElementById('updateId').value = transactionData.ID;
+                document.getElementById('updateIdDisplay').value = transactionData.ID;
+                document.getElementById('updateForm').style.display = 'block';
+
+                this.fillUpdateForm({
+                    FK_STD_KTO_KONTOTYP: transactionData.FK_STD_KTO_KONTOTYP,
+                    FK_EIN_AUS: transactionData.FK_EIN_AUS,
+                    DATUM: transactionData.DATUM,
+                    BETRAG: transactionData.BETRAG,
+                    BUCHUNGSTEXT: transactionData.BUCHUNGSTEXT,
+                    COMM: transactionData.COMM,
+                    JAHR: transactionData.JAHR,
+                    FK_KTO_BANKKONTO: transactionData.FK_KTO_BANKKONTO
+                });
+
+                this.showUpdateResponse({
+                    success: true,
+                    message: `Transaktion ${transactionData.ID} wurde automatisch übernommen`,
+                    transactionData: transactionData
+                });
+            }
+
+            // UTILITY METHODS
+            async setLoading(action, isLoading) {
+                const elements = {
+                    'insert': { btn: 'insertBtn', spinner: 'insertSpinner' },
+                    'search': { btn: 'searchBtn', spinner: 'searchSpinner' },
+                    'update': { btn: 'updateBtn', spinner: 'updateSpinner' },
+                    'searchData': { btn: 'searchDataBtn', spinner: 'searchDataSpinner' },
+                    'deleteSearch': { btn: 'deleteSearchBtn', spinner: 'deleteSearchSpinner' },
+                    'delete': { btn: 'confirmDeleteBtn', spinner: 'deleteSpinner' },
+                    'relation': { btn: 'addRelationBtn', spinner: 'relationSpinner' },
+                    'checkRelation': { btn: 'checkRelationBtn', spinner: 'checkRelationSpinner' },
+                    'searchMainKey': { btn: 'searchByMainKeyBtn', spinner: 'searchMainKeySpinner' },
+                    'searchKontoauszug': { btn: 'searchByKontoauszugBtn', spinner: 'searchKontoauszugSpinner' },
+                    'showAllRelations': { btn: 'showAllRelationsBtn', spinner: 'showAllRelationsSpinner' },
+                    'showRelationStats': { btn: 'showRelationStatsBtn', spinner: 'showRelationStatsSpinner' },
+                    'procedure': { btn: 'executeProcedureBtn', spinner: 'procedureSpinner' },
+                    'checkProcedure': { btn: 'checkProcedureBtn', spinner: 'checkProcedureSpinner' },
+                    'directInsert': { btn: 'directInsertBtn', spinner: 'directInsertSpinner' }
+                };
+
+                const element = elements[action];
+                if (!element) return;
+
+                const btn = document.getElementById(element.btn);
+                const spinner = document.getElementById(element.spinner);
+
+                if (isLoading) {
+                    btn.disabled = true;
+                    spinner.style.display = 'inline-block';
+                } else {
+                    btn.disabled = false;
+                    spinner.style.display = 'none';
+                }
+            }
+
+            toggleNodeCollapse(nodeElement, treeType) {
+                const nodeId = nodeElement.querySelector('.tree-node-content').dataset.nodeId;
+                const childrenContainer = nodeElement.querySelector('.tree-node-children');
+                const icon = nodeElement.querySelector('.tree-node-icon');
+                
+                if (childrenContainer.classList.contains('collapsed')) {
+                    childrenContainer.classList.remove('collapsed');
+                    icon.classList.remove('collapsed');
+                    icon.textContent = '▼';
+                    if (treeType === 'transactions') {
+                        this.collapsedNodes.delete(nodeId);
+                    } else {
+                        this.collapsedAccountsNodes.delete(nodeId);
+                    }
+                } else {
+                    childrenContainer.classList.add('collapsed');
+                    icon.classList.add('collapsed');
+                    icon.textContent = '▶';
+                    if (treeType === 'transactions') {
+                        this.collapsedNodes.add(nodeId);
+                    } else {
+                        this.collapsedAccountsNodes.add(nodeId);
+                    }
+                }
+            }
+
+            switchTab(tabName) {
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.classList.toggle('active', tab.dataset.tab === tabName);
+                });
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.toggle('active', content.id === tabName + 'Tab');
+                });
+            }
+
+            setDefaultDate() {
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('datum').value = today;
+                document.getElementById('jahr').value = new Date().getFullYear();
+            }
+
+            updateFilterInfo() {
+                const filterInfo = document.getElementById('filterInfo');
+                filterInfo.textContent = this.filterTable === 'all' 
+                    ? 'Filter: Alle Tabellen anzeigen' 
+                    : 'Filter: kas_kasse aktiv';
+            }
+
+            expandAll() {
+                document.querySelectorAll('#treeContent .tree-node-children').forEach(container => {
+                    container.classList.remove('collapsed');
+                });
+                document.querySelectorAll('#treeContent .tree-node-icon').forEach(icon => {
+                    icon.classList.remove('collapsed');
+                    icon.textContent = '▼';
+                });
+                this.collapsedNodes.clear();
+            }
+
+            collapseAll() {
+                document.querySelectorAll('#treeContent .tree-node-children').forEach(container => {
+                    container.classList.add('collapsed');
+                });
+                document.querySelectorAll('#treeContent .tree-node-icon').forEach(icon => {
+                    icon.classList.add('collapsed');
+                    icon.textContent = '▶';
+                });
+                this.collapsedNodes.clear();
+            }
+
+            expandAllAccounts() {
+                document.querySelectorAll('#accountsTreeContent .tree-node-children').forEach(container => {
+                    container.classList.remove('collapsed');
+                });
+                document.querySelectorAll('#accountsTreeContent .tree-node-icon').forEach(icon => {
+                    icon.classList.remove('collapsed');
+                    icon.textContent = '▼';
+                });
+                this.collapsedAccountsNodes.clear();
+            }
+
+            collapseAllAccounts() {
+                document.querySelectorAll('#accountsTreeContent .tree-node-children').forEach(container => {
+                    container.classList.add('collapsed');
+                });
+                document.querySelectorAll('#accountsTreeContent .tree-node-icon').forEach(icon => {
+                    icon.classList.add('collapsed');
+                    icon.textContent = '▶';
+                });
+                this.collapsedAccountsNodes.clear();
+            }
+
+            // RESPONSE METHODS
+            showInsertResponse(data, status = 200) {
+                const output = document.getElementById('insertResponseOutput');
+                this.showResponse(output, data, status);
+            }
+
+            showUpdateResponse(data, status = 200) {
+                const output = document.getElementById('updateResponseOutput');
+                this.showResponse(output, data, status);
+            }
+
+            showSearchResponse(data, status = 200) {
+                const output = document.getElementById('searchResponseOutput');
+                this.showResponse(output, data, status);
+            }
+
+            showDeleteResponse(data, status = 200) {
+                const output = document.getElementById('deleteResponseOutput');
+                this.showResponse(output, data, status);
+            }
+
+            showRelationResponse(data, status = 200) {
+                const output = document.getElementById('relationResponseOutput');
+                this.showResponse(output, data, status);
+            }
+
+            showProcedureResponse(data, status = 200) {
+                const output = document.getElementById('procedureResponseOutput');
+                this.showResponse(output, data, status);
+            }
+
+            showResponse(output, data, status = 200) {
+                const timestamp = new Date().toLocaleString();
+                
+                let responseHtml = `Timestamp: ${timestamp}\n`;
+                responseHtml += `Status: ${status}\n`;
+                responseHtml += 'Response:\n';
+                responseHtml += JSON.stringify(data, null, 2);
+
+                output.textContent = responseHtml;
+                output.scrollTop = output.scrollHeight;
+            }
+
+            clearInsertResponse() {
+                document.getElementById('insertResponseOutput').textContent = 'Warten auf Eingabe...';
+            }
+
+            clearUpdateResponse() {
+                document.getElementById('updateResponseOutput').textContent = 'Geben Sie eine Record ID ein und klicken Sie auf "Record laden"...';
+            }
+
+            clearSearchResponse() {
+                document.getElementById('searchResponseOutput').textContent = 'Geben Sie einen Suchbegriff ein...';
+                document.getElementById('searchResults').style.display = 'none';
+            }
+
+            clearDeleteResponse() {
+                document.getElementById('deleteResponseOutput').textContent = 'Geben Sie eine Record ID ein und klicken Sie auf "Record laden"...';
+            }
+
+            clearRelationResponse() {
+                document.getElementById('relationResponseOutput').textContent = 'Wählen Sie eine Aktion aus...';
+                document.getElementById('relationResults').style.display = 'none';
+            }
+
+            clearProcedureResponse() {
+                document.getElementById('procedureResponseOutput').textContent = 'Wählen Sie eine Aktion aus...';
+            }
+
+            showStatus(message, type = 'info') {
+                const statusEl = document.getElementById('statusMessage');
+                statusEl.textContent = message;
+                statusEl.className = `status-message status-${type}`;
+                statusEl.style.display = 'block';
+
+                if (type === 'success') {
+                    setTimeout(() => {
+                        statusEl.style.display = 'none';
+                    }, 5000);
+                }
+            }
+
+            hideStatus() {
+                document.getElementById('statusMessage').style.display = 'none';
+            }
+        }
+
+        // Initialize the application
+        let kasseService;
+        document.addEventListener('DOMContentLoaded', () => {
+            kasseService = new KasseService();
+        });
+    </script>
+</body>
+</html>
