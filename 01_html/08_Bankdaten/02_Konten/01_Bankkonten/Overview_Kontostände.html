@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Finanzcockpit · Sofortaktualisierung bei Kontenauswahl</title>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, 'Segoe UI', 'Inter', 'Roboto', sans-serif;
+    }
+    body {
+      background: #f0f4f8;
+      margin: 0;
+      padding: 20px;
+    }
+    .app-layout {
+      display: flex;
+      gap: 24px;
+      max-width: 1800px;
+      margin: 0 auto;
+    }
+    .filter-sidebar {
+      width: 320px;
+      flex-shrink: 0;
+      background: white;
+      border-radius: 28px;
+      padding: 20px 18px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+      height: fit-content;
+      position: sticky;
+      top: 20px;
+      border: 1px solid #e2edf2;
+    }
+    .filter-sidebar h3 {
+      margin-top: 0;
+      margin-bottom: 16px;
+      font-size: 1.3rem;
+      color: #1e4663;
+      border-left: 4px solid #1f6e8c;
+      padding-left: 12px;
+    }
+    .filter-group {
+      margin-bottom: 28px;
+    }
+    .filter-group label {
+      font-weight: 600;
+      display: block;
+      margin-bottom: 10px;
+      color: #2c5a6e;
+    }
+    .checkbox-scroll {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #e2edf2;
+      border-radius: 16px;
+      padding: 8px 12px;
+      background: #fefefe;
+    }
+    .checkbox-scroll div {
+      margin: 6px 0;
+    }
+    .checkbox-scroll input {
+      margin-right: 8px;
+      transform: scale(1.05);
+      accent-color: #1f6e8c;
+    }
+    .reset-btn, .apply-btn {
+      background: #eef2f5;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 40px;
+      width: 100%;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: 0.2s;
+      color: #1e4663;
+    }
+    .apply-btn {
+      background: #1f6e8c;
+      color: white;
+    }
+    .apply-btn:hover {
+      background: #0e4e6b;
+    }
+    .reset-btn:hover {
+      background: #dce6ec;
+    }
+    .clear-all-btn {
+      background: #ffe6e6;
+      color: #b33;
+      margin-top: 12px;
+    }
+    .main-content {
+      flex: 1;
+      min-width: 0;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+      gap: 12px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.9rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #1f6e8c, #0e4e6b);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+    .sub {
+      color: #2c5a6e;
+      font-weight: 500;
+    }
+    .refresh-btn {
+      background: #1f6e8c;
+      border: none;
+      color: white;
+      padding: 8px 20px;
+      border-radius: 40px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .refresh-btn:hover {
+      background: #0e4e6b;
+    }
+    .status {
+      background: #eef2f5;
+      padding: 6px 12px;
+      border-radius: 40px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    .cards-section {
+      margin-bottom: 32px;
+    }
+    .section-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 18px;
+      border-left: 6px solid #1f6e8c;
+      padding-left: 16px;
+      color: #1e4663;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .cards-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+      padding: 18px 24px;
+      min-width: 180px;
+      flex: 1 1 200px;
+      transition: all 0.2s ease;
+      border: 1px solid #e2edf2;
+      cursor: pointer;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+      border-color: #1f6e8c;
+    }
+    .card-owner {
+      background-color: #ecf9ff;
+      border-left: 4px solid #1f6e8c;
+    }
+    .card-type {
+      background-color: #f0faf4;
+      border-left: 4px solid #2b7a4b;
+    }
+    .card-stmt {
+      background-color: #fff7eb;
+      border-left: 4px solid #e6a017;
+    }
+    .card.selected {
+      background: #e3f2f7 !important;
+      border: 2px solid #1f6e8c !important;
+      box-shadow: 0 6px 14px rgba(31,110,140,0.2);
+    }
+    .card-amount {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #1f6e8c;
+    }
+    .trend {
+      font-size: 0.8rem;
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: 500;
+    }
+    .trend-up { color: #2b7a4b; }
+    .trend-down { color: #c7254e; }
+    .trend-neutral { color: #6f8f9f; }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    .data-table th {
+      background-color: #e2edf2;
+      text-align: left;
+      padding: 12px 12px;
+      font-weight: 600;
+      color: #1e4663;
+    }
+    .data-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #e9f0f3;
+      color: #1f3a4b;
+      transition: background 0.1s;
+    }
+    .data-table tr {
+      cursor: pointer;
+    }
+    .data-table tr:hover td {
+      background-color: #f0f9ff;
+    }
+    .data-table tr.selected-row td {
+      background-color: #e2f0f5;
+      font-weight: 500;
+      border-left: 3px solid #1f6e8c;
+    }
+    .checkbox-col {
+      width: 40px;
+      text-align: center;
+    }
+    .checkbox-col input {
+      cursor: pointer;
+      width: 18px;
+      height: 18px;
+      margin: 0;
+      accent-color: #1f6e8c;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+      margin-top: 12px;
+      border-radius: 20px;
+      margin-bottom: 32px;
+    }
+    .badge-negative { color: #c7254e; font-weight: 500; }
+    .badge-positive { color: #2b7a4b; font-weight: 500; }
+    .chart-container {
+      background: white;
+      border-radius: 28px;
+      padding: 20px 16px 12px 16px;
+      margin-top: 24px;
+      border: 1px solid #e2edf2;
+    }
+    canvas { max-height: 320px; width: 100%; }
+    .info-note { font-size: 0.75rem; color: #5a7b8c; margin-top: 12px; text-align: right; }
+    footer { text-align: center; margin-top: 30px; color: #6f8f9f; font-size: 0.75rem; }
+    .active-filter-badge {
+      background: #eef2f5;
+      padding: 2px 12px;
+      border-radius: 40px;
+      font-size: 0.75rem;
+      font-weight: normal;
+    }
+    .button-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .button-group button {
+      flex: 1;
+      margin-top: 0;
+    }
+    @media (max-width: 800px) {
+      .app-layout { flex-direction: column; }
+      .filter-sidebar { width: 100%; position: static; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="filter-sidebar">
+    <h3>🔍 Filter</h3>
+    <div class="filter-group">
+      <label>👥 Eigentümer (OWNER1)</label>
+      <div id="ownerCheckboxesContainer" class="checkbox-scroll">Lade ...</div>
+      <button id="resetOwnersBtn" class="reset-btn">Alle Eigentümer</button>
+    </div>
+    <div class="filter-group">
+      <label>🏷️ Kontenart</label>
+      <div id="typeCheckboxesContainer" class="checkbox-scroll">Lade ...</div>
+      <button id="resetTypesBtn" class="reset-btn">Alle Kontenarten</button>
+    </div>
+    <div class="filter-group">
+      <label>📑 Kontoauszüge (FK_KTO_KONTO_AUSZUG)</label>
+      <div id="statementCheckboxesContainer" class="checkbox-scroll">Lade ...</div>
+      <button id="resetStatementsBtn" class="reset-btn">Alle Auszüge</button>
+    </div>
+    <button id="clearAllFiltersBtn" class="reset-btn clear-all-btn">✖️ Alle Filter zurücksetzen</button>
+    <div class="info-note" style="margin-top: 16px;">
+      💡 <strong>Neu:</strong> Auswahl in der Konten-Tabelle (☑) <strong>aktualisiert sofort</strong> die Auszugs-Tabelle und das Liniendiagramm.<br>
+      „Filter anwenden“ beeinflusst nur die Salden-Karten oben.
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="header">
+      <div><h1>💰 Finanzcockpit</h1><div class="sub">Sofort‑Analyse bei Kontoauswahl</div></div>
+      <div style="display: flex; gap: 12px;"><div class="status" id="statusBadge">🔄 Daten laden...</div><button class="refresh-btn" id="refreshDataBtn">⟳ Aktualisieren</button></div>
+    </div>
+
+    <!-- Karten: Eigentümer (bläulich) -->
+    <div class="cards-section">
+      <div class="section-title">👥 Eigentümer (Klick zum Selektieren)</div>
+      <div id="ownerCardsGrid" class="cards-grid"><div class="card">⏳ Lade Eigentümer...</div></div>
+    </div>
+
+    <!-- Karten: Kontenart (grünlich) -->
+    <div class="cards-section">
+      <div class="section-title">🏷️ Kontenart (Klick zum Selektieren)</div>
+      <div id="typeCardsGrid" class="cards-grid"><div class="card">⏳ Lade Kontenarten...</div></div>
+    </div>
+
+    <!-- Karten: Kontoauszüge (warmbeige) -->
+    <div class="cards-section">
+      <div class="section-title">📑 Kontoauszüge (Klick zum Selektieren)</div>
+      <div id="statementCardsGrid" class="cards-grid"><div class="card">⏳ Lade Auszüge...</div></div>
+    </div>
+
+    <!-- Karten: Salden pro Konto (werden durch "Filter anwenden" gesteuert) -->
+    <div class="cards-section">
+      <div class="section-title">🏦 Salden pro Konto <span id="accountFilterBadge" class="active-filter-badge"></span></div>
+      <div id="accountCardsGrid" class="cards-grid"><div class="card">⏳ Lade Konten...</div></div>
+    </div>
+
+    <!-- Konten-Tabelle mit Checkboxen (sofortige Auswirkung auf Auszüge & Chart) -->
+    <div class="section-title">📋 Konten-Tabelle (Checkboxen für Mehrfachauswahl)</div>
+    <div class="table-wrapper">
+      <table class="data-table" id="accountsTable">
+        <thead><tr><th class="checkbox-col">✓</th><th>Konto</th><th>Kontenart</th><th>Saldo (EUR)</th><th>Trend</th></tr></thead>
+        <tbody id="accountsTableBody"><tr><td colspan="5">Keine Daten</td></tr></tbody>
+      </table>
+    </div>
+    <div class="button-group">
+      <button id="applyAccountFilterBtn" class="apply-btn">✅ Filter auf Salden-Karten anwenden</button>
+      <button id="resetAccountFilterBtn" class="reset-btn">🗑️ Konten-Auswahl komplett zurücksetzen</button>
+    </div>
+
+    <!-- Kontoauszugs-Tabelle mit Trend (AKTUALISIERT SOFORT bei Checkboxen) -->
+    <div class="section-title">📊 Kontoauszugs-Tabelle mit Trend <span style="font-size:0.8rem;">(aktualisiert bei jeder Kontoauswahl)</span></div>
+    <div class="table-wrapper">
+      <table class="data-table" id="statementsTable">
+        <thead><tr><th>Kontoauszug ID</th><th>Summe (EUR)</th><th>Trend</th></tr></thead>
+        <tbody id="statementsTableBody"><tr><td colspan="3">Keine Daten</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- Liniendiagramm (AKTUALISIERT SOFORT bei Checkboxen) -->
+    <div class="chart-container">
+      <div class="section-title" style="margin-top:0;">📈 Entwicklung der Auszugssummen</div>
+      <canvas id="statementLineChart" width="800" height="300"></canvas>
+      <div class="info-note">📌 Diagramm & Tabelle reagieren SOFORT auf angekreuzte Konten (zusätzlich zu Eigentümer/Kontenart/Auszugs-Filtern).</div>
+    </div>
+
+    <footer>Kombinierte Filter: Eigentümer, Kontenart, Kontoauszug (sofort) + <strong>Konten-Checkboxen (live für Auswertungen)</strong>. „Filter anwenden“ beeinflusst nur die oberen Salden-Karten.</footer>
+  </div>
+</div>
+
+<script>
+  // ---------- Globale Daten ----------
+  let allTransactions = [];
+  let selectedOwners = new Set();
+  let selectedTypes = new Set();
+  let selectedStatements = new Set();
+  let pendingAccounts = new Set();      // Auswahl der Checkboxen (wird sofort für Auszüge & Chart verwendet)
+  let activeAccounts = new Set();       // Nur für die "Salden pro Konto"-Karten (nach „Filter anwenden“)
+  let chartStatement = null;
+
+  // ---------- Hilfsfunktionen ----------
+  function getAccountType(transactionItem, accountName) {
+    if (transactionItem.KONTOTYP && typeof transactionItem.KONTOTYP === 'string') return transactionItem.KONTOTYP.trim();
+    if (transactionItem.FK_STD_KTO_KONTOTYP) {
+      const code = transactionItem.FK_STD_KTO_KONTOTYP;
+      if (code === 1) return "Girokonto";
+      if (code === 2) return "Tagesgeldkonto";
+      if (code === 3) return "Kreditkarte";
+      if (code === 4) return "Sparkonto";
+      return `Typ ${code}`;
+    }
+    const name = accountName.toLowerCase();
+    if (name.includes('giro')) return "Girokonto";
+    if (name.includes('kredit') || name.includes('visa') || name.includes('mastercard')) return "Kreditkarte";
+    if (name.includes('tagesgeld')) return "Tagesgeldkonto";
+    if (name.includes('sparkonto')) return "Sparkonto";
+    if (name.includes('festgeld')) return "Festgeld";
+    return "Sonstige";
+  }
+
+  function normalizeTransaction(item) {
+    let dateStr = item.BUCHUNGSTAG || item.buchungstag || item.date;
+    if (!dateStr) return null;
+    const dateObj = new Date(dateStr);
+    if (isNaN(dateObj.getTime())) return null;
+    let amount = parseFloat(item.BETRAG);
+    if (isNaN(amount)) amount = 0;
+    let account = item.IBAN || item.KTO_BEZEICHNUNG || item.BANK || "Unbekanntes Konto";
+    if (account && typeof account === 'string') account = account.trim();
+    let owner = item.OWNER1 || item.owner1 || item.Owner || "Unbekannt";
+    if (owner && typeof owner === 'string') owner = owner.trim();
+    let stmtId = item.FK_KTO_KONTO_AUSZUG;
+    if (stmtId === undefined || stmtId === null) stmtId = null;
+    else stmtId = Number(stmtId);
+    const accountType = getAccountType(item, account);
+    return {
+      date: dateObj, dateISO: dateObj.toISOString().split('T')[0], amount, account,
+      owner1: owner, kontoauszugId: isNaN(stmtId) ? null : stmtId,
+      accountType: accountType
+    };
+  }
+
+  function isUpToNow(d) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    return d <= today;
+  }
+
+  // Basisfilter: Datum + Eigentümer + Kontenart + Kontoauszug (ohne Kontenfilter)
+  function getBaseFilteredTransactions() {
+    let filtered = allTransactions.filter(tx => isUpToNow(tx.date));
+    if (selectedOwners.size > 0) filtered = filtered.filter(tx => selectedOwners.has(tx.owner1));
+    if (selectedTypes.size > 0) filtered = filtered.filter(tx => selectedTypes.has(tx.accountType));
+    if (selectedStatements.size > 0) filtered = filtered.filter(tx => tx.kontoauszugId !== null && selectedStatements.has(tx.kontoauszugId));
+    return filtered;
+  }
+
+  // Für Auszugs-Tabelle und Diagramm: Basisfilter + gewählte Konten (pendingAccounts)
+  function getFilteredForStatementsAndChart() {
+    let filtered = getBaseFilteredTransactions();
+    if (pendingAccounts.size > 0) filtered = filtered.filter(tx => pendingAccounts.has(tx.account));
+    return filtered;
+  }
+
+  // Für Salden-Karten: Basisfilter + aktive Konten (activeAccounts)
+  function getFilteredForAccountCards() {
+    let filtered = getBaseFilteredTransactions();
+    if (activeAccounts.size > 0) filtered = filtered.filter(tx => activeAccounts.has(tx.account));
+    return filtered;
+  }
+
+  // Für die Konten-Tabelle (Auflistung aller möglichen Konten): Basisfilter OHNE Kontenfilter
+  function getFilteredForAccountsTable() {
+    return getBaseFilteredTransactions();
+  }
+
+  function computeAccountBalances(filteredTx) {
+    const map = new Map();
+    for (const tx of filteredTx) map.set(tx.account, (map.get(tx.account) || 0) + tx.amount);
+    return Array.from(map.entries()).map(([acc, bal]) => ({ account: acc, balance: bal }));
+  }
+
+  function getBalanceUpToDate(account, cutoffDate, filteredBase) {
+    let sum = 0;
+    for (const tx of filteredBase) if (tx.account === account && tx.date <= cutoffDate) sum += tx.amount;
+    return sum;
+  }
+
+  function computeAccountTrends(accounts, filteredTx) {
+    const now = new Date();
+    const firstOfCurrent = new Date(now.getFullYear(), now.getMonth(), 1); firstOfCurrent.setHours(0,0,0,0);
+    const prevMonthEnd = new Date(firstOfCurrent.getTime() - 86400000);
+    if (prevMonthEnd < new Date(2000,0,1)) return accounts.map(a => ({ ...a, trendPct: null }));
+    const trends = [];
+    for (const acc of accounts) {
+      const prevBal = getBalanceUpToDate(acc.account, prevMonthEnd, filteredTx);
+      let trendPct = null;
+      if (prevBal === 0 && acc.balance === 0) trendPct = 0;
+      else if (prevBal === 0) trendPct = (acc.balance !== 0) ? 100 : 0;
+      else trendPct = ((acc.balance - prevBal) / Math.abs(prevBal)) * 100;
+      trends.push({ account: acc.account, balance: acc.balance, trendPct });
+    }
+    return trends;
+  }
+
+  function aggregateByStatement(filteredTx) {
+    const map = new Map();
+    for (const tx of filteredTx) {
+      const id = tx.kontoauszugId;
+      if (id !== null && !isNaN(id)) map.set(id, (map.get(id) || 0) + tx.amount);
+    }
+    const entries = Array.from(map.entries()).map(([id, sum]) => ({ id, sum }));
+    entries.sort((a,b) => a.id - b.id);
+    return entries;
+  }
+
+  function computeStatementTrends(statements) {
+    const withTrend = [];
+    for (let i=0; i<statements.length; i++) {
+      let trendPct = null;
+      if (i>0) {
+        const prevSum = statements[i-1].sum;
+        if (prevSum !== 0) trendPct = ((statements[i].sum - prevSum) / Math.abs(prevSum)) * 100;
+        else trendPct = (statements[i].sum !== 0) ? 100 : 0;
+      }
+      withTrend.push({ id: statements[i].id, sum: statements[i].sum, trendPct });
+    }
+    return withTrend;
+  }
+
+  // ---------- RENDER-FUNKTIONEN ----------
+  function renderOwnerCards() {
+    const base = allTransactions.filter(tx => isUpToNow(tx.date));
+    const ownerSumMap = new Map();
+    for (const tx of base) ownerSumMap.set(tx.owner1, (ownerSumMap.get(tx.owner1) || 0) + tx.amount);
+    const owners = Array.from(ownerSumMap.entries()).map(([name, total]) => ({ name, total }));
+    const container = document.getElementById('ownerCardsGrid');
+    if (owners.length === 0) { container.innerHTML = '<div class="card">Keine Eigentümer</div>'; return; }
+    container.innerHTML = owners.map(owner => {
+      const formatted = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(owner.total);
+      const isSelected = selectedOwners.has(owner.name);
+      return `<div class="card card-owner ${isSelected ? 'selected' : ''}" data-owner="${escapeHtml(owner.name)}"><h3>👤 ${escapeHtml(owner.name)}</h3><div class="card-amount">${formatted}</div><div class="trend trend-neutral">Gesamtsaldo</div></div>`;
+    }).join('');
+    attachCardClick('[data-owner]', (val) => toggleSet(selectedOwners, val, () => { syncOwnerCheckboxes(); fullRefresh(); }));
+  }
+
+  function renderTypeCards() {
+    const base = allTransactions.filter(tx => isUpToNow(tx.date));
+    const typeSumMap = new Map();
+    for (const tx of base) typeSumMap.set(tx.accountType, (typeSumMap.get(tx.accountType) || 0) + tx.amount);
+    const types = Array.from(typeSumMap.entries()).map(([type, total]) => ({ type, total }));
+    const container = document.getElementById('typeCardsGrid');
+    if (types.length === 0) { container.innerHTML = '<div class="card">Keine Kontenarten</div>'; return; }
+    container.innerHTML = types.map(t => {
+      const formatted = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(t.total);
+      const isSelected = selectedTypes.has(t.type);
+      return `<div class="card card-type ${isSelected ? 'selected' : ''}" data-type="${escapeHtml(t.type)}"><h3>🏷️ ${escapeHtml(t.type)}</h3><div class="card-amount">${formatted}</div><div class="trend trend-neutral">Gesamtsaldo</div></div>`;
+    }).join('');
+    attachCardClick('[data-type]', (val) => toggleSet(selectedTypes, val, () => { syncTypeCheckboxes(); fullRefresh(); }));
+  }
+
+  function renderStatementCards() {
+    const base = allTransactions.filter(tx => isUpToNow(tx.date));
+    const stmtMap = new Map();
+    for (const tx of base) {
+      const id = tx.kontoauszugId;
+      if (id !== null && !isNaN(id)) stmtMap.set(id, (stmtMap.get(id) || 0) + tx.amount);
+    }
+    const statements = Array.from(stmtMap.entries()).map(([id, sum]) => ({ id, sum })).sort((a,b) => a.id - b.id);
+    const container = document.getElementById('statementCardsGrid');
+    if (statements.length === 0) { container.innerHTML = '<div class="card">Keine Kontoauszüge</div>'; return; }
+    container.innerHTML = statements.map(stmt => {
+      const formatted = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(stmt.sum);
+      const isSelected = selectedStatements.has(stmt.id);
+      return `<div class="card card-stmt ${isSelected ? 'selected' : ''}" data-stmt="${stmt.id}"><h3>📄 Auszug ${stmt.id}</h3><div class="card-amount">${formatted}</div><div class="trend trend-neutral">Gesamtsumme</div></div>`;
+    }).join('');
+    attachCardClick('[data-stmt]', (val) => toggleSet(selectedStatements, val, () => { syncStatementCheckboxes(); fullRefresh(); }));
+  }
+
+  function attachCardClick(selector, handler) {
+    document.querySelectorAll(selector).forEach(card => {
+      card.removeEventListener('click', card._listener);
+      const listener = (e) => {
+        e.stopPropagation();
+        let val = card.getAttribute('data-owner') || card.getAttribute('data-type');
+        if (!val) val = Number(card.getAttribute('data-stmt'));
+        handler(val);
+      };
+      card.addEventListener('click', listener);
+      card._listener = listener;
+    });
+  }
+
+  function toggleSet(set, value, after) {
+    if (set.has(value)) set.delete(value);
+    else set.add(value);
+    after();
+  }
+
+  // Salden-Karten (basierend auf activeAccounts)
+  function renderAccountCards() {
+    const filtered = getFilteredForAccountCards();
+    const balances = computeAccountBalances(filtered);
+    const trends = computeAccountTrends(balances, filtered);
+    const container = document.getElementById('accountCardsGrid');
+    if (trends.length === 0) { container.innerHTML = '<div class="card">📭 Keine Kontodaten für aktive Filter</div>'; return; }
+    container.innerHTML = trends.map(t => {
+      const formatted = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(t.balance);
+      let trendText = '', trendClass = 'trend-neutral';
+      if (t.trendPct === null) trendText = 'kein Vormonat';
+      else if (Math.abs(t.trendPct) < 0.01 && t.balance === 0) trendText = 'keine Veränderung';
+      else if (t.trendPct > 0) { trendText = `▲ +${t.trendPct.toFixed(1)}%`; trendClass = 'trend-up'; }
+      else if (t.trendPct < 0) { trendText = `▼ ${t.trendPct.toFixed(1)}%`; trendClass = 'trend-down'; }
+      else trendText = '→ unverändert';
+      return `<div class="card"><h3>🏦 ${escapeHtml(t.account)}</h3><div class="card-amount">${formatted}</div><div class="trend ${trendClass}">Trend: ${trendText}</div></div>`;
+    }).join('');
+    document.getElementById('accountFilterBadge').innerHTML = activeAccounts.size ? `${activeAccounts.size} Konto(s) gefiltert` : '';
+  }
+
+  // Konten-Tabelle (alle Konten aus Basisfilter, ohne Kontenfilter)
+  function renderAccountsTable() {
+    const filtered = getFilteredForAccountsTable();
+    const balances = computeAccountBalances(filtered);
+    const accountTypeMap = new Map();
+    for (const tx of filtered) accountTypeMap.set(tx.account, tx.accountType);
+    const trends = computeAccountTrends(balances, filtered);
+    const tbody = document.getElementById('accountsTableBody');
+    if (trends.length === 0) { tbody.innerHTML = '<tr><td colspan="5">Keine Daten</td></tr>'; return; }
+    tbody.innerHTML = trends.map(t => {
+      const formatted = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(t.balance);
+      let trendHtml = '';
+      if (t.trendPct === null) trendHtml = '<span class="trend-neutral">—</span>';
+      else if (Math.abs(t.trendPct) < 0.01 && t.balance === 0) trendHtml = '<span class="trend-neutral">→ 0%</span>';
+      else if (t.trendPct > 0) trendHtml = `<span class="trend-up">▲ +${t.trendPct.toFixed(1)}%</span>`;
+      else if (t.trendPct < 0) trendHtml = `<span class="trend-down">▼ ${t.trendPct.toFixed(1)}%</span>`;
+      else trendHtml = '<span class="trend-neutral">→ 0%</span>';
+      const type = accountTypeMap.get(t.account) || '?';
+      const isChecked = pendingAccounts.has(t.account);
+      return `<tr data-account="${escapeHtml(t.account)}">
+                <td class="checkbox-col"><input type="checkbox" class="account-checkbox" data-account="${escapeHtml(t.account)}" ${isChecked ? 'checked' : ''}></td>
+                <td><strong>${escapeHtml(t.account)}</strong></td>
+                <td>${escapeHtml(type)}</td>
+                <td class="${t.balance >=0 ? 'badge-positive' : 'badge-negative'}">${formatted}</td>
+                <td>${trendHtml}</td>
+              </tr>`;
+    }).join('');
+    attachTableCheckboxEvents();
+  }
+
+  function attachTableCheckboxEvents() {
+    // Checkbox-Change: pendingAccounts aktualisieren + sofort Auszüge/Chart neu rendern
+    document.querySelectorAll('.account-checkbox').forEach(cb => {
+      cb.removeEventListener('change', cb._changeHandler);
+      const handler = (e) => {
+        e.stopPropagation();
+        const acc = cb.getAttribute('data-account');
+        if (cb.checked) pendingAccounts.add(acc);
+        else pendingAccounts.delete(acc);
+        // Zeilenmarkierung
+        const row = cb.closest('tr');
+        if (row) cb.checked ? row.classList.add('selected-row') : row.classList.remove('selected-row');
+        // Sofortige Aktualisierung von Auszugs-Tabelle & Chart
+        renderStatementsAndChart();
+        // Status-Badge aktualisieren
+        updateStatusBadge();
+      };
+      cb.addEventListener('change', handler);
+      cb._changeHandler = handler;
+      const row = cb.closest('tr');
+      if (row && cb.checked) row.classList.add('selected-row');
+      else if (row) row.classList.remove('selected-row');
+    });
+    // Zeilenklick toggelt Checkbox
+    document.querySelectorAll('#accountsTable tbody tr').forEach(row => {
+      row.removeEventListener('click', row._clickHandler);
+      const clickHandler = (e) => {
+        if (e.target.type === 'checkbox') return;
+        const cb = row.querySelector('.account-checkbox');
+        if (cb) {
+          cb.checked = !cb.checked;
+          const acc = cb.getAttribute('data-account');
+          if (cb.checked) pendingAccounts.add(acc);
+          else pendingAccounts.delete(acc);
+          cb.checked ? row.classList.add('selected-row') : row.classList.remove('selected-row');
+          renderStatementsAndChart();
+          updateStatusBadge();
+        }
+      };
+      row.addEventListener('click', clickHandler);
+      row._clickHandler = clickHandler;
+    });
+  }
+
+  // Auszugs-Tabelle und Chart (SOFORT basierend auf pendingAccounts)
+  function renderStatementsAndChart() {
+    const filtered = getFilteredForStatementsAndChart();
+    const statements = aggregateByStatement(filtered);
+    const trends = computeStatementTrends(statements);
+    const tbody = document.getElementById('statementsTableBody');
+    if (trends.length === 0) { tbody.innerHTML = '<tr><td colspan="3">Keine Daten</td></tr>'; }
+    else {
+      tbody.innerHTML = trends.map(s => {
+        const formatted = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(s.sum);
+        let trendHtml = '';
+        if (s.trendPct === null) trendHtml = '<span class="trend-neutral">—</span>';
+        else if (s.trendPct > 0) trendHtml = `<span class="trend-up">▲ +${s.trendPct.toFixed(1)}%</span>`;
+        else if (s.trendPct < 0) trendHtml = `<span class="trend-down">▼ ${s.trendPct.toFixed(1)}%</span>`;
+        else trendHtml = '<span class="trend-neutral">→ 0%</span>';
+        return `<tr><td><strong>${s.id}</strong></td><td class="${s.sum >=0 ? 'badge-positive' : 'badge-negative'}">${formatted}</td><td>${trendHtml}</td></tr>`;
+      }).join('');
+    }
+    // Chart
+    const ctx = document.getElementById('statementLineChart').getContext('2d');
+    if (chartStatement) chartStatement.destroy();
+    if (statements.length > 0) {
+      chartStatement = new Chart(ctx, {
+        type: 'line',
+        data: { labels: statements.map(s => s.id), datasets: [{ label: 'Summe pro Kontoauszug (EUR)', data: statements.map(s => s.sum), borderColor: '#1f6e8c', backgroundColor: 'rgba(31,110,140,0.05)', tension: 0.2, fill: true, pointRadius: 4 }] },
+        options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(ctx.raw)}` } } } }
+      });
+    }
+  }
+
+  function updateStatusBadge() {
+    const totalBase = getBaseFilteredTransactions().length;
+    document.getElementById('statusBadge').innerHTML = `✅ ${totalBase} Buchungen · ${selectedOwners.size} Eigentümer · ${selectedTypes.size} Arten · ${selectedStatements.size} Auszüge · ${pendingAccounts.size} Konten gewählt (live)`;
+  }
+
+  // Vollständige Aktualisierung (nach Filteränderungen bei Eigentümer/Kontenart/Auszug)
+  function fullRefresh() {
+    // Prüfen: Entferne ungültige pendingAccounts (Konten, die nicht mehr in Basisfilter vorkommen)
+    const validAccounts = new Set(getFilteredForAccountsTable().map(tx => tx.account));
+    for (let acc of pendingAccounts) if (!validAccounts.has(acc)) pendingAccounts.delete(acc);
+    for (let acc of activeAccounts) if (!validAccounts.has(acc)) activeAccounts.delete(acc);
+    // Alle Komponenten neu rendern
+    renderOwnerCards();
+    renderTypeCards();
+    renderStatementCards();
+    renderAccountCards();
+    renderAccountsTable();        // Tabelle mit gültigen Checkboxen
+    renderStatementsAndChart();   // Sofort mit bereinigten pendingAccounts
+    updateStatusBadge();
+  }
+
+  // Anwenden der Kontenauswahl auf die Salden-Karten
+  function applyAccountFilter() {
+    activeAccounts.clear();
+    pendingAccounts.forEach(acc => activeAccounts.add(acc));
+    renderAccountCards();
+    updateStatusBadge();
+  }
+
+  function resetAccountFilter() {
+    pendingAccounts.clear();
+    activeAccounts.clear();
+    renderAccountsTable();        // alle Checkboxen entfernen
+    renderStatementsAndChart();   // Chart/Tabelle ohne Kontenfilter
+    renderAccountCards();
+    updateStatusBadge();
+  }
+
+  // Sidebar Sync
+  function syncOwnerCheckboxes() { document.querySelectorAll('.owner-cb').forEach(cb => cb.checked = selectedOwners.has(cb.value)); }
+  function syncTypeCheckboxes() { document.querySelectorAll('.type-cb').forEach(cb => cb.checked = selectedTypes.has(cb.value)); }
+  function syncStatementCheckboxes() { document.querySelectorAll('.stmt-cb').forEach(cb => cb.checked = selectedStatements.has(Number(cb.value))); }
+
+  function buildFilterSidebar() {
+    const allOwners = [...new Set(allTransactions.map(tx => tx.owner1).filter(o => o && o !== "Unbekannt"))];
+    const ownerContainer = document.getElementById('ownerCheckboxesContainer');
+    ownerContainer.innerHTML = allOwners.map(o => `<div><label><input type="checkbox" value="${escapeHtml(o)}" class="owner-cb"> ${escapeHtml(o)}</label></div>`).join('');
+    document.querySelectorAll('.owner-cb').forEach(cb => cb.addEventListener('change', (e) => { toggleSet(selectedOwners, e.target.value, () => { syncOwnerCheckboxes(); fullRefresh(); }); }));
+
+    const allTypes = [...new Set(allTransactions.map(tx => tx.accountType))].sort();
+    const typeContainer = document.getElementById('typeCheckboxesContainer');
+    typeContainer.innerHTML = allTypes.map(t => `<div><label><input type="checkbox" value="${escapeHtml(t)}" class="type-cb"> ${escapeHtml(t)}</label></div>`).join('');
+    document.querySelectorAll('.type-cb').forEach(cb => cb.addEventListener('change', (e) => { toggleSet(selectedTypes, e.target.value, () => { syncTypeCheckboxes(); fullRefresh(); }); }));
+
+    const allStmt = [...new Set(allTransactions.map(tx => tx.kontoauszugId).filter(id => id !== null && !isNaN(id)))].sort((a,b)=>a-b);
+    const stmtContainer = document.getElementById('statementCheckboxesContainer');
+    stmtContainer.innerHTML = allStmt.map(id => `<div><label><input type="checkbox" value="${id}" class="stmt-cb"> Auszug ${id}</label></div>`).join('');
+    document.querySelectorAll('.stmt-cb').forEach(cb => cb.addEventListener('change', (e) => { toggleSet(selectedStatements, Number(e.target.value), () => { syncStatementCheckboxes(); fullRefresh(); }); }));
+
+    syncOwnerCheckboxes(); syncTypeCheckboxes(); syncStatementCheckboxes();
+  }
+
+  function resetOwners() { const all = [...new Set(allTransactions.map(tx => tx.owner1).filter(o=>o && o!=="Unbekannt"))]; selectedOwners.clear(); all.forEach(o=>selectedOwners.add(o)); syncOwnerCheckboxes(); fullRefresh(); }
+  function resetTypes() { const all = [...new Set(allTransactions.map(tx => tx.accountType))]; selectedTypes.clear(); all.forEach(t=>selectedTypes.add(t)); syncTypeCheckboxes(); fullRefresh(); }
+  function resetStatements() { const all = [...new Set(allTransactions.map(tx => tx.kontoauszugId).filter(id=>id!==null && !isNaN(id)))]; selectedStatements.clear(); all.forEach(id=>selectedStatements.add(id)); syncStatementCheckboxes(); fullRefresh(); }
+  function clearAllFilters() { selectedOwners.clear(); selectedTypes.clear(); selectedStatements.clear(); resetAccountFilter(); syncOwnerCheckboxes(); syncTypeCheckboxes(); syncStatementCheckboxes(); fullRefresh(); }
+
+  async function fetchData() {
+    const statusEl = document.getElementById('statusBadge');
+    statusEl.innerHTML = '🔄 Lade http://localhost:5000/transactions ...';
+    try {
+      const resp = await fetch('http://localhost:5000/transactions', { headers: { 'Accept': 'application/json' } });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const raw = await resp.json();
+      if (!Array.isArray(raw)) throw new Error('Kein Array erhalten');
+      const normalized = [];
+      for (const item of raw) { const n = normalizeTransaction(item); if (n) normalized.push(n); }
+      if (normalized.length === 0) throw new Error('Keine gültigen Buchungen');
+      allTransactions = normalized;
+      const allOwners = [...new Set(normalized.map(tx => tx.owner1).filter(o=>o && o!=="Unbekannt"))];
+      selectedOwners.clear(); allOwners.forEach(o=>selectedOwners.add(o));
+      const allTypes = [...new Set(normalized.map(tx => tx.accountType))];
+      selectedTypes.clear(); allTypes.forEach(t=>selectedTypes.add(t));
+      const allStmt = [...new Set(normalized.map(tx => tx.kontoauszugId).filter(id=>id!==null && !isNaN(id)))];
+      selectedStatements.clear(); allStmt.forEach(id=>selectedStatements.add(id));
+      pendingAccounts.clear();
+      activeAccounts.clear();
+      buildFilterSidebar();
+      fullRefresh();
+      statusEl.innerHTML = `✅ ${normalized.length} Buchungen · Konten-Checkboxen wirken sofort auf Auswertungen`;
+    } catch (err) {
+      console.error(err);
+      statusEl.innerHTML = `❌ Fehler: ${err.message} – Service auf Port 5000 benötigt.`;
+      document.getElementById('ownerCardsGrid').innerHTML = '<div class="card">⚠️ Verbindungsfehler</div>';
+    }
+  }
+
+  function escapeHtml(str) { if (!str) return ''; return String(str).replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
+
+  document.getElementById('refreshDataBtn').addEventListener('click', fetchData);
+  document.getElementById('resetOwnersBtn').addEventListener('click', () => { if (allTransactions.length) resetOwners(); });
+  document.getElementById('resetTypesBtn').addEventListener('click', () => { if (allTransactions.length) resetTypes(); });
+  document.getElementById('resetStatementsBtn').addEventListener('click', () => { if (allTransactions.length) resetStatements(); });
+  document.getElementById('clearAllFiltersBtn').addEventListener('click', () => { if (allTransactions.length) clearAllFilters(); });
+  document.getElementById('applyAccountFilterBtn').addEventListener('click', () => { if (allTransactions.length) applyAccountFilter(); });
+  document.getElementById('resetAccountFilterBtn').addEventListener('click', () => { if (allTransactions.length) resetAccountFilter(); });
+
+  fetchData();
+</script>
+</body>
+</html>
