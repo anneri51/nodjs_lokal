@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Gallery with Byte Array Conversion</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            padding: 30px 0;
+            color: #2c3e50;
+        }
+        
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: #7f8c8d;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 25px 0;
+            flex-wrap: wrap;
+        }
+        
+        .id-input {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 30px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            width: 250px;
+            font-size: 1rem;
+            outline: none;
+        }
+        
+        .fetch-btn {
+            padding: 12px 30px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .fetch-btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+        }
+        
+        .fetch-btn:active {
+            transform: translateY(0);
+        }
+        
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .image-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .image-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .image-container {
+            height: 250px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ecf0f1;
+        }
+        
+        .image-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            transition: transform 0.5s ease;
+        }
+        
+        .image-card:hover .image-container img {
+            transform: scale(1.05);
+        }
+        
+        .image-info {
+            padding: 20px;
+        }
+        
+        .image-id {
+            font-weight: 700;
+            color: #3498db;
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+        }
+        
+        .image-desc {
+            color: #7f8c8d;
+            line-height: 1.5;
+        }
+        
+        .loading {
+            text-align: center;
+            font-size: 1.2rem;
+            color: #7f8c8d;
+            padding: 40px;
+            display: none;
+        }
+        
+        .error {
+            text-align: center;
+            color: #e74c3c;
+            padding: 20px;
+            background: rgba(231, 76, 60, 0.1);
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .instructions {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 30px 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+        
+        .instructions h2 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+        
+        .instructions p {
+            line-height: 1.6;
+            color: #34495e;
+            margin-bottom: 15px;
+        }
+        
+        .instructions code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #e74c3c;
+        }
+        
+        .data-info {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 30px 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+        
+        .data-info h2 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+        
+        .data-info pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        @media (max-width: 768px) {
+            .gallery {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .gallery {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .id-input, .fetch-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Person Image Gallery</h1>
+            <p class="subtitle">Fetch and display images with byte array conversion</p>
+        </header>
+        
+        <div class="instructions">
+            <h2>How to Use</h2>
+            <p>Enter a person ID in the input field below and click "Fetch Images" to retrieve and display all images from the web service.</p>
+            <p>The application will call your web service at: <code>http://localhost:5000/person/bild/[ID]</code></p>
+            <p>Each image is returned with ID field <code>PK_BILD_BILDER</code> and image content in <code>FILECONTENT</code>.</p>
+        </div>
+        
+        <div class="controls">
+            <input type="text" class="id-input" placeholder="Enter person ID (e.g., 832)" id="idInput">
+            <button class="fetch-btn" id="fetchBtn">Fetch Images</button>
+        </div>
+        
+        <div class="error" id="errorMessage"></div>
+        
+        <div class="loading" id="loadingIndicator">Loading images...</div>
+        
+        <div class="gallery" id="imageGallery">
+            <!-- Images will be added here dynamically -->
+        </div>
+        
+        <div class="data-info">
+            <h2>Data Processing Information</h2>
+            <p>The application processes the image data using the following conversion logic:</p>
+            <pre>
+// Convert the bytea data to a Uint8Array
+let byteArray;
+if (image.FILECONTENT.data instanceof Array) {
+    byteArray = new Uint8Array(image.FILECONTENT.data);
+} else if (image.FILECONTENT.data instanceof Uint8Array) {
+    byteArray = image.FILECONTENT.data;
+} else if (typeof image.FILECONTENT.data === 'string') {
+    // Handle base64 encoded string
+    const binaryString = atob(image.FILECONTENT.data);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    byteArray = bytes;
+} else {
+    console.warn('Unsupported FILECONTENT data format:', typeof image.FILECONTENT.data);
+    continue; // Skip to next image
+}
+
+// Create a Blob from the byte array
+const blob = new Blob([byteArray], { type: 'image/jpeg' });
+
+// Create an object URL from the Blob
+const imageUrl = URL.createObjectURL(blob);
+            </pre>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const idInput = document.getElementById('idInput');
+            const fetchBtn = document.getElementById('fetchBtn');
+            const imageGallery = document.getElementById('imageGallery');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            // Function to fetch images from web service
+            async function fetchImagesFromWebService(id) {
+                // Show loading indicator
+                loadingIndicator.style.display = 'block';
+                hideError();
+                
+                try {
+                    // Make request to your web service
+                    const response = await fetch(`http://localhost:5000/person/bild/${id}`);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    // Parse the response
+                    const data = await response.json();
+                    
+                    // Clear previous images
+                    imageGallery.innerHTML = '';
+                    
+                    // Check if we have images - adjust based on your API response structure
+                    if (!data || data.length === 0) {
+                        showError('No images found for this ID');
+                        return;
+                    }
+                    
+                    // Display all images
+                    data.forEach((imageData, index) => {
+                        displayImage(id, imageData, index, data.length);
+                    });
+                    
+                } catch (error) {
+                    console.error('Error fetching images:', error);
+                    showError(`Failed to fetch images: ${error.message}`);
+                } finally {
+                    // Hide loading indicator
+                    loadingIndicator.style.display = 'none';
+                }
+            }
+            
+            // Function to display an image with byte array conversion
+            function displayImage(personId, image, index, total) {
+                // Convert the bytea data to a Uint8Array
+                let byteArray;
+                if (image.FILECONTENT.data instanceof Array) {
+                    byteArray = new Uint8Array(image.FILECONTENT.data);
+                } else if (image.FILECONTENT.data instanceof Uint8Array) {
+                    byteArray = image.FILECONTENT.data;
+                } else if (typeof image.FILECONTENT.data === 'string') {
+                    // Handle base64 encoded string
+                    const binaryString = atob(image.FILECONTENT.data);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    byteArray = bytes;
+                } else {
+                    console.warn('Unsupported FILECONTENT data format:', typeof image.FILECONTENT.data);
+                    return; // Skip this image
+                }
+
+                // Create a Blob from the byte array
+                const blob = new Blob([byteArray], { type: 'image/jpeg' });
+
+                // Create an object URL from the Blob
+                const imageUrl = URL.createObjectURL(blob);
+                
+                // Create the image card
+                const imageCard = document.createElement('div');
+                imageCard.className = 'image-card';
+                
+                imageCard.innerHTML = `
+                    <div class="image-container">
+                        <img src="${imageUrl}" alt="Image ID: ${image.PK_BILD_BILDER}">
+                    </div>
+                    <div class="image-info">
+                        <div class="image-id">Person ID: ${personId}</div>
+                        <div class="image-id">Image ID: ${image.PK_BILD_BILDER}</div>
+                        <div class="image-id">Image ${index + 1} of ${total}</div>
+                        <p class="image-desc">Data format: ${typeof image.FILECONTENT.data}</p>
+                    </div>
+                `;
+                
+                imageGallery.appendChild(imageCard);
+            }
+            
+            // Event listener for the fetch button
+            fetchBtn.addEventListener('click', function() {
+                const id = idInput.value.trim();
+                
+                // Validate input
+                if (!id) {
+                    showError('Please enter a person ID');
+                    return;
+                }
+                
+                // Check if it's a valid number
+                if (isNaN(id)) {
+                    showError('Please enter a valid numeric ID');
+                    return;
+                }
+                
+                // Fetch images from web service
+                fetchImagesFromWebService(id);
+            });
+            
+            // Function to show error message
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+            }
+            
+            // Function to hide error message
+            function hideError() {
+                errorMessage.style.display = 'none';
+            }
+            
+            // Allow pressing Enter to fetch images
+            idInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    fetchBtn.click();
+                }
+            });
+            
+            // For demonstration purposes - simulate API response with different data formats
+            // This would be removed in production
+            console.log("Application ready. Enter a person ID and click Fetch Images to retrieve pictures from http://localhost:5000/person/bild/[ID]");
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organizational Units Treeview</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .description {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .layout {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .treeview-container {
+            flex: 0 0 350px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .table-container {
+            flex: 1;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            overflow-x: auto;
+            max-height: 600px;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .search-box {
+            padding: 10px 15px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            width: 300px;
+            font-size: 1rem;
+        }
+        
+        .view-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        button {
+            padding: 10px 15px;
+            background-color: #4b6cb7;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        button:hover {
+            background-color: #3a5999;
+        }
+        
+        button:disabled {
+            background-color: #a0aec0;
+            cursor: not-allowed;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1000px;
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e1e5eb;
+        }
+        
+        th {
+            background-color: #4b6cb7;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        th:hover {
+            background-color: #3a5999;
+        }
+        
+        th::after {
+            content: '';
+            display: inline-block;
+            margin-left: 8px;
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 5px solid #fff;
+            opacity: 0.6;
+        }
+        
+        th.asc::after {
+            border-top: none;
+            border-bottom: 5px solid #fff;
+        }
+        
+        th.desc::after {
+            border-top: 5px solid #fff;
+            border-bottom: none;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f8f9fc;
+        }
+        
+        tr:hover {
+            background-color: #e9ecf5;
+        }
+        
+        .tree-item {
+            padding: 8px 5px;
+            margin: 2px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .tree-item:hover {
+            background-color: #e9ecf5;
+        }
+        
+        .tree-item.selected {
+            background-color: #4b6cb7;
+            color: white;
+        }
+        
+        .tree-children {
+            margin-left: 30px;
+            display: block;
+        }
+        
+        .tree-children.collapsed {
+            display: none;
+        }
+        
+        .toggle-icon {
+            width: 20px;
+            text-align: center;
+            cursor: pointer;
+        }
+        
+        .null-value {
+            color: #999;
+            font-style: italic;
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #4b6cb7;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background-color: #fee2e2;
+            color: #b91c1c;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .status-active {
+            color: #10b981;
+            font-weight: 600;
+        }
+        
+        .status-inactive {
+            color: #ef4444;
+            font-weight: 600;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+        
+        .tree-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e1e5eb;
+        }
+        
+        .tree-search {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            width: 100%;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+        
+        @media (max-width: 1200px) {
+            .layout {
+                flex-direction: column;
+            }
+            
+            .treeview-container {
+                flex: 1;
+                max-height: 300px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+            }
+            
+            .search-box {
+                width: 100%;
+            }
+            
+            .view-controls {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Organizational Units Hierarchy</h1>
+            <p class="description">Treeview and table display of organizational units with parent-child relationships</p>
+        </header>
+        
+        <div class="error" id="error-message"></div>
+        
+        <div class="controls">
+            <input type="text" id="search-input" class="search-box" placeholder="Search table data...">
+            
+            <div class="view-controls">
+                <button id="refresh-btn">
+                    <i class="fas fa-sync-alt"></i> Refresh Data
+                </button>
+                <button id="expand-all-btn">
+                    <i class="fas fa-expand"></i> Expand All
+                </button>
+                <button id="collapse-all-btn">
+                    <i class="fas fa-compress"></i> Collapse All
+                </button>
+            </div>
+        </div>
+        
+        <div class="layout">
+            <div class="treeview-container">
+                <div class="tree-header">
+                    <h3>Organizational Hierarchy</h3>
+                    <span id="tree-info">7 units</span>
+                </div>
+                <input type="text" id="tree-search" class="tree-search" placeholder="Search tree...">
+                <div id="treeview">
+                    <!-- Treeview will be populated by JavaScript -->
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table id="data-table">
+                    <thead>
+                        <tr>
+  <th data-sort="Relationship_Unique_Identifier">ID</th>
+                            <th data-sort="Relationship_Unique_Identifier">Relationship ID</th>
+                            <th data-sort="Mandant_Reference_ID">Mandant</th>
+                            <th data-sort="Related_Org_Unit_Reference">Related Org Unit</th>
+                            <th data-sort="Main_Org_Unit_Reference">Main Org Unit</th>
+                            <th data-sort="Relationship_Comments">Comments</th>
+                            <th data-sort="Relationship_Creation_Timestamp">Created</th>
+                            <th data-sort="Relationship_Last_Modified_Timestamp">Modified</th>
+                            <th data-sort="Relationship_Created_By_User">Created By</th>
+                            <th data-sort="Relationship_Last_Modified_By_User">Modified By</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <!-- Data will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Data fetched from http://localhost:5000/rel_org_unit</p>
+        </div>
+    </div>
+
+    <script>
+        // DOM elements
+        const tableBody = document.getElementById('table-body');
+        const searchInput = document.getElementById('search-input');
+        const treeSearch = document.getElementById('tree-search');
+        const refreshBtn = document.getElementById('refresh-btn');
+        const expandAllBtn = document.getElementById('expand-all-btn');
+        const collapseAllBtn = document.getElementById('collapse-all-btn');
+        const treeview = document.getElementById('treeview');
+        const treeInfo = document.getElementById('tree-info');
+        const errorMessage = document.getElementById('error-message');
+        const headers = document.querySelectorAll('th');
+
+        // State variables
+        let data = [];
+        let filteredData = [];
+        let currentSort = {
+            column: 'Relationship_Unique_Identifier',
+            direction: 'asc'
+        };
+        let selectedNode = null;
+        let treeData = [];
+
+        // Format date for display
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        }
+
+        // Format status for display
+        function formatStatus(status) {
+            if (status === true || status === 1 || status === 'true' || status === 'active') {
+                return '<span class="status-active">Active</span>';
+            } else if (status === false || status === 0 || status === 'false' || status === 'inactive') {
+                return '<span class="status-inactive">Inactive</span>';
+            }
+            return status || '-';
+        }
+
+        // Build hierarchical tree structure from flat data
+        function buildTree(data) {
+            const idToNode = {};
+            const rootNodes = [];
+            
+            // First pass: create all nodes
+            data.forEach(item => {
+                idToNode[item.Related_Org_Unit_Reference] = {
+                    id: item.Related_Org_Unit_Reference,
+                    mainId: item.Main_Org_Unit_Reference,
+                    name: item.Org_Unit_Name || item.Main_Org_Unit_Reference || `Unit ${item.Related_Org_Unit_Reference}  ${item.Main_Org_Unit_Reference}`,
+                    data: item,
+                    children: [],
+                    expanded: true
+                };
+            });
+            
+            // Second pass: build hierarchy
+            data.forEach(item => {
+                const node = idToNode[item.Related_Org_Unit_Reference];
+                const mainNode = idToNode[item.Main_Org_Unit_Reference];
+                
+                if (mainNode && node.id !== mainNode.id) {
+                    mainNode.children.push(node);
+                } else if (!mainNode || node.id === mainNode.id) {
+                    rootNodes.push(node);
+                }
+            });
+            
+            return rootNodes;
+        }
+
+        // Render treeview
+        function renderTree(treeData) {
+            treeview.innerHTML = '';
+            treeInfo.textContent = `${data.length} units`;
+            
+            if (treeData.length === 0) {
+                treeview.innerHTML = '<div class="tree-item">No organizational units found</div>';
+                return;
+            }
+            
+            treeData.forEach(node => {
+                renderTreeNode(node, 0);
+            });
+        }
+        
+        // Render a single tree node recursively
+        function renderTreeNode(node, level) {
+            const nodeElement = document.createElement('div');
+            nodeElement.className = 'tree-item';
+            nodeElement.style.paddingLeft = (level * 20) + 'px';
+            nodeElement.dataset.id = node.id;
+            
+            if (selectedNode === node.id) {
+                nodeElement.classList.add('selected');
+            }
+            
+            let iconHtml = '';
+            if (node.children.length > 0) {
+                const iconClass = node.expanded ? 'fa-caret-down' : 'fa-caret-right';
+                iconHtml = `<span class="toggle-icon" onclick="toggleTreeNode(event, this)"><i class="fas ${iconClass}"></i></span>`;
+            } else {
+                iconHtml = `<span class="toggle-icon"><i class="fas fa-minus" style="color: #ccc;"></i></span>`;
+            }
+            
+            nodeElement.innerHTML = `
+                ${iconHtml}
+                <i class="fas fa-building" style="color: #4b6cb7;"></i>
+                <span class="tree-label">${node.name}</span>
+            `;
+            
+            nodeElement.addEventListener('click', (e) => {
+                if (!e.target.classList.contains('toggle-icon') && 
+                    !e.target.parentElement.classList.contains('toggle-icon')) {
+                    selectTreeNode(node.id);
+                }
+            });
+            
+            treeview.appendChild(nodeElement);
+            
+            // Render children
+            if (node.children.length > 0) {
+                const childrenContainer = document.createElement('div');
+                childrenContainer.className = 'tree-children';
+                if (!node.expanded) {
+                    childrenContainer.classList.add('collapsed');
+                }
+                
+                node.children.forEach(child => {
+                    renderTreeNode(child, level + 1, childrenContainer);
+                });
+                treeview.appendChild(childrenContainer);
+            }
+        }
+        
+        // Toggle tree node expansion
+        function toggleTreeNode(event, element) {
+            event.stopPropagation();
+            const nodeElement = element.closest('.tree-item');
+            const nodeId = parseInt(nodeElement.dataset.id);
+            
+            // Find the node in our tree data
+            const node = findNodeInTree(treeData, nodeId);
+            if (node) {
+                node.expanded = !node.expanded;
+                
+                // Update the icon
+                const icon = element.querySelector('i');
+                if (node.expanded) {
+                    icon.className = 'fas fa-caret-down';
+                } else {
+                    icon.className = 'fas fa-caret-right';
+                }
+                
+                // Find the children container (next sibling element)
+                const childrenContainer = nodeElement.nextElementSibling;
+                if (childrenContainer && childrenContainer.classList.contains('tree-children')) {
+                    childrenContainer.classList.toggle('collapsed');
+                }
+            }
+        }
+        
+        // Select a tree node
+        function selectTreeNode(nodeId) {
+            selectedNode = nodeId;
+            
+            // Update treeview selection
+            document.querySelectorAll('.tree-item').forEach(item => {
+                if (parseInt(item.dataset.id) === nodeId) {
+                    item.classList.add('selected');
+                } else {
+                    item.classList.remove('selected');
+                }
+            });
+            
+            // Filter table to show only selected node and its children
+            if (nodeId) {
+                const node = findNodeInTree(treeData, nodeId);
+                if (node) {
+                    const relatedIds = getRelatedIds(node);
+                    filteredData = data.filter(item => 
+                        relatedIds.includes(item.Related_Org_Unit_Reference) || 
+                        relatedIds.includes(item.Main_Org_Unit_Reference)
+                    );
+                }
+            } else {
+                filteredData = [...data];
+            }
+            
+            sortData(currentSort.column, currentSort.direction);
+            renderTable();
+        }
+        
+        // Find node in tree
+        function findNodeInTree(nodes, id) {
+            for (const node of nodes) {
+                if (node.id === id) return node;
+                if (node.children.length > 0) {
+                    const found = findNodeInTree(node.children, id);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+        
+        // Get all related IDs from a node (including children)
+        function getRelatedIds(node) {
+            let ids = [node.id];
+            node.children.forEach(child => {
+                ids = ids.concat(getRelatedIds(child));
+            });
+            return ids;
+        }
+        
+        // Expand all tree nodes recursively
+        function expandAllNodes(nodes) {
+            nodes.forEach(node => {
+                node.expanded = true;
+                if (node.children.length > 0) {
+                    expandAllNodes(node.children);
+                }
+            });
+        }
+        
+        // Collapse all tree nodes recursively
+        function collapseAllNodes(nodes) {
+            nodes.forEach(node => {
+                node.expanded = false;
+                if (node.children.length > 0) {
+                    collapseAllNodes(node.children);
+                }
+            });
+        }
+        
+        // Expand all tree nodes
+        function expandAll() {
+            expandAllNodes(treeData);
+            renderTree(treeData);
+        }
+        
+        // Collapse all tree nodes
+        function collapseAll() {
+            collapseAllNodes(treeData);
+            renderTree(treeData);
+        }
+
+        // Render table rows
+        function renderTable() {
+            tableBody.innerHTML = '';
+            tableBody.innerHTML = "Anzahl Datensätze: " +filteredData.length;
+            if (filteredData.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td colspan="9" style="text-align: center; padding: 20px;">No data available</td>`;
+                tableBody.appendChild(row);
+                return;
+            }
+            let index = 0;
+            filteredData.forEach(item => {
+                const row = document.createElement('tr');
+                index+=1;
+                row.innerHTML = `
+   <td>${index}</td>
+                    <td>${item.Relationship_Unique_Identifier || '-'}</td>
+                    <td>${item.Mandant_Reference_ID || '-'}</td>
+                    <td>${item.Related_Org_Unit_Reference || '-'} ${item.Org_Unit_Name ? `(${item.Org_Unit_Name})` : ''}</td>
+                    <td>${item.Main_Org_Unit_Reference || '-'} ${item.Main_Org_Unit_Name ? `(${item.Main_Org_Unit_Name})` : ''}</td>
+                    <td class="${!item.Relationship_Comments ? 'null-value' : ''}">${item.Relationship_Comments || 'NULL'}</td>
+                    <td>${formatDate(item.Relationship_Creation_Timestamp)}</td>
+                    <td class="${!item.Relationship_Last_Modified_Timestamp ? 'null-value' : ''}">${formatDate(item.Relationship_Last_Modified_Timestamp) || 'NULL'}</td>
+                    <td>${item.Relationship_Created_By_User || '-'}</td>
+                    <td class="${!item.Relationship_Last_Modified_By_User ? 'null-value' : ''}">${item.Relationship_Last_Modified_By_User || 'NULL'}</td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Sort data
+        function sortData(column, direction) {
+            filteredData.sort((a, b) => {
+                let valueA = a[column];
+                let valueB = b[column];
+                
+                // Handle null values
+                if (valueA === null || valueA === undefined) valueA = direction === 'asc' ? '' : 'zzz';
+                if (valueB === null || valueB === undefined) valueB = direction === 'asc' ? '' : 'zzz';
+                
+                // Compare values
+                if (valueA < valueB) return direction === 'asc' ? -1 : 1;
+                if (valueA > valueB) return direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        // Filter data based on search input
+        function filterData() {
+            const searchTerm = searchInput.value.toLowerCase();
+            
+            if (searchTerm === '') {
+                filteredData = [...data];
+            } else {
+                filteredData = data.filter(item => {
+                    return Object.values(item).some(value => {
+                        if (value === null || value === undefined) return false;
+                        return value.toString().toLowerCase().includes(searchTerm);
+                    });
+                });
+            }
+            
+            sortData(currentSort.column, currentSort.direction);
+            renderTable();
+        }
+        
+        // Filter tree based on search input
+        function filterTree() {
+            const searchTerm = treeSearch.value.toLowerCase();
+            
+            if (searchTerm === '') {
+                renderTree(treeData);
+                return;
+            }
+            
+            const filteredTree = [];
+            
+            function filterNode(node) {
+                const matches = node.name.toLowerCase().includes(searchTerm);
+                
+                // Check if any children match
+                const childMatches = [];
+                node.children.forEach(child => {
+                    const filteredChild = filterNode(child);
+                    if (filteredChild) {
+                        childMatches.push(filteredChild);
+                    }
+                });
+                
+                if (matches || childMatches.length > 0) {
+                    return {
+                        ...node,
+                        children: childMatches,
+                        expanded: true // Auto-expand filtered nodes
+                    };
+                }
+                
+                return null;
+            }
+            
+            treeData.forEach(node => {
+                const filteredNode = filterNode(node);
+                if (filteredNode) {
+                    filteredTree.push(filteredNode);
+                }
+            });
+            
+            renderTree(filteredTree);
+        }
+
+        // Fetch data from the web service
+        async function fetchData() {
+            try {
+                // Show loading state
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="9">
+                            <div class="loading">
+                                <div class="spinner"></div>
+                                <div>Loading data...</div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                
+                treeview.innerHTML = `
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <div>Loading hierarchy...</div>
+                    </div>
+                `;
+                
+                hideError();
+                
+                const response = await fetch('http://localhost:5000/rel_org_unit');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                data = await response.json();
+                filteredData = [...data];
+                
+                // Build tree structure
+                treeData = buildTree(data);
+                
+                // Render initial views
+                renderTree(treeData);
+                sortData(currentSort.column, currentSort.direction);
+                renderTable();
+            } catch (error) {
+                showError(`Failed to fetch data: ${error.message}`);
+            }
+        }
+
+        // Show error message
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+
+        // Hide error message
+        function hideError() {
+            errorMessage.style.display = 'none';
+        }
+
+        // Event listeners
+        searchInput.addEventListener('input', filterData);
+        treeSearch.addEventListener('input', filterTree);
+        refreshBtn.addEventListener('click', fetchData);
+        expandAllBtn.addEventListener('click', expandAll);
+        collapseAllBtn.addEventListener('click', collapseAll);
+
+        headers.forEach(header => {
+            header.addEventListener('click', () => {
+                const column = header.getAttribute('data-sort');
+                
+                // Remove sort indicators from all headers
+                headers.forEach(h => {
+                    h.classList.remove('asc', 'desc');
+                });
+                
+                // Determine sort direction
+                if (currentSort.column === column) {
+                    currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    currentSort.column = column;
+                    currentSort.direction = 'asc';
+                }
+                
+                // Add sort indicator to current header
+                header.classList.add(currentSort.direction);
+                
+                // Sort and render
+                sortData(currentSort.column, currentSort.direction);
+                renderTable();
+            });
+        });
+
+        // Global functions for treeview
+        window.toggleTreeNode = toggleTreeNode;
+
+        // Initial data fetch
+        fetchData();
+    </script>
+</body>
+</html>

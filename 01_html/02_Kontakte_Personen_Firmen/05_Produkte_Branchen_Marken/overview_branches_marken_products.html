@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organization Unit Relations Manager</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 25px;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            border-radius: 12px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .card-header h2 {
+            color: #2575fc;
+            font-size: 1.5rem;
+        }
+
+        .endpoint {
+            background: #e9ecef;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+
+        .card-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .card-controls button {
+            padding: 8px 15px;
+            font-size: 0.85rem;
+        }
+
+        .search-box {
+            display: flex;
+            margin-bottom: 15px;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px 0 0 6px;
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        .search-box button {
+            padding: 0 15px;
+            background: #2575fc;
+            color: white;
+            border: none;
+            border-radius: 0 6px 6px 0;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .search-box button:hover {
+            background: #1a67e8;
+        }
+
+        .data-container {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f8f9fa;
+            position: sticky;
+            top: 0;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #e9ecef;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 10px 15px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 0.9rem;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+
+        .loading i {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: #2575fc;
+        }
+
+        .error {
+            text-align: center;
+            padding: 15px;
+            color: #dc3545;
+            background: #f8d7da;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 0.9rem;
+        }
+
+        .success {
+            text-align: center;
+            padding: 15px;
+            color: #155724;
+            background: #d4edda;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 0.9rem;
+        }
+
+        .relations-section {
+            grid-column: 1 / -1;
+        }
+
+        .relations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .relation-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        .relation-card h3 {
+            color: #2575fc;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .relation-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .relation-controls button {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #2575fc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #1a67e8;
+        }
+
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+
+        .btn-success {
+            background: #28a745;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .org-unit-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+
+        .org-unit-input label {
+            font-weight: 600;
+            color: #2575fc;
+        }
+
+        .org-unit-input input {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            outline: none;
+            flex: 1;
+            max-width: 300px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .card-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .card-header .endpoint {
+                margin-top: 10px;
+            }
+            
+            .card-controls {
+                flex-direction: column;
+            }
+            
+            th, td {
+                padding: 8px 10px;
+            }
+            
+            .org-unit-input {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .org-unit-input input {
+                max-width: 100%;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Organization Unit Relations Manager</h1>
+            <p>Manage relations between organization units, branches, and brands</p>
+        </header>
+
+        <div class="org-unit-input">
+            <label for="orgUnitId">Organization Unit ID:</label>
+            <input type="text" id="orgUnitId" placeholder="Enter organization unit ID">
+            <button id="loadOrgUnitBtn">Load Relations</button>
+        </div>
+
+        <div class="controls">
+            <button id="loadAllBtn">Load All Data</button>
+            <button id="clearAllBtn">Clear All Data</button>
+        </div>
+
+        <div class="dashboard">
+            <!-- Branches Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>Branches</h2>
+                    <div class="endpoint">/branches</div>
+                </div>
+                <div class="card-controls">
+                    <button class="btn-small" id="loadBranchesBtn">Load Branches</button>
+                    <button class="btn-small" id="clearBranchesBtn">Clear</button>
+                </div>
+                <div class="search-box">
+                    <input type="text" id="branches-search" placeholder="Search branches...">
+                    <button><i class="fas fa-search"></i></button>
+                </div>
+                <div class="data-container" id="branches-data">
+                    <div class="loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Click "Load Branches" to fetch data</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Brands Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>Brands</h2>
+                    <div class="endpoint">/marken</div>
+                </div>
+                <div class="card-controls">
+                    <button class="btn-small" id="loadBrandsBtn">Load Brands</button>
+                    <button class="btn-small" id="clearBrandsBtn">Clear</button>
+                </div>
+                <div class="search-box">
+                    <input type="text" id="brands-search" placeholder="Search brands...">
+                    <button><i class="fas fa-search"></i></button>
+                </div>
+                <div class="data-container" id="brands-data">
+                    <div class="loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Click "Load Brands" to fetch data</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>Products</h2>
+                    <div class="endpoint">/products</div>
+                </div>
+                <div class="card-controls">
+                    <button class="btn-small" id="loadProductsBtn">Load Products</button>
+                    <button class="btn-small" id="clearProductsBtn">Clear</button>
+                </div>
+                <div class="search-box">
+                    <input type="text" id="products-search" placeholder="Search products...">
+                    <button><i class="fas fa-search"></i></button>
+                </div>
+                <div class="data-container" id="products-data">
+                    <div class="loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Click "Load Products" to fetch data</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Relations Section -->
+            <div class="card relations-section">
+                <div class="card-header">
+                    <h2>Relations</h2>
+                    <div class="endpoint">Multiple Endpoints</div>
+                </div>
+                <div class="card-controls">
+                    <button class="btn-small" id="loadAllRelationsBtn">Load All Relations</button>
+                    <button class="btn-small" id="clearAllRelationsBtn">Clear All Relations</button>
+                </div>
+                <div class="relations-grid">
+                    <div class="relation-card">
+                        <h3>Organization Unit Relations</h3>
+                        <div class="endpoint">/rel_org_unit</div>
+                        <div class="relation-controls">
+                            <button class="btn-small" id="loadRelOrgUnitBtn">Load</button>
+                            <button class="btn-small" id="clearRelOrgUnitBtn">Clear</button>
+                        </div>
+                        <div class="data-container" id="rel-org-unit-data" style="max-height: 200px; margin-top: 15px;">
+                            <div class="loading">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Click "Load" to fetch relations</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relation-card">
+                        <h3>Branch-Product Relations</h3>
+                        <div class="endpoint">/org_unit_branchen_produkte_rel</div>
+                        <div class="relation-controls">
+                            <button class="btn-small" id="loadBranchProductRelBtn">Load</button>
+                            <button class="btn-small" id="clearBranchProductRelBtn">Clear</button>
+                        </div>
+                        <div class="data-container" id="branch-product-rel-data" style="max-height: 200px; margin-top: 15px;">
+                            <div class="loading">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Click "Load" to fetch relations</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relation-card">
+                        <h3>Branch Relations</h3>
+                        <div class="endpoint">/org_unit_branches_rel</div>
+                        <div class="relation-controls">
+                            <button class="btn-small" id="loadBranchRelBtn">Load</button>
+                            <button class="btn-small" id="clearBranchRelBtn">Clear</button>
+                        </div>
+                        <div class="data-container" id="branch-rel-data" style="max-height: 200px; margin-top: 15px;">
+                            <div class="loading">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Click "Load" to fetch relations</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relation-card">
+                        <h3>Internet App Relations</h3>
+                        <div class="endpoint">/org_unit_internetapp_rel</div>
+                        <div class="relation-controls">
+                            <button class="btn-small" id="loadInternetappRelBtn">Load</button>
+                            <button class="btn-small" id="clearInternetappRelBtn">Clear</button>
+                        </div>
+                        <div class="data-container" id="internetapp-rel-data" style="max-height: 200px; margin-top: 15px;">
+                            <div class="loading">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Click "Load" to fetch relations</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Organization Unit Relations Manager &copy; 2023 | All data loaded from http://localhost:5000</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const loadAllBtn = document.getElementById('loadAllBtn');
+            const clearAllBtn = document.getElementById('clearAllBtn');
+            const loadOrgUnitBtn = document.getElementById('loadOrgUnitBtn');
+            const orgUnitIdInput = document.getElementById('orgUnitId');
+            
+            // Individual load buttons
+            const loadBranchesBtn = document.getElementById('loadBranchesBtn');
+            const loadBrandsBtn = document.getElementById('loadBrandsBtn');
+            const loadProductsBtn = document.getElementById('loadProductsBtn');
+            const loadAllRelationsBtn = document.getElementById('loadAllRelationsBtn');
+            
+            // Individual relation load buttons
+            const loadRelOrgUnitBtn = document.getElementById('loadRelOrgUnitBtn');
+            const loadBranchProductRelBtn = document.getElementById('loadBranchProductRelBtn');
+            const loadBranchRelBtn = document.getElementById('loadBranchRelBtn');
+            const loadInternetappRelBtn = document.getElementById('loadInternetappRelBtn');
+            
+            // Clear buttons
+            const clearBranchesBtn = document.getElementById('clearBranchesBtn');
+            const clearBrandsBtn = document.getElementById('clearBrandsBtn');
+            const clearProductsBtn = document.getElementById('clearProductsBtn');
+            const clearAllRelationsBtn = document.getElementById('clearAllRelationsBtn');
+            const clearRelOrgUnitBtn = document.getElementById('clearRelOrgUnitBtn');
+            const clearBranchProductRelBtn = document.getElementById('clearBranchProductRelBtn');
+            const clearBranchRelBtn = document.getElementById('clearBranchRelBtn');
+            const clearInternetappRelBtn = document.getElementById('clearInternetappRelBtn');
+            
+            // Data storage
+            let branchesData = [];
+            let brandsData = [];
+            let productsData = [];
+            let relationsData = {
+                relOrgUnit: [],
+                branchProductRel: [],
+                branchRel: [],
+                internetappRel: []
+            };
+            
+            // API endpoints
+            const endpoints = {
+                branches: 'http://localhost:5000/branches',
+                brands: 'http://localhost:5000/marken',
+                products: 'http://localhost:5000/products',
+                relOrgUnit: 'http://localhost:5000/rel_org_unit',
+                branchProductRel: 'http://localhost:5000/org_unit_branchen_produkte_rel',
+                branchRel: 'http://localhost:5000/org_unit_branches_rel',
+                internetappRel: 'http://localhost:5000/org_unit_internetapp_rel',
+                insertBranchRel: 'http://localhost:5000/org_unit_branches_rel/insert',
+                insertBrandRel: 'http://localhost:5000/org_unit_marken_rel/insert'
+            };
+            
+            // Load all data from all endpoints
+            async function loadAllData() {
+                loadAllBtn.disabled = true;
+                loadAllBtn.textContent = 'Loading...';
+                
+                try {
+                    // Load branches data
+                    await loadBranchesData();
+                    
+                    // Load brands data
+                    await loadBrandsData();
+                    
+                    // Load products data
+                    await loadProductsData();
+                    
+                    // Load all relations data
+                    await loadAllRelationsData();
+                    
+                    showStatus('All data loaded successfully!', 'success');
+                    
+                } catch (error) {
+                    console.error('Error loading data:', error);
+                    showStatus(`Error loading data: ${error.message}`, 'error');
+                } finally {
+                    loadAllBtn.disabled = false;
+                    loadAllBtn.textContent = 'Load All Data';
+                }
+            }
+            
+            // Load branches data
+            async function loadBranchesData() {
+                await loadData(endpoints.branches, 'branches-data', (data) => {
+                    branchesData = data;
+                    displayTableData('branches-data', data, ['ID', 'Name', 'Location', 'Status', 'Actions']);
+                }, loadBranchesBtn);
+            }
+            
+            // Load brands data
+            async function loadBrandsData() {
+                await loadData(endpoints.brands, 'brands-data', (data) => {
+                    brandsData = data;
+                    displayTableData('brands-data', data, ['ID', 'Brand Name', 'Category', 'Established', 'Actions']);
+                }, loadBrandsBtn);
+            }
+            
+            // Load products data
+            async function loadProductsData() {
+                await loadData(endpoints.products, 'products-data', (data) => {
+                    productsData = data;
+                    displayTableData('products-data', data, ['ID', 'Product Name', 'Brand', 'Price']);
+                }, loadProductsBtn);
+            }
+            
+            // Load all relations data
+            async function loadAllRelationsData() {
+                await loadRelOrgUnitData();
+                await loadBranchProductRelData();
+                await loadBranchRelData();
+                await loadInternetappRelData();
+            }
+            
+            // Load individual relation data
+            async function loadRelOrgUnitData() {
+                await loadData(endpoints.relOrgUnit, 'rel-org-unit-data', (data) => {
+                    relationsData.relOrgUnit = data;
+                    displayTableData('rel-org-unit-data', data, ['From', 'To', 'Type']);
+                }, loadRelOrgUnitBtn);
+            }
+            
+            async function loadBranchProductRelData() {
+                await loadData(endpoints.branchProductRel, 'branch-product-rel-data', (data) => {
+                    relationsData.branchProductRel = data;
+                    displayTableData('branch-product-rel-data', data, ['Branch', 'Product', 'Stock']);
+                }, loadBranchProductRelBtn);
+            }
+            
+            async function loadBranchRelData() {
+                await loadData(endpoints.branchRel, 'branch-rel-data', (data) => {
+                    relationsData.branchRel = data;
+                    displayTableData('branch-rel-data', data, ['Branch 1', 'Branch 2', 'Relation']);
+                }, loadBranchRelBtn);
+            }
+            
+            async function loadInternetappRelData() {
+                await loadData(endpoints.internetappRel, 'internetapp-rel-data', (data) => {
+                    relationsData.internetappRel = data;
+                    displayTableData('internetapp-rel-data', data, ['Branch', 'App', 'Access Level']);
+                }, loadInternetappRelBtn);
+            }
+            
+            // Generic function to load data from an endpoint
+            async function loadData(url, containerId, callback, button = null) {
+                const container = document.getElementById(containerId);
+                container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>Loading data...</p></div>';
+                
+                if (button) {
+                    button.disabled = true;
+                    button.textContent = 'Loading...';
+                }
+                
+                try {
+                    const response = await fetch(url);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    callback(data);
+                    
+                } catch (error) {
+                    container.innerHTML = `<div class="error">Failed to load data: ${error.message}</div>`;
+                    throw error;
+                } finally {
+                    if (button) {
+                        button.disabled = false;
+                        // Reset button text based on container type
+                        if (containerId.includes('branches')) button.textContent = 'Load Branches';
+                        else if (containerId.includes('brands')) button.textContent = 'Load Brands';
+                        else if (containerId.includes('products')) button.textContent = 'Load Products';
+                        else button.textContent = 'Load';
+                    }
+                }
+            }
+            
+            // Display data in a table
+            function displayTableData(containerId, data, headers) {
+                const container = document.getElementById(containerId);
+                
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<div class="error">No data available</div>';
+                    return;
+                }
+                
+                // Create table HTML
+                let tableHTML = '<table>';
+                
+                // Create table header
+                tableHTML += '<thead><tr>';
+                headers.forEach(header => {
+                    tableHTML += `<th>${header}</th>`;
+                });
+                tableHTML += '</tr></thead>';
+                
+                // Create table body
+                tableHTML += '<tbody>';
+                data.forEach(item => {
+                    tableHTML += '<tr>';
+                    
+                    // Handle different data structures
+                    if (containerId === 'branches-data') {
+                        const branchId = item.PK_BAS_ORG_BRANCHES || 'N/A';
+                        tableHTML += `
+                            <td>${branchId}</td>
+                            <td>${item.BRANCH_NAME || 'N/A'}</td>
+                            <td>${item.location || 'N/A'}</td>
+                            <td>${item.status || 'N/A'}</td>
+                            <td class="action-buttons">
+                                <button class="btn-small btn-success" onclick="insertBranchRelation(${branchId})">Add to Org Unit</button>
+                            </td>
+                        `;
+                    } else if (containerId === 'brands-data') {
+                        const brandId = item.PK_BAS_ORG_MARKEN || 'N/A';
+                        tableHTML += `
+                            <td>${brandId}</td>
+                            <td>${item.MARKEN_NAME || 'N/A'}</td>
+                            <td>${item.category || 'N/A'}</td>
+                            <td>${item.established || item.year || 'N/A'}</td>
+                            <td class="action-buttons">
+                                <button class="btn-small btn-success" onclick="insertBrandRelation(${brandId})">Add to Org Unit</button>
+                            </td>
+                        `;
+                    } else if (containerId === 'products-data') {
+                        tableHTML += `
+                            <td>${item.PK_PROD_PRODUCT || 'N/A'}</td>
+                            <td>${item.PRODUCT_NAME || 'N/A'}</td>
+                            <td>${item.brand || 'N/A'}</td>
+                            <td>${item.price || 'N/A'}</td>
+                        `;
+                    } else if (containerId === 'rel-org-unit-data') {
+                        tableHTML += `
+                            <td>${item.from || item.source || 'N/A'}</td>
+                            <td>${item.to || item.target || 'N/A'}</td>
+                            <td>${item.type || item.relationType || 'N/A'}</td>
+                        `;
+                    } else if (containerId === 'branch-product-rel-data') {
+                        tableHTML += `
+                            <td>${item.branch || 'N/A'}</td>
+                            <td>${item.product || 'N/A'}</td>
+                            <td>${item.stock || item.quantity || 'N/A'}</td>
+                        `;
+                    } else if (containerId === 'branch-rel-data') {
+                        tableHTML += `
+                            <td>${item.branch1 || item.from || 'N/A'}</td>
+                            <td>${item.branch2 || item.to || 'N/A'}</td>
+                            <td>${item.relation || item.type || 'N/A'}</td>
+                        `;
+                    } else if (containerId === 'internetapp-rel-data') {
+                        tableHTML += `
+                            <td>${item.branch || 'N/A'}</td>
+                            <td>${item.app || item.application || 'N/A'}</td>
+                            <td>${item.accessLevel || item.level || 'N/A'}</td>
+                        `;
+                    }
+                    
+                    tableHTML += '</tr>';
+                });
+                tableHTML += '</tbody></table>';
+                
+                container.innerHTML = tableHTML;
+                
+                // Set up search for this container
+                setupSearch(containerId, data);
+            }
+            
+            // Set up search functionality for a data container
+            function setupSearch(containerId, data) {
+                const searchInput = document.querySelector(`#${containerId.replace('-data', '-search')}`);
+                const searchButton = searchInput.nextElementSibling;
+                
+                function performSearch() {
+                    const searchTerm = searchInput.value.toLowerCase().trim();
+                    const table = document.querySelector(`#${containerId} table`);
+                    
+                    if (!table) return;
+                    
+                    const rows = table.querySelectorAll('tbody tr');
+                    let hasResults = false;
+                    
+                    rows.forEach(row => {
+                        const text = row.textContent.toLowerCase();
+                        if (text.includes(searchTerm)) {
+                            row.style.display = '';
+                            hasResults = true;
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+                    
+                    // Show message if no results
+                    const container = document.getElementById(containerId);
+                    const existingMessage = container.querySelector('.no-results');
+                    if (existingMessage) existingMessage.remove();
+                    
+                    if (!hasResults) {
+                        const message = document.createElement('div');
+                        message.className = 'error no-results';
+                        message.textContent = 'No matching results found.';
+                        container.appendChild(message);
+                    }
+                }
+                
+                searchButton.addEventListener('click', performSearch);
+                searchInput.addEventListener('keyup', function(event) {
+                    if (event.key === 'Enter') {
+                        performSearch();
+                    }
+                });
+            }
+            
+            // Insert branch relation
+            async function insertBranchRelation(branchId) {
+                const orgUnitId = orgUnitIdInput.value.trim();
+                
+                if (!orgUnitId) {
+                    showStatus('Please enter an Organization Unit ID first', 'error');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(endpoints.insertBranchRel, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            fkkonorgunit: orgUnitId,
+                            fkbasorgbranches: branchId
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showStatus(`Branch ${branchId} successfully added to Organization Unit ${orgUnitId}`, 'success');
+                        // Reload branch relations to show the new relation
+                        await loadBranchRelData();
+                    } else {
+                        throw new Error(result.error || 'Unknown error');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error inserting branch relation:', error);
+                    showStatus(`Failed to add branch: ${error.message}`, 'error');
+                }
+            }
+            
+            // Insert brand relation
+            async function insertBrandRelation(brandId) {
+                const orgUnitId = orgUnitIdInput.value.trim();
+                
+                if (!orgUnitId) {
+                    showStatus('Please enter an Organization Unit ID first', 'error');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(endpoints.insertBrandRel, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            fkkonorgunit: orgUnitId,
+                            fkbasorgmarken: brandId
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showStatus(`Brand ${brandId} successfully added to Organization Unit ${orgUnitId}`, 'success');
+                        // Reload brand relations to show the new relation
+                        await loadRelOrgUnitData();
+                    } else {
+                        throw new Error(result.error || 'Unknown error');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error inserting brand relation:', error);
+                    showStatus(`Failed to add brand: ${error.message}`, 'error');
+                }
+            }
+            
+            // Clear functions
+            function clearAllData() {
+                branchesData = [];
+                brandsData = [];
+                productsData = [];
+                relationsData = {
+                    relOrgUnit: [],
+                    branchProductRel: [],
+                    branchRel: [],
+                    internetappRel: []
+                };
+                
+                // Reset all containers to initial state
+                resetContainer('branches-data', 'Click "Load Branches" to fetch data');
+                resetContainer('brands-data', 'Click "Load Brands" to fetch data');
+                resetContainer('products-data', 'Click "Load Products" to fetch data');
+                resetContainer('rel-org-unit-data', 'Click "Load" to fetch relations');
+                resetContainer('branch-product-rel-data', 'Click "Load" to fetch relations');
+                resetContainer('branch-rel-data', 'Click "Load" to fetch relations');
+                resetContainer('internetapp-rel-data', 'Click "Load" to fetch relations');
+                
+                // Clear search inputs
+                document.querySelectorAll('.search-box input').forEach(input => {
+                    input.value = '';
+                });
+                
+                showStatus('All data cleared', 'success');
+            }
+            
+            function clearBranchesData() {
+                branchesData = [];
+                resetContainer('branches-data', 'Click "Load Branches" to fetch data');
+                document.getElementById('branches-search').value = '';
+                showStatus('Branches data cleared', 'success');
+            }
+            
+            function clearBrandsData() {
+                brandsData = [];
+                resetContainer('brands-data', 'Click "Load Brands" to fetch data');
+                document.getElementById('brands-search').value = '';
+                showStatus('Brands data cleared', 'success');
+            }
+            
+            function clearProductsData() {
+                productsData = [];
+                resetContainer('products-data', 'Click "Load Products" to fetch data');
+                document.getElementById('products-search').value = '';
+                showStatus('Products data cleared', 'success');
+            }
+            
+            function clearAllRelationsData() {
+                relationsData = {
+                    relOrgUnit: [],
+                    branchProductRel: [],
+                    branchRel: [],
+                    internetappRel: []
+                };
+                resetContainer('rel-org-unit-data', 'Click "Load" to fetch relations');
+                resetContainer('branch-product-rel-data', 'Click "Load" to fetch relations');
+                resetContainer('branch-rel-data', 'Click "Load" to fetch relations');
+                resetContainer('internetapp-rel-data', 'Click "Load" to fetch relations');
+                showStatus('All relations data cleared', 'success');
+            }
+            
+            function clearRelOrgUnitData() {
+                relationsData.relOrgUnit = [];
+                resetContainer('rel-org-unit-data', 'Click "Load" to fetch relations');
+                showStatus('Organization unit relations cleared', 'success');
+            }
+            
+            function clearBranchProductRelData() {
+                relationsData.branchProductRel = [];
+                resetContainer('branch-product-rel-data', 'Click "Load" to fetch relations');
+                showStatus('Branch-product relations cleared', 'success');
+            }
+            
+            function clearBranchRelData() {
+                relationsData.branchRel = [];
+                resetContainer('branch-rel-data', 'Click "Load" to fetch relations');
+                showStatus('Branch relations cleared', 'success');
+            }
+            
+            function clearInternetappRelData() {
+                relationsData.internetappRel = [];
+                resetContainer('internetapp-rel-data', 'Click "Load" to fetch relations');
+                showStatus('Internet app relations cleared', 'success');
+            }
+            
+            function resetContainer(containerId, message) {
+                document.getElementById(containerId).innerHTML = 
+                    `<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>${message}</p></div>`;
+            }
+            
+            // Show status message
+            function showStatus(message, type) {
+                // Remove existing status messages
+                const existingStatus = document.querySelector('.status-message');
+                if (existingStatus) {
+                    existingStatus.remove();
+                }
+                
+                // Create new status message
+                const statusDiv = document.createElement('div');
+                statusDiv.className = `status-message ${type}`;
+                statusDiv.textContent = message;
+                
+                // Insert after controls
+                const controls = document.querySelector('.controls');
+                controls.parentNode.insertBefore(statusDiv, controls.nextSibling);
+                
+                // Auto remove after 5 seconds
+                setTimeout(() => {
+                    if (statusDiv.parentNode) {
+                        statusDiv.remove();
+                    }
+                }, 5000);
+            }
+            
+            // Event listeners
+            loadAllBtn.addEventListener('click', loadAllData);
+            clearAllBtn.addEventListener('click', clearAllData);
+            loadOrgUnitBtn.addEventListener('click', loadAllRelationsData);
+            
+            // Individual load buttons
+            loadBranchesBtn.addEventListener('click', loadBranchesData);
+            loadBrandsBtn.addEventListener('click', loadBrandsData);
+            loadProductsBtn.addEventListener('click', loadProductsData);
+            loadAllRelationsBtn.addEventListener('click', loadAllRelationsData);
+            
+            // Individual relation load buttons
+            loadRelOrgUnitBtn.addEventListener('click', loadRelOrgUnitData);
+            loadBranchProductRelBtn.addEventListener('click', loadBranchProductRelData);
+            loadBranchRelBtn.addEventListener('click', loadBranchRelData);
+            loadInternetappRelBtn.addEventListener('click', loadInternetappRelData);
+            
+            // Clear buttons
+            clearBranchesBtn.addEventListener('click', clearBranchesData);
+            clearBrandsBtn.addEventListener('click', clearBrandsData);
+            clearProductsBtn.addEventListener('click', clearProductsData);
+            clearAllRelationsBtn.addEventListener('click', clearAllRelationsData);
+            clearRelOrgUnitBtn.addEventListener('click', clearRelOrgUnitData);
+            clearBranchProductRelBtn.addEventListener('click', clearBranchProductRelData);
+            clearBranchRelBtn.addEventListener('click', clearBranchRelData);
+            clearInternetappRelBtn.addEventListener('click', clearInternetappRelData);
+            
+            // Make functions globally available for onclick handlers
+            window.insertBranchRelation = insertBranchRelation;
+            window.insertBrandRelation = insertBrandRelation;
+        });
+    </script>
+</body>
+</html>

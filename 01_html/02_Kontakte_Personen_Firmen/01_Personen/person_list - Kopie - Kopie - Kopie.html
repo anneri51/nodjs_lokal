@@ -1,0 +1,3876 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personenverwaltung mit Geschwister-Funktionalität</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7f9;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #2c3e50, #1a2530);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+        
+        .logo span {
+            color: #4CAF50;
+        }
+        
+        .last-updated {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .sidebar {
+            width: 300px;
+            background: white;
+            padding: 1.5rem;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .section-title {
+            font-size: 1.3rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #4CAF50;
+            color: #2c3e50;
+        }
+        
+        .group-list {
+            list-style: none;
+        }
+        
+        .group-item {
+            padding: 0.8rem 1rem;
+            margin-bottom: 0.5rem;
+            background: #f8f9fa;
+            border-left: 4px solid #4CAF50;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .group-item:hover {
+            background: #e9f5e9;
+            transform: translateX(5px);
+        }
+        
+        .group-item.active {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .search-box {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+        
+        .search-box input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            padding-left: 40px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #777;
+        }
+        
+        .person-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .person-card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .person-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card-header {
+            background: #2c3e50;
+            color: white;
+            padding: 1rem;
+            position: relative;
+        }
+        
+        .person-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            border: 3px solid white;
+        }
+        
+        .person-name {
+            font-size: 1.2rem;
+            margin-bottom: 0.2rem;
+            padding-right: 90px;
+        }
+        
+        .person-details {
+            padding: 1.2rem;
+        }
+        
+        .detail-row {
+            margin-bottom: 0.8rem;
+            display: flex;
+        }
+        
+        .detail-label {
+            font-weight: bold;
+            min-width: 120px;
+            color: #555;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #777;
+        }
+        
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+        
+        .info {
+            background: #e3f2fd;
+            color: #1565c0;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+        
+        /* Pagination Styles */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 2rem;
+            gap: 0.5rem;
+        }
+        
+        .pagination-button {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .pagination-button:hover:not(:disabled) {
+            background: #4CAF50;
+        }
+        
+        .pagination-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .pagination-info {
+            margin: 0 1rem;
+            font-weight: bold;
+        }
+        
+        .page-size-selector {
+            margin-left: 1rem;
+            padding: 0.5rem;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        
+        /* Person Detail Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+        
+        .person-detail-modal {
+            background: white;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .modal-header {
+            background: #2c3e50;
+            color: white;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+        }
+        
+        .modal-title {
+            font-size: 1.5rem;
+            margin: 0;
+        }
+        
+        .modal-person-image {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            border: 3px solid white;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            padding: 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+        }
+        
+        .detail-section {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #eee;
+            width: 100%;
+        }
+        
+        .detail-section-title {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: #2c3e50;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 0.5rem;
+        }
+        
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+            width: 100%;
+        }
+        
+        .detail-item {
+            margin-bottom: 0.8rem;
+        }
+        
+        .detail-item-label {
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 0.3rem;
+        }
+        
+        .detail-item-value {
+            color: #333;
+        }
+        
+        .modal-loading {
+            text-align: center;
+            padding: 2rem;
+            color: #777;
+        }
+        
+        .modal-error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem;
+        }
+        
+        .all-button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 1rem;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        
+        .all-button:hover {
+            background: #3e8e41;
+        }
+        
+        .image-placeholder {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777;
+            font-size: 0.8rem;
+            text-align: center;
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            border: 3px solid white;
+        }
+        
+        .modal-image-placeholder {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777;
+            font-size: 0.8rem;
+            text-align: center;
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            border: 3px solid white;
+        }
+        
+        /* Image gallery styles */
+        .image-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .image-item {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+        }
+        
+        .image-item img, .image-item iframe {
+            width: 100%;
+            height: 200px;
+            object-fit: contain;
+            background: #f5f5f5;
+        }
+        
+        .pdf-thumbnail {
+            cursor: pointer;
+            background: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            flex-direction: column;
+        }
+        
+        .pdf-thumbnail i {
+            font-size: 3rem;
+            color: #e74c3c;
+        }
+        
+        .image-meta {
+            padding: 1rem;
+            font-size: 0.85rem;
+        }
+        
+        .image-meta p {
+            margin: 0.3rem 0;
+        }
+        
+        .error-thumbnail {
+            background: #ffebee;
+            color: #c62828;
+            padding: 2rem;
+            text-align: center;
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .lexoffice-link {
+            color: #4CAF50;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .lexoffice-link:hover {
+            text-decoration: underline;
+        }
+        
+        .null-value {
+            color: #777;
+            font-style: italic;
+        }
+        
+        /* New styles for selection and relation functionality */
+        .selection-section {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .selection-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .selection-title {
+            font-size: 1.2rem;
+            color: #2c3e50;
+        }
+        
+        .selection-controls {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .selection-button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .selection-button:hover {
+            background: #3e8e41;
+        }
+        
+        .selection-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .selection-button.clear {
+            background: #f44336;
+        }
+        
+        .selection-button.clear:hover {
+            background: #d32f2f;
+        }
+        
+        .selection-summary {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #e8f5e9;
+            border-radius: 4px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .selected-persons-list {
+            margin-top: 1rem;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 0.5rem;
+        }
+        
+        .selected-person-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .selected-person-item:last-child {
+            border-bottom: none;
+        }
+        
+        .remove-person {
+            color: #f44336;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .person-card.selected {
+            border: 2px solid #4CAF50;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+        
+        .group-select {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+        
+        .relation-status {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .relation-status.success {
+            background: #e8f5e9;
+            border-left: 4px solid #4CAF50;
+            color: #2e7d32;
+            display: block;
+        }
+        
+        .relation-status.error {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            color: #c62828;
+            display: block;
+        }
+        
+        /* Details button style */
+        .details-button {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            transition: background 0.3s;
+            width: 100%;
+        }
+        
+        .details-button:hover {
+            background: #4CAF50;
+        }
+        
+        /* New styles for image gallery section */
+        .image-gallery-section {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+        
+        .gallery-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #4CAF50;
+        }
+        
+        .gallery-title {
+            font-size: 1.3rem;
+            color: #2c3e50;
+        }
+        
+        .close-gallery {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .gallery-loading {
+            text-align: center;
+            padding: 2rem;
+            color: #777;
+        }
+        
+        .gallery-error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+        
+        .gallery-image-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+        }
+        
+        .gallery-image-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: contain;
+            background: #f5f5f5;
+        }
+        
+        .gallery-image-info {
+            padding: 1rem;
+        }
+        
+        .gallery-image-info div {
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .view-images-btn {
+            background: #9c27b0;
+            margin-top: 0.5rem;
+        }
+        
+        .view-images-btn:hover {
+            background: #7b1fa2;
+        }
+        
+        /* Table styles for Berufe */
+        .berufe-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        .berufe-table th, .berufe-table td {
+            border: 1px solid #ddd;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        
+        .berufe-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        
+        .berufe-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .berufe-table tr:hover {
+            background-color: #f1f1f1;
+        }
+        
+        .delete-relation-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: background 0.3s;
+        }
+        
+        .delete-relation-btn:hover {
+            background: #d32f2f;
+        }
+        
+        .delete-relation-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .groups-container {
+            margin-top: 20px;
+        }
+        
+        .group-item {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+        
+        .group-header {
+            padding: 15px;
+            background-color: #f8f9fa;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.3s;
+        }
+        
+        .group-header:hover {
+            background-color: #e9ecef;
+        }
+        
+        .group-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #333;
+        }
+        
+        .group-id {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .group-content {
+            padding: 15px;
+            background-color: white;
+            border-top: 1px solid #ddd;
+        }
+        
+        /* New styles for Geschäftspartner Kontakt Relationen */
+        .relation-section {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .relation-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .relation-search-box {
+            position: relative;
+            flex-grow: 1;
+            max-width: 400px;
+        }
+        
+        .relation-search-box input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            padding-left: 40px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        
+        .relation-search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #777;
+        }
+        
+        .refresh-relations-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        
+        .refresh-relations-btn:hover {
+            background: #3e8e41;
+        }
+        
+        .relations-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        .relations-table th, .relations-table td {
+            border: 1px solid #ddd;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        
+        .relations-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        
+        .relations-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .relations-table tr:hover {
+            background-color: #f1f1f1;
+        }
+        
+        .relations-pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 1rem;
+            gap: 0.5rem;
+        }
+        
+        .relations-pagination-button {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .relations-pagination-button:hover:not(:disabled) {
+            background: #4CAF50;
+        }
+        
+        .relations-pagination-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .relations-pagination-info {
+            margin: 0 1rem;
+            font-weight: bold;
+        }
+        
+        .relations-page-size-selector {
+            margin-left: 1rem;
+            padding: 0.5rem;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        
+        /* New styles for Person-Group Relations */
+        .person-group-relations {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .person-group-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        .person-group-table th, .person-group-table td {
+            border: 1px solid #ddd;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        
+        .person-group-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        
+        .person-group-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .person-group-table tr:hover {
+            background-color: #f1f1f1;
+        }
+        
+        .delete-group-relation-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: background 0.3s;
+        }
+        
+        .delete-group-relation-btn:hover {
+            background: #d32f2f;
+        }
+        
+        .delete-group-relation-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        /* New styles for Kandidaten Relations */
+        .kandidaten-section {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .kandidaten-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        .kandidaten-table th, .kandidaten-table td {
+            border: 1px solid #ddd;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        
+        .kandidaten-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        
+        .kandidaten-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .kandidaten-table tr:hover {
+            background-color: #f1f1f1;
+        }
+        
+        /* New styles for family relations */
+        .family-section {
+            margin-top: 1rem;
+        }
+        
+        .family-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .family-button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-size: 0.9rem;
+        }
+        
+        .family-button:hover {
+            background: #2980b9;
+        }
+        
+        .family-button.active {
+            background: #2c3e50;
+        }
+        
+        .family-content {
+            display: none;
+            margin-top: 1rem;
+        }
+        
+        .family-content.active {
+            display: block;
+        }
+        
+        .family-list {
+            list-style: none;
+        }
+        
+        .family-item {
+            padding: 10px 15px;
+            margin-bottom: 5px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .family-item:hover {
+            background: #e9ecef;
+        }
+        
+        .family-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .family-details {
+            font-size: 0.85rem;
+            color: #666;
+        }
+        
+        /* New styles for Geschwister Relations */
+        .geschwister-section {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .geschwister-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        .geschwister-table th, .geschwister-table td {
+            border: 1px solid #ddd;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        
+        .geschwister-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        
+        .geschwister-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .geschwister-table tr:hover {
+            background-color: #f1f1f1;
+        }
+        
+        .delete-geschwister-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: background 0.3s;
+        }
+        
+        .delete-geschwister-btn:hover {
+            background: #d32f2f;
+        }
+        
+        .delete-geschwister-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        @media (max-width: 992px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                box-shadow: none;
+            }
+            
+            .person-grid {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .person-image, .image-placeholder {
+                width: 60px;
+                height: 60px;
+                right: 10px;
+                top: 10px;
+            }
+            
+            .person-name {
+                padding-right: 70px;
+            }
+            
+            .modal-person-image, .modal-image-placeholder {
+                width: 70px;
+                height: 70px;
+                right: 15px;
+                top: 15px;
+            }
+            
+            .image-gallery {
+                grid-template-columns: 1fr;
+            }
+            
+            .selection-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            
+            .selection-controls {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .gallery-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .berufe-table {
+                display: block;
+                overflow-x: auto;
+            }
+            
+            .relation-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .relation-search-box {
+                max-width: 100%;
+            }
+            
+            .relations-table {
+                display: block;
+                overflow-x: auto;
+            }
+            
+            .person-group-table {
+                display: block;
+                overflow-x: auto;
+            }
+            
+            .kandidaten-table {
+                display: block;
+                overflow-x: auto;
+            }
+            
+            .geschwister-table {
+                display: block;
+                overflow-x: auto;
+            }
+            
+            .family-buttons {
+                flex-direction: column;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .person-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+                gap: 0.5rem;
+            }
+            
+            .detail-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .pagination {
+                flex-wrap: wrap;
+            }
+            
+            .person-image, .image-placeholder {
+                position: relative;
+                margin: 0 auto 10px;
+                right: auto;
+                top: auto;
+            }
+            
+            .person-name {
+                padding-right: 0;
+                text-align: center;
+            }
+            
+            .card-header {
+                text-align: center;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .modal-person-image, .modal-image-placeholder {
+                position: relative;
+                margin: 0 auto 15px;
+                right: auto;
+                top: auto;
+            }
+            
+            .modal-header {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .relations-pagination {
+                flex-wrap: wrap;
+            }
+            
+            .geschwister-pagination {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">Personen<span>Verwaltung</span></div>
+            <div class="last-updated">Last updated: <span id="current-date"></span></div>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="sidebar">
+            <h2 class="section-title">Personengruppen</h2>
+            <button class="all-button" id="all-persons-btn">Alle Personen anzeigen</button>
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="group-search" placeholder="Gruppen durchsuchen...">
+            </div>
+            <ul class="group-list" id="group-list">
+                <li class="loading">Lade Personengruppen...</li>
+            </ul>
+        </div>
+        
+        <div class="main-content">
+            <div class="selection-section">
+                <div class="selection-header">
+                    <h3 class="selection-title">Personen auswählen und zu Gruppe zuordnen</h3>
+                    <div class="selection-controls">
+                        <button class="selection-button" id="create-relation-btn" disabled>Zuordnung erstellen</button>
+                        <button class="selection-button clear" id="clear-selection-btn" disabled>Auswahl löschen</button>
+                    </div>
+                </div>
+                
+                <select class="group-select" id="target-group-select">
+                    <option value="">Zielgruppe auswählen...</option>
+                </select>
+                
+                <div class="selection-summary">
+                    <strong>Ausgewählte Personen:</strong> <span id="selected-count">0</span>
+                    <div class="selected-persons-list" id="selected-persons-list"></div>
+                </div>
+                
+                <div class="relation-status" id="relation-status"></div>
+            </div>
+            
+            <h2 class="section-title">Personen</h2>
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="person-search" placeholder="Personen durchsuchen...">
+            </div>
+            
+            <div id="person-list">
+                <div class="loading">Wählen Sie eine Personengruppe aus, um Personen anzuzeigen</div>
+            </div>
+            
+            <div id="pagination-controls" class="pagination" style="display: none;">
+                <button id="first-page" class="pagination-button" disabled>Erste</button>
+                <button id="prev-page" class="pagination-button" disabled>Zurück</button>
+                <span id="pagination-info" class="pagination-info">Seite 1 von 1</span>
+                <button id="next-page" class="pagination-button" disabled>Weiter</button>
+                <button id="last-page" class="pagination-button" disabled>Letzte</button>
+                <select id="page-size" class="page-size-selector">
+                    <option value="50">50 pro Seite</option>
+                    <option value="100" selected>100 pro Seite</option>
+                    <option value="200">200 pro Seite</option>
+                </select>
+            </div>
+            
+            <!-- Kandidaten Section -->
+            <div class="kandidaten-section">
+                <h2 class="section-title">Zugehörige Kandidaten</h2>
+                
+                <div class="relation-controls">
+                    <div class="relation-search-box">
+                        <span class="relation-search-icon">🔍</span>
+                        <input type="text" id="kandidaten-search" placeholder="Kandidaten durchsuchen...">
+                    </div>
+                    <button class="refresh-relations-btn" id="refresh-kandidaten-btn">Daten aktualisieren</button>
+                </div>
+                
+                <div id="kandidaten-table-container">
+                    <div class="loading">Wählen Sie eine Person aus, um zugehörige Kandidaten anzuzeigen</div>
+                </div>
+            </div>
+            
+            <!-- Geschwister Relations Section -->
+            <div class="geschwister-section">
+                <h2 class="section-title">Geschwister Relationen</h2>
+                
+                <div class="relation-controls">
+                    <div class="relation-search-box">
+                        <span class="relation-search-icon">🔍</span>
+                        <input type="text" id="geschwister-search" placeholder="Geschwister Relationen durchsuchen...">
+                    </div>
+                    <button class="refresh-relations-btn" id="refresh-geschwister-btn">Daten aktualisieren</button>
+                </div>
+                
+                <div id="geschwister-table-container">
+                    <div class="loading">Lade Geschwister Relationen...</div>
+                </div>
+                
+                <div id="geschwister-pagination-controls" class="relations-pagination" style="display: none;">
+                    <button id="geschwister-first-page" class="relations-pagination-button" disabled>Erste</button>
+                    <button id="geschwister-prev-page" class="relations-pagination-button" disabled>Zurück</button>
+                    <span id="geschwister-pagination-info" class="relations-pagination-info">Seite 1 von 1</span>
+                    <button id="geschwister-next-page" class="relations-pagination-button" disabled>Weiter</button>
+                    <button id="geschwister-last-page" class="relations-pagination-button" disabled>Letzte</button>
+                    <select id="geschwister-page-size" class="relations-page-size-selector">
+                        <option value="10">10 pro Seite</option>
+                        <option value="25" selected>25 pro Seite</option>
+                        <option value="50">50 pro Seite</option>
+                        <option value="100">100 pro Seite</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Person-Group Relations Section -->
+            <div class="person-group-relations">
+                <h2 class="section-title">Person-Gruppen Zuordnungen</h2>
+                
+                <div class="relation-controls">
+                    <div class="relation-search-box">
+                        <span class="relation-search-icon">🔍</span>
+                        <input type="text" id="person-group-search" placeholder="Person-Gruppen Relationen durchsuchen...">
+                    </div>
+                    <button class="refresh-relations-btn" id="refresh-person-group-btn">Daten aktualisieren</button>
+                </div>
+                
+                <div id="person-group-table-container">
+                    <div class="loading">Lade Person-Gruppen Relationen...</div>
+                </div>
+                
+                <div id="person-group-pagination-controls" class="relations-pagination" style="display: none;">
+                    <button id="person-group-first-page" class="relations-pagination-button" disabled>Erste</button>
+                    <button id="person-group-prev-page" class="relations-pagination-button" disabled>Zurück</button>
+                    <span id="person-group-pagination-info" class="relations-pagination-info">Seite 1 von 1</span>
+                    <button id="person-group-next-page" class="relations-pagination-button" disabled>Weiter</button>
+                    <button id="person-group-last-page" class="relations-pagination-button" disabled>Letzte</button>
+                    <select id="person-group-page-size" class="relations-page-size-selector">
+                        <option value="10">10 pro Seite</option>
+                        <option value="25" selected>25 pro Seite</option>
+                        <option value="50">50 pro Seite</option>
+                        <option value="100">100 pro Seite</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Geschäftspartner Kontakt Relationen Section -->
+            <div class="relation-section">
+                <h2 class="section-title">Geschäftspartner Kontakt Relationen</h2>
+                
+                <div class="relation-controls">
+                    <div class="relation-search-box">
+                        <span class="relation-search-icon">🔍</span>
+                        <input type="text" id="relation-search" placeholder="Relationen durchsuchen...">
+                    </div>
+                    <button class="refresh-relations-btn" id="refresh-relations-btn">Daten aktualisieren</button>
+                </div>
+                
+                <div id="relation-table-container">
+                    <div class="loading">Lade Relationen...</div>
+                </div>
+                
+                <div id="relations-pagination-controls" class="relations-pagination" style="display: none;">
+                    <button id="relations-first-page" class="relations-pagination-button" disabled>Erste</button>
+                    <button id="relations-prev-page" class="relations-pagination-button" disabled>Zurück</button>
+                    <span id="relations-pagination-info" class="relations-pagination-info">Seite 1 von 1</span>
+                    <button id="relations-next-page" class="relations-pagination-button" disabled>Weiter</button>
+                    <button id="relations-last-page" class="relations-pagination-button" disabled>Letzte</button>
+                    <select id="relations-page-size" class="relations-page-size-selector">
+                        <option value="10">10 pro Seite</option>
+                        <option value="25" selected>25 pro Seite</option>
+                        <option value="50">50 pro Seite</option>
+                        <option value="100">100 pro Seite</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Image gallery section -->
+            <div class="image-gallery-section" id="imageGallerySection">
+                <div class="gallery-header">
+                    <h3 class="gallery-title">Bilder für Person: <span id="gallery-person-id"></span></h3>
+                    <button class="close-gallery" id="closeGallery">Schließen</button>
+                </div>
+                <div id="galleryLoading" class="gallery-loading">Lade Bilder...</div>
+                <div id="galleryError" class="gallery-error"></div>
+                <div class="gallery-grid" id="imageGallery"></div>
+
+                <div id="group" class="groups-container gallery-title">
+                    <div>Zugehörige Gruppen:</div>
+                    <!-- Groups will be loaded here -->
+                </div>
+
+                <div id="loading" class="loading" style="display: none;">
+                    Loading groups...
+                </div>
+
+                <div id="error" class="error" style="display: none;"></div>
+            </div>
+        </div>
+        
+        <!-- Person Detail Modal -->
+        <div class="modal-overlay" id="person-modal" style="display: none;">
+            <div class="person-detail-modal">
+                <div class="modal-header">
+                    <h2 class="modal-title">Personendetails</h2>
+                    <img src="" class="modal-person-image" alt="" style="display: none;">
+                    <div class="modal-image-placeholder" style="display: none;">Kein Bild</div>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="modal-content">
+                    <div class="modal-loading">Lade Personendetails...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variable to track blob URLs for cleanup
+        const blobUrls = [];
+        
+        // Global variables for person data
+        let allPersons = [];
+        let filteredPersons = [];
+        
+        // Global variables for relation data
+        let allRelations = [];
+        let filteredRelations = [];
+        
+        // Global variables for person-group relations
+        let allPersonGroupRelations = [];
+        let filteredPersonGroupRelations = [];
+        
+        // Global variables for kandidaten data
+        let allKandidaten = [];
+        let filteredKandidaten = [];
+        let selectedPersonId = null;
+        
+        // Global variables for geschwister data
+        let allGeschwister = [];
+        let filteredGeschwister = [];
+        
+        // Object to cache person images
+        const personImageCache = {};
+        
+        // Format date helper function
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return isNaN(date.getTime()) ? 'Ungültiges Datum' : date.toLocaleDateString('de-DE');
+        }
+        
+        // Function to fetch images from web service
+        async function fetchImagesFromWebService(id) {
+            const galleryLoading = document.getElementById('galleryLoading');
+            const galleryError = document.getElementById('galleryError');
+            const imageGallery = document.getElementById('imageGallery');
+            
+            // Show loading indicator
+            galleryLoading.style.display = 'block';
+            galleryError.style.display = 'none';
+            imageGallery.innerHTML = '';
+            
+            try {
+                // Make request to your web service
+                const response = await fetch(`http://localhost:5000/person/bild/${id}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Parse the response
+                const data = await response.json();
+                
+                // Check if we have images - adjust based on your API response structure
+                if (!data || data.length === 0) {
+                    throw new Error('Keine Bilder für diese Person-ID gefunden');
+                }
+                
+                // Display all images
+                data.forEach((imageData, index) => {
+                    displayImage(id, imageData, index, data.length);
+                });
+                
+            } catch (error) {
+                console.error('Error fetching images:', error);
+                galleryError.textContent = `Fehler beim Laden der Bilder: ${error.message}`;
+                galleryError.style.display = 'block';
+            } finally {
+                // Hide loading indicator
+                galleryLoading.style.display = 'none';
+            }
+        }
+        
+        // Function to fetch and cache the main image for a person
+        async function fetchPersonMainImage(personId) {
+            // Return cached image if available
+            if (personImageCache[personId]) {
+                return personImageCache[personId];
+            }
+            
+            try {
+                // Make request to your web service
+                const response = await fetch(`http://localhost:5000/person/bild/${personId}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Parse the response
+                const data = await response.json();
+                
+                // Check if we have images
+                if (!data || data.length === 0) {
+                    return null;
+                }
+                
+                // Find the main image (MAIN_BILD = 1) or use the first image
+                let mainImage = data.find(img => img.MAIN_BILD === 1) || data[0];
+                
+                // Convert the bytea data to a Uint8Array
+                let byteArray;
+                if (mainImage.FILECONTENT.data instanceof Array) {
+                    byteArray = new Uint8Array(mainImage.FILECONTENT.data);
+                } else if (mainImage.FILECONTENT.data instanceof Uint8Array) {
+                    byteArray = mainImage.FILECONTENT.data;
+                } else if (typeof mainImage.FILECONTENT.data === 'string') {
+                    // Handle base64 encoded string
+                    const binaryString = atob(mainImage.FILECONTENT.data);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    byteArray = bytes;
+                } else {
+                    console.warn('Unsupported FILECONTENT data format:', typeof mainImage.FILECONTENT.data);
+                    return null;
+                }
+
+                // Create a Blob from the byte array
+                const blob = new Blob([byteArray], { type: 'image/jpeg' });
+
+                // Create an object URL from the Blob
+                const imageUrl = URL.createObjectURL(blob);
+                
+                // Cache the image URL
+                personImageCache[personId] = imageUrl;
+                
+                return imageUrl;
+                
+            } catch (error) {
+                console.error('Error fetching person image:', error);
+                return null;
+            }
+        }
+        
+        // Function to display an image with byte array conversion
+        function displayImage(personId, image, index, total) {
+            const imageGallery = document.getElementById('imageGallery');
+            
+            // Convert the bytea data to a Uint8Array
+            let byteArray;
+            if (image.FILECONTENT.data instanceof Array) {
+                byteArray = new Uint8Array(image.FILECONTENT.data);
+            } else if (image.FILECONTENT.data instanceof Uint8Array) {
+                byteArray = image.FILECONTENT.data;
+            } else if (typeof image.FILECONTENT.data === 'string') {
+                // Handle base64 encoded string
+                const binaryString = atob(image.FILECONTENT.data);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                byteArray = bytes;
+            } else {
+                console.warn('Unsupported FILECONTENT data format:', typeof image.FILECONTENT.data);
+                return; // Skip this image
+            }
+
+            // Create a Blob from the byte array
+            const blob = new Blob([byteArray], { type: 'image/jpeg' });
+
+            // Create an object URL from the Blob
+            const imageUrl = URL.createObjectURL(blob);
+            blobUrls.push(imageUrl); // Track for cleanup
+            
+            // Create the image card
+            const imageCard = document.createElement('div');
+            imageCard.className = 'gallery-image-card';
+            
+            imageCard.innerHTML = `
+                <img src="${imageUrl}" alt="Image ID: ${image.PK_BILD_BILDER}">
+                <div class="gallery-image-info">
+                    <div><strong>Person ID:</strong> ${personId}</div>
+                    <div><strong>Image ID:</strong> ${image.PK_BILD_BILDER}</div>
+                    <div><strong>Bild ${index + 1} von ${total}</strong></div>
+                    ${image.MAIN_BILD === 1 ? '<div><strong>Hauptbild</strong></div>' : ''}
+                </div>
+            `;
+            
+            imageGallery.appendChild(imageCard);
+        }
+
+        // Show image gallery for a person
+        function showImageGallery(personId) {
+            // Update gallery title
+            document.getElementById('gallery-person-id').textContent = personId;
+            
+            // Show gallery section
+            document.getElementById('imageGallerySection').style.display = 'block';
+            
+            // Fetch and display images
+            fetchImagesFromWebService(personId);
+            
+            // Fetch and display groups
+            fetchGroups(personId);
+            
+            // Scroll to gallery
+            document.getElementById('imageGallerySection').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Close image gallery
+        function closeImageGallery() {
+            // Clean up blob URLs
+            blobUrls.forEach(url => URL.revokeObjectURL(url));
+            blobUrls.length = 0;
+            
+            // Hide gallery
+            document.getElementById('imageGallerySection').style.display = 'none';
+        }
+
+        // Function to delete person-beruf relation
+        async function deletePersonBerufRelation(relationId, personId, berufId) {
+            if (!confirm('Möchten Sie diese Berufszuordnung wirklich löschen?')) {
+                return false;
+            }
+
+            try {
+                const response = await fetch('http://localhost:5000/person_beruf_rel/delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        id: relationId,
+                        fkkonperson: personId,
+                        fkworkberuf: berufId
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || `HTTP error! Status: ${response.status}`);
+                }
+
+                if (result.success) {
+                    alert(`Erfolgreich gelöscht: ${result.deletedCount} Zuordnung(en)`);
+                    return true;
+                } else {
+                    throw new Error(result.error || 'Unbekannter Fehler beim Löschen');
+                }
+
+            } catch (error) {
+                console.error('Error deleting relation:', error);
+                alert(`Fehler beim Löschen: ${error.message}`);
+                return false;
+            }
+        }
+
+        // Function to delete person-group relation
+        async function deletePersonGroupRelation(relationId) {
+            if (!confirm('Möchten Sie diese Person-Gruppen Zuordnung wirklich löschen?')) {
+                return false;
+            }
+
+            try {
+                const response = await fetch(`http://localhost:5000/person_group_rel/delete/${relationId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || `HTTP error! Status: ${response.status}`);
+                }
+
+                if (result.success) {
+                    alert('Person-Gruppen Zuordnung erfolgreich gelöscht!');
+                    return true;
+                } else {
+                    throw new Error(result.error || 'Unbekannter Fehler beim Löschen');
+                }
+
+            } catch (error) {
+                console.error('Error deleting person-group relation:', error);
+                alert(`Fehler beim Löschen: ${error.message}`);
+                return false;
+            }
+        }
+
+        // Function to delete geschwister relation
+        async function deleteGeschwisterRelation(relationId) {
+            if (!confirm('Möchten Sie diese Geschwister Relation wirklich löschen?')) {
+                return false;
+            }
+
+            try {
+                const response = await fetch(`http://localhost:5000/person_geschw/delete/${relationId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || `HTTP error! Status: ${response.status}`);
+                }
+
+                if (result.success) {
+                    alert('Geschwister Relation erfolgreich gelöscht!');
+                    return true;
+                } else {
+                    throw new Error(result.error || 'Unbekannter Fehler beim Löschen');
+                }
+
+            } catch (error) {
+                console.error('Error deleting geschwister relation:', error);
+                alert(`Fehler beim Löschen: ${error.message}`);
+                return false;
+            }
+        }
+
+        // Function to fetch and display groups for a person
+        async function fetchGroups(personId) {
+            const groupContainer = document.getElementById('group');
+            const loadingElement = document.getElementById('loading');
+            const errorElement = document.getElementById('error');
+
+            // Reset containers
+            errorElement.style.display = 'none';
+            groupContainer.innerHTML = '';
+            
+            if (!personId) {
+                showError('Please enter a Person ID');
+                return;
+            }
+
+            loadingElement.style.display = 'block';
+
+            try {
+                const response = await fetch(`http://localhost:5000/person_group/${personId}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const groups = await response.json();
+                loadingElement.style.display = 'none';
+                
+                if (groups.length === 0) {
+                    groupContainer.innerHTML = '<div class="no-groups">Keine Gruppen für diese Person gefunden</div>';
+                    return;
+                }
+
+                displayGroups(groups, personId);
+                
+            } catch (error) {
+                loadingElement.style.display = 'none';
+                showError(`Error fetching groups: ${error.message}`);
+            }
+        }
+
+        function displayGroups(groups, personId) {
+            const groupContainer = document.getElementById('group');
+            groupContainer.innerHTML = '';
+
+            groups.forEach(group => {
+                const groupElement = createGroupElement(group);
+                groupContainer.appendChild(groupElement);
+            });
+        }
+
+        function createGroupElement(group) {
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'group-item';
+            
+            const header = document.createElement('div');
+            header.className = 'group-header';
+            header.innerHTML = `
+                <h3>${group.PERSON_GROUP_NAME || 'Unnamed Group'}</h3>
+                <span class="group-id">ID: ${group.FK_KON_PERSON_GROUP} (${group.PK_REL_KON_PERSON_PERSON_GROUP})</span>
+            `;
+
+            const content = document.createElement('div');
+            content.className = 'group-content';
+            content.style.display = 'none';
+            content.innerHTML = `
+                <p><strong>Group ID:</strong> ${group.PK_KON_PERSON_GROUP}</p>
+                <p><strong>Group Name:</strong> ${group.PERSON_GROUP_NAME || 'N/A'}</p>
+                <p><strong>Person ID:</strong> ${group.PK_KON_PERSON || 'N/A'}</p>
+                <p><strong>Relation ID:</strong> ${group.PK_REL_KON_PERSON_PERSON_GROUP || 'N/A'}</p>
+                <button class="delete-group-relation-btn" data-relation-id="${group.PK_REL_KON_PERSON_PERSON_GROUP}">
+                    Zuordnung löschen
+                </button>
+            `;
+
+            // Add click event for collapsible functionality
+            header.addEventListener('click', () => {
+                const isVisible = content.style.display === 'block';
+                content.style.display = isVisible ? 'none' : 'block';
+                header.style.backgroundColor = isVisible ? '#f8f9fa' : '#e3f2fd';
+            });
+
+            // Add event listener to delete button
+            const deleteBtn = content.querySelector('.delete-group-relation-btn');
+            deleteBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const relationId = deleteBtn.dataset.relationId;
+                
+                // Disable button during deletion
+                deleteBtn.disabled = true;
+                deleteBtn.textContent = 'Löschen...';
+                
+                const success = await deletePersonGroupRelation(relationId);
+                
+                if (success) {
+                    // Remove the group element
+                    groupDiv.remove();
+                    
+                    // Check if any groups are left
+                    const remainingGroups = document.querySelectorAll('.group-item');
+                    if (remainingGroups.length === 0) {
+                        document.getElementById('group').innerHTML = '<div class="no-groups">Keine Gruppen für diese Person gefunden</div>';
+                    }
+                } else {
+                    // Re-enable button if deletion failed
+                    deleteBtn.disabled = false;
+                    deleteBtn.textContent = 'Zuordnung löschen';
+                }
+            });
+
+            groupDiv.appendChild(header);
+            groupDiv.appendChild(content);
+
+            return groupDiv;
+        }
+
+        // Show error function
+        function showError(message) {
+            const errorElement = document.getElementById('error');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+        }
+
+        // Fetch kandidaten data for a person
+        function fetchKandidatenForPerson(personId) {
+            const kandidatenTableContainer = document.getElementById('kandidaten-table-container');
+            
+            kandidatenTableContainer.innerHTML = '<div class="loading">Lade zugehörige Kandidaten...</div>';
+            
+            fetch(`http://localhost:5000/kand/${personId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    allKandidaten = data;
+                    filteredKandidaten = [...allKandidaten];
+                    selectedPersonId = personId;
+                    renderKandidatenTable();
+                })
+                .catch(error => {
+                    kandidatenTableContainer.innerHTML = 
+                        `<div class="error">Fehler beim Laden der Kandidaten: ${error.message}</div>`;
+                });
+        }
+
+        // Filter kandidaten based on search input
+        function filterKandidaten() {
+            const searchTerm = document.getElementById('kandidaten-search').value.toLowerCase();
+            
+            if (!Array.isArray(allKandidaten)) {
+                allKandidaten = [];
+            }
+            
+            filteredKandidaten = allKandidaten.filter(kand => 
+                (kand.PK_KAND_KANDIDAT && kand.PK_KAND_KANDIDAT.toString().includes(searchTerm)) ||
+                (kand.VORNAME && kand.VORNAME.toLowerCase().includes(searchTerm)) ||
+                (kand.NACHNAME && kand.NACHNAME.toLowerCase().includes(searchTerm)) ||
+                (kand.BEMERKUNG && kand.BEMERKUNG.toLowerCase().includes(searchTerm)) ||
+                (kand.STATUS && kand.STATUS.toLowerCase().includes(searchTerm))
+            );
+            
+            renderKandidatenTable();
+        }
+
+        // Render kandidaten table
+        function renderKandidatenTable() {
+            const kandidatenTableContainer = document.getElementById('kandidaten-table-container');
+            
+            if (!Array.isArray(filteredKandidaten)) {
+                filteredKandidaten = [];
+            }
+            
+            if (filteredKandidaten.length === 0) {
+                kandidatenTableContainer.innerHTML = '<div class="info">Keine Kandidaten für diese Person gefunden</div>';
+                return;
+            }
+            
+            let tableHTML = `
+                <div class="info">Anzahl Kandidaten: ${filteredKandidaten.length}</div>
+                <table class="kandidaten-table">
+                    <thead>
+                        <tr>
+                            <th>Kandidat ID</th>
+                            <th>Vorname</th>
+                            <th>Nachname</th>
+                            <th>Geburtsdatum</th>
+                            <th>Status</th>
+                            <th>Bemerkung</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            filteredKandidaten.forEach(kand => {
+                tableHTML += `
+                    <tr>
+                        <td>${kand.PK_WAHL_KANDIDATEN || '<span class="null-value">N/A</span>'}</td>
+<td>${kand.FK_WAHL_WAHL || '<span class="null-value">N/A</span>'}</td>
+<td>${kand.BEZEICHNUNG || '<span class="null-value">N/A</span>'}</td>
+<td>${kand.FK_KON_PERSON || '<span class="null-value">N/A</span>'}</td>
+                        <td>${kand.VORNAME || '<span class="null-value">N/A</span>'}</td>
+                        <td>${kand.NACHNAME || '<span class="null-value">N/A</span>'}</td>
+<td>${kand.PARTEI_KURZ || '<span class="null-value">N/A</span>'}</td>
+                        <td>${formatDate(kand.GEBURTSDATUM) || '<span class="null-value">N/A</span>'}</td>
+                        <td>${kand.STATUS || '<span class="null-value">N/A</span>'}</td>
+                        <td>${kand.BEMERKUNG || '<span class="null-value">N/A</span>'}</td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+            
+            kandidatenTableContainer.innerHTML = tableHTML;
+        }
+
+        // Fetch geschwister data from API
+        function fetchGeschwisterData() {
+            const geschwisterTableContainer = document.getElementById('geschwister-table-container');
+            const geschwisterPaginationControls = document.getElementById('geschwister-pagination-controls');
+            
+            geschwisterTableContainer.innerHTML = '<div class="loading">Lade Geschwister Relationen...</div>';
+            geschwisterPaginationControls.style.display = 'none';
+            
+            fetch('http://localhost:5000/person_geschw')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    allGeschwister = data;
+                    filteredGeschwister = [...allGeschwister];
+                    geschwisterCurrentPage = 1;
+                    updateGeschwisterPagination();
+                    renderGeschwisterCurrentPage();
+                })
+                .catch(error => {
+                    geschwisterTableContainer.innerHTML = 
+                        `<div class="error">Fehler beim Laden der Geschwister Relationen: ${error.message}</div>`;
+                });
+        }
+
+        // Filter geschwister based on search input
+        function filterGeschwister() {
+            const searchTerm = document.getElementById('geschwister-search').value.toLowerCase();
+            
+            if (!Array.isArray(allGeschwister)) {
+                allGeschwister = [];
+            }
+            
+            filteredGeschwister = allGeschwister.filter(relation => 
+                (relation.PK_REL_KON_PERSON_GESCHWISTER && relation.PK_REL_KON_PERSON_GESCHWISTER.toString().includes(searchTerm)) ||
+                (relation.FK_KON_PERSON && relation.FK_KON_PERSON.toString().includes(searchTerm)) ||
+                (relation.FK_KON_GESCHWISTER && relation.FK_KON_GESCHWISTER.toString().includes(searchTerm)) ||
+                (relation.person_vorname && relation.person_vorname.toLowerCase().includes(searchTerm)) ||
+                (relation.person_nachname && relation.person_nachname.toLowerCase().includes(searchTerm)) ||
+                (relation.geschwister_vorname && relation.geschwister_vorname.toLowerCase().includes(searchTerm)) ||
+                (relation.geschwister_nachname && relation.geschwister_nachname.toLowerCase().includes(searchTerm))
+            );
+            
+            geschwisterCurrentPage = 1;
+            updateGeschwisterPagination();
+            renderGeschwisterCurrentPage();
+        }
+
+        // Update geschwister pagination controls
+        function updateGeschwisterPagination() {
+            const geschwisterPaginationControls = document.getElementById('geschwister-pagination-controls');
+            const geschwisterFirstPageBtn = document.getElementById('geschwister-first-page');
+            const geschwisterPrevPageBtn = document.getElementById('geschwister-prev-page');
+            const geschwisterNextPageBtn = document.getElementById('geschwister-next-page');
+            const geschwisterLastPageBtn = document.getElementById('geschwister-last-page');
+            const geschwisterPaginationInfo = document.getElementById('geschwister-pagination-info');
+            const geschwisterPageSizeSelector = document.getElementById('geschwister-page-size');
+            
+            // Get the current page size
+            const geschwisterPageSize = parseInt(geschwisterPageSizeSelector.value);
+            
+            if (!Array.isArray(filteredGeschwister)) {
+                filteredGeschwister = [];
+            }
+            
+            geschwisterTotalPages = Math.ceil(filteredGeschwister.length / geschwisterPageSize);
+            
+            // Show/hide pagination controls
+            if (filteredGeschwister.length > geschwisterPageSize) {
+                geschwisterPaginationControls.style.display = 'flex';
+            } else {
+                geschwisterPaginationControls.style.display = 'none';
+            }
+            
+            // Update button states
+            geschwisterFirstPageBtn.disabled = geschwisterCurrentPage === 1;
+            geschwisterPrevPageBtn.disabled = geschwisterCurrentPage === 1;
+            geschwisterNextPageBtn.disabled = geschwisterCurrentPage === geschwisterTotalPages;
+            geschwisterLastPageBtn.disabled = geschwisterCurrentPage === geschwisterTotalPages;
+            
+            // Update pagination info
+            const start = (geschwisterCurrentPage - 1) * geschwisterPageSize + 1;
+            const end = Math.min(geschwisterCurrentPage * geschwisterPageSize, filteredGeschwister.length);
+            geschwisterPaginationInfo.textContent = `Seite ${geschwisterCurrentPage} von ${geschwisterTotalPages} (${start}-${end} von ${filteredGeschwister.length})`;
+        }
+
+        // Go to specific geschwister page
+        function goToGeschwisterPage(page) {
+            const geschwisterPageSizeSelector = document.getElementById('geschwister-page-size');
+            const geschwisterPageSize = parseInt(geschwisterPageSizeSelector.value);
+            const geschwisterTotalPages = Math.ceil(filteredGeschwister.length / geschwisterPageSize);
+            
+            if (page < 1 || page > geschwisterTotalPages) return;
+            
+            geschwisterCurrentPage = page;
+            updateGeschwisterPagination();
+            renderGeschwisterCurrentPage();
+        }
+
+        // Render current page of geschwister
+        function renderGeschwisterCurrentPage() {
+            const geschwisterTableContainer = document.getElementById('geschwister-table-container');
+            const geschwisterPageSizeSelector = document.getElementById('geschwister-page-size');
+            
+            // Get the current page size
+            const geschwisterPageSize = parseInt(geschwisterPageSizeSelector.value);
+            
+            if (!Array.isArray(filteredGeschwister)) {
+                filteredGeschwister = [];
+            }
+            
+            if (filteredGeschwister.length === 0) {
+                geschwisterTableContainer.innerHTML = '<div class="info">Keine Geschwister Relationen gefunden</div>';
+                return;
+            }
+            
+            // Calculate start and end index for current page
+            const startIndex = (geschwisterCurrentPage - 1) * geschwisterPageSize;
+            const endIndex = Math.min(startIndex + geschwisterPageSize, filteredGeschwister.length);
+            const currentRelations = filteredGeschwister.slice(startIndex, endIndex);
+            
+            // Create table
+            let tableHTML = `
+                <div class="info">Anzahl Datensätze: ${filteredGeschwister.length} (Zeigt ${startIndex + 1}-${endIndex})</div>
+                <table class="geschwister-table">
+                    <thead>
+                        <tr>
+                            <th>Relation ID</th>
+                            <th>Person ID</th>
+                            <th>Person Name</th>
+                            <th>Geschwister ID</th>
+                            <th>Geschwister Name</th>
+                            <th>Aktion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            currentRelations.forEach(relation => {
+                tableHTML += `
+                    <tr>
+                        <td>${relation.PK_REL_KON_PERSON_GESCHWISTER || '<span class="null-value">N/A</span>'}</td>
+                        <td>${relation.FK_KON_PERSON || '<span class="null-value">N/A</span>'}</td>
+                        <td>${(relation.person_vorname || '') + ' ' + (relation.person_nachname || '') || '<span class="null-value">N/A</span>'}</td>
+                        <td>${relation.FK_KON_GESCHWISTER || '<span class="null-value">N/A</span>'}</td>
+                        <td>${(relation.geschwister_vorname || '') + ' ' + (relation.geschwister_nachname || '') || '<span class="null-value">N/A</span>'}</td>
+                        <td>
+                            <button class="delete-geschwister-btn" 
+                                    data-relation-id="${relation.PK_REL_KON_PERSON_GESCHWISTER}">
+                                Löschen
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+            
+            geschwisterTableContainer.innerHTML = tableHTML;
+            
+            // Add event listeners to delete buttons
+            geschwisterTableContainer.querySelectorAll('.delete-geschwister-btn').forEach(button => {
+                button.addEventListener('click', async function() {
+                    const relationId = this.dataset.relationId;
+                    
+                    // Disable button during deletion
+                    this.disabled = true;
+                    this.textContent = 'Löschen...';
+                    
+                    const success = await deleteGeschwisterRelation(relationId);
+                    
+                    if (success) {
+                        // Remove the row from the table
+                        this.closest('tr').remove();
+                        
+                        // Check if table is empty now
+                        const remainingRows = geschwisterTableContainer.querySelectorAll('tbody tr');
+                        if (remainingRows.length === 0) {
+                            geschwisterTableContainer.innerHTML = '<div class="info">Keine Geschwister Relationen gefunden</div>';
+                        }
+                        
+                        // Refresh the data
+                        fetchGeschwisterData();
+                    } else {
+                        // Re-enable button if deletion failed
+                        this.disabled = false;
+                        this.textContent = 'Löschen';
+                    }
+                });
+            });
+        }
+
+        // Fetch person-group relations data from API
+        function fetchPersonGroupRelations() {
+            const personGroupTableContainer = document.getElementById('person-group-table-container');
+            const personGroupPaginationControls = document.getElementById('person-group-pagination-controls');
+            
+            personGroupTableContainer.innerHTML = '<div class="loading">Lade Person-Gruppen Relationen...</div>';
+            personGroupPaginationControls.style.display = 'none';
+            
+            fetch('http://localhost:5000/person_group_relations')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success && Array.isArray(data.data)) {
+                        allPersonGroupRelations = data.data;
+                        filteredPersonGroupRelations = [...allPersonGroupRelations];
+                        personGroupCurrentPage = 1;
+                        updatePersonGroupPagination();
+                        renderPersonGroupCurrentPage();
+                    } else {
+                        throw new Error('Invalid data format from API');
+                    }
+                })
+                .catch(error => {
+                    personGroupTableContainer.innerHTML = 
+                        `<div class="error">Fehler beim Laden der Person-Gruppen Relationen: ${error.message}</div>`;
+                });
+        }
+
+        // Filter person-group relations based on search input
+        function filterPersonGroupRelations() {
+            const searchTerm = document.getElementById('person-group-search').value.toLowerCase();
+            
+            if (!Array.isArray(allPersonGroupRelations)) {
+                allPersonGroupRelations = [];
+            }
+            
+            filteredPersonGroupRelations = allPersonGroupRelations.filter(relation => 
+                (relation.PK_REL_KON_PERSON_PERSON_GROUP && relation.PK_REL_KON_PERSON_PERSON_GROUP.toString().includes(searchTerm)) ||
+                (relation.PK_KON_PERSON && relation.PK_KON_PERSON.toString().includes(searchTerm)) ||
+                (relation.VORNAME && relation.VORNAME.toLowerCase().includes(searchTerm)) ||
+                (relation.NACHNAME && relation.NACHNAME.toLowerCase().includes(searchTerm)) ||
+
+                (relation.PK_KON_PERSON_GROUP && relation.PK_KON_PERSON_GROUP.toString().includes(searchTerm)) ||
+                (relation.PERSON_GROUP_NAME && relation.PERSON_GROUP_NAME.toLowerCase().includes(searchTerm))
+            );
+            
+            personGroupCurrentPage = 1;
+            updatePersonGroupPagination();
+            renderPersonGroupCurrentPage();
+        }
+
+        // Update person-group relations pagination controls
+        function updatePersonGroupPagination() {
+            const personGroupPaginationControls = document.getElementById('person-group-pagination-controls');
+            const personGroupFirstPageBtn = document.getElementById('person-group-first-page');
+            const personGroupPrevPageBtn = document.getElementById('person-group-prev-page');
+            const personGroupNextPageBtn = document.getElementById('person-group-next-page');
+            const personGroupLastPageBtn = document.getElementById('person-group-last-page');
+            const personGroupPaginationInfo = document.getElementById('person-group-pagination-info');
+            const personGroupPageSizeSelector = document.getElementById('person-group-page-size');
+            
+            // Get the current page size
+            const personGroupPageSize = parseInt(personGroupPageSizeSelector.value);
+            
+            if (!Array.isArray(filteredPersonGroupRelations)) {
+                filteredPersonGroupRelations = [];
+            }
+            
+            personGroupTotalPages = Math.ceil(filteredPersonGroupRelations.length / personGroupPageSize);
+            
+            // Show/hide pagination controls
+            if (filteredPersonGroupRelations.length > personGroupPageSize) {
+                personGroupPaginationControls.style.display = 'flex';
+            } else {
+                personGroupPaginationControls.style.display = 'none';
+            }
+            
+            // Update button states
+            personGroupFirstPageBtn.disabled = personGroupCurrentPage === 1;
+            personGroupPrevPageBtn.disabled = personGroupCurrentPage === 1;
+            personGroupNextPageBtn.disabled = personGroupCurrentPage === personGroupTotalPages;
+            personGroupLastPageBtn.disabled = personGroupCurrentPage === personGroupTotalPages;
+            
+            // Update pagination info
+            const start = (personGroupCurrentPage - 1) * personGroupPageSize + 1;
+            const end = Math.min(personGroupCurrentPage * personGroupPageSize, filteredPersonGroupRelations.length);
+            personGroupPaginationInfo.textContent = `Seite ${personGroupCurrentPage} von ${personGroupTotalPages} (${start}-${end} von ${filteredPersonGroupRelations.length})`;
+        }
+
+        // Go to specific person-group relations page
+        function goToPersonGroupPage(page) {
+            const personGroupPageSizeSelector = document.getElementById('person-group-page-size');
+            const personGroupPageSize = parseInt(personGroupPageSizeSelector.value);
+            const personGroupTotalPages = Math.ceil(filteredPersonGroupRelations.length / personGroupPageSize);
+            
+            if (page < 1 || page > personGroupTotalPages) return;
+            
+            personGroupCurrentPage = page;
+            updatePersonGroupPagination();
+            renderPersonGroupCurrentPage();
+        }
+
+        // Render current page of person-group relations
+        function renderPersonGroupCurrentPage() {
+            const personGroupTableContainer = document.getElementById('person-group-table-container');
+            const personGroupPageSizeSelector = document.getElementById('person-group-page-size');
+            
+            // Get the current page size
+            const personGroupPageSize = parseInt(personGroupPageSizeSelector.value);
+            
+            if (!Array.isArray(filteredPersonGroupRelations)) {
+                filteredPersonGroupRelations = [];
+            }
+            
+            if (filteredPersonGroupRelations.length === 0) {
+                personGroupTableContainer.innerHTML = '<div class="info">Keine Person-Gruppen Relationen gefunden</div>';
+                return;
+            }
+            
+            // Calculate start and end index for current page
+            const startIndex = (personGroupCurrentPage - 1) * personGroupPageSize;
+            const endIndex = Math.min(startIndex + personGroupPageSize, filteredPersonGroupRelations.length);
+            const currentRelations = filteredPersonGroupRelations.slice(startIndex, endIndex);
+            
+            // Create table
+            let tableHTML = `
+                <div class="info">Anzahl Datensätze: ${filteredPersonGroupRelations.length} (Zeigt ${startIndex + 1}-${endIndex})</div>
+                <table class="person-group-table">
+                    <thead>
+                        <tr>
+                            <th>Relation ID</th>
+                            <th>Person ID</th>
+                            <th>Name</th>
+                            <th>Gruppen ID</th>
+                            <th>Gruppen Name</th>
+                            <th>Aktion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            currentRelations.forEach(relation => {
+                tableHTML += `
+                    <tr>
+                        <td>${relation.PK_REL_KON_PERSON_PERSON_GROUP || '<span class="null-value">N/A</span>'}</td>
+                        <td>${relation.PK_KON_PERSON || '<span class="null-value">N/A</span>'}</td>
+                        <td>${(relation.VORNAME || '') + ' ' + (relation.NACHNAME || '') || '<span class="null-value">N/A</span>'}</td>
+                        <td>${relation.PK_KON_PERSON_GROUP || '<span class="null-value">N/A</span>'}</td>
+                        <td>${relation.PERSON_GROUP_NAME || '<span class="null-value">N/A</span>'}</td>
+                        <td>
+                            <button class="delete-group-relation-btn" 
+                                    data-relation-id="${relation.PK_REL_KON_PERSON_PERSON_GROUP}">
+                                Löschen
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+            
+            personGroupTableContainer.innerHTML = tableHTML;
+            
+            // Add event listeners to delete buttons
+            personGroupTableContainer.querySelectorAll('.delete-group-relation-btn').forEach(button => {
+                button.addEventListener('click', async function() {
+                    const relationId = this.dataset.relationId;
+                    
+                    // Disable button during deletion
+                    this.disabled = true;
+                    this.textContent = 'Löschen...';
+                    
+                    const success = await deletePersonGroupRelation(relationId);
+                    
+                    if (success) {
+                        // Remove the row from the table
+                        this.closest('tr').remove();
+                        
+                        // Check if table is empty now
+                        const remainingRows = personGroupTableContainer.querySelectorAll('tbody tr');
+                        if (remainingRows.length === 0) {
+                            personGroupTableContainer.innerHTML = '<div class="info">Keine Person-Gruppen Relationen gefunden</div>';
+                        }
+                        
+                        // Refresh the data
+                        fetchPersonGroupRelations();
+                    } else {
+                        // Re-enable button if deletion failed
+                        this.disabled = false;
+                        this.textContent = 'Löschen';
+                    }
+                });
+            });
+        }
+
+        // Fetch relation data from API - UPDATED to use correct API structure
+        function fetchRelationData() {
+            const relationTableContainer = document.getElementById('relation-table-container');
+            const relationsPaginationControls = document.getElementById('relations-pagination-controls');
+            
+            relationTableContainer.innerHTML = '<div class="loading">Lade Relationen...</div>';
+            relationsPaginationControls.style.display = 'none';
+            
+            fetch('http://localhost:5000/geschaeftspartner_kontakt_rel')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // The API returns an object with success, data, count, and filters properties
+                    if (data.success && Array.isArray(data.data)) {
+                        allRelations = data.data;
+                        filteredRelations = [...allRelations]; // Create a copy
+                        relationsCurrentPage = 1;
+                        updateRelationsPagination();
+                        renderRelationsCurrentPage();
+                    } else {
+                        throw new Error('Invalid data format from API');
+                    }
+                })
+                .catch(error => {
+                    relationTableContainer.innerHTML = 
+                        `<div class="error">Fehler beim Laden der Relationen: ${error.message}</div>`;
+                });
+        }
+
+        // Filter relations based on search input - UPDATED field names
+        function filterRelations() {
+            const searchTerm = document.getElementById('relation-search').value.toLowerCase();
+            
+            // Ensure filteredRelations is an array before filtering
+            if (!Array.isArray(allRelations)) {
+                allRelations = [];
+            }
+            
+            filteredRelations = allRelations.filter(relation => 
+                (relation.PK_REL_KON_GESCHAEFTSPARTNER_KONTAKT && relation.PK_REL_KON_GESCHAEFTSPARTNER_KONTAKT.toString().includes(searchTerm)) ||
+                (relation.PK_KON_PERSON && relation.PK_KON_PERSON.toString().includes(searchTerm)) ||
+                (relation.LOCATION && relation.LOCATION.toLowerCase().includes(searchTerm)) ||
+                (relation.PK_INP_BELEGE_ALL && relation.PK_INP_BELEGE_ALL.toString().includes(searchTerm)) ||
+                (relation.ORG_UNIT_NAME && relation.ORG_UNIT_NAME.toLowerCase().includes(searchTerm)) ||
+                (relation.PK_ORG_UNIT && relation.PK_ORG_UNIT.toLowerCase().includes(searchTerm)) ||
+          (relation.VORNAME && relation.VORNAME.toLowerCase().includes(searchTerm)) ||
+          (relation.NACHNAME && relation.NACHNAME.toLowerCase().includes(searchTerm)) ||
+                (relation.PK_KON_KONTAKT && relation.PK_KON_KONTAKT.toLowerCase().includes(searchTerm))
+            );
+            
+            relationsCurrentPage = 1;
+            updateRelationsPagination();
+            renderRelationsCurrentPage();
+        }
+
+        // Update relations pagination controls
+        function updateRelationsPagination() {
+            const relationsPaginationControls = document.getElementById('relations-pagination-controls');
+            const relationsFirstPageBtn = document.getElementById('relations-first-page');
+            const relationsPrevPageBtn = document.getElementById('relations-prev-page');
+            const relationsNextPageBtn = document.getElementById('relations-next-page');
+            const relationsLastPageBtn = document.getElementById('relations-last-page');
+            const relationsPaginationInfo = document.getElementById('relations-pagination-info');
+            const relationsPageSizeSelector = document.getElementById('relations-page-size');
+            
+            // Get the current page size
+            const relationsPageSize = parseInt(relationsPageSizeSelector.value);
+            
+            // Ensure filteredRelations is an array
+            if (!Array.isArray(filteredRelations)) {
+                filteredRelations = [];
+            }
+            
+            relationsTotalPages = Math.ceil(filteredRelations.length / relationsPageSize);
+            
+            // Show/hide pagination controls
+            if (filteredRelations.length > relationsPageSize) {
+                relationsPaginationControls.style.display = 'flex';
+            } else {
+                relationsPaginationControls.style.display = 'none';
+            }
+            
+            // Update button states
+            relationsFirstPageBtn.disabled = relationsCurrentPage === 1;
+            relationsPrevPageBtn.disabled = relationsCurrentPage === 1;
+            relationsNextPageBtn.disabled = relationsCurrentPage === relationsTotalPages;
+            relationsLastPageBtn.disabled = relationsCurrentPage === relationsTotalPages;
+            
+            // Update pagination info
+            const start = (relationsCurrentPage - 1) * relationsPageSize + 1;
+            const end = Math.min(relationsCurrentPage * relationsPageSize, filteredRelations.length);
+            relationsPaginationInfo.textContent = `Seite ${relationsCurrentPage} von ${relationsTotalPages} (${start}-${end} von ${filteredRelations.length})`;
+        }
+
+        // Go to specific relations page
+        function goToRelationsPage(page) {
+            const relationsPageSizeSelector = document.getElementById('relations-page-size');
+            const relationsPageSize = parseInt(relationsPageSizeSelector.value);
+            const relationsTotalPages = Math.ceil(filteredRelations.length / relationsPageSize);
+            
+            if (page < 1 || page > relationsTotalPages) return;
+            
+            relationsCurrentPage = page;
+            updateRelationsPagination();
+            renderRelationsCurrentPage();
+        }
+
+        // Render current page of relations - UPDATED with correct field names
+        function renderRelationsCurrentPage() {
+            const relationTableContainer = document.getElementById('relation-table-container');
+            const relationsPageSizeSelector = document.getElementById('relations-page-size');
+            
+            // Get the current page size
+            const relationsPageSize = parseInt(relationsPageSizeSelector.value);
+            
+            // Ensure filteredRelations is an array
+            if (!Array.isArray(filteredRelations)) {
+                filteredRelations = [];
+            }
+            
+            if (filteredRelations.length === 0) {
+                relationTableContainer.innerHTML = '<div class="info">Keine Relationen gefunden</div>';
+                return;
+            }
+            
+            // Calculate start and end index for current page
+            const startIndex = (relationsCurrentPage - 1) * relationsPageSize;
+            const endIndex = Math.min(startIndex + relationsPageSize, filteredRelations.length);
+            const currentRelations = filteredRelations.slice(startIndex, endIndex);
+            
+            // Create table with correct field names from your API response
+            let tableHTML = `
+                <div class="info">Anzahl Datensätze: ${filteredRelations.length} (Zeigt ${startIndex + 1}-${endIndex})</div>
+                <table class="relations-table">
+                    <thead>
+                        <tr>
+                            <th>Relation ID</th>
+                            <th>Location</th>
+                            <th>Beleg ID</th>
+                            <th>Organisation</th>
+                            <th>Vorname</th>
+                            <th>Nachname</th>
+                            <th>Festnetz</th>
+                            <th>Fax</th>
+                            <th>Telex</th>
+                            <th>Email</th>
+                            <th>Webseite</th>
+                            <th>Kontakt ID</th>
+                            <th>Org Unit ID</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            currentRelations.forEach(relation => {
+                tableHTML += `
+                    <tr>
+                        <td>${relation.PK_REL_KON_GESCHAEFTSPARTNER_KONTAKT || '<span class="null-value">N/A</span>'}</td>
+                        <td>${relation.LOCATION || '<span class="null-value">N/A</span>'}</td>
+                        <td>${relation.PK_INP_BELEGE_ALL || '<span class="null-value">N/A</span>'}</td>
+                        <td>${relation.ORG_UNIT_NAME || '<span class="null-value">N/A</span>'}</td>
+                        <td>${relation.VORNAME || '<span class="null-value">N/A</span>'}</td>
+                        <td>${relation.NACHNAME || '<span class="null-value">N/A</span>'}</td>
+                        <td>${relation.FESTNETZNUMMER || '<span class="null-value">N/A</span>'}</td>
+                        <td>${relation.FAX || '<span class="null-value">N/A</span>'}</td>
+                        <td>${relation.TELEX || '<span class="null-value">N/A</span>'}</td>
+                        <td>${relation.EMAIL || '<span class="null-value">N/A</span>'}</td>
+                        <td>${relation.WEBSEITE || '<span class="null-value">N/A</span>'}</td>
+                        <td>${relation.PK_KON_KONTAKT || '<span class="null-value">N/A</span>'}</td>
+                        <td>${relation.PK_ORG_UNIT || '<span class="null-value">N/A</span>'}</td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+            
+            relationTableContainer.innerHTML = tableHTML;
+        }
+
+        // Function to fetch family data from web services
+        async function fetchFamilyData(personId) {
+            try {
+                // Fetch data from all family endpoints
+                const [geschwister, lebenspartner, eltern, kind, religion] = await Promise.all([
+                    fetch(`http://localhost:5000/person_geschw?fk_kon_person=${personId}`).then(res => res.ok ? res.json() : []),
+                    fetch(`http://localhost:5000/person_lebenspartner/${personId}`).then(res => res.ok ? res.json() : []),
+                    fetch(`http://localhost:5000/person_eltern?kind_pk_kon_person=${personId}`).then(res => res.ok ? res.json() : []),
+         fetch(`http://localhost:5000/person_eltern?id=${personId}`).then(res => res.ok ? res.json() : []),
+fetch(`http://localhost:5000/person_religion/${personId}`).then(res => res.ok ? res.json() : [])
+                ]);
+                
+                return {
+                    geschwister,
+                    lebenspartner,
+                    eltern,
+                    kind,
+religion
+                };
+            } catch (error) {
+                console.error('Error fetching family data:', error);
+                return {
+                    geschwister: [],
+                    lebenspartner: [],
+                    eltern: [],
+kind: [],
+religion: []
+
+                };
+            }
+        }
+
+        // Function to render family data
+        function renderFamilyData(familyData, container) {
+            let html = '';
+            
+            // Geschwister section
+            if (familyData.geschwister && familyData.geschwister.length > 0) {
+                html += `
+                    <div class="family-section">
+                        <h4 class="detail-section-title">Geschwister</h4>
+                        <ul class="family-list">
+                            ${familyData.geschwister.map(geschwister => `
+                                <li class="family-item">
+                                    <div class="family-name">${geschwister.VORNAME || ''} ${geschwister.NACHNAME || ''}</div>
+                                    <div class="family-details">
+                                        ${geschwister.GEBURTSDATUM ? `Geboren: ${formatDate(geschwister.GEBURTSDATUM)}` : ''}
+                                        ${geschwister.BERUF ? ` | Beruf: ${geschwister.BERUF}` : ''}
+                                    </div>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+            
+            // Lebenspartner section
+            if (familyData.lebenspartner && familyData.lebenspartner.length > 0) {
+                html += `
+                    <div class="family-section">
+                        <h4 class="detail-section-title">Lebenspartner</h4>
+                        <ul class="family-list">
+                            ${familyData.lebenspartner.map(partner => `
+                                <li class="family-item">
+                                    <div class="family-name"><strong>${partner.VORNAME || ''} ${partner.NAME || ''} - ${partner.PK_KON_PERSON || ''} (${partner.GESCHLECHT}) / ${partner.pers_vorname || ''} ${partner.pers_nachname || ''} - ${partner.FK_KON_PERSON || ''}  (${partner.pers_fk_std_kon_person_geschlecht}) - (${partner.STATUS} </strong> - ${partner.STANDESAMT} : ${formatDate(partner.DATUM_STANDESAMTLICH)} - ${partner.KIRCHE} : ${formatDate(partner.DATUM_KIRCHLICH)} - (${partner.ORT} (${partner.LAND}))/ (${partner.KOMMENTAR}))</div>
+                                    <div class="family-details">
+                                        ${partner.GEBURTSDATUM ? `Geboren: ${formatDate(partner.GEBURTSDATUM)}` : ''}
+                                        ${partner.BERUF ? ` | Beruf: ${partner.BERUF}` : ''}
+                                    </div>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+            
+            // Eltern section
+            if (familyData.eltern && familyData.eltern.length > 0) {
+                html += `
+                    <div class="family-section">
+                        <h4 class="detail-section-title">Eltern</h4>
+                        <ul class="family-list">
+                            ${familyData.eltern.map(eltern => `
+                                <li class="family-item">
+                                    <div class="family-name">${eltern.VORNAME || ''} ${eltern.NACHNAME || ''} - ${eltern.PK_KON_PERSON || ''} (${eltern.FK_STD_KON_PERSON_GESCHLECHT || ''}) / ${eltern.kind_vorname || ''} ${eltern.kind_nachname || ''} - ${eltern.kind_pk_kon_person || ''}  (${eltern.kind_fk_std_kon_person_geschlecht || ''}) - (${eltern.PK_REL_AHN_PERSON_ELTERN || ''})</div>
+                                    <div class="family-details">
+                                        ${eltern.GEBURTSDATUM ? `Geboren: ${formatDate(eltern.GEBURTSDATUM)}` : ''}
+                                        ${eltern.BERUF ? ` | Beruf: ${eltern.BERUF}` : ''}
+                                    </div>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+
+   // Kind section
+            if (familyData.kind && familyData.kind.length > 0) {
+                html += `
+                    <div class="family-section">
+                        <h4 class="detail-section-title">Kind</h4>
+                        <ul class="family-list">
+                            ${familyData.kind.map(kind => `
+                                <li class="family-item">
+                                    <div class="family-name">${kind.VORNAME || ''} ${kind.NACHNAME || ''} - ${kind.PK_KON_PERSON || ''} (${kind.FK_STD_KON_PERSON_GESCHLECHT || ''}) / ${kind.kind_vorname || ''} ${kind.kind_nachname || ''} - ${kind.kind_pk_kon_person || ''}  (${kind.kind_fk_std_kon_person_geschlecht || ''}) - (${kind.PK_REL_AHN_PERSON_ELTERN || ''})</div>
+                                    <div class="family-details">
+                                        ${kind.GEBURTSDATUM ? `Geboren: ${formatDate(kind.GEBURTSDATUM)}` : ''}
+                                        ${kind.BERUF ? ` | Beruf: ${kind.BERUF}` : ''}
+                                    </div>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+// religion section
+            if (familyData.religion && familyData.religion.length > 0) {
+                html += `
+                    <div class="family-section">
+                        <h4 class="detail-section-title">Religion</h4>
+                        <ul class="family-list">
+                            ${familyData.religion.map(religion => `
+                                <li class="family-item">
+                                    <div class="family-name">${religion.STD_NAME || ''} </div>
+                                   
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            
+            if (!html) {
+                html = '<div class="info">Keine Familieninformationen verfügbar</div>';
+            }
+            
+            container.innerHTML = html;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set current date
+            const now = new Date();
+            document.getElementById('current-date').textContent = 
+                `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+            
+            // DOM elements
+            const groupList = document.getElementById('group-list');
+            const personList = document.getElementById('person-list');
+            const groupSearch = document.getElementById('group-search');
+            const personSearch = document.getElementById('person-search');
+            const allPersonsBtn = document.getElementById('all-persons-btn');
+            const paginationControls = document.getElementById('pagination-controls');
+            const firstPageBtn = document.getElementById('first-page');
+            const prevPageBtn = document.getElementById('prev-page');
+            const nextPageBtn = document.getElementById('next-page');
+            const lastPageBtn = document.getElementById('last-page');
+            const paginationInfo = document.getElementById('pagination-info');
+            const pageSizeSelector = document.getElementById('page-size');
+            
+            // New elements for selection functionality
+            const targetGroupSelect = document.getElementById('target-group-select');
+            const createRelationBtn = document.getElementById('create-relation-btn');
+            const clearSelectionBtn = document.getElementById('clear-selection-btn');
+            const selectedCount = document.getElementById('selected-count');
+            const selectedPersonsList = document.getElementById('selected-persons-list');
+            const relationStatus = document.getElementById('relation-status');
+            
+            // New elements for image gallery
+            const closeGalleryBtn = document.getElementById('closeGallery');
+            
+            // New elements for relations
+            const relationSearch = document.getElementById('relation-search');
+            const refreshRelationsBtn = document.getElementById('refresh-relations-btn');
+            const relationsFirstPageBtn = document.getElementById('relations-first-page');
+            const relationsPrevPageBtn = document.getElementById('relations-prev-page');
+            const relationsNextPageBtn = document.getElementById('relations-next-page');
+            const relationsLastPageBtn = document.getElementById('relations-last-page');
+            const relationsPageSizeSelector = document.getElementById('relations-page-size');
+            
+            // New elements for person-group relations
+            const personGroupSearch = document.getElementById('person-group-search');
+            const refreshPersonGroupBtn = document.getElementById('refresh-person-group-btn');
+            const personGroupFirstPageBtn = document.getElementById('person-group-first-page');
+            const personGroupPrevPageBtn = document.getElementById('person-group-prev-page');
+            const personGroupNextPageBtn = document.getElementById('person-group-next-page');
+            const personGroupLastPageBtn = document.getElementById('person-group-last-page');
+            const personGroupPageSizeSelector = document.getElementById('person-group-page-size');
+            
+            // New elements for kandidaten
+            const kandidatenSearch = document.getElementById('kandidaten-search');
+            const refreshKandidatenBtn = document.getElementById('refresh-kandidaten-btn');
+            
+            // New elements for geschwister
+            const geschwisterSearch = document.getElementById('geschwister-search');
+            const refreshGeschwisterBtn = document.getElementById('refresh-geschwister-btn');
+            const geschwisterFirstPageBtn = document.getElementById('geschwister-first-page');
+            const geschwisterPrevPageBtn = document.getElementById('geschwister-prev-page');
+            const geschwisterNextPageBtn = document.getElementById('geschwister-next-page');
+            const geschwisterLastPageBtn = document.getElementById('geschwister-last-page');
+            const geschwisterPageSizeSelector = document.getElementById('geschwister-page-size');
+            
+            // State
+            let personGroups = [];
+            let activeGroupId = null;
+            let selectedPersons = new Set();
+            
+            // Pagination state
+            let currentPage = 1;
+            let pageSize = 100;
+            let totalPages = 1;
+            
+            // Relations pagination state
+            let relationsCurrentPage = 1;
+            let relationsTotalPages = 1;
+            
+            // Person-group relations pagination state
+            let personGroupCurrentPage = 1;
+            let personGroupTotalPages = 1;
+            
+            // Geschwister pagination state
+            let geschwisterCurrentPage = 1;
+            let geschwisterTotalPages = 1;
+            
+            // Initialize filtered arrays as empty arrays
+            filteredRelations = [];
+            filteredPersonGroupRelations = [];
+            filteredKandidaten = [];
+            filteredGeschwister = [];
+            
+            // Fetch person groups, all persons, relations and person-group relations
+            fetchPersonGroups();
+            fetchRelationData();
+            fetchPersonGroupRelations();
+            fetchGeschwisterData();
+            
+            // Event listeners
+            groupSearch.addEventListener('input', filterGroups);
+            personSearch.addEventListener('input', filterPersons);
+            allPersonsBtn.addEventListener('click', fetchAllPersons);
+            
+            // New event listeners for selection functionality
+            targetGroupSelect.addEventListener('change', updateCreateButtonState);
+            createRelationBtn.addEventListener('click', createRelations);
+            clearSelectionBtn.addEventListener('click', clearSelection);
+            
+            // Event listener for closing gallery
+            closeGalleryBtn.addEventListener('click', closeImageGallery);
+            
+            // Pagination event listeners
+            firstPageBtn.addEventListener('click', () => goToPage(1));
+            prevPageBtn.addEventListener('click', () => goToPage(currentPage - 1));
+            nextPageBtn.addEventListener('click', () => goToPage(currentPage + 1));
+            lastPageBtn.addEventListener('click', () => goToPage(totalPages));
+            pageSizeSelector.addEventListener('change', () => {
+                pageSize = parseInt(pageSizeSelector.value);
+                currentPage = 1;
+                updatePagination();
+                renderCurrentPage();
+            });
+            
+            // Relations event listeners
+            relationSearch.addEventListener('input', filterRelations);
+            refreshRelationsBtn.addEventListener('click', fetchRelationData);
+            relationsFirstPageBtn.addEventListener('click', () => goToRelationsPage(1));
+            relationsPrevPageBtn.addEventListener('click', () => goToRelationsPage(relationsCurrentPage - 1));
+            relationsNextPageBtn.addEventListener('click', () => goToRelationsPage(relationsCurrentPage + 1));
+            relationsLastPageBtn.addEventListener('click', () => goToRelationsPage(relationsTotalPages));
+            relationsPageSizeSelector.addEventListener('change', () => {
+                relationsCurrentPage = 1;
+                updateRelationsPagination();
+                renderRelationsCurrentPage();
+            });
+            
+            // Person-group relations event listeners
+            personGroupSearch.addEventListener('input', filterPersonGroupRelations);
+            refreshPersonGroupBtn.addEventListener('click', fetchPersonGroupRelations);
+            personGroupFirstPageBtn.addEventListener('click', () => goToPersonGroupPage(1));
+            personGroupPrevPageBtn.addEventListener('click', () => goToPersonGroupPage(personGroupCurrentPage - 1));
+            personGroupNextPageBtn.addEventListener('click', () => goToPersonGroupPage(personGroupCurrentPage + 1));
+            personGroupLastPageBtn.addEventListener('click', () => goToPersonGroupPage(personGroupTotalPages));
+            personGroupPageSizeSelector.addEventListener('change', () => {
+                personGroupCurrentPage = 1;
+                updatePersonGroupPagination();
+                renderPersonGroupCurrentPage();
+            });
+            
+            // Kandidaten event listeners
+            kandidatenSearch.addEventListener('input', filterKandidaten);
+            refreshKandidatenBtn.addEventListener('click', () => {
+                if (selectedPersonId) {
+                    fetchKandidatenForPerson(selectedPersonId);
+                }
+            });
+            
+            // Geschwister event listeners
+            geschwisterSearch.addEventListener('input', filterGeschwister);
+            refreshGeschwisterBtn.addEventListener('click', fetchGeschwisterData);
+            geschwisterFirstPageBtn.addEventListener('click', () => goToGeschwisterPage(1));
+            geschwisterPrevPageBtn.addEventListener('click', () => goToGeschwisterPage(geschwisterCurrentPage - 1));
+            geschwisterNextPageBtn.addEventListener('click', () => goToGeschwisterPage(geschwisterCurrentPage + 1));
+            geschwisterLastPageBtn.addEventListener('click', () => goToGeschwisterPage(geschwisterTotalPages));
+            geschwisterPageSizeSelector.addEventListener('change', () => {
+                geschwisterCurrentPage = 1;
+                updateGeschwisterPagination();
+                renderGeschwisterCurrentPage();
+            });
+            
+            // Fetch person groups from API
+            function fetchPersonGroups() {
+                fetch('http://localhost:5000/kon_person_group')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        personGroups = data;
+                        renderGroupsList(personGroups);
+                        populateGroupSelect(personGroups);
+                    })
+                    .catch(error => {
+                        groupList.innerHTML = 
+                            `<li class="error">Fehler beim Laden der Personengruppen: ${error.message}</li>`;
+                    });
+            }
+            
+            // Populate the group selection dropdown
+            function populateGroupSelect(groups) {
+                targetGroupSelect.innerHTML = '<option value="">Zielgruppe auswählen...</option>';
+                
+                groups.forEach(group => {
+                    const option = document.createElement('option');
+                    option.value = group.PK_KON_PERSON_GROUP;
+                    option.textContent = `${group.PERSON_GROUP_NAME} (${group.PK_KON_PERSON_GROUP})`;
+                    targetGroupSelect.appendChild(option);
+                });
+            }
+            
+            // Fetch all persons from API
+            function fetchAllPersons() {
+                personList.innerHTML = '<div class="loading">Lade alle Personen...</div>';
+                paginationControls.style.display = 'none';
+                
+                fetch('http://localhost:5000/kon_person')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        allPersons = data;
+                        // Sort persons by name
+                        sortPersonsByName(allPersons);
+                        filteredPersons = allPersons;
+                        currentPage = 1;
+                        updatePagination();
+                        renderCurrentPage();
+                    })
+                    .catch(error => {
+                        personList.innerHTML = 
+                            `<div class="error">Fehler beim Laden der Personen: ${error.message}</div>`;
+                    });
+            }
+            
+            // Sort persons by name
+            function sortPersonsByName(persons) {
+                return persons.sort((a, b) => {
+                    const nameA = `${a.VORNAME || ''} ${a.NACHNAME || ''}`.toLowerCase();
+                    const nameB = `${b.VORNAME || ''} ${b.NACHNAME || ''}`.toLowerCase();
+                    return nameA.localeCompare(nameB);
+                });
+            }
+            
+            // Render groups list
+            function renderGroupsList(groups) {
+                if (groups.length === 0) {
+                    groupList.innerHTML = '<li class="loading">Keine Personengruppen gefunden</li>';
+                    return;
+                }
+                
+                groupList.innerHTML = '';
+                groups.forEach(group => {
+                    const li = document.createElement('li');
+                    li.className = 'group-item';
+                    li.dataset.id = group.PK_KON_PERSON_GROUP;
+                    li.innerHTML = `
+                        <strong>${group.PERSON_GROUP_NAME} (${group.PK_KON_PERSON_GROUP})</strong>
+                        <div>Anzahl Mitglieder: ${group.cnt}</div>
+                        <div>Mandant: ${group.FK_MDT_MANDANT}</div>
+                    `;
+                    
+                    li.addEventListener('click', () => {
+                        // Set active group
+                        document.querySelectorAll('.group-item').forEach(item => {
+                            item.classList.remove('active');
+                        });
+                        li.classList.add('active');
+                        
+                        // Fetch persons for this group
+                        activeGroupId = group.PK_KON_PERSON_GROUP;
+                        fetchPersonsForGroup(activeGroupId);
+                    });
+                    
+                    groupList.appendChild(li);
+                });
+            }
+            
+            // Filter groups based on search input
+            function filterGroups() {
+                const searchTerm = groupSearch.value.toLowerCase();
+                const filteredGroups = personGroups.filter(group => 
+                    group.PERSON_GROUP_NAME.toLowerCase().includes(searchTerm) ||
+                    group.PK_KON_PERSON_GROUP.toString().includes(searchTerm)
+                );
+                renderGroupsList(filteredGroups);
+            }
+            
+            function fetchPersonsForGroup(groupId) {
+                personList.innerHTML = '<div class="loading">Lade Personen...</div>';
+                paginationControls.style.display = 'none';
+                
+                fetch(`http://localhost:5000/person_person_group/${groupId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (!data || data.length === 0) {
+                            personList.innerHTML = '<div class="info">Keine Personen in dieser Gruppe</div>';
+                            return;
+                        }
+                        
+                        const personIds = data.map(item => item.FK_KON_PERSON);
+                        
+                        // Use Promise.all to fetch all persons in parallel
+                        const personPromises = personIds.map(personId => 
+                            fetch(`http://localhost:5000/person/${personId}`)
+                                .then(response => {
+                                    if (!response.ok) {
+                                        throw new Error(`Failed to fetch person ${personId}: ${response.status}`);
+                                    }
+                                    return response.json();
+                                })
+                                .then(personData => {
+                                    // API returns an array with one person object
+                                    return personData && personData.length > 0 ? personData[0] : null;
+                                })
+                                .catch(error => {
+                                    console.error(`Error fetching person ${personId}:`, error);
+                                    return null; // Return null for failed requests
+                                })
+                        );
+                        
+                        Promise.all(personPromises)
+                            .then(persons => {
+                                // Filter out null values (failed requests)
+                                const successfulPersons = persons.filter(person => person !== null);
+                                
+                                if (successfulPersons.length === 0) {
+                                    personList.innerHTML = '<div class="error">Keine Personendaten konnten geladen werden</div>';
+                                    return;
+                                }
+                               
+                                // Sort persons by name
+                                filteredPersons = sortPersonsByName(successfulPersons);
+                                currentPage = 1;
+                                updatePagination();
+                                renderCurrentPage();
+                            })
+                            .catch(error => {
+                                personList.innerHTML = 
+                                    `<div class="error">Fehler beim Laden der Personendetails: ${error.message}</div>`;
+                            });
+                    })
+                    .catch(error => {
+                        personList.innerHTML = 
+                            `<div class="error">Fehler beim Laden der Personen: ${error.message}</div>`;
+                    });
+            }
+            
+            // Update pagination controls
+            function updatePagination() {
+                totalPages = Math.ceil(filteredPersons.length / pageSize);
+                
+                // Show/hide pagination controls
+                if (filteredPersons.length > pageSize) {
+                    paginationControls.style.display = 'flex';
+                } else {
+                    paginationControls.style.display = 'none';
+                }
+                
+                // Update button states
+                firstPageBtn.disabled = currentPage === 1;
+                prevPageBtn.disabled = currentPage === 1;
+                nextPageBtn.disabled = currentPage === totalPages;
+                lastPageBtn.disabled = currentPage === totalPages;
+                
+                // Update pagination info
+                const start = (currentPage - 1) * pageSize + 1;
+                const end = Math.min(currentPage * pageSize, filteredPersons.length);
+                paginationInfo.textContent = `Seite ${currentPage} von ${totalPages} (${start}-${end} von ${filteredPersons.length})`;
+            }
+            
+            // Go to specific page
+            function goToPage(page) {
+                if (page < 1 || page > totalPages) return;
+                
+                currentPage = page;
+                updatePagination();
+                renderCurrentPage();
+                
+                // Scroll to top of person list
+                personList.scrollIntoView({ behavior: 'smooth' });
+            }
+            
+            // Toggle person selection
+            function togglePersonSelection(personId, personName) {
+                if (selectedPersons.has(personId)) {
+                    selectedPersons.delete(personId);
+                } else {
+                    selectedPersons.add(personId);
+                }
+                
+                updateSelectionUI();
+            }
+            
+            // Update selection UI
+            function updateSelectionUI() {
+                // Update count
+                selectedCount.textContent = selectedPersons.size;
+                
+                // Update clear button state
+                clearSelectionBtn.disabled = selectedPersons.size === 0;
+                
+                // Update create button state
+                updateCreateButtonState();
+                
+                // Update selected persons list
+                updateSelectedPersonsList();
+                
+                // Update person cards visual state
+                document.querySelectorAll('.person-card').forEach(card => {
+                    const personId = card.dataset.id;
+                    if (selectedPersons.has(personId)) {
+                        card.classList.add('selected');
+                    } else {
+                        card.classList.remove('selected');
+                    }
+                });
+            }
+            
+            // Update selected persons list
+            function updateSelectedPersonsList() {
+                selectedPersonsList.innerHTML = '';
+                
+                if (selectedPersons.size === 0) {
+                    selectedPersonsList.innerHTML = '<div class="info">Keine Personen ausgewählt</div>';
+                    return;
+                }
+                
+                // Get names of selected persons
+                const selectedPersonDetails = Array.from(selectedPersons).map(id => {
+                    const person = allPersons.find(p => p.PK_KON_PERSON == id) || 
+                                  filteredPersons.find(p => p.PK_KON_PERSON == id);
+                    return {
+                        id: id,
+                        name: person ? `${person.VORNAME || ''} ${person.NACHNAME || ''}` : `Person ${id}`
+                    };
+                });
+                
+                // Add to list
+                selectedPersonDetails.forEach(person => {
+                    const div = document.createElement('div');
+                    div.className = 'selected-person-item';
+                    div.innerHTML = `
+                        <span>${person.name} (ID: ${person.id})</span>
+                        <span class="remove-person" data-id="${person.id}">✕</span>
+                    `;
+                    selectedPersonsList.appendChild(div);
+                });
+                
+                // Add event listeners to remove buttons
+                document.querySelectorAll('.remove-person').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const personId = e.target.dataset.id;
+                        selectedPersons.delete(personId);
+                        updateSelectionUI();
+                    });
+                });
+            }
+            
+            // Update create button state based on selection and target group
+            function updateCreateButtonState() {
+                const targetGroupId = targetGroupSelect.value;
+                createRelationBtn.disabled = selectedPersons.size === 0 || !targetGroupId;
+            }
+            
+            // Clear selection
+            function clearSelection() {
+                selectedPersons.clear();
+                updateSelectionUI();
+            }
+            
+            // Create relations between selected persons and target group
+            function createRelations() {
+                const targetGroupId = targetGroupSelect.value;
+                
+                if (selectedPersons.size === 0 || !targetGroupId) {
+                    return;
+                }
+                
+                // Show loading state
+                createRelationBtn.disabled = true;
+                createRelationBtn.textContent = 'Wird verarbeitet...';
+                relationStatus.className = 'relation-status';
+                relationStatus.textContent = 'Erstelle Zuordnungen...';
+                relationStatus.style.display = 'block';
+                
+                // Prepare requests
+                const requests = Array.from(selectedPersons).map(personId => {
+                    const relationData = {
+                        FK_KON_PERSON: personId,
+                        FK_KON_PERSON_GROUP: targetGroupId
+                    };
+                    
+                    return fetch('http://localhost:5000/add_person_group_rel', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(relationData)
+                    });
+                });
+                
+                // Execute all requests
+                Promise.all(requests)
+                    .then(responses => {
+                        // Check if all responses are OK
+                        const allOk = responses.every(response => response.ok);
+                        
+                        if (allOk) {
+                            relationStatus.className = 'relation-status success';
+                            relationStatus.textContent = `Erfolgreich ${selectedPersons.size} Zuordnung(en) erstellt.`;
+                            
+                            // Clear selection after successful creation
+                            clearSelection();
+                            
+                            // Refresh person-group relations data
+                            fetchPersonGroupRelations();
+                        } else {
+                            throw new Error('Einige Zuordnungen konnten nicht erstellt werden.');
+                        }
+                    })
+                    .catch(error => {
+                        relationStatus.className = 'relation-status error';
+                        relationStatus.textContent = `Fehler: ${error.message}`;
+                    })
+                    .finally(() => {
+                        // Reset button state
+                        createRelationBtn.disabled = false;
+                        createRelationBtn.textContent = 'Zuordnung erstellen';
+                        
+                        // Hide status after 5 seconds
+                        setTimeout(() => {
+                            relationStatus.style.display = 'none';
+                        }, 5000);
+                    });
+            }
+            
+            // Render current page of persons
+            function renderCurrentPage() {
+                if (filteredPersons.length === 0) {
+                    personList.innerHTML = '<div class="loading">Keine Personen in dieser Gruppe gefunden</div>';
+                    return;
+                }
+                
+                // Calculate start and end index for current page
+                const startIndex = (currentPage - 1) * pageSize;
+                const endIndex = Math.min(startIndex + pageSize, filteredPersons.length);
+                const currentPersons = filteredPersons.slice(startIndex, endIndex);
+                
+                personList.innerHTML = `
+                    <div class="info">Anzahl Datensätze: ${filteredPersons.length} (Zeigt ${startIndex + 1}-${endIndex})</div>
+                    <div class="person-grid" id="person-grid"></div>
+                `;
+                
+                const grid = document.getElementById('person-grid');
+                
+                // Create an array of promises for fetching images
+                const imagePromises = currentPersons.map(person => 
+                    fetchPersonMainImage(person.PK_KON_PERSON)
+                );
+                  
+                // Wait for all images to load
+                Promise.all(imagePromises).then(imageUrls => {
+                    currentPersons.forEach((person, index) => {
+                        const card = document.createElement('div');
+                        card.className = 'person-card';
+                        card.dataset.id = person.PK_KON_PERSON;
+                        
+                        // Add selected class if this person is selected
+                        if (selectedPersons.has(person.PK_KON_PERSON)) {
+                            card.classList.add('selected');
+                        }
+                        
+                        const geschlecht = person.FK_STD_KON_PERSON_GESCHLECHT === 1
+                            ? 'männlich'
+                            : person.FK_STD_KON_PERSON_GESCHLECHT === 2
+                              ? 'weiblich'
+                              : 'unbekannt';
+
+
+                        
+                        // Format dates
+                        const birthDate = person.GEBURTSDATUM ? new Date(person.GEBURTSDATUM).toLocaleDateString() : 'N/A';
+                        const deathDate = person.STERBEDATUM ? new Date(person.STERBEDATUM).toLocaleDateString() : 'N/A';
+                        
+                        // Check if we have an image for this person
+                        const imageUrl = imageUrls[index];
+                        
+                        card.innerHTML = `
+                            <div class="card-header">
+                                <h3 class="person-name"><small>${person.TITEL? person.TITEL + '<br>' : ''}</small> ${person.VORNAME || ''} ${person.NACHNAME || ''}</h3>
+                             
+                                ${imageUrl ? 
+                                    `<img src="${imageUrl}" 
+                                          alt="${person.VORNAME || ''} ${person.NACHNAME || ''}" 
+                                          class="person-image" 
+                                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"> 
+                                     <div class="image-placeholder" style="display: none;">Kein Bild</div>` : 
+                                    `<div class="image-placeholder">Kein Bild</div>`
+                                }
+                            </div>
+                            <div class="person-details">
+                                <div class="detail-row">
+                                    <span class="detail-label">ID:</span>
+                                    <span>${person.PK_KON_PERSON}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Geburtsdatum:</span>
+                                    <span>${birthDate} (${person.GEBURTSJAHR})</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Sterbedatum:</span>
+                                    <span>${deathDate} (${person.STERBEJAHR})</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Geschlecht:</span>
+                                    <span>${geschlecht}</span>
+                                </div>
+
+                                <div class="family-buttons">
+                                    <button class="details-button" data-id="${person.PK_KON_PERSON}">Details</button>
+                                    <button class="details-button view-images-btn" data-id="${person.PK_KON_PERSON}">Bilder</button>
+                                    <button class="details-button" data-id="${person.PK_KON_PERSON}" style="background: #ff9800;">Kandidaten</button>
+                                </div>
+                            </div>
+                        `;
+                        
+                       
+                        // Add click event to select person
+                        card.addEventListener('click', (e) => {
+                            // Don't trigger selection if clicking on a link or button
+                            if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON') return;
+                            
+                            togglePersonSelection(
+                                person.PK_KON_PERSON, 
+                                `${person.VORNAME || ''} ${person.NACHNAME || ''}`
+                            );
+                        });
+
+                        grid.appendChild(card);
+                    });
+
+                    // Add event listeners to details buttons
+                    document.querySelectorAll('.details-button').forEach(button => {
+                        button.addEventListener('click', (e) => {
+                            e.stopPropagation(); // Prevent triggering the card selection
+                            const personId = button.dataset.id;
+                            
+                            if (button.classList.contains('view-images-btn')) {
+                                showImageGallery(personId);
+                            } else if (button.style.background === 'rgb(255, 152, 0)') {
+                                // Kandidaten anzeigen button
+                                fetchKandidatenForPerson(personId);
+                                document.getElementById('kandidaten-section').scrollIntoView({ behavior: 'smooth' });
+                            } else {
+                                renderPersonDetails(personId);
+                            }
+                        });
+                    });
+                });
+            }
+            
+            // Filter persons based on search input
+            function filterPersons() {
+                const searchTerm = personSearch.value.toLowerCase();
+                const filtered = allPersons.filter(person => 
+                    (person.VORNAME && person.VORNAME.toLowerCase().includes(searchTerm)) ||
+                    (person.NACHNAME && person.NACHNAME.toLowerCase().includes(searchTerm)) ||
+ (person.GEBURTSNAME && person.GEBURTSNAME.toLowerCase().includes(searchTerm)) ||
+                    (person.BEMERKUNG && person.BEMERKUNG.toLowerCase().includes(searchTerm)) ||
+                    (person.TITEL && person.TITEL.toLowerCase().includes(searchTerm)) ||
+                    (person.PK_KON_PERSON && person.PK_KON_PERSON.toString().includes(searchTerm))
+                );
+                
+                // Sort filtered persons by name
+                filteredPersons = sortPersonsByName(filtered);
+                currentPage = 1;
+                updatePagination();
+                renderCurrentPage();
+            }
+        });
+
+        // Render person details in modal
+        async function renderPersonDetails(personId) {
+            const modal = document.getElementById('person-modal');
+            const modalContent = modal.querySelector('.modal-content');
+            const modalTitle = modal.querySelector('.modal-title');
+            const modalImage = modal.querySelector('.modal-person-image');
+            const modalImagePlaceholder = modal.querySelector('.modal-image-placeholder');
+           
+            // Show loading state
+            modal.style.display = 'flex';
+            modalContent.innerHTML = '<div class="modal-loading">Lade Personendetails...</div>';
+            
+            try {
+                // Fetch person details
+                const response = await fetch(`http://localhost:5000/person/${personId}`);
+                
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                
+                const data = await response.json();
+                const person = data[0]; // Assuming API returns an array with one person
+                
+                // Fetch family data
+                const familyData = await fetchFamilyData(personId);
+                
+                // Update modal title
+                modalTitle.textContent = `${person.VORNAME || ''} ${person.NACHNAME || ''}`;
+                
+                // Try to load person image
+                modalImage.style.display = 'none';
+                modalImagePlaceholder.style.display = 'none';
+                
+                fetchPersonMainImage(personId)
+                    .then(imageUrl => {
+                        if (imageUrl) {
+                            modalImage.src = imageUrl;
+                            modalImage.style.display = 'block';
+                        } else {
+                            modalImagePlaceholder.style.display = 'flex';
+                        }
+                    })
+                    .catch(() => {
+                        modalImagePlaceholder.style.display = 'flex';
+                    });
+                
+                // Format dates
+                const formatDate = (dateString) => {
+                    if (!dateString) return 'N/A';
+                    const date = new Date(dateString);
+                    return isNaN(date.getTime()) ? 'Ungültiges Datum' : date.toLocaleDateString('de-DE');
+                };
+                
+                // Format gender
+                const formatGender = (genderCode) => {
+                    if (!genderCode) return 'N/A';
+                    switch(genderCode) {
+                        case '1': return 'Männlich';
+                        case '2': return 'Weiblich';
+                        case '3': return 'Divers';
+                        default: return `Unbekannt (${genderCode})`;
+                    }
+                };
+                
+                // Create details HTML
+                modalContent.innerHTML = `
+                    <div class="detail-section">
+                        <h3 class="detail-section-title">Persönliche Daten</h3>
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <div class="detail-item-label">ID</div>
+                                <div class="detail-item-value">${person.PK_KON_PERSON || 'N/A'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">Vorname</div>
+                                <div class="detail-item-value">${person.VORNAME || 'N/A'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">Nachname</div>
+                                <div class="detail-item-value">${person.NACHNAME || 'N/A'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">Geburtsname</div>
+                                <div class="detail-item-value">${person.GEBURTSNAME || 'N/A'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">Titel</div>
+                                <div class="detail-item-value">${person.TITEL || 'N/A'} / ${person.ADELSTITEL || 'N/A'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">Geschlecht</div>
+                                <div class="detail-item-value">${formatGender(person.FK_STD_KON_PERSON_GESCHLECHT)}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">Geburtsdatum</div>
+                                <div class="detail-item-value">${formatDate(person.GEBURTSDATUM)} - ${person.ORT} (${person.LAND}) </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">Sterbedatum</div>
+                                <div class="detail-item-value">${formatDate(person.STERBEDATUM)} - ${person.so_ort} (${person.so_land}) </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-section">
+                        <h3 class="detail-section-title">Weitere Informationen</h3>
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <div class="detail-item-label">Beschreibung</div>
+                                <div class="detail-item-value">${person.BESCHREIBUNG || 'N/A'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">Bemerkung</div>
+                                <div class="detail-item-value">${person.BEMERKUNG || 'N/A'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">Mandant</div>
+                                <div class="detail-item-value">${person.FK_MDT_MANDANT || 'N/A'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">Aktiv</div>
+                                <div class="detail-item-value">${person.ACTIVE ? 'Ja' : 'Nein'}</div>
+                            </div>
+  <div class="detail-item">
+                                <div class="detail-item-label">Ahnentafel</div>
+                                <div class="detail-item-value">${person.NR_AHNENTAFEL_TEMP }</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">Erstellt von</div>
+                                <div class="detail-item-value">${person.CREATED_BY || 'N/A'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">Erstellt am</div>
+                                <div class="detail-item-value">${formatDate(person.CREATED_AT)}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">Geändert von</div>
+                                <div class="detail-item-value">${person.MODIFIED_BY || 'N/A'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-item-label">Geändert am</div>
+                                <div class="detail-item-value">${formatDate(person.MODIFIED_AT)}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-section">
+                        <h3 class="detail-section-title">Familieninformationen</h3>
+                        <div id="family-data">
+                            <div class="loading">Lade Familieninformationen...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-section">
+                        <h3 class="detail-section-title">Berufe</h3>
+                        <div id="person-berufe">
+                            <div class="loading">Lade Berufe...</div>
+                        </div>
+                    </div>
+
+ <div class="detail-section">
+                        <h3 class="detail-section-title">Wohnort</h3>
+                        <div id="person-wohnort">
+                            <div class="loading">Lade Wohnort...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-section">
+                        <h3 class="detail-section-title">Dokumente und Bilder</h3>
+                        <div id="person-documents">
+                            <div class="loading">Lade Dokumente...</div>
+                        </div>
+                    </div>
+                `;
+                
+                // Render family data
+                renderFamilyData(familyData, document.getElementById('family-data'));
+                
+                // Load berufe for this person
+                fetch(`http://localhost:5000/person_beruf/${personId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(berufe => {
+                        const berufeContainer = modalContent.querySelector('#person-berufe');
+                        if (berufe && berufe.length > 0) {
+                            displayBerufeTable(berufe, berufeContainer, personId);
+                        } else {
+                            berufeContainer.innerHTML = '<div class="info">Keine Berufe für diese Person gefunden</div>';
+                        }
+                    })
+                    .catch(error => {
+                        const berufeContainer = modalContent.querySelector('#person-berufe');
+                        berufeContainer.innerHTML = `<div class="error">Fehler beim Laden der Berufe: ${error.message}</div>`;
+                    });
+
+                   fetch(`http://localhost:5000/person_wohnort/${personId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(wohnort => {
+                        const wohnortContainer = modalContent.querySelector('#person-wohnort');
+                        if (wohnort && wohnort.length > 0) {
+                            displayWohnortTable(wohnort, wohnortContainer, personId);
+                        } else {
+                            wohnortContainer.innerHTML = '<div class="info">Kein Wohnort für diese Person gefunden</div>';
+                        }
+                    })
+                    .catch(error => {
+                        const wohnortContainer = modalContent.querySelector('#person-wohnort');
+                        wohnortContainer.innerHTML = `<div class="error">Fehler beim Laden der Wohnort: ${error.message}</div>`;
+                    });
+                
+                // Load documents for this person
+                fetch(`http://localhost:5000/person/dokumente/${personId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(documents => {
+                        const documentsContainer = modalContent.querySelector('#person-documents');
+                        if (documents && documents.length > 0) {
+                            displayDocumentImages(documents, documentsContainer);
+                        } else {
+                            documentsContainer.innerHTML = '<div class="info">Keine Dokumente für diese Person gefunden</div>';
+                        }
+                    })
+                    .catch(error => {
+                        const documentsContainer = modalContent.querySelector('#person-documents');
+                        documentsContainer.innerHTML = `<div class="error">Fehler beim Laden der Dokumente: ${error.message}</div>`;
+                    });
+            } catch (error) {
+                modalContent.innerHTML = `<div class="modal-error">Fehler beim Laden der Personendetails: ${error.message}</div>`;
+            }
+            
+            // Add event listener for close button
+            const closeBtn = modal.querySelector('.close-btn');
+            closeBtn.onclick = () => {
+                modal.style.display = 'none';
+            };
+            
+            // Close modal when clicking outside
+            modal.onclick = (e) => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                } 
+            };
+        }
+
+        // Display berufe as a table with delete buttons
+        function displayBerufeTable(berufe, container, personId) {
+            if (!berufe || berufe.length === 0) {
+                container.innerHTML = '<div class="info">Keine Berufe für diese Person gefunden</div>';
+                return;
+            }
+            
+            let tableHTML = `
+                <table class="berufe-table">
+                    <thead>
+                        <tr>
+                            <th>PK_WORK_BERUF</th>
+                            <th>Relation ID</th>
+                            <th>BERUF</th>
+                            <th>BERUF_MAENNLICH</th>
+                            <th>BERUF_WEIBLICH</th>
+                            <th>BERUF_ENG</th>
+                            <th>Aktion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            berufe.forEach(beruf => {
+                // Extract relation ID from the beruf object or use a combination of IDs
+                const relationId = beruf.PK_REL_KON_PERSON_BERUF;
+                
+                tableHTML += `
+                    <tr>
+                        <td>${beruf.PK_WORK_BERUF || 'N/A'}</td>
+                        <td>${beruf.PK_REL_KON_PERSON_BERUF || 'N/A'}</td>
+                        <td>${beruf.BERUF || 'N/A'}</td>
+                        <td>${beruf.BERUF_MAENNLICH || 'N/A'}</td>
+                        <td>${beruf.BERUF_WEIBLICH || 'N/A'}</td>
+                        <td>${beruf.BERUF_ENG || 'N/A'}</td>
+                        <td>
+                            <button class="delete-relation-btn" 
+                                    data-relation-id="${relationId}"
+                                    data-person-id="${personId}"
+                                    data-beruf-id="${beruf.PK_WORK_BERUF}">
+                                Löschen
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+            
+            container.innerHTML = tableHTML;
+            
+            // Add event listeners to delete buttons
+            container.querySelectorAll('.delete-relation-btn').forEach(button => {
+                button.addEventListener('click', async function() {
+                    const relationId = this.dataset.relationId;
+                    const personId = this.dataset.personId;
+                    const berufId = this.dataset.berufId;
+                    
+                    // Disable button during deletion
+                    this.disabled = true;
+                    this.textContent = 'Löschen...';
+                    
+                    const success = await deletePersonBerufRelation(relationId, personId, berufId);
+                    
+                    if (success) {
+                        // Remove the row from the table
+                        this.closest('tr').remove();
+                        
+                        // Check if table is empty now
+                        const remainingRows = container.querySelectorAll('tbody tr');
+                        if (remainingRows.length === 0) {
+                            container.innerHTML = '<div class="info">Keine Berufe für diese Person gefunden</div>';
+                        }
+                    } else {
+                        // Re-enable button if deletion failed
+                        this.disabled = false;
+                        this.textContent = 'Löschen';
+                    }
+                });
+            });
+        }
+
+
+function displayWohnortTable(wohnort, container, personId) {
+            if (!wohnort || wohnort.length === 0) {
+                container.innerHTML = '<div class="info">Kein Wohnort für diese Person gefunden</div>';
+                return;
+            }
+            
+            let tableHTML = `
+                <table class="berufe-table">
+                    <thead>
+                        <tr>
+                            <th>PK_WORK_BERUF</th>
+                            <th>Relation ID</th>
+                            <th>BERUF</th>
+                            <th>BERUF_MAENNLICH</th>
+                            <th>BERUF_WEIBLICH</th>
+                            <th>BERUF_ENG</th>
+                            <th>Aktion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            wohnort.forEach(wohnort => {
+                // Extract relation ID from the beruf object or use a combination of IDs
+                const relationId = wohnort.PK_REL_KON_PERSON_WOHNORT;
+                
+                tableHTML += `
+                    <tr>
+                        <td>${wohnort.FK_ADR_WOHNORT || 'N/A'}</td>
+                        <td>${wohnort.PK_REL_KON_PERSON_WOHNORT || 'N/A'}</td>
+<td>${wohnort.PLZ || 'N/A'}</td>
+<td>${wohnort.WOHNORT || 'N/A'}</td>
+                        <td>${wohnort.ORT || 'N/A'}</td>
+                        <td>${wohnort.LAND || 'N/A'}</td>
+                    
+                        <td>
+                            <button class="delete-relation-btn" 
+                                    data-relation-id="${relationId}"
+                                    data-person-id="${personId}"
+                                    data-beruf-id="${wohnort.PK_WORK_BERUF}">
+                                Löschen
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+            
+            container.innerHTML = tableHTML;
+            /*
+            // Add event listeners to delete buttons
+            container.querySelectorAll('.delete-relation-btn').forEach(button => {
+                button.addEventListener('click', async function() {
+                    const relationId = this.dataset.relationId;
+                    const personId = this.dataset.personId;
+                    const berufId = this.dataset.berufId;
+                    
+                    // Disable button during deletion
+                    this.disabled = true;
+                    this.textContent = 'Löschen...';
+                    
+                    const success = await deletePersonBerufRelation(relationId, personId, berufId);
+                    
+                    if (success) {
+                        // Remove the row from the table
+                        this.closest('tr').remove();
+                        
+                        // Check if table is empty now
+                        const remainingRows = container.querySelectorAll('tbody tr');
+                        if (remainingRows.length === 0) {
+                            container.innerHTML = '<div class="info">Keine Berufe für diese Person gefunden</div>';
+                        }
+                    } else {
+                        // Re-enable button if deletion failed
+                        this.disabled = false;
+                        this.textContent = 'Löschen';
+                    }
+                });
+            }); */
+        }
+
+
+        // Display document images (existing function)
+        function displayDocumentImages(documents, container) {
+            // Your existing implementation for displaying documents
+            container.innerHTML = '<div class="info">Dokumente werden geladen...</div>';
+        }
+    </script>
+</body>
+</html>

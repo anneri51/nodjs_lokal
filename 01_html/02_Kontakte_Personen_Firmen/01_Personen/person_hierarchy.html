@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Tree Viewer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 2000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 95vh;
+        }
+
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 30px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.8;
+            font-size: 1.1em;
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Left Sidebar Styles */
+        .sidebar {
+            width: 380px;
+            background: #f8f9fa;
+            border-right: 1px solid #e9ecef;
+            padding: 20px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header {
+            margin-bottom: 20px;
+        }
+
+        .sidebar h2 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 15px;
+            transition: border-color 0.3s;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .person-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .person-item {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .person-item:hover {
+            border-color: #667eea;
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .person-item.active {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .person-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1em;
+            flex-shrink: 0;
+            overflow: hidden;
+            border: 3px solid white;
+            position: relative;
+        }
+
+        .person-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .person-avatar .initials {
+            font-size: 1.2em;
+        }
+
+        .person-item.active .person-avatar {
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px white;
+        }
+
+        .person-info {
+            flex: 1;
+        }
+
+        .person-name {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .person-id {
+            font-size: 0.9em;
+            color: #6c757d;
+            font-family: 'Courier New', monospace;
+        }
+
+        .person-item.active .person-id {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .person-type {
+            font-size: 0.8em;
+            padding: 3px 10px;
+            border-radius: 12px;
+            background: #e9ecef;
+            color: #495057;
+            font-weight: 600;
+        }
+
+        .person-item.active .person-type {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        /* Tree Content Styles */
+        .tree-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #f8f9fa;
+            min-width: 0;
+        }
+
+        .tree-controls {
+            padding: 20px 30px;
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+
+        .current-root {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .current-root-badge {
+            background: #667eea;
+            color: white;
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .tree-actions {
+            display: flex;
+            gap: 12px;
+            margin-left: auto;
+        }
+
+        .action-btn {
+            padding: 12px 24px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            font-size: 0.95em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .action-btn.reset {
+            border-color: #e74c3c;
+            color: #e74c3c;
+        }
+
+        .action-btn.reset:hover {
+            background: #e74c3c;
+            color: white;
+        }
+
+        /* Horizontal Scrollable Tree Container */
+        .tree-container-wrapper {
+            flex: 1;
+            position: relative;
+            background: #f8f9fa;
+            overflow: hidden;
+        }
+
+        .tree-container {
+            padding: 50px 40px;
+            overflow: auto;
+            height: 100%;
+            width: 100%;
+        }
+
+        .tree-container::-webkit-scrollbar {
+            height: 14px;
+            width: 14px;
+        }
+
+        .tree-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 8px;
+        }
+
+        .tree-container::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 8px;
+            border: 2px solid #f1f1f1;
+        }
+
+        .tree-container::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* Tree Structure Styles */
+        .tree {
+            display: inline-flex;
+            min-width: min-content;
+            position: relative;
+            padding: 30px 0;
+        }
+
+        .tree-level {
+            display: flex;
+            flex-direction: column;
+            gap: 80px;
+            margin-right: 120px;
+            position: relative;
+            min-width: 380px;
+        }
+
+        .tree-level:last-child {
+            margin-right: 0;
+        }
+
+        .tree-level::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            right: -60px;
+            width: 3px;
+            background: linear-gradient(to bottom, transparent, #ccc, transparent);
+            opacity: 0.6;
+        }
+
+        .tree-level:last-child::before {
+            display: none;
+        }
+
+        .node {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .node-card {
+            background: white;
+            border: 4px solid #4a90e2;
+            border-radius: 20px;
+            padding: 25px;
+            min-width: 350px;
+            max-width: 400px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            transition: all 0.4s ease;
+            position: relative;
+            z-index: 2;
+            text-align: center;
+        }
+
+        .node-card:hover {
+            transform: translateY(-8px) scale(1.03);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.18);
+            border-color: #2c3e50;
+        }
+
+        .node-card.root {
+            border-color: #e74c3c;
+            background: linear-gradient(135deg, #fff, #fdf2f2);
+        }
+
+        .node-card.branch {
+            border-color: #f39c12;
+            background: linear-gradient(135deg, #fff, #fef9f3);
+        }
+
+        .node-card.leaf {
+            border-color: #27ae60;
+            background: linear-gradient(135deg, #fff, #f3fdf7);
+        }
+
+        .person-image {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            margin: 0 auto 20px auto;
+            border: 4px solid #e9ecef;
+            overflow: hidden;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .person-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .person-image .initials {
+            font-size: 2em;
+        }
+
+        .person-image .image-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            color: white;
+            font-size: 0.9em;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .person-image:hover .image-overlay {
+            opacity: 1;
+        }
+
+        .person-id {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 6px 12px;
+            border-radius: 10px;
+            display: inline-block;
+            border: 1px solid #e9ecef;
+        }
+
+        .person-name {
+            font-size: 1.5em;
+            color: #495057;
+            margin-bottom: 15px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .node-details {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-top: 15px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #e9ecef;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #495057;
+            font-size: 0.85em;
+        }
+
+        .detail-value {
+            color: #6c757d;
+            text-align: right;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+
+        .node-type-badge {
+            position: absolute;
+            top: -12px;
+            right: -12px;
+            background: #2c3e50;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+            z-index: 3;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .depth-badge {
+            position: absolute;
+            top: -12px;
+            left: -12px;
+            background: #667eea;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+            z-index: 3;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        /* Two-sided children container */
+        .children-container {
+            display: flex;
+            width: 100%;
+            margin-top: 30px;
+            position: relative;
+        }
+
+        .children-side {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+            position: relative;
+        }
+
+        .children-side.left {
+            align-items: flex-end;
+            padding-right: 30px;
+        }
+
+        .children-side.right {
+            align-items: flex-start;
+            padding-left: 30px;
+        }
+
+        /* Connection lines for two-sided layout */
+        .parent-connector {
+            position: absolute;
+            top: -30px;
+            height: 30px;
+            width: 2px;
+            background: #95a5a6;
+        }
+
+        .children-side.left .parent-connector {
+            right: 0;
+        }
+
+        .children-side.right .parent-connector {
+            left: 0;
+        }
+
+        .child-connector {
+            position: absolute;
+            top: -30px;
+            height: 30px;
+            width: 2px;
+            background: #95a5a6;
+        }
+
+        .children-side.left .child-connector {
+            right: 0;
+        }
+
+        .children-side.right .child-connector {
+            left: 0;
+        }
+
+        .horizontal-connector {
+            position: absolute;
+            top: -30px;
+            height: 2px;
+            background: #95a5a6;
+        }
+
+        .children-side.left .horizontal-connector {
+            right: 0;
+            width: 30px;
+        }
+
+        .children-side.right .horizontal-connector {
+            left: 0;
+            width: 30px;
+        }
+
+        /* Expand/Collapse */
+        .expand-toggle {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 0.9em;
+            padding: 10px 18px;
+            margin-top: 20px;
+            border-radius: 20px;
+            transition: all 0.3s;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .expand-toggle:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(102, 126, 234, 0.4);
+        }
+
+        .expand-toggle .icon {
+            font-size: 1em;
+            transition: transform 0.3s;
+        }
+
+        .collapsed .children-container {
+            display: none;
+        }
+
+        .collapsed .expand-toggle .icon {
+            transform: rotate(-90deg);
+        }
+
+        /* Loading and Error States */
+        .loading {
+            text-align: center;
+            padding: 60px;
+            font-size: 1.3em;
+            color: #6c757d;
+        }
+
+        .error {
+            text-align: center;
+            padding: 60px;
+            color: #e74c3c;
+            font-size: 1.3em;
+        }
+
+        .stats {
+            padding: 25px 40px;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            font-size: 1em;
+            color: #6c757d;
+            flex-shrink: 0;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+            border: 1px solid #e9ecef;
+        }
+
+        .empty-message {
+            text-align: center;
+            padding: 60px;
+            color: #6c757d;
+            font-size: 1.2em;
+            font-style: italic;
+        }
+
+        .zoom-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-left: 30px;
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 12px;
+            border: 1px solid #e9ecef;
+        }
+
+        .zoom-btn {
+            width: 45px;
+            height: 45px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.3em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .zoom-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .zoom-level {
+            font-size: 1em;
+            color: #495057;
+            min-width: 70px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .image-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1400px) {
+            .tree-level {
+                margin-right: 100px;
+                min-width: 350px;
+            }
+            
+            .node-card {
+                min-width: 320px;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                max-height: 350px;
+                border-right: none;
+                border-bottom: 1px solid #e9ecef;
+            }
+            
+            .tree-level {
+                min-width: 320px;
+                margin-right: 80px;
+            }
+            
+            .node-card {
+                min-width: 300px;
+                padding: 20px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .tree-controls {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 15px;
+                padding: 20px;
+            }
+            
+            .tree-actions {
+                margin-left: 0;
+                justify-content: center;
+            }
+            
+            .zoom-controls {
+                margin-left: 0;
+                justify-content: center;
+            }
+            
+            .tree-level {
+                min-width: 280px;
+                margin-right: 60px;
+            }
+            
+            .node-card {
+                min-width: 260px;
+                padding: 18px;
+            }
+            
+            .person-image {
+                width: 100px;
+                height: 100px;
+            }
+            
+            .stats {
+                grid-template-columns: 1fr 1fr;
+                padding: 20px;
+            }
+
+            .children-container {
+                flex-direction: column;
+            }
+
+            .children-side {
+                align-items: center !important;
+                padding: 0 !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats {
+                grid-template-columns: 1fr;
+            }
+            
+            .node-card {
+                min-width: 240px;
+                padding: 15px;
+            }
+            
+            .person-id {
+                font-size: 1.1em;
+            }
+            
+            .person-name {
+                font-size: 1.3em;
+            }
+            
+            .tree-level {
+                min-width: 250px;
+                margin-right: 40px;
+            }
+            
+            .person-image {
+                width: 80px;
+                height: 80px;
+            }
+            
+            .person-image .initials {
+                font-size: 1.5em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌳 Family Tree Viewer</h1>
+            <p>Click on any person in the list to view their family tree</p>
+        </div>
+        
+        <div class="main-content">
+            <!-- Left Sidebar -->
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <h2>👥 People List</h2>
+                    <input type="text" class="search-box" placeholder="Search people..." id="peopleSearch">
+                </div>
+                <div class="person-list" id="personList">
+                    <div class="loading">Loading people...</div>
+                </div>
+            </div>
+
+            <!-- Tree Content -->
+            <div class="tree-content">
+                <div class="tree-controls">
+                    <div class="current-root">
+                        <span>Current Tree Root:</span>
+                        <span class="current-root-badge" id="currentRoot">Select a person</span>
+                    </div>
+                    <div class="tree-actions">
+                        <button class="action-btn" id="expandAllBtn">
+                            <i class="fas fa-expand-alt"></i> Expand All
+                        </button>
+                        <button class="action-btn" id="collapseAllBtn">
+                            <i class="fas fa-compress-alt"></i> Collapse All
+                        </button>
+                        <button class="action-btn reset" id="resetTreeBtn">
+                            <i class="fas fa-home"></i> Show All Roots
+                        </button>
+                    </div>
+                    <div class="zoom-controls">
+                        <button class="zoom-btn" id="zoomOutBtn">-</button>
+                        <span class="zoom-level" id="zoomLevel">100%</span>
+                        <button class="zoom-btn" id="zoomInBtn">+</button>
+                    </div>
+                </div>
+
+                <div class="tree-container-wrapper">
+                    <div class="tree-container" id="treeContainer">
+                        <div class="empty-message">Select a person from the list to view their family tree</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stats" id="stats">
+            <div class="stat-item">Total People: <strong id="totalPeople">0</strong></div>
+            <div class="stat-item">Tree Depth: <strong id="treeDepth">0</strong></div>
+            <div class="stat-item">Visible Nodes: <strong id="visibleNodes">0</strong></div>
+            <div class="stat-item">Branch Nodes: <strong id="branchNodes">0</strong></div>
+            <div class="stat-item">Leaf Nodes: <strong id="leafNodes">0</strong></div>
+            <div class="stat-item">Total Relations: <strong id="totalRelations">0</strong></div>
+        </div>
+    </div>
+
+    <script>
+        class FamilyTree {
+            constructor() {
+                this.data = [];
+                this.allPeople = [];
+                this.filteredPeople = [];
+                this.currentRoot = null;
+                this.searchTerm = '';
+                this.zoomLevel = 100;
+                this.blobUrls = []; // Track blob URLs for cleanup
+                this.init();
+            }
+
+            init() {
+                this.bindEvents();
+                this.loadData();
+            }
+
+            bindEvents() {
+                document.getElementById('peopleSearch').addEventListener('input', (e) => {
+                    this.searchTerm = e.target.value.toLowerCase();
+                    this.filterPeople();
+                });
+
+                document.getElementById('expandAllBtn').addEventListener('click', () => this.expandAll());
+                document.getElementById('collapseAllBtn').addEventListener('click', () => this.collapseAll());
+                document.getElementById('resetTreeBtn').addEventListener('click', () => this.resetTree());
+                document.getElementById('zoomInBtn').addEventListener('click', () => this.zoomIn());
+                document.getElementById('zoomOutBtn').addEventListener('click', () => this.zoomOut());
+            }
+
+            // Clean up blob URLs to prevent memory leaks
+            cleanupBlobUrls() {
+                this.blobUrls.forEach(url => URL.revokeObjectURL(url));
+                this.blobUrls = [];
+            }
+
+            async loadData() {
+                const personList = document.getElementById('personList');
+                personList.innerHTML = '<div class="loading">Loading people...</div>';
+
+                try {
+                    const response = await fetch('http://localhost:5000/person_hierarchy');
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    
+                    this.data = await response.json();
+                    this.processPeople();
+                    this.filterPeople();
+                } catch (error) {
+                    console.error('Error loading data:', error);
+                    personList.innerHTML = `
+                        <div class="error">
+                            ❌ Failed to load data from server<br>
+                            <small>${error.message}</small>
+                        </div>
+                    `;
+                }
+            }
+
+            processPeople() {
+                const peopleMap = new Map();
+
+                // Process all data to create unique people list
+                this.data.forEach(item => {
+                    const childId =item.CHILD_ID;
+                    const childName = item.CHILD_NAME || `Person ${childId}`;
+                    const parentId =  item.PARENT_ID;
+                    
+                    // Get image data for child
+                    const childImageContent = item.child_image_content || item.fb1_filecontent || item.fb_filecontent;
+                    const childImageFilename = item.child_image_filename || item.fb1_filename;
+                    
+                    // Get image data for parent
+                    const parentImageContent = item.parent_image_content || item.fb_filecontent || item.fb1_filecontent;
+                    const parentImageFilename = item.parent_image_filename || item.fb_filename;
+                    
+                    // Add child person
+                    if (!peopleMap.has(childId)) {
+                        peopleMap.set(childId, {
+                            id: childId,
+                            name: childName,
+                            parentId: parentId,
+                            isRoot: parentId === null || parentId === undefined,
+                            childrenCount: 0,
+                            relation_id: item.relation_id || item.RELATION_ID,
+                            imageContent: childImageContent,
+                            imageFilename: childImageFilename,
+                            imageMimeType: this.getMimeType(childImageFilename)
+                        });
+                    }
+
+                    // Count children for parent
+                    if (parentId && !peopleMap.has(parentId)) {
+                        const parentName = item.PARENT_NAME || `Person ${parentId}`;
+                        peopleMap.set(parentId, {
+                            id: parentId,
+                            name: parentName,
+                            parentId: null,
+                            isRoot: false,
+                            childrenCount: 0,
+                            relation_id: null,
+                            imageContent: parentImageContent,
+                            imageFilename: parentImageFilename,
+                            imageMimeType: this.getMimeType(parentImageFilename)
+                        });
+                    }
+                });
+
+                // Count children for each person
+                this.data.forEach(item => {
+                    const parentId = item.PARENT_ID;
+                    if (parentId && peopleMap.has(parentId)) {
+                        peopleMap.get(parentId).childrenCount++;
+                    }
+                });
+
+                this.allPeople = Array.from(peopleMap.values());
+                this.allPeople.sort((a, b) => {
+                    if (a.isRoot && !b.isRoot) return -1;
+                    if (!a.isRoot && b.isRoot) return 1;
+                    return a.name.localeCompare(b.name);
+                });
+            }
+
+            getMimeType(filename) {
+                if (!filename) return 'image/jpeg';
+                
+                const ext = filename.toLowerCase().split('.').pop();
+                switch (ext) {
+                    case 'png': return 'image/png';
+                    case 'jpg': case 'jpeg': return 'image/jpeg';
+                    case 'gif': return 'image/gif';
+                    case 'pdf': return 'application/pdf';
+                    case 'svg': return 'image/svg+xml';
+                    default: return 'image/jpeg';
+                }
+            }
+
+            filterPeople() {
+                this.filteredPeople = this.allPeople.filter(person => {
+                    return !this.searchTerm || 
+                        person.id.toString().toLowerCase().includes(this.searchTerm) ||
+                        person.name.toLowerCase().includes(this.searchTerm);
+                });
+
+                this.renderPeopleList();
+            }
+
+            getInitials(name) {
+                return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+            }
+
+            createImageElement(imageContent, imageFilename, initials, alt = 'Person image') {
+                if (imageContent && imageContent.data) {
+                    try {
+                        // Convert bytea data to blob
+                        const byteArray = new Uint8Array(imageContent.data);
+                        const mimeType = this.getMimeType(imageFilename);
+                        const blob = new Blob([byteArray], { type: mimeType });
+                        const blobUrl = URL.createObjectURL(blob);
+                        this.blobUrls.push(blobUrl);
+
+                        const isPDF = mimeType.includes('pdf');
+                        
+                        if (isPDF) {
+                            return `
+                                <div class="pdf-thumbnail" data-blob-url="${blobUrl}">
+                                    <i class="fas fa-file-pdf"></i>
+                                    <div class="image-overlay">PDF Document</div>
+                                </div>
+                            `;
+                        } else {
+                            return `
+                                <img src="${blobUrl}" alt="${alt}" loading="lazy">
+                                <div class="image-overlay">View Image</div>
+                            `;
+                        }
+                    } catch (error) {
+                        console.error('Error creating image element:', error);
+                        return `<div class="image-placeholder"><span class="initials">${initials}</span></div>`;
+                    }
+                } else {
+                    return `<div class="image-placeholder"><span class="initials">${initials}</span></div>`;
+                }
+            }
+
+            renderPeopleList() {
+                const personList = document.getElementById('personList');
+                
+                if (this.filteredPeople.length === 0) {
+                    personList.innerHTML = '<div class="empty-message">No people found matching your search</div>';
+                    return;
+                }
+
+                personList.innerHTML = this.filteredPeople.map(person => {
+                    const initials = this.getInitials(person.name);
+                    const type = person.isRoot ? 'Root' : (person.childrenCount > 0 ? 'Branch' : 'Leaf');
+                    const isActive = this.currentRoot && this.currentRoot.id === person.id;
+                    
+                    return `
+                        <div class="person-item ${isActive ? 'active' : ''}" data-person-id="${person.id}">
+                            <div class="person-avatar">
+                                ${this.createImageElement(person.imageContent, person.imageFilename, initials)}
+                            </div>
+                            <div class="person-info">
+                                <div class="person-name">${person.name}</div>
+                                <div class="person-id">ID: ${person.id}</div>
+                            </div>
+                            <div class="person-type">${type}</div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Add click event listeners for PDF thumbnails
+                personList.querySelectorAll('.pdf-thumbnail').forEach(thumbnail => {
+                    thumbnail.addEventListener('click', function() {
+                        const blobUrl = this.getAttribute('data-blob-url');
+                        window.open(blobUrl, '_blank');
+                    });
+                });
+
+                // Add click event listeners for person items
+                personList.querySelectorAll('.person-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const personId = item.dataset.personId;
+                        const person = this.allPeople.find(p => p.id == personId);
+                        if (person) {
+                            this.setCurrentRoot(person);
+                        }
+                    });
+                });
+            }
+
+            setCurrentRoot(person) {
+                this.currentRoot = person;
+                this.renderPeopleList();
+                this.updateCurrentRootDisplay();
+                this.renderTree();
+            }
+
+            updateCurrentRootDisplay() {
+                const currentRootElement = document.getElementById('currentRoot');
+                if (this.currentRoot) {
+                    currentRootElement.textContent = `${this.currentRoot.name} (ID: ${this.currentRoot.id})`;
+                } else {
+                    currentRootElement.textContent = 'Select a person';
+                }
+            }
+
+            resetTree() {
+                this.currentRoot = null;
+                this.updateCurrentRootDisplay();
+                this.renderTree();
+            }
+
+            zoomIn() {
+                if (this.zoomLevel < 200) {
+                    this.zoomLevel += 10;
+                    this.updateZoom();
+                }
+            }
+
+            zoomOut() {
+                if (this.zoomLevel > 50) {
+                    this.zoomLevel -= 10;
+                    this.updateZoom();
+                }
+            }
+
+            updateZoom() {
+                const treeContainer = document.getElementById('treeContainer');
+                treeContainer.style.transform = `scale(${this.zoomLevel / 100})`;
+                treeContainer.style.transformOrigin = 'top left';
+                document.getElementById('zoomLevel').textContent = `${this.zoomLevel}%`;
+            }
+
+            buildTreeHierarchy() {
+                const nodes = new Map();
+                let roots = [];
+
+                // Create all nodes
+                this.data.forEach(item => {
+                    const childId = item.child_id || item.CHILD_ID;
+                    const parentId = item.parent_id || item.PARENT_ID;
+                    const childName = item.CHILD_NAME || `Person ${childId}`;
+                    const parentName = item.PARENT_NAME;
+                    
+                    // Get image data
+                    const childImageContent = item.child_image_content || item.fb1_filecontent;
+                    const childImageFilename = item.child_image_filename || item.fb1_filename;
+                    const parentImageContent = item.parent_image_content || item.fb_filecontent;
+                    const parentImageFilename = item.parent_image_filename || item.fb_filename;
+                    
+                    nodes.set(childId, {
+                        id: childId,
+                        parentId: parentId,
+                        name: childName,
+                        parentName: parentName,
+                        children: [],
+                        relation_id: item.relation_id || item.RELATION_ID,
+                        imageContent: childImageContent,
+                        imageFilename: childImageFilename,
+                        imageMimeType: this.getMimeType(childImageFilename),
+                        parentImageContent: parentImageContent,
+                        parentImageFilename: parentImageFilename,
+                        parentImageMimeType: this.getMimeType(parentImageFilename),
+                        expanded: true,
+                        depth: 0
+                    });
+                });
+
+                // Build parent-child relationships
+                nodes.forEach(node => {
+                    if (node.parentId && nodes.has(node.parentId)) {
+                        nodes.get(node.parentId).children.push(node);
+                    }
+                });
+
+                // Calculate depths and find roots
+                if (this.currentRoot) {
+                    const rootNode = nodes.get(this.currentRoot.id);
+                    if (rootNode) {
+                        this.calculateDepth(rootNode, 0);
+                        roots = [rootNode];
+                    }
+                } else {
+                    nodes.forEach(node => {
+                        if (node.parentId === null || node.parentId === undefined) {
+                            this.calculateDepth(node, 0);
+                            roots.push(node);
+                        }
+                    });
+                }
+
+                return roots;
+            }
+
+            calculateDepth(node, depth) {
+                node.depth = depth;
+                node.children.forEach(child => {
+                    this.calculateDepth(child, depth + 1);
+                });
+            }
+
+            organizeNodesByDepth(roots) {
+                const depths = {};
+                
+                const traverse = (node) => {
+                    if (!depths[node.depth]) {
+                        depths[node.depth] = [];
+                    }
+                    
+                    if (!depths[node.depth].some(n => n.id === node.id)) {
+                        depths[node.depth].push(node);
+                    }
+                    
+                    if (node.expanded) {
+                        node.children.forEach(child => traverse(child));
+                    }
+                };
+                
+                roots.forEach(root => traverse(root));
+                return depths;
+            }
+
+            renderTree() {
+                const container = document.getElementById('treeContainer');
+                
+                if (!this.currentRoot && this.data.length === 0) {
+                    container.innerHTML = '<div class="empty-message">No data available</div>';
+                    return;
+                }
+
+                if (!this.currentRoot) {
+                    container.innerHTML = '<div class="empty-message">Select a person from the list to view their family tree, or see all root nodes below</div>';
+                }
+
+                const roots = this.buildTreeHierarchy();
+                
+                if (roots.length === 0) {
+                    container.innerHTML = '<div class="empty-message">No family tree data found for the selected person</div>';
+                    return;
+                }
+
+                const depths = this.organizeNodesByDepth(roots);
+                
+                container.innerHTML = '<div class="tree" id="treeVisualization"></div>';
+                const treeElement = document.getElementById('treeVisualization');
+                
+                // Render each depth level horizontally
+                Object.keys(depths).sort((a, b) => parseInt(a) - parseInt(b)).forEach(depth => {
+                    const levelElement = document.createElement('div');
+                    levelElement.className = 'tree-level';
+                    levelElement.dataset.depth = depth;
+                    
+                    depths[depth].forEach(node => {
+                        const nodeElement = this.createNodeElement(node, parseInt(depth));
+                        levelElement.appendChild(nodeElement);
+                    });
+                    
+                    treeElement.appendChild(levelElement);
+                });
+
+                this.addExpandCollapse();
+                this.updateZoom();
+                this.updateStats();
+            }
+
+            createNodeElement(node, depth) {
+                const nodeElement = document.createElement('div');
+                nodeElement.className = 'node';
+                nodeElement.dataset.nodeId = node.id;
+                
+                const isCurrentRoot = this.currentRoot && node.id === this.currentRoot.id;
+                const nodeType = isCurrentRoot ? 'root' : (node.children.length > 0 ? 'branch' : 'leaf');
+                const typeLabel = isCurrentRoot ? 'Root' : (node.children.length > 0 ? 'Branch' : 'Leaf');
+                const isExpanded = node.expanded;
+                const initials = this.getInitials(node.name);
+                
+                // Split children into two groups for left and right sides
+                const childrenCount = node.children.length;
+                const leftChildren = node.children.slice(0, Math.ceil(childrenCount / 2));
+                const rightChildren = node.children.slice(Math.ceil(childrenCount / 2));
+                
+                nodeElement.innerHTML = `
+                    <div class="node-card ${nodeType}">
+                        <span class="node-type-badge">${typeLabel}</span>
+                        <span class="depth-badge">Level ${depth}</span>
+                        <div class="person-image">
+                            ${this.createImageElement(node.imageContent, node.imageFilename, initials, node.name)}
+                        </div>
+                        <div class="person-id">${node.id}</div>
+                        <div class="person-name">${node.name}</div>
+                        <div class="node-details">
+                            ${node.parentId && !isCurrentRoot ? `
+                            <div class="detail-row">
+                                <span class="detail-label">Parent:</span>
+                                <span class="detail-value">${node.parentName || node.parentId}</span>
+                            </div>
+                            ` : ''}
+                            <div class="detail-row">
+                                <span class="detail-label">Children:</span>
+                                <span class="detail-value">${node.children.length}</span>
+                            </div>
+                            ${node.relation_id ? `
+                            <div class="detail-row">
+                                <span class="detail-label">Relation ID:</span>
+                                <span class="detail-value">${node.relation_id} ${node.childId} ${node.parentId}</span>
+                            </div>
+                            ` : ''}
+                        </div>
+                        ${node.children.length > 0 ? `
+                        <button class="expand-toggle" data-expanded="${isExpanded}" data-node-id="${node.id}">
+                            <span class="icon">${isExpanded ? '▼' : '►'}</span>
+                            ${isExpanded ? 'Collapse' : 'Expand'} Children (${node.children.length})
+                        </button>
+                        ` : ''}
+                    </div>
+                    ${node.children.length > 0 && node.expanded ? `
+                    <div class="children-container">
+                        <div class="children-side left">
+                            ${leftChildren.map(child => {
+                                const childElement = this.createNodeElement(child, depth + 1);
+                                return `
+                                    <div class="child-node">
+                                        <div class="parent-connector"></div>
+                                        <div class="horizontal-connector"></div>
+                                        ${childElement.outerHTML}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                        <div class="children-side right">
+                            ${rightChildren.map(child => {
+                                const childElement = this.createNodeElement(child, depth + 1);
+                                return `
+                                    <div class="child-node">
+                                        <div class="parent-connector"></div>
+                                        <div class="horizontal-connector"></div>
+                                        ${childElement.outerHTML}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                `;
+
+                if (!node.expanded && node.children.length > 0) {
+                    nodeElement.classList.add('collapsed');
+                }
+
+                return nodeElement;
+            }
+
+            addExpandCollapse() {
+                document.querySelectorAll('.expand-toggle').forEach(toggle => {
+                    toggle.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const nodeId = e.target.dataset.nodeId;
+                        
+                        const roots = this.buildTreeHierarchy();
+                        const allNodes = this.getAllNodes(roots);
+                        const node = allNodes.find(n => n.id == nodeId);
+                        
+                        if (node) {
+                            node.expanded = !node.expanded;
+                            this.renderTree();
+                        }
+                    });
+                });
+
+                // Add click handlers for PDF thumbnails in tree
+                document.querySelectorAll('.pdf-thumbnail').forEach(thumbnail => {
+                    thumbnail.addEventListener('click', function() {
+                        const blobUrl = this.getAttribute('data-blob-url');
+                        window.open(blobUrl, '_blank');
+                    });
+                });
+            }
+
+            expandAll() {
+                const roots = this.buildTreeHierarchy();
+                const allNodes = this.getAllNodes(roots);
+                allNodes.forEach(node => {
+                    node.expanded = true;
+                });
+                this.renderTree();
+            }
+
+            collapseAll() {
+                const roots = this.buildTreeHierarchy();
+                const allNodes = this.getAllNodes(roots);
+                allNodes.forEach(node => {
+                    node.expanded = false;
+                });
+                this.renderTree();
+            }
+
+            getAllNodes(roots) {
+                const allNodes = [];
+                const traverse = (node) => {
+                    allNodes.push(node);
+                    node.children.forEach(child => traverse(child));
+                };
+                roots.forEach(root => traverse(root));
+                return allNodes;
+            }
+
+            updateStats() {
+                const roots = this.buildTreeHierarchy();
+                const allNodes = this.getAllNodes(roots);
+                const visibleNodes = allNodes.filter(node => node.expanded || node.depth === 0);
+                
+                const branchNodes = allNodes.filter(node => node.children.length > 0);
+                const leafNodes = allNodes.filter(node => node.children.length === 0);
+                
+                const stats = {
+                    totalPeople: this.allPeople.length,
+                    treeDepth: Math.max(...allNodes.map(node => node.depth || 0), 0),
+                    visibleNodes: visibleNodes.length,
+                    branchNodes: branchNodes.length,
+                    leafNodes: leafNodes.length,
+                    totalRelations: this.data.length
+                };
+
+                document.getElementById('totalPeople').textContent = stats.totalPeople;
+                document.getElementById('treeDepth').textContent = stats.treeDepth;
+                document.getElementById('visibleNodes').textContent = stats.visibleNodes;
+                document.getElementById('branchNodes').textContent = stats.branchNodes;
+                document.getElementById('leafNodes').textContent = stats.leafNodes;
+                document.getElementById('totalRelations').textContent = stats.totalRelations;
+            }
+        }
+
+        // Global function for downloading images
+        window.downloadImage = function(blobUrl, filename) {
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        };
+
+        // Initialize the application when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new FamilyTree();
+        });
+    </script>
+</body>
+</html>

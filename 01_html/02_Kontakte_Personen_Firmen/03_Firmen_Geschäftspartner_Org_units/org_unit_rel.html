@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organizational Unit Relationship Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            display: flex;
+            gap: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            flex: 1;
+        }
+        .sidebar {
+            width: 350px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+        .sidebar h2 {
+            color: #333;
+            margin-top: 0;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #4CAF50;
+        }
+        .org-unit-list {
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .org-unit-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .org-unit-item:hover {
+            background-color: #f0f0f0;
+        }
+        .org-unit-item.selected {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196F3;
+        }
+        .org-unit-id {
+            font-weight: bold;
+            color: #2196F3;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+        .org-unit-name {
+            color: #333;
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+        .org-unit-details {
+            color: #666;
+            font-size: 0.85em;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            margin-top: 5px;
+        }
+        .org-unit-status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        .status-active {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+        }
+        .status-inactive {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .input-section {
+            margin-bottom: 20px;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        label {
+            font-weight: bold;
+            min-width: 120px;
+        }
+        input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            flex-grow: 1;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button.secondary {
+            background-color: #2196F3;
+        }
+        button.secondary:hover {
+            background-color: #0b7dda;
+        }
+        button.tertiary {
+            background-color: #FF9800;
+        }
+        button.tertiary:hover {
+            background-color: #e68900;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+        .relationship-section {
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .relationship-header {
+            background-color: #e9e9e9;
+            padding: 12px 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        .relationship-header:hover {
+            background-color: #d9d9d9;
+        }
+        .relationship-content {
+            padding: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+        }
+        .relationship-content.expanded {
+            padding: 15px;
+            max-height: 5000px;
+        }
+        .toggle-icon {
+            font-size: 18px;
+            transition: transform 0.3s;
+        }
+        .toggle-icon.expanded {
+            transform: rotate(90deg);
+        }
+        .summary {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+        .navigation-links {
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #f0f8ff;
+            border-radius: 4px;
+            border-left: 4px solid #2196F3;
+        }
+        .navigation-links h3 {
+            margin-top: 0;
+            color: #2196F3;
+        }
+        .nav-link {
+            display: inline-block;
+            margin-right: 10px;
+            padding: 5px 10px;
+            background-color: #e3f2fd;
+            border-radius: 4px;
+            text-decoration: none;
+            color: #1976d2;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        .nav-link:hover {
+            background-color: #bbdefb;
+        }
+        .breadcrumb {
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            color: #666;
+        }
+        .breadcrumb a {
+            color: #1976d2;
+            text-decoration: none;
+        }
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        .breadcrumb span {
+            margin: 0 5px;
+        }
+        .history-section {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .history-section h3 {
+            margin-top: 0;
+        }
+        .history-item {
+            display: inline-block;
+            margin-right: 10px;
+            padding: 5px 10px;
+            background-color: #e9e9e9;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .current-data {
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            border-left: 4px solid #FF9800;
+        }
+        .current-data h3 {
+            margin-top: 0;
+            color: #FF9800;
+        }
+        .current-data p {
+            margin: 5px 0;
+        }
+        .search-info {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #e8f5e8;
+            border-radius: 4px;
+            border-left: 4px solid #4CAF50;
+        }
+        .relationship-type {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .relationship-type.main {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+        }
+        .relationship-type.related {
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+        .relationship-buttons {
+            display: flex;
+            gap: 5px;
+            margin-left: 10px;
+        }
+        .relationship-buttons button {
+            padding: 4px 8px;
+            font-size: 0.8em;
+        }
+        .sidebar-loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        .sidebar-error {
+            color: red;
+            padding: 10px;
+            text-align: center;
+        }
+        .search-box {
+            margin-bottom: 15px;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .branches-section {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            border-left: 4px solid #9C27B0;
+        }
+        .branches-section h3 {
+            margin-top: 0;
+            color: #9C27B0;
+        }
+        .branch-type {
+            margin-bottom: 15px;
+        }
+        .branch-type h4 {
+            margin: 10px 0;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #ddd;
+            background-color: green;
+        }
+        .branch-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 10px;
+        }
+        .branch-item {
+            padding: 10px;
+            background-color: white;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .branch-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .branch-name-deu, .branch-name-eng {
+            font-size: 0.9em;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Organizational Units</h2>
+        
+        <div class="search-box">
+            <input type="text" id="searchUnits" placeholder="Search units by name or ID...">
+        </div>
+        
+        <div id="sidebarLoading" class="sidebar-loading">Loading organizational units...</div>
+        <div id="sidebarError" class="sidebar-error" style="display: none;"></div>
+        <div id="orgUnitList" class="org-unit-list" style="display: none;"></div>
+    </div>
+
+    <div class="container">
+        <h1>Organizational Unit Relationship Viewer</h1>
+        
+        <div class="input-section">
+            <div class="input-group">
+                <label for="orgUnitId">Org Unit ID:</label>
+                <input type="text" id="orgUnitId" placeholder="Enter first ID (e.g., 1)">
+            </div>
+            <div class="input-group">
+                <label for="mainUnitId">Main Unit ID:</label>
+                <input type="text" id="mainUnitId" placeholder="Enter second ID (e.g., 2)">
+            </div>
+            <div class="button-group">
+                <button id="fetchData">Fetch Relationships</button>
+                <button id="clearHistory" class="secondary">Clear History</button>
+            </div>
+        </div>
+        
+        <div id="searchInfo" class="search-info" style="display: none;">
+            <h3>Search Parameters</h3>
+            <p>Showing relationships for Org Unit ID: <span id="currentOrgIdDisplay">-</span> and Main Unit ID: <span id="currentMainIdDisplay">-</span></p>
+        </div>
+        
+        <div id="currentData" class="current-data" style="display: none;">
+            <h3>Current Relationship Data</h3>
+            <p>Main Org Unit ID: <span id="currentMainId">-</span></p>
+            <p>Org Unit ID: <span id="currentOrgId">-</span></p>
+            <div class="button-group">
+                <button id="useMainId" class="tertiary">Use Main Org Unit ID</button>
+                <button id="useOrgId" class="tertiary">Use Org Unit ID</button>
+            </div>
+        </div>
+        
+        <div id="breadcrumb" class="breadcrumb"></div>
+        
+        <div id="loading" class="loading">Loading data...</div>
+        <div id="error" class="error"></div>
+        
+        <div id="results"></div>
+        
+        <div id="branchesSection" class="branches-section" style="display: none;">
+            <h3>Branches</h3>
+            <div id="mainBranches" class="branch-type">
+                <h4>Main Org Unit Branches</h4>
+                <div id="mainBranchesList" class="branch-list"></div>
+            </div>
+            <div id="subBranches" class="branch-type">
+                <h4>Sub Org Unit Branches</h4>
+                <div id="subBranchesList" class="branch-list"></div>
+            </div>
+        </div>
+        
+        <div id="history" class="history-section" style="display: none;">
+            <h3>Navigation History</h3>
+            <div id="historyItems"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const fetchButton = document.getElementById('fetchData');
+            const clearHistoryButton = document.getElementById('clearHistory');
+            const useMainIdButton = document.getElementById('useMainId');
+            const useOrgIdButton = document.getElementById('useOrgId');
+            const orgUnitIdInput = document.getElementById('orgUnitId');
+            const mainUnitIdInput = document.getElementById('mainUnitId');
+            const resultsDiv = document.getElementById('results');
+            const loadingDiv = document.getElementById('loading');
+            const errorDiv = document.getElementById('error');
+            const breadcrumbDiv = document.getElementById('breadcrumb');
+            const historySection = document.getElementById('history');
+            const historyItemsDiv = document.getElementById('historyItems');
+            const currentDataSection = document.getElementById('currentData');
+            const searchInfoSection = document.getElementById('searchInfo');
+            const currentMainIdSpan = document.getElementById('currentMainId');
+            const currentOrgIdSpan = document.getElementById('currentOrgId');
+            const currentOrgIdDisplay = document.getElementById('currentOrgIdDisplay');
+            const currentMainIdDisplay = document.getElementById('currentMainIdDisplay');
+            
+            // Sidebar elements
+            const sidebarLoading = document.getElementById('sidebarLoading');
+            const sidebarError = document.getElementById('sidebarError');
+            const orgUnitList = document.getElementById('orgUnitList');
+            const searchInput = document.getElementById('searchUnits');
+            
+            // Branches elements
+            const branchesSection = document.getElementById('branchesSection');
+            const mainBranchesList = document.getElementById('mainBranchesList');
+            const subBranchesList = document.getElementById('subBranchesList');
+            
+            // Initialize navigation history
+            let navigationHistory = JSON.parse(localStorage.getItem('orgUnitNavigationHistory')) || [];
+            let currentOrgUnitId = null;
+            let currentMainUnitId = null;
+            let currentRelationshipData = null;
+            let allOrgUnits = [];
+            let filteredOrgUnits = [];
+            
+            // Load organizational units on page load
+            loadOrgUnits();
+            
+            // Display history if exists
+            updateHistoryDisplay();
+            
+            fetchButton.addEventListener('click', fetchData);
+            clearHistoryButton.addEventListener('click', clearHistory);
+            useMainIdButton.addEventListener('click', useMainId);
+            useOrgIdButton.addEventListener('click', useOrgId);
+            
+            // Search functionality
+            searchInput.addEventListener('input', filterOrgUnits);
+            
+            // Enter key support
+            orgUnitIdInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') fetchData();
+            });
+            mainUnitIdInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') fetchData();
+            });
+            
+            function loadOrgUnits() {
+                sidebarLoading.style.display = 'block';
+                sidebarError.style.display = 'none';
+                orgUnitList.style.display = 'none';
+                
+                fetch('http://localhost:5000/org_unit')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        sidebarLoading.style.display = 'none';
+                        allOrgUnits = data;
+                        filteredOrgUnits = [...data];
+                        displayOrgUnits(data);
+                    })
+                    .catch(error => {
+                        sidebarLoading.style.display = 'none';
+                        sidebarError.textContent = `Error loading organizational units: ${error.message}`;
+                        sidebarError.style.display = 'block';
+                    });
+            }
+            
+            function filterOrgUnits() {
+                const searchTerm = searchInput.value.toLowerCase().trim();
+                
+                if (!searchTerm) {
+                    filteredOrgUnits = [...allOrgUnits];
+                } else {
+                    filteredOrgUnits = allOrgUnits.filter(unit => {
+                        const unitId = unit.PK_ORG_UNIT?.toString().toLowerCase() || '';
+                        const unitName = unit.ORG_UNIT_NAME?.toLowerCase() || '';
+                        return unitId.includes(searchTerm) || unitName.includes(searchTerm);
+                    });
+                }
+                
+                displayOrgUnits(filteredOrgUnits);
+            }
+            
+            function displayOrgUnits(orgUnits) {
+                if (!orgUnits || orgUnits.length === 0) {
+                    orgUnitList.innerHTML = '<div class="org-unit-item">No organizational units found</div>';
+                    orgUnitList.style.display = 'block';
+                    return;
+                }
+                
+                let html = '';
+                
+                orgUnits.forEach(unit => {
+                    const unitId = unit.PK_ORG_UNIT || 'N/A';
+                    const unitName = unit.ORG_UNIT_NAME || 'Unnamed Unit';
+                    const isActive = unit.ACTIVE === true || unit.ACTIVE === 'true' || unit.ACTIVE === 1;
+                    const unitType = unit.FK_ORG_UNIT_TYPE || '';
+                    
+                    // Format dates
+                    const createdDate = unit.CREATED_DATE ? new Date(unit.CREATED_DATE).toLocaleDateString() : 'N/A';
+                    const modifiedDate = unit.MODIFIED_DATE ? new Date(unit.MODIFIED_DATE).toLocaleDateString() : 'N/A';
+                    
+                    html += `<div class="org-unit-item" data-unit-id="${unitId}">`;
+                    html += `<div class="org-unit-id">Unit ${unitId}</div>`;
+                    html += `<div class="org-unit-name">${unitName}</div>`;
+                    html += `<div class="org-unit-details">`;
+                    html += `<div><strong>Type:</strong> ${unitType}</div>`;
+                    html += `<div><strong>Created:</strong> ${createdDate}</div>`;
+                    html += `<div><strong>Modified:</strong> ${modifiedDate}</div>`;
+                    html += `</div>`;
+                    html += `<div class="org-unit-status ${isActive ? 'status-active' : 'status-inactive'}">`;
+                    html += `${isActive ? 'Active' : 'Inactive'}`;
+                    html += `</div>`;
+                    html += `</div>`;
+                });
+                
+                orgUnitList.innerHTML = html;
+                orgUnitList.style.display = 'block';
+                
+                // Add click handlers to org unit items
+                document.querySelectorAll('.org-unit-item').forEach(item => {
+                    item.addEventListener('click', function() {
+                        const unitId = this.getAttribute('data-unit-id');
+                        
+                        // Remove selected class from all items
+                        document.querySelectorAll('.org-unit-item').forEach(i => {
+                            i.classList.remove('selected');
+                        });
+                        
+                        // Add selected class to clicked item
+                        this.classList.add('selected');
+                        
+                        // Fill both input fields with the selected unit ID
+                        orgUnitIdInput.value = unitId;
+                        mainUnitIdInput.value = unitId;
+                        
+                        // Automatically fetch relationships for this unit
+                        fetchOrgUnitData(unitId, unitId);
+                    });
+                });
+                
+                // Re-apply selection if there's a current unit
+                if (currentOrgUnitId) {
+                    updateSidebarSelection(currentOrgUnitId);
+                }
+            }
+            
+            function fetchData() {
+                const orgId = orgUnitIdInput.value.trim();
+                const mainId = mainUnitIdInput.value.trim();
+                
+                if (!orgId || !mainId) {
+                    showError('Please enter both Organizational Unit IDs');
+                    return;
+                }
+                
+                if (isNaN(orgId) || isNaN(mainId)) {
+                    showError('Both IDs must be valid numbers');
+                    return;
+                }
+                
+                // Add to navigation history
+                addToHistory(orgId, mainId);
+                
+                // Fetch the data
+                fetchOrgUnitData(orgId, mainId);
+            }
+            
+            function fetchOrgUnitData(orgId, mainId) {
+                // Clear previous results and errors
+                resultsDiv.innerHTML = '';
+                errorDiv.textContent = '';
+                branchesSection.style.display = 'none';
+                
+                // Show loading indicator
+                loadingDiv.style.display = 'block';
+                
+                // Construct the URL with both IDs
+                const url = `http://localhost:5000/rel_org_unit/${orgId}/${mainId}`;
+                
+                // Fetch data from the web service
+                fetch(url)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        loadingDiv.style.display = 'none';
+                        currentOrgUnitId = orgId;
+                        currentMainUnitId = mainId;
+                        currentRelationshipData = data;
+                        displayData(data);
+                        updateSearchInfo(orgId, mainId);
+                        updateBreadcrumb(orgId, mainId);
+                        updateCurrentDataSection(data);
+                        
+                        // Update selected state in sidebar
+                        updateSidebarSelection(orgId);
+                        
+                        // Fetch branches for the selected relationship
+                        fetchBranches(orgId, mainId);
+                    })
+                    .catch(error => {
+                        loadingDiv.style.display = 'none';
+                        showError(`Error fetching data: ${error.message}`);
+                    });
+            }
+            
+            function fetchBranches(orgId, mainId) {
+                // Fetch branches for the main org unit
+                fetch(`http://localhost:5000/org_unit_branches_rel/${mainId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(mainBranches => {
+                        // Fetch branches for the sub org unit
+                        return fetch(`http://localhost:5000/org_unit_branches_rel/${orgId}`)
+                            .then(response => {
+                                if (!response.ok) {
+                                    throw new Error(`HTTP error! Status: ${response.status}`);
+                                }
+                                return response.json();
+                            })
+                            .then(subBranches => {
+                                displayBranches(mainBranches, subBranches);
+                            });
+                    })
+                    .catch(error => {
+                        console.error('Error fetching branches:', error);
+                        // Don't show error for branches, just log it
+                    });
+            }
+            
+            function displayBranches(mainBranches, subBranches) {
+                // Clear previous branches
+                mainBranchesList.innerHTML = '';
+                subBranchesList.innerHTML = '';
+                
+                // Display main branches
+                if (mainBranches && mainBranches.length > 0) {
+                    mainBranches.forEach(branch => {
+                        const branchItem = document.createElement('div');
+                        branchItem.className = 'branch-item';
+                        branchItem.innerHTML = `
+                           <div class="branch-name">
+  ${branch.BRANCH_NAME 
+    ? '<span style="background-color: lightgreen;">' + branch.BRANCH_NAME + '</span>' 
+    : 'Keine Branche'}
+</div>
+                            <div class="branch-name-deu">${branch.BRANCH_NAME_DEU || ''}</div>
+                            <div class="branch-name-eng">${branch.BRANCH_NAME_ENG || ''}</div>
+<div class="branch-name">
+  ${branch.DIENSTLEISTUNG 
+    ? '<span style="background-color: lightblue;">' + branch.DIENSTLEISTUNG + '</span>' 
+    : 'Keine Dienstleistung'}
+</div>
+                        `;
+                        mainBranchesList.appendChild(branchItem);
+                    });
+                } else {
+                    mainBranchesList.innerHTML = '<div class="branch-item">No branches found</div>';
+                }
+                
+                // Display sub branches
+                if (subBranches && subBranches.length > 0) {
+                    subBranches.forEach(branch => {
+                        const branchItem = document.createElement('div');
+                        branchItem.className = 'branch-item';
+                        branchItem.innerHTML = `
+                          <div class="branch-name">
+  ${branch.BRANCH_NAME 
+    ? '<span style="background-color: lightgreen;">' + branch.BRANCH_NAME + '</span>' 
+    : 'Keine Branche'}
+</div>
+                            <div class="branch-name-deu">${branch.BRANCH_NAME_DEU || ''}</div>
+                            <div class="branch-name-eng">${branch.BRANCH_NAME_ENG || ''}</div>
+<div class="branch-name">
+  ${branch.DIENSTLEISTUNG
+    ? '<span style="background-color: lightblue;">' + branch.DIENSTLEISTUNG + '</span>' 
+    : 'Keine Dienstleistung'}
+</div>
+                        `;
+                        subBranchesList.appendChild(branchItem);
+                    });
+                } else {
+                    subBranchesList.innerHTML = '<div class="branch-item">No branches found</div>';
+                }
+                
+                // Show the branches section
+                branchesSection.style.display = 'block';
+            }
+            
+            function updateSidebarSelection(orgId) {
+                // Remove selected class from all items
+                document.querySelectorAll('.org-unit-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                
+                // Add selected class to matching item
+                const matchingItem = document.querySelector(`.org-unit-item[data-unit-id="${orgId}"]`);
+                if (matchingItem) {
+                    matchingItem.classList.add('selected');
+                    
+                    // Scroll to selected item
+                    matchingItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }
+            
+            function displayData(data) {
+                if (!data || data.length === 0) {
+                    resultsDiv.innerHTML = '<p>No relationships found for the provided IDs.</p>';
+                    return;
+                }
+                
+                let html = '';
+                
+                // Create navigation links section
+                html += createNavigationLinks(data);
+                
+                // Process each relationship in the data array
+                data.forEach((relationship, index) => {
+                    const relationshipId = relationship.Relationship_Unique_Identifier || index;
+                    const orgUnitName = relationship.Org_Unit_Name || 'N/A';
+                    const mainOrgUnitName = relationship.Main_Org_Unit_Name || 'N/A';
+                    const mainOrgUnitId = relationship.Main_Org_Unit_Reference;
+                    const orgUnitId = relationship.Related_Org_Unit_Reference;
+                    
+                    // Determine relationship type
+                    const isMainRelationship = mainOrgUnitId == currentOrgUnitId || mainOrgUnitId == currentMainUnitId;
+                    const relationshipType = isMainRelationship ? 'related' : 'main';
+                    const relationshipTypeLabel = isMainRelationship ? 'Related' : 'Main';
+                    
+                    html += `<div class="relationship-section">`;
+                    html += `<div class="relationship-header" data-index="${index}">`;
+                    html += `<span>`;
+                    html += `Relationship ${relationshipId}: ${mainOrgUnitName} → ${orgUnitName} (M: ${mainOrgUnitId},S: ${orgUnitId})`;
+                    html += `<span class="relationship-type ${relationshipType}">${relationshipTypeLabel}</span>`;
+                    html += `<div class="relationship-buttons">`;
+                    html += `<button class="main-button" data-main-id="${mainOrgUnitId}" data-org-id="${orgUnitId}">Main</button>`;
+                    html += `<button class="sub-button" data-main-id="${mainOrgUnitId}" data-org-id="${orgUnitId}">Sub</button>`;
+                    html += `</div>`;
+                    html += `</span>`;
+                    html += `<span class="toggle-icon">▶</span>`;
+                    html += `</div>`;
+                    html += `<div class="relationship-content" id="content-${index}">`;
+                    html += `<div class="summary">Relationship created: ${formatValue(relationship.Relationship_Creation_Timestamp)}</div>`;
+                    html += `<table>`;
+                    
+                    // Create table rows for each property
+                    for (const [key, value] of Object.entries(relationship)) {
+                        html += `<tr>`;
+                        html += `<td><strong>${formatKey(key)}</strong></td>`;
+                        html += `<td>${formatValue(value)}</td>`;
+                        html += `</tr>`;
+                    }
+                    
+                    html += `</table>`;
+                    html += `</div>`;
+                    html += `</div>`;
+                });
+                
+                resultsDiv.innerHTML = html;
+                
+                // Add click handlers to all relationship headers
+                document.querySelectorAll('.relationship-header').forEach(header => {
+                    header.addEventListener('click', function(e) {
+                        // Don't trigger toggle if clicking on Main/Sub buttons
+                        if (e.target.classList.contains('main-button') || e.target.classList.contains('sub-button')) {
+                            return;
+                        }
+                        
+                        const index = this.getAttribute('data-index');
+                        const content = document.getElementById(`content-${index}`);
+                        const icon = this.querySelector('.toggle-icon');
+                        
+                        if (content.classList.contains('expanded')) {
+                            content.classList.remove('expanded');
+                            icon.classList.remove('expanded');
+                        } else {
+                            content.classList.add('expanded');
+                            icon.classList.add('expanded');
+                        }
+                    });
+                });
+                
+                // Add click handlers to Main buttons
+                document.querySelectorAll('.main-button').forEach(button => {
+                    button.addEventListener('click', function(e) {
+                        e.stopPropagation(); // Prevent triggering the header click
+                        const mainId = this.getAttribute('data-main-id');
+                        const orgId = this.getAttribute('data-org-id');
+                        
+                        // Fill both fields with the Main Org Unit ID
+                        orgUnitIdInput.value = mainId;
+                        mainUnitIdInput.value = mainId;
+                        
+                        // Fetch data with the new IDs
+                        fetchOrgUnitData(mainId, mainId);
+                    });
+                });
+                
+                // Add click handlers to Sub buttons
+                document.querySelectorAll('.sub-button').forEach(button => {
+                    button.addEventListener('click', function(e) {
+                        e.stopPropagation(); // Prevent triggering the header click
+                        const mainId = this.getAttribute('data-main-id');
+                        const orgId = this.getAttribute('data-org-id');
+                        
+                        // Fill both fields with the Org Unit ID
+                        orgUnitIdInput.value = orgId;
+                        mainUnitIdInput.value = orgId;
+                        
+                        // Fetch data with the new IDs
+                        fetchOrgUnitData(orgId, orgId);
+                    });
+                });
+                
+                // Expand the first section by default
+                const firstHeader = document.querySelector('.relationship-header');
+                if (firstHeader) {
+                    firstHeader.click();
+                }
+            }
+            
+            function updateSearchInfo(orgId, mainId) {
+                currentOrgIdDisplay.textContent = orgId;
+                currentMainIdDisplay.textContent = mainId;
+                searchInfoSection.style.display = 'block';
+            }
+            
+            function updateCurrentDataSection(data) {
+                if (!data || data.length === 0) {
+                    currentDataSection.style.display = 'none';
+                    return;
+                }
+                
+                // Use the first relationship to get IDs
+                const firstRelationship = data[0];
+                const mainOrgUnitId = firstRelationship.Main_Org_Unit_Reference || 'N/A';
+                const orgUnitId = firstRelationship.Org_Unit_Reference || 'N/A';
+                
+                currentMainIdSpan.textContent = mainOrgUnitId;
+                currentOrgIdSpan.textContent = orgUnitId;
+                currentDataSection.style.display = 'block';
+            }
+            
+            function useMainId() {
+                const mainId = currentMainIdSpan.textContent;
+                if (mainId && mainId !== 'N/A') {
+                    mainUnitIdInput.value = mainId;
+                }
+            }
+            
+            function useOrgId() {
+                const orgId = currentOrgIdSpan.textContent;
+                if (orgId && orgId !== 'N/A') {
+                    orgUnitIdInput.value = orgId;
+                }
+            }
+            
+            function createNavigationLinks(data) {
+                const relatedOrgUnits = new Set();
+                
+                data.forEach(relationship => {
+                    // Add Main_Org_Unit_Reference if it's different from current IDs
+                    if (relationship.Main_Org_Unit_Reference && 
+                        relationship.Main_Org_Unit_Reference !== currentOrgUnitId && 
+                        relationship.Main_Org_Unit_Reference !== currentMainUnitId) {
+                        relatedOrgUnits.add(relationship.Main_Org_Unit_Reference);
+                    }
+                    
+                    // Add Org_Unit_Reference if it's different from current IDs
+                    if (relationship.Org_Unit_Reference && 
+                        relationship.Org_Unit_Reference !== currentOrgUnitId && 
+                        relationship.Org_Unit_Reference !== currentMainUnitId) {
+                        relatedOrgUnits.add(relationship.Org_Unit_Reference);
+                    }
+                });
+                
+                if (relatedOrgUnits.size === 0) {
+                    return '<p>No related organizational units found.</p>';
+                }
+                
+                let html = '<div class="navigation-links">';
+                html += '<h3>Navigate to Related Organizational Units:</h3>';
+                
+                relatedOrgUnits.forEach(unitId => {
+                    html += `<a href="#" class="nav-link" data-unit-id="${unitId}">Unit ${unitId}</a>`;
+                });
+                
+                html += '</div>';
+                
+                return html;
+            }
+            
+            function addToHistory(orgId, mainId) {
+                const historyEntry = `${orgId}-${mainId}`;
+                
+                // Don't add if it's the same as the last item in history
+                if (navigationHistory.length > 0 && navigationHistory[navigationHistory.length - 1] === historyEntry) {
+                    return;
+                }
+                
+                navigationHistory.push(historyEntry);
+                
+                // Keep only the last 10 items
+                if (navigationHistory.length > 10) {
+                    navigationHistory = navigationHistory.slice(-10);
+                }
+                
+                // Save to localStorage
+                localStorage.setItem('orgUnitNavigationHistory', JSON.stringify(navigationHistory));
+                
+                // Update display
+                updateHistoryDisplay();
+            }
+            
+            function updateHistoryDisplay() {
+                if (navigationHistory.length === 0) {
+                    historySection.style.display = 'none';
+                    return;
+                }
+                
+                historySection.style.display = 'block';
+                historyItemsDiv.innerHTML = '';
+                
+                navigationHistory.forEach(entry => {
+                    const [orgId, mainId] = entry.split('-');
+                    const historyItem = document.createElement('div');
+                    historyItem.className = 'history-item';
+                    historyItem.textContent = `Org: ${orgId}, Main: ${mainId}`;
+                    historyItem.addEventListener('click', function() {
+                        orgUnitIdInput.value = orgId;
+                        mainUnitIdInput.value = mainId;
+                        fetchOrgUnitData(orgId, mainId);
+                    });
+                    historyItemsDiv.appendChild(historyItem);
+                });
+            }
+            
+            function clearHistory() {
+                navigationHistory = [];
+                localStorage.removeItem('orgUnitNavigationHistory');
+                updateHistoryDisplay();
+            }
+            
+            function updateBreadcrumb(orgId, mainId) {
+                if (navigationHistory.length <= 1) {
+                    breadcrumbDiv.innerHTML = '';
+                    return;
+                }
+                
+                let breadcrumbHtml = '<strong>Navigation: </strong>';
+                const currentEntry = `${orgId}-${mainId}`;
+                const currentIndex = navigationHistory.indexOf(currentEntry);
+                
+                navigationHistory.forEach((entry, index) => {
+                    const [orgId, mainId] = entry.split('-');
+                    if (index > 0) {
+                        breadcrumbHtml += ' <span>→</span> ';
+                    }
+                    
+                    if (index === currentIndex) {
+                        breadcrumbHtml += `<strong>Org: ${orgId}, Main: ${mainId}</strong>`;
+                    } else {
+                        breadcrumbHtml += `<a href="#" data-entry="${entry}">Org: ${orgId}, Main: ${mainId}</a>`;
+                    }
+                });
+                
+                breadcrumbDiv.innerHTML = breadcrumbHtml;
+                
+                // Add click handlers to breadcrumb links
+                breadcrumbDiv.querySelectorAll('a').forEach(link => {
+                    link.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const entry = this.getAttribute('data-entry');
+                        const [orgId, mainId] = entry.split('-');
+                        orgUnitIdInput.value = orgId;
+                        mainUnitIdInput.value = mainId;
+                        fetchOrgUnitData(orgId, mainId);
+                    });
+                });
+            }
+            
+            function formatKey(key) {
+                return key.split('_')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                    .join(' ');
+            }
+            
+            function formatValue(value) {
+                if (value === null || value === undefined) {
+                    return '<em>null</em>';
+                }
+                
+                if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) {
+                    const date = new Date(value);
+                    return date.toLocaleString();
+                }
+                
+                return value;
+            }
+            
+            function showError(message) {
+                errorDiv.textContent = message;
+            }
+            
+            // Add event delegation for navigation links
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('nav-link')) {
+                    e.preventDefault();
+                    const unitId = e.target.getAttribute('data-unit-id');
+                    orgUnitIdInput.value = unitId;
+                    // Keep the current main ID or set a default
+                    if (!mainUnitIdInput.value) {
+                        mainUnitIdInput.value = unitId;
+                    }
+                    fetchOrgUnitData(unitId, mainUnitIdInput.value);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,4347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Person Management System with Organisation Unit Tree</title>
+    <style>
+        /* Base Styles */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            display: flex;
+            gap: 25px;
+        }
+        .left-panel {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+        .middle-panel {
+            flex: 3;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+        .right-panel {
+            flex: 2;
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            position: sticky;
+            top: 20px;
+            height: fit-content;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 35px;
+            font-weight: 600;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #3498db;
+        }
+        .form-section {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            margin-bottom: 25px;
+        }
+        .form-section h2 {
+            color: #2c3e50;
+            margin-top: 0;
+            margin-bottom: 22px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #4CAF50;
+            font-weight: 600;
+        }
+        .form-group {
+            margin-bottom: 18px;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #34495e;
+        }
+        input[type="text"], input[type="email"], input[type="tel"], input[type="number"], textarea, select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #dce4ec;
+            border-radius: 6px;
+            font-size: 15px;
+            box-sizing: border-box;
+            transition: all 0.3s;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        input[type="text"]:focus, input[type="email"]:focus, input[type="tel"]:focus, input[type="number"]:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 8px rgba(52, 152, 219, 0.3);
+        }
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        button {
+            padding: 13px 26px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        button:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .btn-danger {
+            background: #e74c3c;
+        }
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        .btn-success {
+            background: #2ecc71;
+        }
+        .btn-success:hover {
+            background: #27ae60;
+        }
+        .btn-warning {
+            background: #f39c12;
+        }
+        .btn-warning:hover {
+            background: #d35400;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .message {
+            margin-top: 18px;
+            padding: 12px 15px;
+            border-radius: 6px;
+            display: none;
+            font-weight: 500;
+        }
+        .success {
+            background-color: #d4f8e8;
+            color: #27ae60;
+            border: 1px solid #a3e4bc;
+        }
+        .error {
+            background-color: #fdeaea;
+            color: #e74c3c;
+            border: 1px solid #f5b7b1;
+        }
+
+        /* Tab Styles */
+        .tabs-container {
+            margin-bottom: 20px;
+        }
+        .tabs {
+            display: flex;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 5px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .tab {
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #6c757d;
+            transition: all 0.3s;
+            flex: 1;
+            text-align: center;
+            min-width: 120px;
+        }
+        .tab:hover {
+            background-color: #e9ecef;
+            color: #495057;
+        }
+        .tab.active {
+            background-color: #3498db;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .form-row .form-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+        .optional-field {
+            opacity: 0.7;
+        }
+        .optional-field label::after {
+            content: " (optional)";
+            font-weight: normal;
+            font-style: italic;
+        }
+        .contact-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        @media (max-width: 768px) {
+            .contact-grid {
+                grid-template-columns: 1fr;
+            }
+            .tabs {
+                flex-direction: column;
+            }
+            .tab {
+                min-width: auto;
+            }
+        }
+        .kontakt-id-display, .org-unit-display, .branch-display, .marken-display {
+            background-color: #e8f4fd;
+            border: 1px solid #3498db;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 15px;
+            text-align: center;
+            display: none;
+        }
+        .kontakt-id, .org-unit-id, .branch-id, .marken-id {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 18px;
+        }
+        .sub-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e1e8ed;
+        }
+        .sub-section h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        /* Person Details Styles */
+        .person-details-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            margin-bottom: 25px;
+        }
+        
+        .person-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .person-info-item {
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .person-info-label {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .person-info-value {
+            color: #7f8c8d;
+        }
+        
+        .person-berufe-list {
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .person-beruf-item {
+            padding: 15px;
+            margin-bottom: 12px;
+            background-color: white;
+            border-left: 5px solid #9b59b6;
+            border-radius: 6px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: all 0.2s;
+        }
+        
+        .person-beruf-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+        }
+        
+        .person-beruf-item h4 {
+            margin: 0 0 8px 0;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+        
+        .person-beruf-item p {
+            margin: 5px 0;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        
+        .no-person-berufe {
+            padding: 20px;
+            text-align: center;
+            color: #7f8c8d;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            font-style: italic;
+        }
+        
+        .person-details-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        /* Image Viewer Styles */
+        .image-container {
+            margin-top: 15px;
+            text-align: center;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 6px;
+            background-color: #f9f9f9;
+        }
+        .image-container img {
+            max-width: 100%;
+            max-height: 500px;
+            border: 1px solid #ddd;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .image-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .image-controls input {
+            flex: 1;
+        }
+        .image-controls button {
+            width: auto;
+            padding: 8px 12px;
+        }
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .image-info {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #555;
+        }
+
+        /* JSON Fields Display Styles */
+        .json-fields-container {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e1e8ed;
+        }
+        .json-field {
+            display: flex;
+            margin-bottom: 10px;
+            padding: 8px;
+            background-color: white;
+            border-radius: 4px;
+            border-left: 4px solid #3498db;
+        }
+        .json-field-key {
+            font-weight: bold;
+            min-width: 150px;
+            color: #2c3e50;
+        }
+        .json-field-value {
+            flex: 1;
+            color: #7f8c8d;
+        }
+        .json-field-actions {
+            margin-left: 10px;
+        }
+        .update-button {
+            background-color: #e67e22;
+            padding: 6px 12px;
+            font-size: 14px;
+        }
+        .update-button:hover {
+            background-color: #d35400;
+        }
+        
+        /* Geschäftspartner Form Styles */
+        .geschaeftspartner-form {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e1e8ed;
+        }
+        
+        /* Update Button Styles */
+        .update-relation-btn {
+            background-color: #e67e22;
+            padding: 8px 15px;
+            font-size: 14px;
+            margin: 5px;
+        }
+        
+        .update-relation-btn:hover {
+            background-color: #d35400;
+        }
+        
+        /* Modal Styles for Update Form */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 12px;
+            width: 80%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        
+        .close-modal {
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #7f8c8d;
+        }
+        
+        .close-modal:hover {
+            color: #34495e;
+        }
+        
+        .update-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .update-form-full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+        
+        .cancel-btn {
+            background-color: #95a5a6;
+        }
+        
+        .cancel-btn:hover {
+            background-color: #7f8c8d;
+        }
+
+        /* Organisation Unit Management Styles */
+        .org-unit-management {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            margin-bottom: 25px;
+        }
+        
+        .org-unit-form {
+            margin-bottom: 30px;
+        }
+        
+        .org-unit-list {
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .org-unit-item {
+            padding: 15px;
+            margin-bottom: 12px;
+            background-color: white;
+            border-left: 5px solid #3498db;
+            border-radius: 6px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: all 0.2s;
+        }
+        
+        .org-unit-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+        }
+        
+        .org-unit-item h3 {
+            margin: 0 0 8px 0;
+            color: #2c3e50;
+            font-size: 18px;
+        }
+        
+        .org-unit-item p {
+            margin: 5px 0;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        
+        .no-org-units {
+            padding: 20px;
+            text-align: center;
+            color: #7f8c8d;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            font-style: italic;
+        }
+        
+        .org-unit-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .org-unit-actions button {
+            padding: 8px 15px;
+            font-size: 14px;
+        }
+        
+        .delete-btn {
+            background-color: #e74c3c;
+        }
+        
+        .delete-btn:hover {
+            background-color: #c0392b;
+        }
+        
+        .edit-btn {
+            background-color: #f39c12;
+        }
+        
+        .edit-btn:hover {
+            background-color: #d35400;
+        }
+        
+        /* Organisation Unit Relations Styles */
+        .org-unit-relations {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e1e8ed;
+        }
+        
+        .relations-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .relations-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .relations-table th {
+            background-color: #9b59b6;
+            color: white;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #8e44ad;
+        }
+        
+        .relations-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e1e8ed;
+        }
+        
+        .relations-table tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .relations-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .no-relations {
+            padding: 20px;
+            text-align: center;
+            color: #7f8c8d;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            font-style: italic;
+        }
+
+        /* Middle Panel Styles for Relations Tabs */
+        .relations-tabs-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            margin-bottom: 25px;
+        }
+        
+        .relation-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e1e8ed;
+            padding-bottom: 10px;
+        }
+        
+        .relation-tab {
+            padding: 10px 15px;
+            background: none;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #6c757d;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .relation-tab:hover {
+            background-color: #e9ecef;
+            color: #495057;
+        }
+        
+        .relation-tab.active {
+            background-color: #3498db;
+            color: white;
+            border-bottom: 3px solid #2980b9;
+        }
+        
+        .relation-content {
+            display: none;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e1e8ed;
+        }
+        
+        .relation-content.active {
+            display: block;
+        }
+        
+        .relation-details-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .relation-details-tab {
+            padding: 8px 12px;
+            background: none;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            color: #6c757d;
+            transition: all 0.3s;
+            border-bottom: 2px solid transparent;
+        }
+        
+        .relation-details-tab:hover {
+            background-color: #e9ecef;
+            color: #495057;
+        }
+        
+        .relation-details-tab.active {
+            background-color: #9b59b6;
+            color: white;
+            border-bottom: 2px solid #8e44ad;
+        }
+        
+        .relation-details-content {
+            display: none;
+            padding: 15px;
+            background-color: white;
+            border-radius: 6px;
+            border: 1px solid #e1e8ed;
+        }
+        
+        .relation-details-content.active {
+            display: block;
+        }
+        
+        .relation-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .relation-info-item {
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .relation-info-label {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .relation-info-value {
+            color: #7f8c8d;
+        }
+        
+        .no-relations-message {
+            padding: 40px;
+            text-align: center;
+            color: #7f8c8d;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            font-style: italic;
+        }
+        
+        .relations-count {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #e8f4fd;
+            border-radius: 6px;
+            text-align: center;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
+        /* Person Tab Action Button Styles */
+        .person-tab-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e1e8ed;
+        }
+        
+        .person-action-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            flex: 1;
+            text-align: center;
+        }
+        
+        .person-action-btn:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .person-action-btn.view-berufe {
+            background-color: #9b59b6;
+        }
+        
+        .person-action-btn.view-berufe:hover {
+            background-color: #8e44ad;
+        }
+        
+        .person-action-btn.edit-person {
+            background-color: #f39c12;
+        }
+        
+        .person-action-btn.edit-person:hover {
+            background-color: #d35400;
+        }
+        
+        .person-action-btn.add-beruf {
+            background-color: #2ecc71;
+        }
+        
+        .person-action-btn.add-beruf:hover {
+            background-color: #27ae60;
+        }
+
+        /* Copy to Kontakt Button Styles */
+        .copy-to-kontakt-btn {
+            background-color: #9b59b6;
+            padding: 8px 15px;
+            font-size: 14px;
+            margin: 5px;
+        }
+        
+        .copy-to-kontakt-btn:hover {
+            background-color: #8e44ad;
+        }
+        
+        /* Organisation Unit Tree Styles */
+        .org-unit-tree-container {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 8px;
+            border: 1px solid #e1e8ed;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .org-unit-tree {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        
+        .org-unit-tree-item {
+            margin-bottom: 10px;
+            position: relative;
+        }
+        
+        .org-unit-tree-node {
+            padding: 10px 15px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #3498db;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .org-unit-tree-node:hover {
+            background-color: #e9ecef;
+            transform: translateX(5px);
+        }
+        
+        .org-unit-tree-node.active {
+            background-color: #3498db;
+            color: white;
+            border-left-color: #2980b9;
+        }
+        
+        .org-unit-tree-node.selected {
+            background-color: #2ecc71;
+            color: white;
+            border-left-color: #27ae60;
+        }
+        
+        .org-unit-tree-node .node-name {
+            font-weight: bold;
+        }
+        
+        .org-unit-tree-node .node-id {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-left: 10px;
+        }
+        
+        .org-unit-tree-node.active .node-id {
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .org-unit-tree-node.selected .node-id {
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .org-unit-tree-children {
+            padding-left: 20px;
+            margin-top: 10px;
+            border-left: 2px solid #e1e8ed;
+        }
+        
+        .tree-loading {
+            padding: 20px;
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        
+        .tree-empty {
+            padding: 20px;
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+        }
+        
+        .tree-info {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #e8f4fd;
+            border-radius: 6px;
+            text-align: center;
+            color: #2c3e50;
+        }
+
+        /* Branches Section Styles - Enhanced */
+        .branches-section {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            margin-bottom: 25px;
+        }
+        .branches-container {
+            max-height: 400px;
+            overflow: auto;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .branches-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .branches-table th {
+            background-color: #9b59b6;
+            color: white;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #8e44ad;
+        }
+        .branches-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e1e8ed;
+        }
+        .branches-table tr:hover {
+            background-color: #f8f9fa;
+        }
+        .branches-table tr:last-child td {
+            border-bottom: none;
+        }
+        .no-branches {
+            padding: 20px;
+            text-align: center;
+            color: #7f8c8d;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            font-style: italic;
+        }
+        
+        /* Berufe List Styles */
+        .berufe-list, .relations-list {
+            margin-top: 22px;
+            max-height: 350px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .beruf-item, .relation-item {
+            padding: 15px;
+            margin-bottom: 12px;
+            background-color: white;
+            border-left: 5px solid #3498db;
+            border-radius: 6px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: all 0.2s;
+        }
+        .relation-item {
+            border-left-color: #9b59b6;
+        }
+        .beruf-item:hover, .relation-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+        }
+        .beruf-item h3, .relation-item h3 {
+            margin: 0 0 8px 0;
+            color: #2c3e50;
+            font-size: 18px;
+        }
+        .beruf-item p, .relation-item p {
+            margin: 5px 0;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        .no-berufe, .no-relations {
+            padding: 20px;
+            text-align: center;
+            color: #7f8c8d;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            font-style: italic;
+        }
+        .search-container {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        .search-container input {
+            padding-left: 40px;
+        }
+        .search-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #95a5a6;
+        }
+        .beruf-count {
+            text-align: center;
+            margin: 10px 0;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .action-buttons button {
+            flex: 1;
+        }
+        .secondary-button {
+            background-color: #95a5a6;
+        }
+        .secondary-button:hover {
+            background-color: #7f8c8d;
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .section-header h2 {
+            margin-bottom: 0;
+            border-bottom: none;
+        }
+        .refresh-btn {
+            background-color: #9b59b6;
+            padding: 8px 15px;
+            font-size: 14px;
+        }
+        .refresh-btn:hover {
+            background-color: #8e44ad;
+        }
+
+        /* Response Data Styles */
+        .response-data {
+            margin-top: 12px;
+            padding: 12px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            display: none;
+            border: 1px solid #e9ecef;
+        }
+
+        /* JSON formatting */
+        .json-beruf {
+            font-weight: bold;
+            color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <h1>Person Management System with Organisation Unit Tree</h1>
+    
+    <div class="container">
+        <!-- Left Panel for Person Management -->
+        <div class="left-panel">
+            <!-- Person Details Section -->
+            <div class="person-details-container">
+                <div class="section-header">
+                    <h2>Person Details</h2>
+                </div>
+                <div class="form-group">
+                    <label for="personDetailsId">Person ID (PK_KON_PERSON):</label>
+                    <input type="text" id="personDetailsId" placeholder="Enter person ID">
+                </div>
+                <div class="person-details-actions">
+                    <button id="getPersonDetailsBtn" onclick="getPersonDetails()">
+                        Get Person Details
+                    </button>
+                    <button class="secondary-button" onclick="clearPersonDetails()">
+                        Clear
+                    </button>
+                </div>
+                <div id="personDetailsMessage" class="message"></div>
+                <div id="personDetailsResponse" class="response-data"></div>
+                
+                <!-- Person Information Display -->
+                <div id="personInfoContainer" style="display: none;">
+                    <h3>Person Information</h3>
+                    <div id="personInfoGrid" class="person-info-grid">
+                        <!-- Person info will be displayed here -->
+                    </div>
+                    
+                    <h3>Berufe</h3>
+                    <div id="personBerufeList" class="person-berufe-list">
+                        <!-- Person berufe will be displayed here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Insert Person Form -->
+            <div class="form-section">
+                <h2>Insert New Person</h2>
+        
+                <div class="form-group">
+                    <label for="titel">Titel:</label>
+                    <input type="text" id="titel" placeholder="Enter titel">
+                </div>
+                <div class="form-group">
+                    <label for="vorname">First Name (Vorname):</label>
+                    <input type="text" id="vorname" placeholder="Enter first name">
+                </div>
+                <div class="form-group">
+                    <label for="nachname">Last Name (Nachname):</label>
+                    <input type="text" id="nachname" placeholder="Enter last name">
+                </div>
+                <div class="form-group">
+                    <label for="geschlecht">Geschlecht:</label>
+                    <input type="text" id="geschlecht" placeholder="Enter Geschlecht">
+                </div>
+                <button id="insertPersonBtn" onclick="insertPerson()">
+                    Insert Person
+                </button>
+                <div id="personMessage" class="message"></div>
+                <div id="personResponse" class="response-data"></div>
+            </div>
+
+            <!-- Enhanced Branches by Selected Organisation Unit -->
+            <div class="branches-section">
+                <div class="section-header">
+                    <h2>Branches by Selected Organisation Unit</h2>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="selectedOrgUnitId">Organisation Unit ID (PK_ORG_UNIT):</label>
+                        <input type="text" id="selectedOrgUnitId" placeholder="Enter organisation unit ID">
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button id="getBranchesBtn" onclick="getBranchesByOrgUnit()">
+                        Get Branches
+                    </button>
+                    <button class="secondary-button" onclick="clearBranches()">
+                        Clear
+                    </button>
+                </div>
+                <div id="branchesMessage" class="message"></div>
+                <div id="branchesResponse" class="response-data"></div>
+                
+                <!-- JSON Fields Display -->
+                <div id="jsonFieldsContainer" class="json-fields-container" style="display: none;">
+                    <h3>Branch JSON Fields</h3>
+                    <div id="jsonFieldsList">
+                        <!-- JSON fields will be displayed here -->
+                    </div>
+                </div>
+                
+                <!-- Geschäftspartner Creation Form -->
+                <div id="geschaeftspartnerForm" class="geschaeftspartner-form" style="display: none;">
+                    <h3>Create Geschäftspartner Relation</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="selectedBranchId">Selected Branch ID:</label>
+                            <input type="text" id="selectedBranchId" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="selectedBranchName">Selected Branch Name:</label>
+                            <input type="text" id="selectedBranchName" readonly>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="fkKonGeschaeftspartnerFromBranch">Geschäftspartner ID (FK_KON_GESCHAEFTSPARTNER):</label>
+                            <input type="text" id="fkKonGeschaeftspartnerFromBranch" placeholder="Enter Geschäftspartner ID">
+                        </div>
+                        <div class="form-group">
+                            <label for="fkKonPersonFromBranch">Person ID (FK_KON_PERSON):</label>
+                            <input type="text" id="fkKonPersonFromBranch" placeholder="Enter Person ID">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group optional-field">
+                            <label for="fkAdrAdresseFromBranch">Adresse ID (FK_ADR_ADRESSE):</label>
+                            <input type="text" id="fkAdrAdresseFromBranch" placeholder="Enter Adresse ID">
+                        </div>
+                        <div class="form-group optional-field">
+                            <label for="fkOrgUnitFromBranch">Organisation Unit ID (FK_ORG_UNIT):</label>
+                            <input type="text" id="fkOrgUnitFromBranch" placeholder="Enter Organisation Unit ID">
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        <button id="addGeschaeftspartnerFromBranchBtn" onclick="addGeschaeftspartnerRelationFromBranch()">
+                            Create Geschäftspartner Relation
+                        </button>
+                        <button class="secondary-button" onclick="cancelGeschaeftspartnerFromBranch()">
+                            Cancel
+                        </button>
+                    </div>
+                    <div id="geschaeftspartnerFromBranchMessage" class="message"></div>
+                </div>
+                
+                <div id="branchesContainer" class="branches-container">
+                    <!-- Branches will be displayed here -->
+                </div>
+            </div>
+        </div> 
+
+        <!-- Middle Panel for Geschäftspartner Kontakt Relations -->
+        <div class="middle-panel">
+            <!-- Geschäftspartner Kontakt Relations Viewer -->
+            <div class="relations-tabs-container">
+                <div class="section-header">
+                    <h2>Geschäftspartner Kontakt Relations</h2>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="relationPersonId">Person ID (FK_KON_PERSON):</label>
+                        <input type="text" id="relationPersonId" placeholder="Enter person ID">
+                    </div>
+                    <div class="form-group">
+                        <label for="relationOrgUnitId">Organisation Unit ID (FK_KON_ORG_UNIT):</label>
+                        <input type="text" id="relationOrgUnitId" placeholder="Enter organisation unit ID">
+                    </div>
+                    <div class="form-group">
+                        <label for="inpbelegallId">Beleg (PK_INP_BELEGE_ALL):</label>
+                        <input type="text" id="inpbelegallId" placeholder="Enter Beleg ID">
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button id="getRelationsBtn" onclick="getGeschaeftspartnerRelations()">
+                        Get Relations
+                    </button>
+                    <button class="secondary-button" onclick="clearRelations()">
+                        Clear
+                    </button>
+                </div>
+                <div id="relationsMessage" class="message"></div>
+                <div id="relationsResponse" class="response-data"></div>
+                
+                <!-- Relations Tabs Container -->
+                <div id="relationsTabsContainer">
+                    <!-- Relations tabs will be dynamically generated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel for Tabs and Image Viewer -->
+        <div class="right-panel">
+            <!-- Image Viewer Section -->
+            <div class="form-section">
+                <h2>Image Viewer</h2>
+                <div class="image-controls">
+                    <input type="number" id="imageIdInput" placeholder="Enter PK_BILD_BILDER">
+                    <button id="loadImageBtn">Load Image</button>
+                </div>
+                <div class="image-container" id="imageContainer">
+                    <p>No image loaded. Enter an image ID and click "Load Image".</p>
+                </div>
+                <div class="nav-buttons">
+                    <button id="prevImageBtn">-1</button>
+                    <button id="nextImageBtn">+1</button>
+                </div>
+                <div class="image-info" id="imageInfo"></div>
+            </div>
+            <div class="tabs-container">
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('personGroupTab')">Add to Group</button>
+                    <button class="tab" onclick="switchTab('personBerufTab')">Add Beruf</button>
+                    <button class="tab" onclick="switchTab('branchesMarkenTab')">Branches & Marken</button>
+                    <button class="tab" onclick="switchTab('geschaeftspartnerTab')">Geschäftspartner</button>
+                    <button class="tab" onclick="switchTab('kontaktTab')">Add Kontakt</button>
+                    <button class="tab" onclick="switchTab('personBildTab')">Person Bild</button>
+                    <button class="tab" onclick="switchTab('orgUnitTab')">Org Unit</button>
+                </div>
+                
+                <!-- Person Group Tab -->
+                <div id="personGroupTab" class="tab-content active">
+                    <div class="form-section">
+                        <h2>Add Person to Group</h2>
+                        <div class="form-group">
+                            <label for="fkkonperson">Person ID (FK_KON_PERSON):</label>
+                            <input type="text" id="fkkonperson" placeholder="Enter person ID">
+                        </div>
+                        <div class="form-group">
+                            <label for="fkkonpersongroup">Group ID (FK_KON_PERSON_GROUP):</label>
+                            <input type="text" id="fkkonpersongroup" placeholder="Enter group ID">
+                        </div>
+                        <button id="insertPersonGroupBtn" onclick="insertPersonGroup()">
+                            Add Person to Group
+                        </button>
+                        <div id="personGroupMessage" class="message"></div>
+                        <div id="personGroupResponse" class="response-data"></div>
+                    </div>
+                </div>
+                
+                <!-- Person Beruf Tab -->
+                <div id="personBerufTab" class="tab-content">
+                    <div class="form-section">
+                        <div class="section-header">
+                            <h2>Add Beruf to Person</h2>
+                            <button class="refresh-btn" id="refreshBerufeBtn" onclick="loadAllBerufe()">Refresh</button>
+                        </div>
+                        <div class="form-group">
+                            <label for="addPersonId">Person ID (PK_KON_PERSON):</label>
+                            <input type="text" id="addPersonId" placeholder="Enter person ID">
+                        </div>
+                        <div class="form-group">
+                            <label for="berufSearch">Search Berufe:</label>
+                            <div class="search-container">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" id="berufSearch" placeholder="Search for a beruf...">
+                            </div>
+                            <div id="berufCount" class="beruf-count"></div>
+                            <label for="berufSelect">Select Beruf:</label>
+                            <select id="berufSelect" size="5">
+                                <option value="">Loading Berufe...</option>
+                            </select>
+                        </div>
+                        <button id="addBerufBtn" onclick="addBerufToPerson()">
+                            Add Beruf to Person
+                        </button>
+                        <div id="addBerufMessage" class="message"></div>
+                        <div id="addBerufResponse" class="response-data"></div>
+                    </div>
+                </div>
+                
+                <!-- Branches & Marken Tab -->
+                <div id="branchesMarkenTab" class="tab-content">
+                    <div class="form-section">
+                        <!-- Branches Section -->
+                        <div class="section-header">
+                            <h2>Create Branch</h2>
+                        </div>
+                        <div class="form-group">
+                            <label for="branchName">Branch Name:</label>
+                            <input type="text" id="branchName" placeholder="Enter branch name">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="branchNameEng">Branch Name (English):</label>
+                                <input type="text" id="branchNameEng" placeholder="Enter branch name in English">
+                            </div>
+                            <div class="form-group">
+                                <label for="branchNameDeu">Branch Name (German):</label>
+                                <input type="text" id="branchNameDeu" placeholder="Enter branch name in German">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="dienstleistung">Dienstleistung:</label>
+                            <textarea id="dienstleistung" placeholder="Enter services description"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="fkMdtMandant">Mandant ID (FK_MDT_MANDANT):</label>
+                            <input type="text" id="fkMdtMandant" placeholder="Enter mandant ID (default: 1)" value="1">
+                        </div>
+                        <button id="createBranchBtn" onclick="createBranch()">
+                            Create Branch
+                        </button>
+                        <div id="branchMessage" class="message"></div>
+                        <div id="branchResponse" class="response-data"></div>
+                        
+                        <!-- Display created Branch ID -->
+                        <div id="branchDisplay" class="branch-display">
+                            <strong>Branch successfully created!</strong><br>
+                            Branch ID: <span id="branchIdValue" class="branch-id"></span>
+                        </div>
+
+                        <!-- Marken Section -->
+                        <div class="sub-section">
+                            <h3>Create Marke</h3>
+                            <div class="form-group">
+                                <label for="markenName">Marken Name:</label>
+                                <input type="text" id="markenName" placeholder="Enter marken name">
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="markenNameEng">Marken Name (English):</label>
+                                    <input type="text" id="markenNameEng" placeholder="Enter marken name in English">
+                                </div>
+                                <div class="form-group">
+                                    <label for="markenNameDeu">Marken Name (German):</label>
+                                    <input type="text" id="markenNameDeu" placeholder="Enter marken name in German">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="fkMdtMandantMarken">Mandant ID (FK_MDT_MANDANT):</label>
+                                <input type="text" id="fkMdtMandantMarken" placeholder="Enter mandant ID (default: 1)" value="1">
+                            </div>
+                            <button id="createMarkenBtn" onclick="createMarken()">
+                                Create Marke
+                            </button>
+                            <div id="markenMessage" class="message"></div>
+                            <div id="markenResponse" class="response-data"></div>
+                            
+                            <!-- Display created Marken ID -->
+                            <div id="markenDisplay" class="marken-display">
+                                <strong>Marke successfully created!</strong><br>
+                                Marken ID: <span id="markenIdValue" class="marken-id"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Geschäftspartner Tab -->
+                <div id="geschaeftspartnerTab" class="tab-content">
+                    <div class="form-section">
+                        <h2>Create Geschäftspartner Relation</h2>
+                        
+                        <div class="form-group">
+                            <label for="fkKonGeschaeftspartner">Geschäftspartner ID (FK_KON_GESCHAEFTSPARTNER):</label>
+                            <input type="text" id="fkKonGeschaeftspartner" placeholder="Enter Geschäftspartner ID">
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="fkKonPerson">Person ID (FK_KON_PERSON):</label>
+                                <input type="text" id="fkKonPerson" placeholder="Enter Person ID">
+                            </div>
+                            <div class="form-group">
+                                <label for="fkKonKontakt">Kontakt ID (FK_KON_KONTAKT):</label>
+                                <input type="text" id="fkKonKontakt" placeholder="Enter Kontakt ID">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group optional-field">
+                                <label for="fkAdrAdresse">Adresse ID (FK_ADR_ADRESSE):</label>
+                                <input type="text" id="fkAdrAdresse" placeholder="Enter Adresse ID">
+                            </div>
+                            <div class="form-group optional-field">
+                                <label for="fkOrgUnit">Organisation Unit ID (FK_ORG_UNIT):</label>
+                                <input type="text" id="fkOrgUnit" placeholder="Enter Organisation Unit ID">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group optional-field">
+                                <label for="fkLocLocation">Location ID (FK_LOC_LOCATION):</label>
+                                <input type="text" id="fkLocLocation" placeholder="Enter Location ID">
+                            </div>
+                            <div class="form-group optional-field">
+                                <label for="fkAdrAdresseSchnell">Schnell Adresse ID (FK_ADR_ADRESSE_SCHNELL):</label>
+                                <input type="text" id="fkAdrAdresseSchnell" placeholder="Enter Schnell Adresse ID">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group optional-field">
+                                <label for="fkInpBelegeAll">Belege ID (FK_INP_BELEGE_ALL):</label>
+                                <input type="text" id="fkInpBelegeAll" placeholder="Enter Belege ID">
+                            </div>
+                            <div class="form-group optional-field">
+                                <label for="fkFirmMitarbeiter">Mitarbeiter ID (FK_FIRM_MITARBEITER):</label>
+                                <input type="text" id="fkFirmMitarbeiter" placeholder="Enter Mitarbeiter ID">
+                            </div>
+                        </div>
+                        
+                        <button id="addGeschaeftspartnerBtn" onclick="addGeschaeftspartnerRelation()">
+                            Create Geschäftspartner Relation
+                        </button>
+                        <div id="geschaeftspartnerMessage" class="message"></div>
+                        <div id="geschaeftspartnerResponse" class="response-data"></div>
+                    </div>
+                </div>
+
+                <!-- Kontakt Tab -->
+                <div id="kontaktTab" class="tab-content">
+                    <div class="form-section">
+                        <h2>Add New Kontakt</h2>
+                        
+                        <div class="contact-grid">
+                            <div class="form-group">
+                                <label for="email">Email:</label>
+                                <input type="email" id="email" placeholder="Enter email address">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="festnetznummer">Festnetznummer:</label>
+                                <input type="tel" id="festnetznummer" placeholder="Enter phone number">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="mobilnummer">Mobilnummer:</label>
+                                <input type="tel" id="mobilnummer" placeholder="Enter mobile number">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="webseite">Webseite:</label>
+                                <input type="text" id="webseite" placeholder="Enter website URL">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="fax">Fax:</label>
+                                <input type="tel" id="fax" placeholder="Enter fax number">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="telex">Telex:</label>
+                                <input type="text" id="telex" placeholder="Enter telex number">
+                            </div>
+                            
+                            <div class="form-group full-width">
+                                <label for="beschreibung">Beschreibung:</label>
+                                <textarea id="beschreibung" placeholder="Enter description"></textarea>
+                            </div>
+                        </div>
+                        
+                        <button id="addKontaktBtn" onclick="addKontakt()">
+                            Add Kontakt
+                        </button>
+                        <button class="secondary-button" onclick="clearKontakt()">
+                            Clear Form
+                        </button>
+                        <div id="kontaktMessage" class="message"></div>
+                        <div id="kontaktResponse" class="response-data"></div>
+                        
+                        <!-- Display created Kontakt ID -->
+                        <div id="kontaktIdDisplay" class="kontakt-id-display">
+                            <strong>Kontakt successfully created!</strong><br>
+                            Kontakt ID: <span id="kontaktIdValue" class="kontakt-id"></span>
+                        </div>
+                        
+                        <!-- Kontakt Update Section -->
+                        <div class="sub-section">
+                            <h3>Update Existing Kontakt</h3>
+                            <div class="form-group">
+                                <label for="kontaktIdToUpdate">Kontakt ID (PK_KON_KONTAKT):</label>
+                                <input type="text" id="kontaktIdToUpdate" placeholder="Enter Kontakt ID to update">
+                            </div>
+                            <button id="updatekontaktbtn" onclick="updateKontaktFromForm()">
+                                Update Kontakt
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Person Bild Tab -->
+                <div id="personBildTab" class="tab-content">
+                    <div class="form-section">
+                        <h2>Add Person-Bild Relation</h2>
+                        <div class="form-group">
+                            <label for="fkKonPersonBild">Person ID (FK_KON_PERSON):</label>
+                            <input type="text" id="fkKonPersonBild" placeholder="Enter person ID">
+                        </div>
+                        <div class="form-group">
+                            <label for="fkBildBilder">Bild ID (FK_BILD_BILDER):</label>
+                            <input type="text" id="fkBildBilder" placeholder="Enter bild ID">
+                        </div>
+                        <button id="addPersonBildBtn" onclick="addPersonBildRelation()">
+                            Add Person-Bild Relation
+                        </button>
+                        <div id="personBildMessage" class="message"></div>
+                        <div id="personBildResponse" class="response-data"></div>
+                    </div>
+                </div>
+
+                <!-- Organisation Unit Tab -->
+                <div id="orgUnitTab" class="tab-content">
+                    <div class="org-unit-management">
+                        <div class="section-header">
+                            <h2>Organisation Unit Management</h2>
+                            <button class="refresh-btn" id="refreshOrgUnitsBtn" onclick="loadAllOrgUnits()">Refresh</button>
+                        </div>
+                        
+                        <!-- Create Organisation Unit Form -->
+                        <div class="org-unit-form">
+                            <h3>Create New Organisation Unit</h3>
+                            <div class="form-group">
+                                <label for="orgUnitName">Organisation Unit Name:</label>
+                                <input type="text" id="orgUnitName" placeholder="Enter organisation unit name">
+                            </div>
+                            <div class="form-group">
+                                <label for="orgUnitDescription">Description:</label>
+                                <textarea id="orgUnitDescription" placeholder="Enter description (optional)"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="orgUnitMandant">Mandant ID (FK_MDT_MANDANT):</label>
+                                <input type="text" id="orgUnitMandant" placeholder="Enter mandant ID (default: 1)" value="1">
+                            </div>
+                            <button id="createOrgUnitBtn" onclick="createOrgUnit()">
+                                Create Organisation Unit
+                            </button>
+                            <div id="orgUnitMessage" class="message"></div>
+                            <div id="orgUnitResponse" class="response-data"></div>
+                            
+                            <!-- Display created Org Unit ID -->
+                            <div id="orgUnitDisplay" class="org-unit-display">
+                                <strong>Organisation Unit successfully created!</strong><br>
+                                Organisation Unit ID: <span id="orgUnitIdValue" class="org-unit-id"></span>
+                            </div>
+                        </div>
+
+                        <!-- Organisation Unit Relations -->
+                        <div class="org-unit-relations">
+                            <h3>Organisation Unit Relations</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="fkkonorgunit">Organisation Unit ID (FK_KON_ORG_UNIT):</label>
+                                    <input type="text" id="fkkonorgunit" placeholder="Enter organisation unit ID">
+                                </div>
+                                <div class="form-group">
+                                    <label for="fkkonorgunitmain">Main Organisation Unit ID (FK_KON_ORG_UNIT_MAIN):</label>
+                                    <input type="text" id="fkkonorgunitmain" placeholder="Enter main organisation unit ID">
+                                </div>
+                            </div>
+                            <button id="createOrgUnitRelationBtn" onclick="createOrgUnitRelation()">
+                                Create Organisation Unit Relation
+                            </button>
+                            <div id="orgUnitRelationMessage" class="message"></div>
+                            <div id="orgUnitRelationResponse" class="response-data"></div>
+                        </div>
+
+                        <!-- Organisation Units List -->
+                        <div class="org-unit-list-container">
+                            <h3>Existing Organisation Units</h3>
+                            <div id="orgUnitList" class="org-unit-list">
+                                <!-- Organisation units will be displayed here -->
+                            </div>
+                        </div>
+
+                        <!-- Organisation Unit Relations List -->
+                        <div class="org-unit-relations-container">
+                            <h3>Existing Organisation Unit Relations</h3>
+                            <div id="orgUnitRelationsList" class="relations-container">
+                                <!-- Organisation unit relations will be displayed here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Relation Modal -->
+    <div id="updateRelationModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeUpdateModal()">&times;</span>
+            <h2>Update Geschäftspartner Relation</h2>
+            
+            <div id="updateModalMessage" class="message"></div>
+            
+            <form id="updateRelationForm">
+                <input type="hidden" id="updateRelationId">
+                
+                <div class="update-form-grid">
+                    <div class="form-group">
+                        <label for="updateFkKonGeschaeftspartner">Geschäftspartner ID:</label>
+                        <input type="text" id="updateFkKonGeschaeftspartner" class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="updateFkKonPerson">Person ID:</label>
+                        <input type="text" id="updateFkKonPerson" class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="updateFkKonKontakt">Kontakt ID:</label>
+                        <input type="text" id="updateFkKonKontakt" class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="updateFkOrgUnit">Organisation Unit ID:</label>
+                        <input type="text" id="updateFkOrgUnit" class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="updateFkAdrAdresse">Adresse ID:</label>
+                        <input type="text" id="updateFkAdrAdresse" class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="updateFkLocLocation">Location ID:</label>
+                        <input type="text" id="updateFkLocLocation" class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="updateFkAdrAdresseSchnell">Schnell Adresse ID:</label>
+                        <input type="text" id="updateFkAdrAdresseSchnell" class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="updateFkInpBelegeAll">Belege ID:</label>
+                        <input type="text" id="updateFkInpBelegeAll" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="updatefkbildbilder">Bild ID:</label>
+                        <input type="text" id="updatefkbildbilder" class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="updateFkFirmMitarbeiter">Mitarbeiter ID:</label>
+                        <input type="text" id="updateFkFirmMitarbeiter" class="form-control">
+                    </div>
+                    
+                    <div class="form-group update-form-full-width">
+                        <label for="updateBemerkungen">Bemerkungen:</label>
+                        <textarea id="updateBemerkungen" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="cancel-btn" onclick="closeUpdateModal()">Cancel</button>
+                    <button type="submit" class="update-relation-btn">Update Relation</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Global variable to store all berufe
+        let allBerufe = [];
+
+        // Global variable to store all organisation units
+        let allOrgUnits = [];
+
+        // Global variable to store selected branch data
+        let selectedBranchData = null;
+
+        // Global variable to store relations data
+        let relationsData = [];
+
+        // Tab switching function
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+        // Get Person Details function
+        async function getPersonDetails() {
+            const personId = document.getElementById('personDetailsId').value.trim();
+            const button = document.getElementById('getPersonDetailsBtn');
+            const messageDiv = document.getElementById('personDetailsMessage');
+            const responseDiv = document.getElementById('personDetailsResponse');
+            const personInfoContainer = document.getElementById('personInfoContainer');
+            const personInfoGrid = document.getElementById('personInfoGrid');
+            const personBerufeList = document.getElementById('personBerufeList');
+
+            // Clear previous messages and results
+            messageDiv.style.display = 'none';
+            responseDiv.style.display = 'none';
+            messageDiv.className = 'message';
+            personInfoContainer.style.display = 'none';
+            personInfoGrid.innerHTML = '';
+            personBerufeList.innerHTML = '';
+
+            // Validation
+            if (!personId) {
+                showMessage(messageDiv, 'Please enter a Person ID', 'error');
+                return;
+            }
+
+            // Validate numeric ID
+            if (isNaN(personId)) {
+                showMessage(messageDiv, 'Person ID must be a number', 'error');
+                return;
+            }
+
+            // Show loading state
+            button.innerHTML = '<div class="loading"></div>Loading...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch(`http://localhost:5000/person_beruf/${personId}`);
+                
+                // Check if response is OK
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+
+                // Show response data
+                responseDiv.textContent = JSON.stringify(result, null, 2);
+                responseDiv.style.display = 'block';
+
+                if (response.ok) {
+                    // Handle different response formats
+                    let personData = [];
+                    
+                    if (Array.isArray(result)) {
+                        personData = result;
+                    } else if (result.success && Array.isArray(result.data)) {
+                        personData = result.data;
+                    } else if (result.data && Array.isArray(result.data)) {
+                        personData = result.data;
+                    } else {
+                        throw new Error('Unexpected response format from server');
+                    }
+                    
+                    showMessage(messageDiv, 'Person details loaded successfully!', 'success');
+                    
+                    if (personData && personData.length > 0) {
+                        // Extract person information from the first item
+                        const personInfo = personData[0];
+                        
+                        // Display person information
+                        displayPersonInfo(personInfo, personInfoGrid);
+                        
+                        // Display berufe
+                        displayPersonBerufe(personData, personBerufeList);
+                        
+                        // Show the container
+                        personInfoContainer.style.display = 'block';
+                    } else {
+                        showMessage(messageDiv, 'No person data found for this ID', 'info');
+                    }
+                } else {
+                    showMessage(messageDiv, `Error: ${result.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error fetching person details:', error);
+                showMessage(messageDiv, `Network error: ${error.message}`, 'error');
+                responseDiv.textContent = `Error: ${error.message}`;
+                responseDiv.style.display = 'block';
+            } finally {
+                // Reset button
+                button.innerHTML = 'Get Person Details';
+                button.disabled = false;
+            }
+        }
+
+        // Display person information
+        function displayPersonInfo(personInfo, container) {
+            const fields = [
+                { label: 'Person ID', value: personInfo.PK_KON_PERSON },
+                { label: 'Titel', value: personInfo.TITEL },
+                { label: 'Vorname', value: personInfo.VORNAME },
+                { label: 'Nachname', value: personInfo.NACHNAME },
+                { label: 'Geschlecht', value: personInfo.GESCHLECHT },
+                { label: 'Geburtsdatum', value: personInfo.GEBURTSDATUM },
+                { label: 'Created Date', value: personInfo.CREATED_DATE },
+                { label: 'Updated Date', value: personInfo.UPDATED_DATE }
+            ];
+            
+            let html = '';
+            fields.forEach(field => {
+                if (field.value) {
+                    html += `
+                        <div class="person-info-item">
+                            <div class="person-info-label">${field.label}:</div>
+                            <div class="person-info-value">${field.value}</div>
+                        </div>
+                    `;
+                }
+            });
+            
+            container.innerHTML = html;
+        }
+
+        // Display person berufe
+        function displayPersonBerufe(personData, container) {
+            // Extract unique berufe from person data
+            const berufeMap = new Map();
+            
+            personData.forEach(item => {
+                if (item.PK_WORK_BERUF && !berufeMap.has(item.PK_WORK_BERUF)) {
+                    berufeMap.set(item.PK_WORK_BERUF, {
+                        id: item.PK_WORK_BERUF,
+                        name: item.BERUF + ' / ' + item.BERUF_ENG,
+                        description: item.BESCHREIBUNG,
+                        startDate: item.STARTDATUM,
+                        endDate: item.ENDDATUM
+                    });
+                }
+            });
+            
+            const berufe = Array.from(berufeMap.values());
+            
+            if (berufe.length > 0) {
+                let html = '';
+                berufe.forEach(beruf => {
+                    html += `
+                        <div class="person-beruf-item">
+                            <h4>${beruf.name || 'Unknown Beruf'}</h4>
+                            <p><strong>ID:</strong> ${beruf.id}</p>
+                            ${beruf.description ? `<p><strong>Description:</strong> ${beruf.description}</p>` : ''}
+                            ${beruf.startDate ? `<p><strong>Start Date:</strong> ${beruf.startDate}</p>` : ''}
+                            ${beruf.endDate ? `<p><strong>End Date:</strong> ${beruf.endDate}</p>` : ''}
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = '<div class="no-person-berufe">No Berufe found for this person</div>';
+            }
+        }
+
+        // Clear Person Details
+        function clearPersonDetails() {
+            document.getElementById('personDetailsId').value = '';
+            document.getElementById('personInfoContainer').style.display = 'none';
+            document.getElementById('personDetailsMessage').style.display = 'none';
+            document.getElementById('personDetailsResponse').style.display = 'none';
+        }
+
+        // Insert Person function
+        async function insertPerson() {
+            const titel = document.getElementById('titel').value.trim();
+            const vorname = document.getElementById('vorname').value.trim();
+            const nachname = document.getElementById('nachname').value.trim();
+            const geschlecht = document.getElementById('geschlecht').value.trim();
+            const button = document.getElementById('insertPersonBtn');
+            const messageDiv = document.getElementById('personMessage');
+            const responseDiv = document.getElementById('personResponse');
+
+            // Clear previous messages
+            messageDiv.style.display = 'none';
+            responseDiv.style.display = 'none';
+            messageDiv.className = 'message';
+
+            // Prepare data
+            const data = {
+                titel: titel,
+                vorname: vorname,
+                nachname: nachname,
+                fkkonpersongeschlecht: geschlecht
+            };
+
+            // Show loading state
+            button.innerHTML = '<div class="loading"></div>Inserting...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:5000/person/insert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                // Show response data
+                responseDiv.textContent = JSON.stringify(result, null, 2);
+                responseDiv.style.display = 'block';
+
+                if (response.ok && result.success) {
+                    showMessage(messageDiv, 'Person inserted successfully!', 'success');
+                    // Clear form on success
+                    document.getElementById('titel').value = '';
+                    document.getElementById('vorname').value = '';
+                    document.getElementById('nachname').value = '';
+                    document.getElementById('geschlecht').value = '';
+                } else {
+                    showMessage(messageDiv, `Error: ${result.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error inserting person:', error);
+                showMessage(messageDiv, `Network error: ${error.message}`, 'error');
+                responseDiv.textContent = `Error: ${error.message}`;
+                responseDiv.style.display = 'block';
+            } finally {
+                // Reset button
+                button.innerHTML = 'Insert Person';
+                button.disabled = false;
+            }
+        }
+
+        // Get Branches by Organisation Unit function - Enhanced
+        async function getBranchesByOrgUnit() {
+            const orgUnitId = document.getElementById('selectedOrgUnitId').value.trim();
+            const button = document.getElementById('getBranchesBtn');
+            const messageDiv = document.getElementById('branchesMessage');
+            const responseDiv = document.getElementById('branchesResponse');
+            const branchesContainer = document.getElementById('branchesContainer');
+            const jsonFieldsContainer = document.getElementById('jsonFieldsContainer');
+            const geschaeftspartnerForm = document.getElementById('geschaeftspartnerForm');
+
+            // Clear previous messages and results
+            messageDiv.style.display = 'none';
+            responseDiv.style.display = 'none';
+            messageDiv.className = 'message';
+            branchesContainer.innerHTML = '';
+            jsonFieldsContainer.style.display = 'none';
+            geschaeftspartnerForm.style.display = 'none';
+
+            // Validation
+            if (!orgUnitId) {
+                showMessage(messageDiv, 'Please enter an Organisation Unit ID', 'error');
+                return;
+            }
+
+            if (isNaN(orgUnitId)) {
+                showMessage(messageDiv, 'Organisation Unit ID must be a number', 'error');
+                return;
+            }
+
+            // Show loading state
+            button.innerHTML = '<div class="loading"></div>Loading...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch(`http://localhost:5000/org_unit_branches_rel/${orgUnitId}`);
+                
+                // Check if response is OK
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+
+                // Show response data
+                responseDiv.textContent = JSON.stringify(result, null, 2);
+                responseDiv.style.display = 'block';
+
+                console.log('Full API response:', result);
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
+
+                if (response.ok) {
+                    // Handle different response formats
+                    let branchesData = [];
+                    
+                    if (Array.isArray(result)) {
+                        branchesData = result;
+                    } else if (result.success && Array.isArray(result.data)) {
+                        branchesData = result.data;
+                    } else if (result.data && Array.isArray(result.data)) {
+                        branchesData = result.data;
+                    } else {
+                        throw new Error('Unexpected response format from server');
+                    }
+                    
+                    showMessage(messageDiv, 'Branches loaded successfully!', 'success');
+                    
+                    if (branchesData.length > 0) {
+                        let tableHTML = `
+                            <div class="table-info">
+                                Found ${branchesData.length} branch(es) for Organisation Unit ID: ${orgUnitId}
+                            </div>
+                            <table class="branches-table">
+                                <thead>
+                                    <tr>
+                                        <th>Branch ID</th>
+                                        <th>Branch Name</th>
+                                        <th>Branch Name (English)</th>
+                                        <th>Branch Name (German)</th>
+                                        <th>Dienstleistung</th>
+                                        <th>Mandant ID</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                        `;
+                        
+                        branchesData.forEach(branch => {
+                            const branchId = branch.PK_BAS_ORG_BRANCHES || branch.id;
+                            const branchName = branch.BRANCH_NAME || branch.ORG_UNIT_NAME || 'N/A';
+                            const branchNameEng = branch.BRANCH_NAME_ENG || 'N/A';
+                            const branchNameDeu = branch.BRANCH_NAME_DEU || 'N/A';
+                            const dienstleistung = branch.DIENSTLEISTUNG || 'N/A';
+                            const mandantId = branch.FK_MDT_MANDANT || 'N/A';
+                            
+                            tableHTML += `
+                                <tr>
+                                    <td class="id-column">${branchId}</td>
+                                    <td>${branchName}</td>
+                                    <td>${branchNameEng}</td>
+                                    <td>${branchNameDeu}</td>
+                                    <td>${dienstleistung}</td>
+                                    <td class="id-column">${mandantId}</td>
+                                    <td>
+                                        <button class="update-relation-btn" onclick="showBranchDetails(${branchId}, '${branchName.replace(/'/g, "\\'")}')">
+                                            Select
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        
+                        tableHTML += `
+                                </tbody>
+                            </table>
+                        `;
+                        branchesContainer.innerHTML = tableHTML;
+                    } else {
+                        showMessage(messageDiv, 'No branches found for this Organisation Unit', 'info');
+                        branchesContainer.innerHTML = '<div class="no-branches">No branches found for this Organisation Unit</div>';
+                    }
+                } else {
+                    // HTTP error (4xx, 5xx)
+                    showMessage(messageDiv, `HTTP Error: ${response.status} - Failed to load branches`, 'error');
+                    branchesContainer.innerHTML = '<div class="no-branches">Error loading branches</div>';
+                }
+            } catch (error) {
+                console.error('Error fetching branches:', error);
+                showMessage(messageDiv, `Network error: ${error.message}`, 'error');
+                responseDiv.textContent = `Error: ${error.message}`;
+                responseDiv.style.display = 'block';
+                branchesContainer.innerHTML = '<div class="no-branches">Error loading branches</div>';
+            } finally {
+                // Reset button
+                button.innerHTML = 'Get Branches';
+                button.disabled = false;
+            }
+        }
+
+        // Show branch details and JSON fields
+        function showBranchDetails(branchId, branchName) {
+            const orgUnitId = document.getElementById('selectedOrgUnitId').value.trim();
+            const jsonFieldsContainer = document.getElementById('jsonFieldsContainer');
+            const jsonFieldsList = document.getElementById('jsonFieldsList');
+            const geschaeftspartnerForm = document.getElementById('geschaeftspartnerForm');
+            const selectedBranchIdInput = document.getElementById('selectedBranchId');
+            const selectedBranchNameInput = document.getElementById('selectedBranchName');
+            
+            // Store selected branch data
+            selectedBranchData = {
+                branchId: branchId,
+                branchName: branchName,
+                orgUnitId: orgUnitId
+            };
+            
+            // Set form values
+            selectedBranchIdInput.value = branchId;
+            selectedBranchNameInput.value = branchName;
+            
+            // Show the forms
+            jsonFieldsContainer.style.display = 'block';
+            geschaeftspartnerForm.style.display = 'block';
+            
+            // Fetch and display branch details
+            fetchBranchDetails(branchId, jsonFieldsList);
+        }
+
+        // Fetch branch details and display JSON fields
+        async function fetchBranchDetails(branchId, jsonFieldsList) {
+            try {
+                const response = await fetch(`http://localhost:5000/branches/${branchId}`);
+                
+                // Check if response is OK
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    let branchData = {};
+                    
+                    // Handle different response formats
+                    if (result.success && result.data) {
+                        branchData = result.data;
+                    } else if (result.data) {
+                        branchData = result.data;
+                    } else {
+                        branchData = result;
+                    }
+                    
+                    // Clear previous fields
+                    jsonFieldsList.innerHTML = '';
+                    
+                    // Display JSON fields
+                    Object.keys(branchData).forEach(key => {
+                        const fieldDiv = document.createElement('div');
+                        fieldDiv.className = 'json-field';
+                        
+                        const keySpan = document.createElement('span');
+                        keySpan.className = 'json-field-key';
+                        keySpan.textContent = key;
+                        
+                        const valueSpan = document.createElement('span');
+                        valueSpan.className = 'json-field-value';
+                        valueSpan.textContent = branchData[key] || 'N/A';
+                        
+                        fieldDiv.appendChild(keySpan);
+                        fieldDiv.appendChild(valueSpan);
+                        jsonFieldsList.appendChild(fieldDiv);
+                    });
+                } else {
+                    jsonFieldsList.innerHTML = '<div class="no-branches">Error loading branch details</div>';
+                }
+            } catch (error) {
+                console.error('Error fetching branch details:', error);
+                jsonFieldsList.innerHTML = '<div class="no-branches">Error loading branch details</div>';
+            }
+        }
+
+        // Add Geschäftspartner Relation from Branch section
+        async function addGeschaeftspartnerRelationFromBranch() {
+            const button = document.getElementById('addGeschaeftspartnerFromBranchBtn');
+            const messageDiv = document.getElementById('geschaeftspartnerFromBranchMessage');
+
+            // Clear previous messages
+            messageDiv.style.display = 'none';
+            messageDiv.className = 'message';
+
+            // Get values from form
+            const fkKonGeschaeftspartner = document.getElementById('fkKonGeschaeftspartnerFromBranch').value.trim();
+            const fkKonPerson = document.getElementById('fkKonPersonFromBranch').value.trim();
+            const fkAdrAdresse = document.getElementById('fkAdrAdresseFromBranch').value.trim();
+            const fkOrgUnit = document.getElementById('fkOrgUnitFromBranch').value.trim();
+
+            // Prepare data - only include fields that have values
+            const data = {};
+            if (fkKonGeschaeftspartner) data.FK_KON_GESCHAEFTSPARTNER = parseInt(fkKonGeschaeftspartner);
+            if (fkKonPerson) data.FK_KON_PERSON = parseInt(fkKonPerson);
+            if (fkAdrAdresse) data.FK_ADR_ADRESSE = parseInt(fkAdrAdresse);
+            if (fkOrgUnit) data.FK_ORG_UNIT = parseInt(fkOrgUnit);
+
+            // Show loading state
+            button.innerHTML = '<div class="loading"></div>Creating Relation...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:5000/geschaeftspartner_rel/insert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    showMessage(messageDiv, 'Geschäftspartner relation created successfully!', 'success');
+                    // Clear form on success
+                    document.getElementById('fkKonGeschaeftspartnerFromBranch').value = '';
+                    document.getElementById('fkKonPersonFromBranch').value = '';
+                    document.getElementById('fkAdrAdresseFromBranch').value = '';
+                    document.getElementById('fkOrgUnitFromBranch').value = '';
+                } else {
+                    showMessage(messageDiv, `Error: ${result.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error creating geschaeftspartner relation:', error);
+                showMessage(messageDiv, `Network error: ${error.message}`, 'error');
+            } finally {
+                // Reset button
+                button.innerHTML = 'Create Geschäftspartner Relation';
+                button.disabled = false;
+            }
+        }
+
+        // Cancel Geschäftspartner creation from branch
+        function cancelGeschaeftspartnerFromBranch() {
+            const jsonFieldsContainer = document.getElementById('jsonFieldsContainer');
+            const geschaeftspartnerForm = document.getElementById('geschaeftspartnerForm');
+            
+            jsonFieldsContainer.style.display = 'none';
+            geschaeftspartnerForm.style.display = 'none';
+            
+            // Clear form fields
+            document.getElementById('fkKonGeschaeftspartnerFromBranch').value = '';
+            document.getElementById('fkKonPersonFromBranch').value = '';
+            document.getElementById('fkAdrAdresseFromBranch').value = '';
+            document.getElementById('fkOrgUnitFromBranch').value = '';
+            
+            // Clear message
+            document.getElementById('geschaeftspartnerFromBranchMessage').style.display = 'none';
+        }
+
+        // Clear Branches display
+        function clearBranches() {
+            document.getElementById('selectedOrgUnitId').value = '';
+            document.getElementById('branchesContainer').innerHTML = '';
+            document.getElementById('branchesMessage').style.display = 'none';
+            document.getElementById('branchesResponse').style.display = 'none';
+            document.getElementById('jsonFieldsContainer').style.display = 'none';
+            document.getElementById('geschaeftspartnerForm').style.display = 'none';
+        }
+
+        // Create Branch function
+        async function createBranch() {
+            const branchName = document.getElementById('branchName').value.trim();
+            const branchNameEng = document.getElementById('branchNameEng').value.trim();
+            const branchNameDeu = document.getElementById('branchNameDeu').value.trim();
+            const dienstleistung = document.getElementById('dienstleistung').value.trim();
+            const fkMdtMandant = document.getElementById('fkMdtMandant').value.trim();
+            const button = document.getElementById('createBranchBtn');
+            const messageDiv = document.getElementById('branchMessage');
+            const responseDiv = document.getElementById('branchResponse');
+            const branchDisplay = document.getElementById('branchDisplay');
+
+            // Clear previous messages
+            messageDiv.style.display = 'none';
+            responseDiv.style.display = 'none';
+            branchDisplay.style.display = 'none';
+            messageDiv.className = 'message';
+
+            // Validation
+            if (!branchName) {
+                showMessage(messageDiv, 'Please enter a branch name', 'error');
+                return;
+            }
+
+            // Prepare data
+            const data = {
+                BRANCH_NAME: branchName,
+                FK_MDT_MANDANT: fkMdtMandant ? parseInt(fkMdtMandant) : 1,
+                BRANCH_NAME_ENG: branchNameEng || null,
+                BRANCH_NAME_DEU: branchNameDeu || null,
+                DIENSTLEISTUNG: dienstleistung || null
+            };
+
+            // Show loading state
+            button.innerHTML = '<div class="loading"></div>Creating Branch...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:5000/branches/insert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                // Show response data
+                responseDiv.textContent = JSON.stringify(result, null, 2);
+                responseDiv.style.display = 'block';
+
+                if (response.ok && result.success) {
+                    showMessage(messageDiv, 'Branch created successfully!', 'success');
+                    
+                    // Display the created Branch ID
+                    if (result.branchId) {
+                        document.getElementById('branchIdValue').textContent = result.branchId;
+                        branchDisplay.style.display = 'block';
+                    }
+                    
+                    // Clear form on success
+                    document.getElementById('branchName').value = '';
+                    document.getElementById('branchNameEng').value = '';
+                    document.getElementById('branchNameDeu').value = '';
+                    document.getElementById('dienstleistung').value = '';
+                } else {
+                    showMessage(messageDiv, `Error: ${result.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error creating branch:', error);
+                showMessage(messageDiv, `Network error: ${error.message}`, 'error');
+                responseDiv.textContent = `Error: ${error.message}`;
+                responseDiv.style.display = 'block';
+            } finally {
+                // Reset button
+                button.innerHTML = 'Create Branch';
+                button.disabled = false;
+            }
+        }
+
+        // Create Marken function
+        async function createMarken() {
+            const markenName = document.getElementById('markenName').value.trim();
+            const markenNameEng = document.getElementById('markenNameEng').value.trim();
+            const markenNameDeu = document.getElementById('markenNameDeu').value.trim();
+            const fkMdtMandant = document.getElementById('fkMdtMandantMarken').value.trim();
+            const button = document.getElementById('createMarkenBtn');
+            const messageDiv = document.getElementById('markenMessage');
+            const responseDiv = document.getElementById('markenResponse');
+            const markenDisplay = document.getElementById('markenDisplay');
+
+            // Clear previous messages
+            messageDiv.style.display = 'none';
+            responseDiv.style.display = 'none';
+            markenDisplay.style.display = 'none';
+            messageDiv.className = 'message';
+
+            // Validation
+            if (!markenName) {
+                showMessage(messageDiv, 'Please enter a marken name', 'error');
+                return;
+            }
+
+            // Prepare data
+            const data = {
+                MARKEN_NAME: markenName,
+                FK_MDT_MANDANT: fkMdtMandant ? parseInt(fkMdtMandant) : 1,
+                MARKEN_NAME_ENG: markenNameEng || null,
+                MARKEN_NAME_DEU: markenNameDeu || null
+            };
+
+            // Show loading state
+            button.innerHTML = '<div class="loading"></div>Creating Marke...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:5000/marken/insert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                // Show response data
+                responseDiv.textContent = JSON.stringify(result, null, 2);
+                responseDiv.style.display = 'block';
+
+                if (response.ok && result.success) {
+                    showMessage(messageDiv, 'Marke created successfully!', 'success');
+                    
+                    // Display the created Marken ID
+                    if (result.markenId) {
+                        document.getElementById('markenIdValue').textContent = result.markenId;
+                        markenDisplay.style.display = 'block';
+                    }
+                    
+                    // Clear form on success
+                    document.getElementById('markenName').value = '';
+                    document.getElementById('markenNameEng').value = '';
+                    document.getElementById('markenNameDeu').value = '';
+                } else {
+                    showMessage(messageDiv, `Error: ${result.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error creating marken:', error);
+                showMessage(messageDiv, `Network error: ${error.message}`, 'error');
+                responseDiv.textContent = `Error: ${error.message}`;
+                responseDiv.style.display = 'block';
+            } finally {
+                // Reset button
+                button.innerHTML = 'Create Marke';
+                button.disabled = false;
+            }
+        }
+
+        // Insert Person to Group Relationship function
+        async function insertPersonGroup() {
+            const fkkonperson = document.getElementById('fkkonperson').value.trim();
+            const fkkonpersongroup = document.getElementById('fkkonpersongroup').value.trim();
+            const button = document.getElementById('insertPersonGroupBtn');
+            const messageDiv = document.getElementById('personGroupMessage');
+            const responseDiv = document.getElementById('personGroupResponse');
+
+            // Clear previous messages
+            messageDiv.style.display = 'none';
+            responseDiv.style.display = 'none';
+            messageDiv.className = 'message';
+
+            // Validation
+            if (!fkkonperson || !fkkonpersongroup) {
+                showMessage(messageDiv, 'Please fill in both Person ID and Group ID', 'error');
+                return;
+            }
+
+            // Validate numeric IDs
+            if (isNaN(fkkonperson) || isNaN(fkkonpersongroup)) {
+                showMessage(messageDiv, 'Both Person ID and Group ID must be numbers', 'error');
+                return;
+            }
+
+            // Prepare data
+            const data = {
+                fkkonperson: parseInt(fkkonperson),
+                fkkonpersongroup: parseInt(fkkonpersongroup)
+            };
+
+            // Show loading state
+            button.innerHTML = '<div class="loading"></div>Adding to Group...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:5000/person_rel_group/insert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                // Show response data
+                responseDiv.textContent = JSON.stringify(result, null, 2);
+                responseDiv.style.display = 'block';
+
+                if (response.ok && result.success) {
+                    showMessage(messageDiv, 'Person added to group successfully!', 'success');
+                    // Clear form on success
+                    document.getElementById('fkkonperson').value = '';
+                    document.getElementById('fkkonpersongroup').value = '';
+                } else {
+                    showMessage(messageDiv, `Error: ${result.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error inserting person to group:', error);
+                showMessage(messageDiv, `Network error: ${error.message}`, 'error');
+                responseDiv.textContent = `Error: ${error.message}`;
+                responseDiv.style.display = 'block';
+            } finally {
+                // Reset button
+                button.innerHTML = 'Add Person to Group';
+                button.disabled = false;
+            }
+        }
+
+        // Load all Berufe for the dropdown
+        async function loadAllBerufe() {
+            const select = document.getElementById('berufSelect');
+            const button = document.getElementById('refreshBerufeBtn');
+            const messageDiv = document.getElementById('addBerufMessage');
+            const countDiv = document.getElementById('berufCount');
+
+            // Show loading state
+            button.innerHTML = '<div class="loading"></div>';
+            select.innerHTML = '<option value="">Loading Berufe...</option>';
+
+            try {
+                const response = await fetch('http://localhost:5000/berufe');
+                
+                // Check if response is OK
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+
+                if (response.ok) {
+                    // Handle different response formats
+                    if (Array.isArray(result)) {
+                        allBerufe = result;
+                    } else if (result.success && Array.isArray(result.data)) {
+                        allBerufe = result.data;
+                    } else if (result.data && Array.isArray(result.data)) {
+                        allBerufe = result.data;
+                    } else {
+                        throw new Error('Unexpected response format from server');
+                    }
+                    
+                    // Populate the dropdown
+                    if (allBerufe && allBerufe.length > 0) {
+                        populateBerufSelect(allBerufe);
+                        countDiv.textContent = `${allBerufe.length} Berufe loaded`;
+                        showMessage(messageDiv, 'Berufe loaded successfully!', 'success');
+                    } else {
+                        select.innerHTML = '<option value="">No Berufe available</option>';
+                        countDiv.textContent = 'No Berufe found';
+                        showMessage(messageDiv, 'No Berufe found', 'error');
+                    }
+                } else {
+                    select.innerHTML = '<option value="">Error loading Berufe</option>';
+                    countDiv.textContent = 'Error loading Berufe';
+                    showMessage(messageDiv, `Error: ${result.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error loading berufe:', error);
+                select.innerHTML = '<option value="">Error loading Berufe</option>';
+                countDiv.textContent = 'Error loading Berufe';
+                showMessage(messageDiv, `Network error: ${error.message}`, 'error');
+            } finally {
+                // Reset button
+                button.innerHTML = 'Refresh';
+            }
+        }
+
+        // Populate the Beruf select dropdown
+        function populateBerufSelect(berufe) {
+            const select = document.getElementById('berufSelect');
+            select.innerHTML = '';
+            
+            berufe.forEach(beruf => {
+                const option = document.createElement('option');
+                option.value = beruf.PK_WORK_BERUF || beruf.id;
+                option.textContent = `${beruf.PK_WORK_BERUF || beruf.id}: ${beruf.BERUF || 'Unknown Beruf'}`;
+                if (beruf.BESCHREIBUNG) {
+                    option.title = beruf.BESCHREIBUNG;
+                }
+                select.appendChild(option);
+            });
+            
+            // Update count display
+            document.getElementById('berufCount').textContent = `${berufe.length} Berufe loaded`;
+        }
+
+        // Filter Berufe based on search input
+        function filterBerufe() {
+            const searchTerm = document.getElementById('berufSearch').value.toLowerCase();
+            const filteredBerufe = allBerufe.filter(beruf => {
+                const name = (beruf.BERUF || '').toLowerCase() + ' (' + (beruf.BERUF_ENG || '').toLowerCase() + ')';
+                const desc = (beruf.BESCHREIBUNG || '').toLowerCase();
+                const id = (beruf.PK_WORK_BERUF || beruf.id || '').toString();
+                
+                return name.includes(searchTerm) || desc.includes(searchTerm) || id.includes(searchTerm);
+            });
+            
+            populateBerufSelect(filteredBerufe);
+        }
+
+        // Add Beruf to Person function
+        async function addBerufToPerson() {
+            const personId = document.getElementById('addPersonId').value.trim();
+            const berufId = document.getElementById('berufSelect').value;
+            const button = document.getElementById('addBerufBtn');
+            const messageDiv = document.getElementById('addBerufMessage');
+            const responseDiv = document.getElementById('addBerufResponse');
+
+            // Clear previous messages
+            messageDiv.style.display = 'none';
+            responseDiv.style.display = 'none';
+            messageDiv.className = 'message';
+
+            // Validation
+            if (!personId) {
+                showMessage(messageDiv, 'Please enter a Person ID', 'error');
+                return;
+            }
+
+            if (!berufId) {
+                showMessage(messageDiv, 'Please select a Beruf', 'error');
+                return;
+            }
+
+            // Validate numeric ID
+            if (isNaN(personId)) {
+                showMessage(messageDiv, 'Person ID must be a number', 'error');
+                return;
+            }
+
+            // Prepare data
+            const data = {
+                fkkonperson: parseInt(personId),
+                fkworkberuf: parseInt(berufId)
+            };
+
+            // Show loading state
+            button.innerHTML = '<div class="loading"></div>Adding Beruf...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:5000/person_beruf_rel/insert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                // Show response data
+                responseDiv.textContent = JSON.stringify(result, null, 2);
+                responseDiv.style.display = 'block';
+
+                if (response.ok && result.success) {
+                    showMessage(messageDiv, 'Beruf added to person successfully!', 'success');
+                    // Clear form on success
+                    document.getElementById('addPersonId').value = '';
+                    document.getElementById('berufSelect').selectedIndex = 0;
+                    document.getElementById('berufSearch').value = '';
+                } else {
+                    showMessage(messageDiv, `Error: ${result.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error adding beruf to person:', error);
+                showMessage(messageDiv, `Network error: ${error.message}`, 'error');
+                responseDiv.textContent = `Error: ${error.message}`;
+                responseDiv.style.display = 'block';
+            } finally {
+                // Reset button
+                button.innerHTML = 'Add Beruf to Person';
+                button.disabled = false;
+            }
+        }
+
+        // Add Geschäftspartner Relation function
+        async function addGeschaeftspartnerRelation() {
+            const button = document.getElementById('addGeschaeftspartnerBtn');
+            const messageDiv = document.getElementById('geschaeftspartnerMessage');
+            const responseDiv = document.getElementById('geschaeftspartnerResponse');
+
+            // Clear previous messages
+            messageDiv.style.display = 'none';
+            responseDiv.style.display = 'none';
+            messageDiv.className = 'message';
+
+            // Get values from form
+            const fkKonGeschaeftspartner = document.getElementById('fkKonGeschaeftspartner').value.trim();
+            const fkKonPerson = document.getElementById('fkKonPerson').value.trim();
+            const fkKonKontakt = document.getElementById('fkKonKontakt').value.trim();
+            const fkAdrAdresse = document.getElementById('fkAdrAdresse').value.trim();
+            const fkOrgUnit = document.getElementById('fkOrgUnit').value.trim();
+            const fkLocLocation = document.getElementById('fkLocLocation').value.trim();
+            const fkAdrAdresseSchnell = document.getElementById('fkAdrAdresseSchnell').value.trim();
+            const fkInpBelegeAll = document.getElementById('fkInpBelegeAll').value.trim();
+            const fkFirmMitarbeiter = document.getElementById('fkFirmMitarbeiter').value.trim();
+
+            // Prepare data - only include fields that have values
+            const data = {};
+            if (fkKonGeschaeftspartner) data.FK_KON_GESCHAEFTSPARTNER = parseInt(fkKonGeschaeftspartner);
+            if (fkKonPerson) data.FK_KON_PERSON = parseInt(fkKonPerson);
+            if (fkKonKontakt) data.FK_KON_KONTAKT = parseInt(fkKonKontakt);
+            if (fkAdrAdresse) data.FK_ADR_ADRESSE = parseInt(fkAdrAdresse);
+            if (fkOrgUnit) data.FK_ORG_UNIT = parseInt(fkOrgUnit);
+            if (fkLocLocation) data.FK_LOC_LOCATION = parseInt(fkLocLocation);
+            if (fkAdrAdresseSchnell) data.FK_ADR_ADRESSE_SCHNELL = parseInt(fkAdrAdresseSchnell);
+            if (fkInpBelegeAll) data.FK_INP_BELEGE_ALL = parseInt(fkInpBelegeAll);
+            if (fkFirmMitarbeiter) data.FK_FIRM_MITARBEITER = parseInt(fkFirmMitarbeiter);
+
+            // Show loading state
+            button.innerHTML = '<div class="loading"></div>Creating Relation...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:5000/geschaeftspartner_rel/insert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                // Show response data
+                responseDiv.textContent = JSON.stringify(result, null, 2);
+                responseDiv.style.display = 'block';
+
+                if (response.ok && result.success) {
+                    showMessage(messageDiv, 'Geschäftspartner relation created successfully!', 'success');
+                    // Clear form on success
+                    document.getElementById('fkKonGeschaeftspartner').value = '';
+                    document.getElementById('fkKonPerson').value = '';
+                    document.getElementById('fkKonKontakt').value = '';
+                    document.getElementById('fkAdrAdresse').value = '';
+                    document.getElementById('fkOrgUnit').value = '';
+                    document.getElementById('fkLocLocation').value = '';
+                    document.getElementById('fkAdrAdresseSchnell').value = '';
+                    document.getElementById('fkInpBelegeAll').value = '';
+                    document.getElementById('fkFirmMitarbeiter').value = '';
+                } else {
+                    showMessage(messageDiv, `Error: ${result.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error creating geschaeftspartner relation:', error);
+                showMessage(messageDiv, `Network error: ${error.message}`, 'error');
+                responseDiv.textContent = `Error: ${error.message}`;
+                responseDiv.style.display = 'block';
+            } finally {
+                // Reset button
+                button.innerHTML = 'Create Geschäftspartner Relation';
+                button.disabled = false;
+            }
+        }
+
+        // Add Kontakt function
+        async function addKontakt() {
+            const button = document.getElementById('addKontaktBtn');
+            const messageDiv = document.getElementById('kontaktMessage');
+            const responseDiv = document.getElementById('kontaktResponse');
+            const kontaktIdDisplay = document.getElementById('kontaktIdDisplay');
+
+            // Clear previous messages
+            messageDiv.style.display = 'none';
+            responseDiv.style.display = 'none';
+            kontaktIdDisplay.style.display = 'none';
+            messageDiv.className = 'message';
+
+            // Get values from form
+            const email = document.getElementById('email').value.trim();
+            const festnetznummer = document.getElementById('festnetznummer').value.trim();
+            const mobilnummer = document.getElementById('mobilnummer').value.trim();
+            const webseite = document.getElementById('webseite').value.trim();
+            const fax = document.getElementById('fax').value.trim();
+            const beschreibung = document.getElementById('beschreibung').value.trim();
+            const telex = document.getElementById('telex').value.trim();
+
+            // All fields are optional in the database, but we should have at least one field filled
+            if (!email && !festnetznummer && !mobilnummer && !webseite && !fax && !telex && !beschreibung) {
+                showMessage(messageDiv, 'Please fill in at least one field', 'error');
+                return;
+            }
+
+            // Prepare data - send all fields, even empty ones (database will handle NULL)
+            const data = {
+                EMAIL: email || null,
+                FESTNETZNUMMER: festnetznummer || null,
+                MOBILNUMMER: mobilnummer || null,
+                WEBSEITE: webseite || null,
+                FAX: fax || null,
+                BESCHREIBUNG: beschreibung || null,
+                TELEX: telex || null
+            };
+
+            // Show loading state
+            button.innerHTML = '<div class="loading"></div>Adding Kontakt...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:5000/kontakt/insert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                // Show response data
+                responseDiv.textContent = JSON.stringify(result, null, 2);
+                responseDiv.style.display = 'block';
+
+                if (response.ok && result.success) {
+                    showMessage(messageDiv, 'Kontakt added successfully!', 'success');
+                    
+                    // Display the created Kontakt ID
+                    if (result.kontaktId) {
+                        document.getElementById('kontaktIdValue').textContent = result.kontaktId;
+                        kontaktIdDisplay.style.display = 'block';
+                    }
+                    
+                    // Clear form on success
+                    document.getElementById('email').value = '';
+                    document.getElementById('festnetznummer').value = '';
+                    document.getElementById('mobilnummer').value = '';
+                    document.getElementById('webseite').value = '';
+                    document.getElementById('fax').value = '';
+                    document.getElementById('beschreibung').value = '';
+                    document.getElementById('telex').value = '';
+                } else {
+                    showMessage(messageDiv, `Error: ${result.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error adding kontakt:', error);
+                showMessage(messageDiv, `Network error: ${error.message}`, 'error');
+                responseDiv.textContent = `Error: ${error.message}`;
+                responseDiv.style.display = 'block';
+            } finally {
+                // Reset button
+                button.innerHTML = 'Add Kontakt';
+                button.disabled = false;
+            }
+        }
+
+        // Update Kontakt function using values from the "Add New Kontakt" form
+        async function updateKontaktFromForm() {
+            const kontaktId = document.getElementById('kontaktIdToUpdate').value.trim();
+            const button = document.getElementById('updatekontaktbtn');
+            const messageDiv = document.getElementById('kontaktMessage');
+            const responseDiv = document.getElementById('kontaktResponse');
+
+            // Clear previous messages
+            messageDiv.style.display = 'none';
+            responseDiv.style.display = 'none';
+            messageDiv.className = 'message';
+
+            // Validation
+            if (!kontaktId) {
+                showMessage(messageDiv, 'Please enter a Kontakt ID to update', 'error');
+                return;
+            }
+
+            if (isNaN(kontaktId)) {
+                showMessage(messageDiv, 'Kontakt ID must be a number', 'error');
+                return;
+            }
+
+            // Get values from the "Add New Kontakt" form
+            const updateData = {
+                id: parseInt(kontaktId),
+                EMAIL: document.getElementById('email').value.trim() || null,
+                FESTNETZNUMMER: document.getElementById('festnetznummer').value.trim() || null,
+                MOBILNUMMER: document.getElementById('mobilnummer').value.trim() || null,
+                WEBSEITE: document.getElementById('webseite').value.trim() || null,
+                FAX: document.getElementById('fax').value.trim() || null,
+                BESCHREIBUNG: document.getElementById('beschreibung').value.trim() || null,
+                TELEX: document.getElementById('telex').value.trim() || null
+            };
+
+            // Show loading state
+            const originalButtonText = button.innerHTML;
+            button.innerHTML = '<div class="loading"></div>Updating...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:5000/update-kontakt', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(updateData)
+                });
+
+                const result = await response.json();
+
+                // Show response data
+                responseDiv.textContent = JSON.stringify(result, null, 2);
+                responseDiv.style.display = 'block';
+
+                if (response.ok && result.success) {
+                    showMessage(messageDiv, 'Kontakt updated successfully!', 'success');
+                    
+                    // Clear form on success
+                    document.getElementById('kontaktIdToUpdate').value = '';
+                    document.getElementById('email').value = '';
+                    document.getElementById('festnetznummer').value = '';
+                    document.getElementById('mobilnummer').value = '';
+                    document.getElementById('webseite').value = '';
+                    document.getElementById('fax').value = '';
+                    document.getElementById('beschreibung').value = '';
+                    document.getElementById('telex').value = '';
+                } else {
+                    showMessage(messageDiv, `Error: ${result.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error updating kontakt:', error);
+                showMessage(messageDiv, `Network error: ${error.message}`, 'error');
+                responseDiv.textContent = `Error: ${error.message}`;
+                responseDiv.style.display = 'block';
+            } finally {
+                // Reset button
+                button.innerHTML = originalButtonText;
+                button.disabled = false;
+            }
+        }
+
+        // Clear Kontakt form
+        function clearKontakt() {
+            document.getElementById('email').value = '';
+            document.getElementById('festnetznummer').value = '';
+            document.getElementById('mobilnummer').value = '';
+            document.getElementById('webseite').value = '';
+            document.getElementById('fax').value = '';
+            document.getElementById('beschreibung').value = '';
+            document.getElementById('telex').value = '';
+            document.getElementById('kontaktIdToUpdate').value = '';
+            
+            // Show success message
+            showMessage(document.getElementById('kontaktMessage'), 'Kontakt form cleared!', 'success');
+        }
+
+        // Add Person-Bild Relation function
+        async function addPersonBildRelation() {
+            const fkKonPerson = document.getElementById('fkKonPersonBild').value.trim();
+            const fkBildBilder = document.getElementById('fkBildBilder').value.trim();
+            const button = document.getElementById('addPersonBildBtn');
+            const messageDiv = document.getElementById('personBildMessage');
+            const responseDiv = document.getElementById('personBildResponse');
+
+            // Clear previous messages
+            messageDiv.style.display = 'none';
+            responseDiv.style.display = 'none';
+            messageDiv.className = 'message';
+
+            // Validation
+            if (!fkKonPerson || !fkBildBilder) {
+                showMessage(messageDiv, 'Please fill in both Person ID and Bild ID', 'error');
+                return;
+            }
+
+            // Validate numeric IDs
+            if (isNaN(fkKonPerson) || isNaN(fkBildBilder)) {
+                showMessage(messageDiv, 'Both Person ID and Bild ID must be numbers', 'error');
+                return;
+            }
+
+            // Prepare data
+            const data = {
+                FK_KON_PERSON: parseInt(fkKonPerson),
+                FK_BILD_BILDER: parseInt(fkBildBilder)
+            };
+
+            // Show loading state
+            button.innerHTML = '<div class="loading"></div>Adding Relation...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:5000/add_person_bild_rel', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                // Show response data
+                responseDiv.textContent = JSON.stringify(result, null, 2);
+                responseDiv.style.display = 'block';
+
+                if (response.ok && result.success) {
+                    showMessage(messageDiv, 'Person-Bild relation added successfully!', 'success');
+                    // Clear form on success
+                    document.getElementById('fkKonPersonBild').value = '';
+                    document.getElementById('fkBildBilder').value = '';
+                } else {
+                    showMessage(messageDiv, `Error: ${result.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error adding person-bild relation:', error);
+                showMessage(messageDiv, `Network error: ${error.message}`, 'error');
+                responseDiv.textContent = `Error: ${error.message}`;
+                responseDiv.style.display = 'block';
+            } finally {
+                // Reset button
+                button.innerHTML = 'Add Person-Bild Relation';
+                button.disabled = false;
+            }
+        }
+
+        // Create Organisation Unit function
+        async function createOrgUnit() {
+            const orgUnitName = document.getElementById('orgUnitName').value.trim();
+            const orgUnitDescription = document.getElementById('orgUnitDescription').value.trim();
+            const orgUnitMandant = document.getElementById('orgUnitMandant').value.trim();
+            const button = document.getElementById('createOrgUnitBtn');
+            const messageDiv = document.getElementById('orgUnitMessage');
+            const responseDiv = document.getElementById('orgUnitResponse');
+            const orgUnitDisplay = document.getElementById('orgUnitDisplay');
+
+            // Clear previous messages
+            messageDiv.style.display = 'none';
+            responseDiv.style.display = 'none';
+            orgUnitDisplay.style.display = 'none';
+            messageDiv.className = 'message';
+
+            // Validation
+            if (!orgUnitName) {
+                showMessage(messageDiv, 'Please enter an organisation unit name', 'error');
+                return;
+            }
+
+            // Prepare data
+            const data = {
+                org_unit_name: orgUnitName,
+                description: orgUnitDescription || null,
+                fk_mdt_mandant: orgUnitMandant ? parseInt(orgUnitMandant) : 1
+            };
+
+            // Show loading state
+            button.innerHTML = '<div class="loading"></div>Creating...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:5000/org_unit/insert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                // Show response data
+                responseDiv.textContent = JSON.stringify(result, null, 2);
+                responseDiv.style.display = 'block';
+
+                if (response.ok && result.success) {
+                    showMessage(messageDiv, 'Organisation Unit created successfully!', 'success');
+                    
+                    // Display the created Organisation Unit ID
+                    if (result.orgUnitId) {
+                        document.getElementById('orgUnitIdValue').textContent = result.orgUnitId;
+                        orgUnitDisplay.style.display = 'block';
+                    }
+                    
+                    // Clear form on success
+                    document.getElementById('orgUnitName').value = '';
+                    document.getElementById('orgUnitDescription').value = '';
+                    
+                    // Reload organisation units list
+                    loadAllOrgUnits();
+                } else {
+                    showMessage(messageDiv, `Error: ${result.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error creating organisation unit:', error);
+                showMessage(messageDiv, `Network error: ${error.message}`, 'error');
+                responseDiv.textContent = `Error: ${error.message}`;
+                responseDiv.style.display = 'block';
+            } finally {
+                // Reset button
+                button.innerHTML = 'Create Organisation Unit';
+                button.disabled = false;
+            }
+        }
+
+        // Load all Organisation Units
+        async function loadAllOrgUnits() {
+            const orgUnitList = document.getElementById('orgUnitList');
+            const button = document.getElementById('refreshOrgUnitsBtn');
+
+            // Show loading state
+            button.innerHTML = '<div class="loading"></div>';
+            orgUnitList.innerHTML = '<div class="no-org-units">Loading organisation units...</div>';
+
+            try {
+                const response = await fetch('http://localhost:5000/org_unit');
+                
+                // Check if response is OK
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Check content type to ensure it's JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error(`Expected JSON but got: ${contentType}`);
+                }
+                
+                const result = await response.json();
+                
+                console.log('Org Units API Response:', result); // Debug log
+
+                if (response.ok) {
+                    // Handle different response formats
+                    if (Array.isArray(result)) {
+                        allOrgUnits = result;
+                    } else if (result.success && Array.isArray(result.data)) {
+                        allOrgUnits = result.data;
+                    } else if (result.data && Array.isArray(result.data)) {
+                        allOrgUnits = result.data;
+                    } else {
+                        throw new Error('Unexpected response format from server');
+                    }
+                    
+                    // Populate the organisation units list
+                    if (allOrgUnits && allOrgUnits.length > 0) {
+                        let orgUnitsHTML = '';
+                        allOrgUnits.forEach(orgUnit => {
+                            const orgUnitId = orgUnit.PK_ORG_UNIT || orgUnit.id;
+                            const orgUnitName = orgUnit.ORG_UNIT_NAME || 'Unknown Organisation Unit';
+                            const description = orgUnit.DESCRIPTION || '';
+                            const mandantId = orgUnit.FK_MDT_MANDANT || 'N/A';
+                            
+                            orgUnitsHTML += `
+                                <div class="org-unit-item">
+                                    <h3>${orgUnitName}</h3>
+                                    <p><strong>ID:</strong> ${orgUnitId}</p>
+                                    ${description ? `<p><strong>Description:</strong> ${description}</p>` : ''}
+                                    <p><strong>Mandant ID:</strong> ${mandantId}</p>
+                                    <div class="org-unit-actions">
+                                        <button class="edit-btn" onclick="editOrgUnit(${orgUnitId})">Edit</button>
+                                        <button class="delete-btn" onclick="deleteOrgUnit(${orgUnitId})">Delete</button>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        orgUnitList.innerHTML = orgUnitsHTML;
+                    } else {
+                        orgUnitList.innerHTML = '<div class="no-org-units">No organisation units found</div>';
+                    }
+                } else {
+                    throw new Error(result.error || 'Failed to load organisation units');
+                }
+            } catch (error) {
+                console.error('Error loading organisation units:', error);
+                orgUnitList.innerHTML = `<div class="no-org-units">Error loading organisation units: ${error.message}</div>`;
+            } finally {
+                // Reset button
+                button.innerHTML = 'Refresh';
+            }
+        }
+
+        // Edit Organisation Unit function
+        function editOrgUnit(orgUnitId) {
+            // Find the organisation unit in the list
+            const orgUnit = allOrgUnits.find(unit => unit.PK_ORG_UNIT === orgUnitId);
+            
+            if (orgUnit) {
+                // Populate the form with existing data
+                document.getElementById('orgUnitName').value = orgUnit.ORG_UNIT_NAME || '';
+                document.getElementById('orgUnitDescription').value = orgUnit.DESCRIPTION || '';
+                document.getElementById('orgUnitMandant').value = orgUnit.FK_MDT_MANDANT || '1';
+                
+                // Change button text and functionality
+                const createBtn = document.getElementById('createOrgUnitBtn');
+                createBtn.innerHTML = 'Update Organisation Unit';
+                createBtn.onclick = function() { updateOrgUnit(orgUnitId); };
+                
+                // Scroll to the form
+                document.getElementById('orgUnitName').scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // Update Organisation Unit function
+        async function updateOrgUnit(orgUnitId) {
+            const orgUnitName = document.getElementById('orgUnitName').value.trim();
+            const orgUnitDescription = document.getElementById('orgUnitDescription').value.trim();
+            const orgUnitMandant = document.getElementById('orgUnitMandant').value.trim();
+            const button = document.getElementById('createOrgUnitBtn');
+            const messageDiv = document.getElementById('orgUnitMessage');
+            const responseDiv = document.getElementById('orgUnitResponse');
+
+            // Clear previous messages
+            messageDiv.style.display = 'none';
+            responseDiv.style.display = 'none';
+            messageDiv.className = 'message';
+
+            // Validation
+            if (!orgUnitName) {
+                showMessage(messageDiv, 'Please enter an organisation unit name', 'error');
+                return;
+            }
+
+            // Prepare data
+            const data = {
+                id: orgUnitId,
+                org_unit_name: orgUnitName,
+                description: orgUnitDescription || null,
+                fk_mdt_mandant: orgUnitMandant ? parseInt(orgUnitMandant) : 1
+            };
+
+            // Show loading state
+            button.innerHTML = '<div class="loading"></div>Updating...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:5000/org_unit/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                // Show response data
+                responseDiv.textContent = JSON.stringify(result, null, 2);
+                responseDiv.style.display = 'block';
+
+                if (response.ok && result.success) {
+                    showMessage(messageDiv, 'Organisation Unit updated successfully!', 'success');
+                    
+                    // Reset form and button
+                    document.getElementById('orgUnitName').value = '';
+                    document.getElementById('orgUnitDescription').value = '';
+                    button.innerHTML = 'Create Organisation Unit';
+                    button.onclick = createOrgUnit;
+                    
+                    // Reload organisation units list
+                    loadAllOrgUnits();
+                } else {
+                    showMessage(messageDiv, `Error: ${result.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error updating organisation unit:', error);
+                showMessage(messageDiv, `Network error: ${error.message}`, 'error');
+                responseDiv.textContent = `Error: ${error.message}`;
+                responseDiv.style.display = 'block';
+            } finally {
+                // Reset button
+                button.disabled = false;
+            }
+        }
+
+        // Delete Organisation Unit function
+        async function deleteOrgUnit(orgUnitId) {
+            if (!confirm('Are you sure you want to delete this organisation unit?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`http://localhost:5000/org_unit/delete/${orgUnitId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // Reload organisation units list
+                    loadAllOrgUnits();
+                    
+                    // Show success message
+                    const messageDiv = document.getElementById('orgUnitMessage');
+                    showMessage(messageDiv, 'Organisation Unit deleted successfully!', 'success');
+                } else {
+                    alert(`Error: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                console.error('Error deleting organisation unit:', error);
+                alert(`Network error: ${error.message}`);
+            }
+        }
+
+        // Create Organisation Unit Relation function
+        async function createOrgUnitRelation() {
+            const fkkonorgunit = document.getElementById('fkkonorgunit').value.trim();
+            const fkkonorgunitmain = document.getElementById('fkkonorgunitmain').value.trim();
+            const button = document.getElementById('createOrgUnitRelationBtn');
+            const messageDiv = document.getElementById('orgUnitRelationMessage');
+            const responseDiv = document.getElementById('orgUnitRelationResponse');
+
+            // Clear previous messages
+            messageDiv.style.display = 'none';
+            responseDiv.style.display = 'none';
+            messageDiv.className = 'message';
+
+            // Validation
+            if (!fkkonorgunit || !fkkonorgunitmain) {
+                showMessage(messageDiv, 'Please fill in both Organisation Unit ID and Main Organisation Unit ID', 'error');
+                return;
+            }
+
+            // Validate numeric IDs
+            if (isNaN(fkkonorgunit) || isNaN(fkkonorgunitmain)) {
+                showMessage(messageDiv, 'Both Organisation Unit ID and Main Organisation Unit ID must be numbers', 'error');
+                return;
+            }
+
+            // Prepare data
+            const data = {
+                fkkonorgunit: parseInt(fkkonorgunit),
+                fkkonorgunitmain: parseInt(fkkonorgunitmain)
+            };
+
+            // Show loading state
+            button.innerHTML = '<div class="loading"></div>Creating Relation...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:5000/org_unit_rel_main/insert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                // Show response data
+                responseDiv.textContent = JSON.stringify(result, null, 2);
+                responseDiv.style.display = 'block';
+
+                if (response.ok && result.success) {
+                    showMessage(messageDiv, 'Organisation Unit relation created successfully!', 'success');
+                    // Clear form on success
+                    document.getElementById('fkkonorgunit').value = '';
+                    document.getElementById('fkkonorgunitmain').value = '';
+                    
+                    // Reload organisation unit relations
+                    loadOrgUnitRelations();
+                } else {
+                    showMessage(messageDiv, `Error: ${result.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error creating organisation unit relation:', error);
+                showMessage(messageDiv, `Network error: ${error.message}`, 'error');
+                responseDiv.textContent = `Error: ${error.message}`;
+                responseDiv.style.display = 'block';
+            } finally {
+                // Reset button
+                button.innerHTML = 'Create Organisation Unit Relation';
+                button.disabled = false;
+            }
+        }
+
+        // Load Organisation Unit Relations
+        async function loadOrgUnitRelations() {
+            const relationsList = document.getElementById('orgUnitRelationsList');
+
+            try {
+                const response = await fetch('http://localhost:5000/rel_org_unit');
+                
+                // Check if response is OK
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Check content type
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error(`Expected JSON but got: ${contentType}`);
+                }
+                
+                const result = await response.json();
+                
+                console.log('Org Unit Relations API Response:', result); // Debug log
+
+                if (response.ok) {
+                    let relationsData = [];
+                    
+                    // Handle different response formats
+                    if (Array.isArray(result)) {
+                        relationsData = result;
+                    } else if (result.success && Array.isArray(result.data)) {
+                        relationsData = result.data;
+                    } else if (result.data && Array.isArray(result.data)) {
+                        relationsData = result.data;
+                    } else {
+                        throw new Error('Unexpected response format from server');
+                    }
+                    
+                    // Populate the relations list
+                    if (relationsData && relationsData.length > 0) {
+                        let relationsHTML = `
+                            <table class="relations-table">
+                                <thead>
+                                    <tr>
+                                        <th>Relation ID</th>
+                                        <th>Organisation Unit ID</th>
+                                        <th>Main Organisation Unit ID</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                        `;
+                        
+                        relationsData.forEach(relation => {
+                            const relationId = relation.Relationship_Unique_Identifier;
+                            const orgUnitId = relation.Org_Unit_ID;
+                            const mainOrgUnitId = relation.Main_Org_Unit_ID;
+                            
+                            relationsHTML += `
+                                <tr>
+                                    <td class="id-column"> ${relationId || 'N/A'}</td>
+                                    <td class="id-column">${orgUnitId || 'N/A'}</td>
+                                    <td class="id-column">${mainOrgUnitId || 'N/A'}</td>
+                                    <td>
+                                        <button class="delete-btn" onclick="deleteOrgUnitRelation(${relationId})">Delete</button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        
+                        relationsHTML += `
+                                </tbody>
+                            </table>
+                        `;
+                        relationsList.innerHTML = relationsHTML;
+                    } else {
+                        relationsList.innerHTML = '<div class="no-relations">No organisation unit relations found</div>';
+                    }
+                } else {
+                    throw new Error(result.error || 'Failed to load organisation unit relations');
+                }
+            } catch (error) {
+                console.error('Error loading organisation unit relations:', error);
+                relationsList.innerHTML = `<div class="no-relations">Error loading organisation unit relations: ${error.message}</div>`;
+            }
+        }
+
+        // Delete Organisation Unit Relation function
+        async function deleteOrgUnitRelation(relationId) {
+            if (!confirm('Are you sure you want to delete this organisation unit relation?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`http://localhost:5000/org_unit_relation/delete/${relationId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // Reload organisation unit relations
+                    loadOrgUnitRelations();
+                    
+                    // Show success message
+                    const messageDiv = document.getElementById('orgUnitRelationMessage');
+                    showMessage(messageDiv, 'Organisation Unit relation deleted successfully!', 'success');
+                } else {
+                    alert(`Error: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                console.error('Error deleting organisation unit relation:', error);
+                alert(`Network error: ${error.message}`);
+            }
+        }
+
+        // Get Geschäftspartner Kontakt Relations function with tab display
+        async function getGeschaeftspartnerRelations() {
+            const personId = document.getElementById('relationPersonId').value.trim();
+            const orgUnitId = document.getElementById('relationOrgUnitId').value.trim();
+            const inpbelegallId = document.getElementById('inpbelegallId').value.trim();
+            const button = document.getElementById('getRelationsBtn');
+            const messageDiv = document.getElementById('relationsMessage');
+            const responseDiv = document.getElementById('relationsResponse');
+            const tabsContainer = document.getElementById('relationsTabsContainer');
+
+            // Clear previous messages and results
+            messageDiv.style.display = 'none';
+            responseDiv.style.display = 'none';
+            messageDiv.className = 'message';
+            tabsContainer.innerHTML = '';
+
+            // At least one filter should be provided
+            if (!personId && !orgUnitId && !inpbelegallId) {
+                showMessage(messageDiv, 'Please enter either a Person ID or Organisation Unit ID', 'error');
+                return;
+            }
+
+            // Show loading state
+            button.innerHTML = '<div class="loading"></div>Loading...';
+            button.disabled = true;
+
+            try {
+                // Build query parameters
+                const params = new URLSearchParams();
+                if (personId) params.append('fk_kon_person', personId);
+                if (orgUnitId) params.append('fk_org_org_unit', orgUnitId);
+                if (inpbelegallId) params.append('pk_inp_belege_all', inpbelegallId);
+
+                const response = await fetch(`http://localhost:5000/geschaeftspartner_kontakt_rel?${params}`);
+                
+                // Check if response is OK
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+
+                // Show response data
+                responseDiv.style.display = 'block';
+
+                console.log('Full API response:', result);
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
+
+                if (response.ok) {
+                    // Handle different response formats
+                    let relationsData = [];
+                    
+                    if (Array.isArray(result)) {
+                        relationsData = result;
+                    } else if (result.success && Array.isArray(result.data)) {
+                        relationsData = result.data;
+                    } else if (result.data && Array.isArray(result.data)) {
+                        relationsData = result.data;
+                    } else {
+                        throw new Error('Unexpected response format from server');
+                    }
+                    
+                    showMessage(messageDiv, 'Relations loaded successfully!', 'success');
+                    
+                    // Store relations data globally
+                    window.relationsData = relationsData;
+                    
+                    // Display the relations in tabs
+                    if (relationsData && relationsData.length > 0) {
+                        displayRelationsInTabs(relationsData);
+                    } else {
+                        tabsContainer.innerHTML = '<div class="no-relations-message">No relations found for the specified criteria</div>';
+                    }
+                } else {
+                    showMessage(messageDiv, `Error: ${result.error || 'Unknown error'}`, 'error');
+                    tabsContainer.innerHTML = '<div class="no-relations-message">Error loading relations</div>';
+                }
+            } catch (error) {
+                console.error('Error fetching relations:', error);
+                showMessage(messageDiv, `Network error: ${error.message}`, 'error');
+                responseDiv.textContent = `Error: ${error.message}`;
+                responseDiv.style.display = 'block';
+                tabsContainer.innerHTML = '<div class="no-relations-message">Error loading relations</div>';
+            } finally {
+                // Reset button
+                button.innerHTML = 'Get Relations';
+                button.disabled = false;
+            }
+        }
+
+        // Display relations in tabs
+        function displayRelationsInTabs(relations) {
+            const tabsContainer = document.getElementById('relationsTabsContainer');
+            
+            // Create relations count display
+            const countDiv = document.createElement('div');
+            countDiv.className = 'relations-count';
+            countDiv.textContent = `Found ${relations.length} relation(s)`;
+            tabsContainer.appendChild(countDiv);
+            
+            // Create tabs container
+            const tabsDiv = document.createElement('div');
+            tabsDiv.className = 'relation-tabs';
+            tabsContainer.appendChild(tabsDiv);
+            
+            // Create content container
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'relation-contents';
+            tabsContainer.appendChild(contentDiv);
+            
+            // Create tabs and content for each relation
+            relations.forEach((relation, index) => {
+                const relationId = relation.PK_REL_KON_GESCHAEFTSPARTNER_KONTAKT || relation.id || index;
+                
+                // Create tab
+                const tab = document.createElement('button');
+                tab.className = `relation-tab ${index === 0 ? 'active' : ''}`;
+                tab.textContent = `Relation ${relationId}`;
+                tab.onclick = () => switchRelationTab(relationId);
+                tabsDiv.appendChild(tab);
+                
+                // Create content
+                const content = document.createElement('div');
+                content.className = `relation-content ${index === 0 ? 'active' : ''}`;
+                content.id = `relation-content-${relationId}`;
+                contentDiv.appendChild(content);
+                
+                // Populate content with relation details
+                populateRelationContent(relation, content);
+            });
+        }
+
+        // Switch between relation tabs
+        function switchRelationTab(relationId) {
+            // Hide all relation contents
+            document.querySelectorAll('.relation-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all relation tabs
+            document.querySelectorAll('.relation-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected relation content
+            document.getElementById(`relation-content-${relationId}`).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+        // Populate relation content with details tabs
+        function populateRelationContent(relation, contentElement) {
+            const relationId = relation.PK_REL_KON_GESCHAEFTSPARTNER_KONTAKT || relation.id;
+            
+            // Create header
+            const header = document.createElement('h3');
+            header.textContent = `Relation Details: ${relationId}`;
+            contentElement.appendChild(header);
+
+            // Create header
+            const content1 = document.createElement('div');
+            content1.innerHTML = `Beleg: ${relation.PK_INP_BELEGE_ALL} <br> Bezeichnung: ${relation.BEZEICHNUNG} <br> <br>`;
+            contentElement.appendChild(content1);
+            
+            // Create details tabs container
+            const detailsTabsDiv = document.createElement('div');
+            detailsTabsDiv.className = 'relation-details-tabs';
+            contentElement.appendChild(detailsTabsDiv);
+            
+            // Create details content container
+            const detailsContentDiv = document.createElement('div');
+            detailsContentDiv.className = 'relation-details-contents';
+            contentElement.appendChild(detailsContentDiv);
+            
+            // Define tab configurations
+            const tabConfigs = [
+                { id: 'person', label: 'Person', fields: getPersonFields(relation) },
+                { id: 'org-unit', label: 'Organisation Unit', fields: getOrgUnitFields(relation) },
+                { id: 'location', label: 'Location', fields: getLocationFields(relation) },
+                { id: 'kontakt', label: 'Kontakt', fields: getKontaktFields(relation) },
+                { id: 'bild', label: 'Bild', fields: getBildFields(relation) },
+                { id: 'org-unit-tree', label: 'Org Unit Tree', fields: [] }
+            ];
+            
+            // Create tabs and content for each category
+            tabConfigs.forEach((config, index) => {
+                // Create tab
+                const tab = document.createElement('button');
+                tab.className = `relation-details-tab ${index === 0 ? 'active' : ''}`;
+                tab.textContent = config.label;
+                tab.onclick = () => switchDetailsTab(relationId, config.id);
+                detailsTabsDiv.appendChild(tab);
+                
+                // Create content
+                const content = document.createElement('div');
+                content.className = `relation-details-content ${index === 0 ? 'active' : ''}`;
+                content.id = `relation-${relationId}-${config.id}`;
+                detailsContentDiv.appendChild(content);
+                
+                // Populate content with fields
+                if (config.id === 'org-unit-tree') {
+                    // For org unit tree, we'll load it dynamically
+                    loadOrgUnitTree(relation, content);
+                } else {
+                    populateDetailsContent(config.fields, content);
+                }
+                
+                // Add action buttons to Person tab
+                if (config.id === 'person') {
+                    addPersonTabActions(content, relation);
+                }
+                
+                // Add action buttons to Kontakt tab
+                if (config.id === 'kontakt') {
+                    addKontaktTabActions(content, relation);
+                }
+            });
+            
+            // Add update button
+            const updateButton = document.createElement('button');
+            updateButton.className = 'update-relation-btn';
+            updateButton.textContent = 'Update Relation';
+            updateButton.onclick = () => openUpdateModal(relation);
+            contentElement.appendChild(updateButton);
+        }
+
+        // Load Organisation Unit Tree for a relation
+        async function loadOrgUnitTree(relation, contentElement) {
+            const orgUnitId = relation.PK_ORG_UNIT || relation.FK_ORG_UNIT;
+            
+            if (!orgUnitId) {
+                contentElement.innerHTML = '<div class="tree-empty">No Organisation Unit ID available for this relation</div>';
+                return;
+            }
+            
+            contentElement.innerHTML = '<div class="tree-loading">Loading organisation unit tree...</div>';
+            
+            try {
+                // Fetch the main branches for the organisation unit
+                const mainBranchesResponse = await fetch(`http://localhost:5000/org_unit_branches_rel/${orgUnitId}`);
+                const mainBranches = mainBranchesResponse.ok ? await mainBranchesResponse.json() : [];
+                
+                // Create the tree container
+                const treeContainer = document.createElement('div');
+                treeContainer.className = 'org-unit-tree-container';
+                
+                // Create tree info
+                const treeInfo = document.createElement('div');
+                treeInfo.className = 'tree-info';
+                treeInfo.textContent = `Organisation Unit Tree for ID: ${orgUnitId}`;
+                treeContainer.appendChild(treeInfo);
+                
+                // Create the tree structure
+                const tree = document.createElement('ul');
+                tree.className = 'org-unit-tree';
+                
+                // Add the selected organisation unit as the leaf node
+                const leafNode = document.createElement('li');
+                leafNode.className = 'org-unit-tree-item';
+                
+                const leafNodeDiv = document.createElement('div');
+                leafNodeDiv.className = 'org-unit-tree-node selected';
+                leafNodeDiv.innerHTML = `
+                    <span class="node-name">${relation.ORG_UNIT_NAME || 'Unknown Unit'}</span>
+                    <span class="node-id">(ID: ${orgUnitId})</span>
+                `;
+                
+                leafNode.appendChild(leafNodeDiv);
+                tree.appendChild(leafNode);
+                
+                // Add parent units if available
+                if (mainBranches && mainBranches.length > 0) {
+                    // For now, we'll just show the branches as parent nodes
+                    // In a real implementation, you would build the actual hierarchy
+                    mainBranches.forEach(branch => {
+                        const branchId = branch.PK_BAS_ORG_BRANCHES || branch.id;
+                        const branchName = branch.BRANCH_NAME || branch.ORG_UNIT_NAME || 'Unknown Branch';
+                        
+                        const branchNode = document.createElement('li');
+                        branchNode.className = 'org-unit-tree-item';
+                        
+                        const branchNodeDiv = document.createElement('div');
+                        branchNodeDiv.className = 'org-unit-tree-node';
+                        branchNodeDiv.innerHTML = `
+                            <span class="node-name">${branchName}</span>
+                            <span class="node-id">(ID: ${branchId})</span>
+                        `;
+                        
+                        branchNode.appendChild(branchNodeDiv);
+                        tree.appendChild(branchNode);
+                    });
+                } else {
+                    const noParentsNode = document.createElement('li');
+                    noParentsNode.className = 'org-unit-tree-item';
+                    
+                    const noParentsDiv = document.createElement('div');
+                    noParentsDiv.className = 'org-unit-tree-node';
+                    noParentsDiv.textContent = 'No parent organisation units found';
+                    
+                    noParentsNode.appendChild(noParentsDiv);
+                    tree.appendChild(noParentsNode);
+                }
+                
+                treeContainer.appendChild(tree);
+                contentElement.innerHTML = '';
+                contentElement.appendChild(treeContainer);
+                
+            } catch (error) {
+                console.error('Error loading organisation unit tree:', error);
+                contentElement.innerHTML = `<div class="tree-empty">Error loading organisation unit tree: ${error.message}</div>`;
+            }
+        }
+
+        // Add action buttons to Person tab
+        function addPersonTabActions(contentElement, relation) {
+            const personId = relation.PK_KON_PERSON || relation.FK_KON_PERSON;
+            
+            if (personId) {
+                const actionsContainer = document.createElement('div');
+                actionsContainer.className = 'person-tab-actions';
+                
+                // View Berufe button
+                const viewBerufeBtn = document.createElement('button');
+                viewBerufeBtn.className = 'person-action-btn view-berufe';
+                viewBerufeBtn.textContent = 'View Berufe';
+                viewBerufeBtn.onclick = () => viewPersonBerufe(personId);
+                
+                // Edit Person button
+                const editPersonBtn = document.createElement('button');
+                editPersonBtn.className = 'person-action-btn edit-person';
+                editPersonBtn.textContent = 'Edit Person';
+                editPersonBtn.onclick = () => editPerson(personId);
+                
+                // Add Beruf button
+                const addBerufBtn = document.createElement('button');
+                addBerufBtn.className = 'person-action-btn add-beruf';
+                addBerufBtn.textContent = 'Add Beruf';
+                addBerufBtn.onclick = () => addBerufToPersonFromRelation(personId);
+                
+                actionsContainer.appendChild(viewBerufeBtn);
+                actionsContainer.appendChild(editPersonBtn);
+                actionsContainer.appendChild(addBerufBtn);
+                
+                contentElement.appendChild(actionsContainer);
+            }
+        }
+
+        // Add action buttons to Kontakt tab
+        function addKontaktTabActions(contentElement, relation) {
+            const kontaktId = relation.PK_KON_KONTAKT || relation.FK_KON_KONTAKT;
+            
+            if (kontaktId) {
+                const actionsContainer = document.createElement('div');
+                actionsContainer.className = 'person-tab-actions';
+                
+                // Update Kontakt button
+                const updateKontaktBtn = document.createElement('button');
+                updateKontaktBtn.className = 'person-action-btn edit-person';
+                updateKontaktBtn.textContent = 'Update Kontakt';
+                updateKontaktBtn.onclick = () => openKontaktUpdateModalWithId(kontaktId);
+                
+                // Copy to Kontakt Form button
+                const copyToKontaktBtn = document.createElement('button');
+                copyToKontaktBtn.className = 'copy-to-kontakt-btn';
+                copyToKontaktBtn.textContent = 'Copy to Kontakt Form';
+                copyToKontaktBtn.onclick = () => copyToKontaktForm(relation);
+                
+                actionsContainer.appendChild(updateKontaktBtn);
+                actionsContainer.appendChild(copyToKontaktBtn);
+                
+                contentElement.appendChild(actionsContainer);
+            }
+        }
+
+        // Copy relation-kontakt data to the add kontakt form
+        function copyToKontaktForm(relation) {
+            // Switch to the kontakt tab
+            switchTab('kontaktTab');
+            
+            // Populate the kontakt form with data from the relation
+            document.getElementById('email').value = relation.EMAIL || '';
+            document.getElementById('festnetznummer').value = relation.FESTNETZNUMMER || '';
+            document.getElementById('mobilnummer').value = relation.MOBILNUMMER || '';
+            document.getElementById('webseite').value = relation.WEBSEITE || '';
+            document.getElementById('fax').value = relation.FAX || '';
+            document.getElementById('beschreibung').value = relation.kon_beschreibung || '';
+            document.getElementById('telex').value = relation.TELEX || '';
+            
+            // Set the kontakt ID to update
+            const kontaktId = relation.PK_KON_KONTAKT || relation.FK_KON_KONTAKT;
+            if (kontaktId) {
+                document.getElementById('kontaktIdToUpdate').value = kontaktId;
+            }
+            
+            // Show success message
+            showMessage(document.getElementById('kontaktMessage'), 'Kontakt data copied to form!', 'success');
+        }
+
+        // Open Kontakt Update Modal with specific Kontakt ID
+        function openKontaktUpdateModalWithId(kontaktId) {
+            document.getElementById('kontaktIdToUpdate').value = kontaktId;
+            // For this implementation, we'll use the direct update function instead of opening a modal
+            updateKontaktFromForm();
+        }
+
+        // View Person Berufe function
+        function viewPersonBerufe(personId) {
+            // Set the person ID in the main person details section
+            document.getElementById('personDetailsId').value = personId;
+            
+            // Trigger the get person details function
+            getPersonDetails();
+            
+            // Show success message
+            showMessage(document.getElementById('personDetailsMessage'), `Loading Berufe for Person ID: ${personId}`, 'success');
+        }
+
+        // Edit Person function
+        function editPerson(personId) {
+            // For now, just show an alert - in a real implementation, this would open an edit form
+            alert(`Edit Person functionality would open for Person ID: ${personId}`);
+            
+            // In a real implementation, you would:
+            // 1. Fetch the person details
+            // 2. Populate an edit form
+            // 3. Allow the user to update the person information
+            // 4. Submit the changes to the server
+        }
+
+        // Add Beruf to Person from Relation function
+        function addBerufToPersonFromRelation(personId) {
+            // Set the person ID in the add beruf tab
+            document.getElementById('addPersonId').value = personId;
+            
+            // Switch to the add beruf tab
+            switchTab('personBerufTab');
+            
+            // Show success message
+            showMessage(document.getElementById('addBerufMessage'), `Ready to add Beruf for Person ID: ${personId}`, 'success');
+        }
+
+        // Switch between details tabs within a relation
+        function switchDetailsTab(relationId, tabId) {
+            // Hide all details contents for this relation
+            document.querySelectorAll(`#relation-content-${relationId} .relation-details-content`).forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all details tabs for this relation
+            document.querySelectorAll(`#relation-content-${relationId} .relation-details-tab`).forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected details content
+            document.getElementById(`relation-${relationId}-${tabId}`).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+        // Populate details content with fields
+        function populateDetailsContent(fields, contentElement) {
+            const grid = document.createElement('div');
+            grid.className = 'relation-info-grid';
+            contentElement.appendChild(grid);
+            
+            fields.forEach(field => {
+                const item = document.createElement('div');
+                item.className = 'relation-info-item';
+                
+                const label = document.createElement('div');
+                label.className = 'relation-info-label';
+                label.textContent = field.label;
+                
+                const value = document.createElement('div');
+                value.className = 'relation-info-value';
+                value.innerHTML = field.value || 'N/A';
+                
+                item.appendChild(label);
+                item.appendChild(value);
+                grid.appendChild(item);
+            });
+        }
+
+        // Get person fields from relation data
+        function getPersonFields(relation) {
+            return [
+                { label: 'Person ID', value: relation.PK_KON_PERSON || relation.FK_KON_PERSON },
+                { label: 'Titel', value: relation.TITEL },
+                { label: 'Vorname', value: relation.VORNAME },
+                { label: 'Nachname', value: relation.NACHNAME },
+                { label: 'Geschlecht', value: relation.GESCHLECHT }
+            ];
+        }
+
+        // Get organisation unit fields from relation data
+        function getOrgUnitFields(relation) {
+            return [
+                { label: 'Organisation Unit ID', value: relation.PK_ORG_UNIT || relation.FK_ORG_UNIT },
+                { label: 'Organisation Unit Name', value: relation.ORG_UNIT_NAME },
+                { label: 'Description', value: relation.DESCRIPTION },
+                { label: 'Mandant ID', value: relation.FK_MDT_MANDANT }
+            ];
+        }
+
+        // Get location fields from relation data
+        function getLocationFields(relation) {
+            return [
+                { label: 'Location ID', value: relation.PK_LOC_LOCATION || relation.FK_LOC_LOCATION },
+                { label: 'Location Name', value: relation.LOCATION },
+                { label: 'Strasse', value: relation.LOC_STRASSE },
+                { label: 'Hausnummer', value: relation.LOC_HSNR },
+                { label: 'Gebäude', value: relation.GEBAEUDE },
+                { label: 'Postfach ID', value: relation.PK_ADR_POSTFACH },
+                { label: 'Postfach', value: relation.post_postfach },
+                { label: 'PLZ', value: relation.LOC_PLZ },
+                { label: 'Ort', value: relation.LOC_ORT },
+                { label: 'Region', value: relation.REGION },
+                { label: 'Land', value: relation.LOC_LAND }
+            ];
+        }
+
+        // Get kontakt fields from relation data
+        function getKontaktFields(relation) {
+            return [
+                { label: 'Kontakt ID', value: relation.PK_KON_KONTAKT || relation.FK_KON_KONTAKT },
+                { label: 'Beschreibung', value: relation.kon_beschreibung },
+                { label: 'Festnetznummer', value: relation.FESTNETZNUMMER },
+                { label: 'Fax', value: relation.FAX },
+                { label: 'Mobilnummer', value: relation.MOBILNUMMER },
+                { label: 'Telex', value: relation.TELEX },
+                { label: 'Email', value: relation.EMAIL },
+                { label: 'Webseite', value: relation.WEBSEITE }
+            ];
+        }
+
+        function getBildFields(relation) {
+            return [
+                { label: 'Bild ID', value: relation.FK_BILD_BILDER },
+   { label: 'Beleg ID', value: relation.PK_INP_BELEGE_ALL }
+            ];
+        }
+
+        // Clear Relations display
+        function clearRelations() {
+            document.getElementById('relationPersonId').value = '';
+            document.getElementById('relationOrgUnitId').value = '';
+            document.getElementById('inpbelegallId').value = '';
+            document.getElementById('relationsTabsContainer').innerHTML = '';
+            document.getElementById('relationsMessage').style.display = 'none';
+            document.getElementById('relationsResponse').style.display = 'none';
+        }
+
+        // Image Viewer Functions
+        function navigateImage(change) {
+            const currentId = parseInt(document.getElementById('imageIdInput').value) || 0;
+            const newId = currentId + change;
+            document.getElementById('imageIdInput').value = newId > 0 ? newId : 1;
+            handleImageLoad();
+        }
+
+        async function handleImageLoad() {
+            const imageId = document.getElementById('imageIdInput').value.trim();
+            const imageContainer = document.getElementById('imageContainer');
+            const imageInfo = document.getElementById('imageInfo');
+            
+            if (!imageId) {
+                showError("Please enter an image ID");
+                return;
+            }
+            
+            try {
+                imageContainer.innerHTML = '<p>Loading image...</p>';
+                imageInfo.textContent = '';
+                
+                const response = await fetch(`http://localhost:5000/accounts/bild/1/1/1/${imageId}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const blob = await response.blob();
+                const imageUrl = URL.createObjectURL(blob);
+                
+                imageContainer.innerHTML = `
+                    <img src="${imageUrl}" alt="Image ID: ${imageId}">
+                `;
+                imageInfo.innerHTML = `
+                    <p><strong>Image ID:</strong> ${imageId}</p>
+                    <p><strong>Size:</strong> ${(blob.size / 1024).toFixed(2)} KB</p>
+                    <p><strong>Type:</strong> ${blob.type}</p>
+                `;
+                
+                // Clean up the object URL when the image is no longer needed
+                const img = imageContainer.querySelector('img');
+                img.onload = function() {
+                    URL.revokeObjectURL(imageUrl);
+                };
+                
+            } catch (error) {
+                imageContainer.innerHTML = `<p class="error">Error loading image: ${error.message}</p>`;
+                imageInfo.textContent = '';
+                console.error("Image load error:", error);
+            }
+        }
+
+        // Update Relation Functions
+        function openUpdateModal(relation) {
+            const modal = document.getElementById('updateRelationModal');
+            const messageDiv = document.getElementById('updateModalMessage');
+            
+            // Clear previous messages
+            messageDiv.style.display = 'none';
+            messageDiv.className = 'message';
+            
+            // Populate form with relation data
+            document.getElementById('updateRelationId').value = relation.PK_REL_KON_GESCHAEFTSPARTNER_KONTAKT || '';
+            document.getElementById('updateFkKonGeschaeftspartner').value = relation.FK_KON_GESCHAEFTSPARTNER || '';
+            document.getElementById('updateFkKonPerson').value = relation.PK_KON_PERSON || relation.FK_KON_PERSON || '';
+            document.getElementById('updateFkKonKontakt').value = relation.PK_KON_KONTAKT || relation.FK_KON_KONTAKT || '';
+            document.getElementById('updateFkOrgUnit').value = relation.PK_ORG_UNIT || relation.FK_ORG_UNIT || '';
+            document.getElementById('updateFkAdrAdresse').value = relation.FK_ADR_ADRESSE || '';
+            document.getElementById('updateFkLocLocation').value = relation.PK_LOC_LOCATION || relation.FK_LOC_LOCATION || '';
+            document.getElementById('updateFkAdrAdresseSchnell').value = relation.FK_ADR_ADRESSE_SCHNELL || '';
+            document.getElementById('updateFkInpBelegeAll').value = relation.FK_INP_BELEGE_ALL || '';
+            document.getElementById('updateFkFirmMitarbeiter').value = relation.FK_FIRM_MITARBEITER || '';
+            document.getElementById('updateBemerkungen').value = relation.BEMERKUNGEN || '';
+            
+            // Show modal
+            modal.style.display = 'block';
+        }
+
+        function closeUpdateModal() {
+            const modal = document.getElementById('updateRelationModal');
+            modal.style.display = 'none';
+            
+            // Clear form
+            document.getElementById('updateRelationForm').reset();
+        }
+
+        async function handleUpdateRelation(e) {
+            e.preventDefault();
+            
+            const button = e.target.querySelector('button[type="submit"]');
+            const messageDiv = document.getElementById('updateModalMessage');
+            const relationId = document.getElementById('updateRelationId').value;
+            
+            // Clear previous messages
+            messageDiv.style.display = 'none';
+            messageDiv.className = 'message';
+            
+            // Validation
+            if (!relationId) {
+                showMessage(messageDiv, 'Relation ID is required', 'error');
+                return;
+            }
+
+            // Get values from form
+            const updateData = {
+                id: parseInt(relationId),
+                fk_kon_geschaeftspartner: document.getElementById('updateFkKonGeschaeftspartner').value.trim() || null,
+                fk_kon_person: document.getElementById('updateFkKonPerson').value.trim() || null,
+                fk_kon_kontakt: document.getElementById('updateFkKonKontakt').value.trim() || null,
+                fk_org_unit: document.getElementById('updateFkOrgUnit').value.trim() || null,
+                fk_adr_adresse: document.getElementById('updateFkAdrAdresse').value.trim() || null,
+                fk_loc_location: document.getElementById('updateFkLocLocation').value.trim() || null,
+                fk_adr_adresse_schnell: document.getElementById('updateFkAdrAdresseSchnell').value.trim() || null,
+                fk_inp_belege_all: document.getElementById('updateFkInpBelegeAll').value.trim() || null,
+                fk_firm_mitarbeiter: document.getElementById('updateFkFirmMitarbeiter').value.trim() || null,
+                bemerkungen: document.getElementById('updateBemerkungen').value.trim() || null,
+                fk_bild_bilder: document.getElementById('updatefkbildbilder').value.trim() || null
+            };
+            
+            // Convert numeric fields to integers
+            if (updateData.fk_kon_geschaeftspartner) updateData.fk_kon_geschaeftspartner = parseInt(updateData.fk_kon_geschaeftspartner);
+            if (updateData.fk_kon_person) updateData.fk_kon_person = parseInt(updateData.fk_kon_person);
+            if (updateData.fk_kon_kontakt) updateData.fk_kon_kontakt = parseInt(updateData.fk_kon_kontakt);
+            if (updateData.fk_org_unit) updateData.fk_org_unit = parseInt(updateData.fk_org_unit);
+            if (updateData.fk_adr_adresse) updateData.fk_adr_adresse = parseInt(updateData.fk_adr_adresse);
+            if (updateData.fk_loc_location) updateData.fk_loc_location = parseInt(updateData.fk_loc_location);
+            if (updateData.fk_adr_adresse_schnell) updateData.fk_adr_adresse_schnell = parseInt(updateData.fk_adr_adresse_schnell);
+            if (updateData.fk_inp_belege_all) updateData.fk_inp_belege_all = parseInt(updateData.fk_inp_belege_all);
+            if (updateData.fk_firm_mitarbeiter) updateData.fk_firm_mitarbeiter = parseInt(updateData.fk_firm_mitarbeiter);
+            if (updateData.fk_bild_bilder) updateData.fk_bild_bilder = parseInt(updateData.fk_bild_bilder);
+            
+            // Show loading state
+            const originalButtonText = button.innerHTML;
+            button.innerHTML = '<div class="loading"></div>Updating...';
+            button.disabled = true;
+            
+            try {
+                const response = await fetch('http://localhost:5000/update-kon_geschaeftspartner_rel', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(updateData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    showMessage(messageDiv, 'Relation updated successfully!', 'success');
+                    
+                    // Close modal after successful update
+                    setTimeout(() => {
+                        closeUpdateModal();
+                        // Refresh the relations table
+                        getGeschaeftspartnerRelations();
+                    }, 1500);
+                } else {
+                    showMessage(messageDiv, `Error: ${result.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error updating relation:', error);
+                showMessage(messageDiv, `Network error: ${error.message}`, 'error');
+            } finally {
+                // Reset button
+                button.innerHTML = originalButtonText;
+                button.disabled = false;
+            }
+        }
+
+        // Helper functions
+        function showMessage(element, message, type) {
+            element.textContent = message;
+            element.className = `message ${type}`;
+            element.style.display = 'block';
+        }
+
+        function showError(message) {
+            console.error(message);
+        }
+
+        // Helper function to escape JSON for HTML
+        function escapeJsonForHtml(obj) {
+            return JSON.stringify(obj).replace(/"/g, '&quot;');
+        }
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', () => {
+            // Person Management Event Listeners
+            const loadImageBtn = document.getElementById('loadImageBtn');
+            const prevImageBtn = document.getElementById('prevImageBtn');
+            const nextImageBtn = document.getElementById('nextImageBtn');
+            const imageIdInput = document.getElementById('imageIdInput');
+            const updateForm = document.getElementById('updateRelationForm');
+            const modal = document.getElementById('updateRelationModal');
+
+            // Person form enter key support
+            const personInputs = document.querySelectorAll('#titel, #vorname, #nachname, #geschlecht');
+            personInputs.forEach(input => {
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        insertPerson();
+                    }
+                });
+            });
+
+            // Person details enter key support
+            const personDetailsInput = document.getElementById('personDetailsId');
+            if (personDetailsInput) {
+                personDetailsInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        getPersonDetails();
+                    }
+                });
+            }
+
+            // Search functionality
+            const searchInput = document.getElementById('berufSearch');
+            searchInput.addEventListener('input', filterBerufe);
+
+            // Load all Berufe on page load
+            loadAllBerufe();
+
+            // Load all Organisation Units on page load
+            loadAllOrgUnits();
+
+            // Load Organisation Unit Relations on page load
+            loadOrgUnitRelations();
+
+            // Image Viewer Event Listeners
+            loadImageBtn.addEventListener('click', handleImageLoad);
+            prevImageBtn.addEventListener('click', () => navigateImage(-1));
+            nextImageBtn.addEventListener('click', () => navigateImage(1));
+            imageIdInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    handleImageLoad();
+                }
+            });
+
+            // Update form event listener
+            if (updateForm) {
+                updateForm.addEventListener('submit', handleUpdateRelation);
+            }
+            
+            // Close modal when clicking outside
+            if (modal) {
+                modal.addEventListener('click', function(event) {
+                    if (event.target === modal) {
+                        closeUpdateModal();
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
