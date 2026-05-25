@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Finanzcockpit · Sofortaktualisierung bei Kontenauswahl</title>
+  <title>Finanzcockpit · Gruppierung nach Eigentümer, Konto, Jahr</title>
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
@@ -23,7 +23,7 @@
       margin: 0 auto;
     }
     .filter-sidebar {
-      width: 320px;
+      width: 340px;
       flex-shrink: 0;
       background: white;
       border-radius: 28px;
@@ -52,7 +52,7 @@
       color: #2c5a6e;
     }
     .checkbox-scroll {
-      max-height: 200px;
+      max-height: 180px;
       overflow-y: auto;
       border: 1px solid #e2edf2;
       border-radius: 16px;
@@ -285,6 +285,23 @@
       flex: 1;
       margin-top: 0;
     }
+    .grouped-table th, .grouped-table td {
+      text-align: left;
+      vertical-align: top;
+    }
+    .group-stmt-badge {
+      background: #eef2f5;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      display: inline-block;
+      margin: 2px 4px 2px 0;
+      white-space: nowrap;
+    }
+    .tooltip-hover {
+      border-bottom: 1px dashed #6f8f9f;
+      cursor: help;
+    }
     @media (max-width: 800px) {
       .app-layout { flex-direction: column; }
       .filter-sidebar { width: 100%; position: static; }
@@ -294,7 +311,13 @@
 <body>
 <div class="app-layout">
   <aside class="filter-sidebar">
-    <h3>🔍 Filter</h3>
+    <h3>🔍 Filter & Gruppierung</h3>
+    <!-- Jahresauswahl -->
+    <div class="filter-group">
+      <label>📅 Jahr (Year)</label>
+      <div id="yearCheckboxesContainer" class="checkbox-scroll">Lade ...</div>
+      <button id="resetYearsBtn" class="reset-btn">Alle Jahre</button>
+    </div>
     <div class="filter-group">
       <label>👥 Eigentümer (OWNER1)</label>
       <div id="ownerCheckboxesContainer" class="checkbox-scroll">Lade ...</div>
@@ -306,20 +329,20 @@
       <button id="resetTypesBtn" class="reset-btn">Alle Kontenarten</button>
     </div>
     <div class="filter-group">
-      <label>📑 Kontoauszüge (FK_KTO_KONTO_AUSZUG)</label>
+      <label>📑 Kontoauszüge (ID)</label>
       <div id="statementCheckboxesContainer" class="checkbox-scroll">Lade ...</div>
       <button id="resetStatementsBtn" class="reset-btn">Alle Auszüge</button>
     </div>
     <button id="clearAllFiltersBtn" class="reset-btn clear-all-btn">✖️ Alle Filter zurücksetzen</button>
     <div class="info-note" style="margin-top: 16px;">
-      💡 <strong>Neu:</strong> Auswahl in der Konten-Tabelle (☑) <strong>aktualisiert sofort</strong> die Auszugs-Tabelle und das Liniendiagramm.<br>
-      „Filter anwenden“ beeinflusst nur die Salden-Karten oben.
+      💡 <strong>Neu:</strong> Jahresfilter & Gruppierung nach Eigentümer·Konto·Jahr. <br>
+      Konto-Checkboxen wirken sofort auf Auszüge, Chart & Gruppierung.
     </div>
   </aside>
 
   <div class="main-content">
     <div class="header">
-      <div><h1>💰 Finanzcockpit</h1><div class="sub">Sofort‑Analyse bei Kontoauswahl</div></div>
+      <div><h1>💰 Finanzcockpit</h1><div class="sub">Gruppierung: Eigentümer · Konto · Jahr</div></div>
       <div style="display: flex; gap: 12px;"><div class="status" id="statusBadge">🔄 Daten laden...</div><button class="refresh-btn" id="refreshDataBtn">⟳ Aktualisieren</button></div>
     </div>
 
@@ -341,14 +364,32 @@
       <div id="statementCardsGrid" class="cards-grid"><div class="card">⏳ Lade Auszüge...</div></div>
     </div>
 
-    <!-- Karten: Salden pro Konto (werden durch "Filter anwenden" gesteuert) -->
+    <!-- NEU: Gruppierung nach Eigentümer, Konto, Jahr -->
+    <div class="cards-section">
+      <div class="section-title">📂 Kontoauszüge gruppiert nach Eigentümer · Konto · Jahr 
+        <span class="active-filter-badge" id="groupingInfoBadge">Live-Filter aktiv</span>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table grouped-table" id="groupedStatementsTable" style="min-width: 600px;">
+          <thead>
+            <tr><th>Eigentümer</th><th>Konto</th><th>Jahr</th><th>Summe (EUR)</th><th>Kontoauszüge (IDs)</th><th>Anzahl Buchungen</th></tr>
+          </thead>
+          <tbody id="groupedStatementsBody">
+            <tr><td colspan="6">⏳ Gruppierung wird geladen...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="info-note">⬤ Gruppierung berücksichtigt aktive Filter (Jahr, Eigentümer, Kontenart, Auszug-ID) sowie die ausgewählten Konten (☑).</div>
+    </div>
+
+    <!-- Salden-Karten (beeinflusst durch "Filter anwenden" Button) -->
     <div class="cards-section">
       <div class="section-title">🏦 Salden pro Konto <span id="accountFilterBadge" class="active-filter-badge"></span></div>
       <div id="accountCardsGrid" class="cards-grid"><div class="card">⏳ Lade Konten...</div></div>
     </div>
 
-    <!-- Konten-Tabelle mit Checkboxen (sofortige Auswirkung auf Auszüge & Chart) -->
-    <div class="section-title">📋 Konten-Tabelle (Checkboxen für Mehrfachauswahl)</div>
+    <!-- Konten-Tabelle mit Checkboxen (sofortige Auswirkung auf Auszüge, Chart & Gruppierung) -->
+    <div class="section-title">📋 Konten-Tabelle (☑ Auswahl wirkt sofort auf Auswertungen)</div>
     <div class="table-wrapper">
       <table class="data-table" id="accountsTable">
         <thead><tr><th class="checkbox-col">✓</th><th>Konto</th><th>Kontenart</th><th>Saldo (EUR)</th><th>Trend</th></tr></thead>
@@ -357,10 +398,10 @@
     </div>
     <div class="button-group">
       <button id="applyAccountFilterBtn" class="apply-btn">✅ Filter auf Salden-Karten anwenden</button>
-      <button id="resetAccountFilterBtn" class="reset-btn">🗑️ Konten-Auswahl komplett zurücksetzen</button>
+      <button id="resetAccountFilterBtn" class="reset-btn">🗑️ Konten-Auswahl zurücksetzen</button>
     </div>
 
-    <!-- Kontoauszugs-Tabelle mit Trend (AKTUALISIERT SOFORT bei Checkboxen) -->
+    <!-- Kontoauszugs-Tabelle mit Trend -->
     <div class="section-title">📊 Kontoauszugs-Tabelle mit Trend <span style="font-size:0.8rem;">(aktualisiert bei jeder Kontoauswahl)</span></div>
     <div class="table-wrapper">
       <table class="data-table" id="statementsTable">
@@ -369,14 +410,14 @@
       </table>
     </div>
 
-    <!-- Liniendiagramm (AKTUALISIERT SOFORT bei Checkboxen) -->
+    <!-- Liniendiagramm -->
     <div class="chart-container">
       <div class="section-title" style="margin-top:0;">📈 Entwicklung der Auszugssummen</div>
       <canvas id="statementLineChart" width="800" height="300"></canvas>
-      <div class="info-note">📌 Diagramm & Tabelle reagieren SOFORT auf angekreuzte Konten (zusätzlich zu Eigentümer/Kontenart/Auszugs-Filtern).</div>
+      <div class="info-note">📌 Diagramm & Tabelle reagieren SOFORT auf angekreuzte Konten + Filter.</div>
     </div>
 
-    <footer>Kombinierte Filter: Eigentümer, Kontenart, Kontoauszug (sofort) + <strong>Konten-Checkboxen (live für Auswertungen)</strong>. „Filter anwenden“ beeinflusst nur die oberen Salden-Karten.</footer>
+    <footer>Kombinierte Filter: Jahr, Eigentümer, Kontenart, Auszug-ID + Konten-Checkboxen (live) für alle Auswertungen. Gruppierung nach Owner·Konto·Jahr.</footer>
   </div>
 </div>
 
@@ -386,8 +427,9 @@
   let selectedOwners = new Set();
   let selectedTypes = new Set();
   let selectedStatements = new Set();
-  let pendingAccounts = new Set();      // Auswahl der Checkboxen (wird sofort für Auszüge & Chart verwendet)
-  let activeAccounts = new Set();       // Nur für die "Salden pro Konto"-Karten (nach „Filter anwenden“)
+  let selectedYears = new Set();        // NEU: Jahresfilter
+  let pendingAccounts = new Set();      // Auswahl der Checkboxen (live)
+  let activeAccounts = new Set();       // Für Salden-Karten (nach „Filter anwenden“)
   let chartStatement = null;
 
   // ---------- Hilfsfunktionen ----------
@@ -428,7 +470,7 @@
     return {
       date: dateObj, dateISO: dateObj.toISOString().split('T')[0], amount, account,
       owner1: owner, kontoauszugId: isNaN(stmtId) ? null : stmtId,
-      accountType: accountType
+      accountType: accountType, year: dateObj.getFullYear()
     };
   }
 
@@ -437,16 +479,17 @@
     return d <= today;
   }
 
-  // Basisfilter: Datum + Eigentümer + Kontenart + Kontoauszug (ohne Kontenfilter)
+  // Basisfilter inkl. JAHRES-Filter
   function getBaseFilteredTransactions() {
     let filtered = allTransactions.filter(tx => isUpToNow(tx.date));
     if (selectedOwners.size > 0) filtered = filtered.filter(tx => selectedOwners.has(tx.owner1));
     if (selectedTypes.size > 0) filtered = filtered.filter(tx => selectedTypes.has(tx.accountType));
     if (selectedStatements.size > 0) filtered = filtered.filter(tx => tx.kontoauszugId !== null && selectedStatements.has(tx.kontoauszugId));
+    if (selectedYears.size > 0) filtered = filtered.filter(tx => selectedYears.has(tx.year));
     return filtered;
   }
 
-  // Für Auszugs-Tabelle und Diagramm: Basisfilter + gewählte Konten (pendingAccounts)
+  // Für Auszugs-Tabelle, Diagramm und Gruppierung: Basisfilter + gewählte Konten (pendingAccounts)
   function getFilteredForStatementsAndChart() {
     let filtered = getBaseFilteredTransactions();
     if (pendingAccounts.size > 0) filtered = filtered.filter(tx => pendingAccounts.has(tx.account));
@@ -460,7 +503,7 @@
     return filtered;
   }
 
-  // Für die Konten-Tabelle (Auflistung aller möglichen Konten): Basisfilter OHNE Kontenfilter
+  // Für Konten-Tabelle (ohne Kontenfilter)
   function getFilteredForAccountsTable() {
     return getBaseFilteredTransactions();
   }
@@ -519,7 +562,45 @@
     return withTrend;
   }
 
-  // ---------- RENDER-FUNKTIONEN ----------
+  // NEU: Gruppierung nach Eigentümer, Konto, Jahr
+  function renderGroupedStatements() {
+    const filtered = getFilteredForStatementsAndChart(); // respektiert alle Filter + pendingAccounts
+    const groupMap = new Map(); // key: "owner|account|year"
+    for (const tx of filtered) {
+      const key = `${tx.owner1}|${tx.account}|${tx.year}`;
+      if (!groupMap.has(key)) {
+        groupMap.set(key, { owner: tx.owner1, account: tx.account, year: tx.year, totalSum: 0, stmtIds: new Set(), txCount: 0 });
+      }
+      const entry = groupMap.get(key);
+      entry.totalSum += tx.amount;
+      if (tx.kontoauszugId !== null && !isNaN(tx.kontoauszugId)) entry.stmtIds.add(tx.kontoauszugId);
+      entry.txCount += 1;
+    }
+    const groups = Array.from(groupMap.values()).sort((a,b) => a.owner.localeCompare(b.owner) || a.account.localeCompare(b.account) || a.year - b.year);
+    const tbody = document.getElementById('groupedStatementsBody');
+    if (groups.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6">📭 Keine Gruppierungen für aktuelle Filter</td></tr>';
+      return;
+    }
+    tbody.innerHTML = groups.map(g => {
+      const formattedSum = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(g.totalSum);
+      const stmtArray = Array.from(g.stmtIds).sort((a,b)=>a-b);
+      const stmtDisplay = stmtArray.length > 5 
+        ? stmtArray.slice(0,5).map(id => `<span class="group-stmt-badge">${id}</span>`).join('') + ` <span class="tooltip-hover" title="+${stmtArray.length-5} weitere">…</span>`
+        : stmtArray.map(id => `<span class="group-stmt-badge">${id}</span>`).join('');
+      const fullTooltip = stmtArray.join(', ');
+      return `<tr title="Auszugs-IDs: ${fullTooltip || 'keine'}">
+        <td><strong>${escapeHtml(g.owner)}</strong></td>
+        <td>${escapeHtml(g.account)}</td>
+        <td>${g.year}</td>
+        <td class="${g.totalSum >=0 ? 'badge-positive' : 'badge-negative'}">${formattedSum}</td>
+        <td>${stmtDisplay || '—'}</td>
+        <td>${g.txCount}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ---------- RENDER-FUNKTIONEN (bestehend, angepasst) ----------
   function renderOwnerCards() {
     const base = allTransactions.filter(tx => isUpToNow(tx.date));
     const ownerSumMap = new Map();
@@ -553,10 +634,7 @@
   function renderStatementCards() {
     const base = allTransactions.filter(tx => isUpToNow(tx.date));
     const stmtMap = new Map();
-    for (const tx of base) {
-      const id = tx.kontoauszugId;
-      if (id !== null && !isNaN(id)) stmtMap.set(id, (stmtMap.get(id) || 0) + tx.amount);
-    }
+    for (const tx of base) { const id = tx.kontoauszugId; if (id !== null && !isNaN(id)) stmtMap.set(id, (stmtMap.get(id) || 0) + tx.amount); }
     const statements = Array.from(stmtMap.entries()).map(([id, sum]) => ({ id, sum })).sort((a,b) => a.id - b.id);
     const container = document.getElementById('statementCardsGrid');
     if (statements.length === 0) { container.innerHTML = '<div class="card">Keine Kontoauszüge</div>'; return; }
@@ -565,7 +643,7 @@
       const isSelected = selectedStatements.has(stmt.id);
       return `<div class="card card-stmt ${isSelected ? 'selected' : ''}" data-stmt="${stmt.id}"><h3>📄 Auszug ${stmt.id}</h3><div class="card-amount">${formatted}</div><div class="trend trend-neutral">Gesamtsumme</div></div>`;
     }).join('');
-    attachCardClick('[data-stmt]', (val) => toggleSet(selectedStatements, val, () => { syncStatementCheckboxes(); fullRefresh(); }));
+    attachCardClick('[data-stmt]', (val) => toggleSet(selectedStatements, Number(val), () => { syncStatementCheckboxes(); fullRefresh(); }));
   }
 
   function attachCardClick(selector, handler) {
@@ -588,7 +666,6 @@
     after();
   }
 
-  // Salden-Karten (basierend auf activeAccounts)
   function renderAccountCards() {
     const filtered = getFilteredForAccountCards();
     const balances = computeAccountBalances(filtered);
@@ -608,12 +685,10 @@
     document.getElementById('accountFilterBadge').innerHTML = activeAccounts.size ? `${activeAccounts.size} Konto(s) gefiltert` : '';
   }
 
-  // Konten-Tabelle (alle Konten aus Basisfilter, ohne Kontenfilter)
   function renderAccountsTable() {
     const filtered = getFilteredForAccountsTable();
     const balances = computeAccountBalances(filtered);
-    const accountTypeMap = new Map();
-    for (const tx of filtered) accountTypeMap.set(tx.account, tx.accountType);
+    const accountTypeMap = new Map(); for (const tx of filtered) accountTypeMap.set(tx.account, tx.accountType);
     const trends = computeAccountTrends(balances, filtered);
     const tbody = document.getElementById('accountsTableBody');
     if (trends.length === 0) { tbody.innerHTML = '<tr><td colspan="5">Keine Daten</td></tr>'; return; }
@@ -629,17 +704,15 @@
       const isChecked = pendingAccounts.has(t.account);
       return `<tr data-account="${escapeHtml(t.account)}">
                 <td class="checkbox-col"><input type="checkbox" class="account-checkbox" data-account="${escapeHtml(t.account)}" ${isChecked ? 'checked' : ''}></td>
-                <td><strong>${escapeHtml(t.account)}</strong></td>
-                <td>${escapeHtml(type)}</td>
+                <td><strong>${escapeHtml(t.account)}</strong></td><td>${escapeHtml(type)}</td>
                 <td class="${t.balance >=0 ? 'badge-positive' : 'badge-negative'}">${formatted}</td>
                 <td>${trendHtml}</td>
-              </tr>`;
+               </tr>`;
     }).join('');
     attachTableCheckboxEvents();
   }
 
   function attachTableCheckboxEvents() {
-    // Checkbox-Change: pendingAccounts aktualisieren + sofort Auszüge/Chart neu rendern
     document.querySelectorAll('.account-checkbox').forEach(cb => {
       cb.removeEventListener('change', cb._changeHandler);
       const handler = (e) => {
@@ -647,12 +720,10 @@
         const acc = cb.getAttribute('data-account');
         if (cb.checked) pendingAccounts.add(acc);
         else pendingAccounts.delete(acc);
-        // Zeilenmarkierung
         const row = cb.closest('tr');
         if (row) cb.checked ? row.classList.add('selected-row') : row.classList.remove('selected-row');
-        // Sofortige Aktualisierung von Auszugs-Tabelle & Chart
-        renderStatementsAndChart();
-        // Status-Badge aktualisieren
+        renderStatementsAndChart();    // Tabelle + Chart
+        renderGroupedStatements();     // Gruppierung sofort aktualisieren
         updateStatusBadge();
       };
       cb.addEventListener('change', handler);
@@ -661,7 +732,6 @@
       if (row && cb.checked) row.classList.add('selected-row');
       else if (row) row.classList.remove('selected-row');
     });
-    // Zeilenklick toggelt Checkbox
     document.querySelectorAll('#accountsTable tbody tr').forEach(row => {
       row.removeEventListener('click', row._clickHandler);
       const clickHandler = (e) => {
@@ -674,6 +744,7 @@
           else pendingAccounts.delete(acc);
           cb.checked ? row.classList.add('selected-row') : row.classList.remove('selected-row');
           renderStatementsAndChart();
+          renderGroupedStatements();
           updateStatusBadge();
         }
       };
@@ -682,13 +753,12 @@
     });
   }
 
-  // Auszugs-Tabelle und Chart (SOFORT basierend auf pendingAccounts)
   function renderStatementsAndChart() {
     const filtered = getFilteredForStatementsAndChart();
     const statements = aggregateByStatement(filtered);
     const trends = computeStatementTrends(statements);
     const tbody = document.getElementById('statementsTableBody');
-    if (trends.length === 0) { tbody.innerHTML = '<tr><td colspan="3">Keine Daten</td></tr>'; }
+    if (trends.length === 0) tbody.innerHTML = '<tr><td colspan="3">Keine Daten</td></tr>';
     else {
       tbody.innerHTML = trends.map(s => {
         const formatted = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(s.sum);
@@ -700,7 +770,6 @@
         return `<tr><td><strong>${s.id}</strong></td><td class="${s.sum >=0 ? 'badge-positive' : 'badge-negative'}">${formatted}</td><td>${trendHtml}</td></tr>`;
       }).join('');
     }
-    // Chart
     const ctx = document.getElementById('statementLineChart').getContext('2d');
     if (chartStatement) chartStatement.destroy();
     if (statements.length > 0) {
@@ -714,43 +783,35 @@
 
   function updateStatusBadge() {
     const totalBase = getBaseFilteredTransactions().length;
-    document.getElementById('statusBadge').innerHTML = `✅ ${totalBase} Buchungen · ${selectedOwners.size} Eigentümer · ${selectedTypes.size} Arten · ${selectedStatements.size} Auszüge · ${pendingAccounts.size} Konten gewählt (live)`;
+    document.getElementById('statusBadge').innerHTML = `✅ ${totalBase} Buchungen · ${selectedYears.size} Jahr(e) · ${selectedOwners.size} Eigentümer · ${pendingAccounts.size} Konten live`;
   }
 
-  // Vollständige Aktualisierung (nach Filteränderungen bei Eigentümer/Kontenart/Auszug)
   function fullRefresh() {
-    // Prüfen: Entferne ungültige pendingAccounts (Konten, die nicht mehr in Basisfilter vorkommen)
     const validAccounts = new Set(getFilteredForAccountsTable().map(tx => tx.account));
     for (let acc of pendingAccounts) if (!validAccounts.has(acc)) pendingAccounts.delete(acc);
     for (let acc of activeAccounts) if (!validAccounts.has(acc)) activeAccounts.delete(acc);
-    // Alle Komponenten neu rendern
-    renderOwnerCards();
-    renderTypeCards();
-    renderStatementCards();
-    renderAccountCards();
-    renderAccountsTable();        // Tabelle mit gültigen Checkboxen
-    renderStatementsAndChart();   // Sofort mit bereinigten pendingAccounts
-    updateStatusBadge();
+    renderOwnerCards(); renderTypeCards(); renderStatementCards(); renderAccountCards(); renderAccountsTable();
+    renderStatementsAndChart(); renderGroupedStatements(); updateStatusBadge();
   }
 
-  // Anwenden der Kontenauswahl auf die Salden-Karten
-  function applyAccountFilter() {
-    activeAccounts.clear();
-    pendingAccounts.forEach(acc => activeAccounts.add(acc));
-    renderAccountCards();
-    updateStatusBadge();
+  function applyAccountFilter() { activeAccounts.clear(); pendingAccounts.forEach(acc => activeAccounts.add(acc)); renderAccountCards(); updateStatusBadge(); }
+  function resetAccountFilter() { pendingAccounts.clear(); activeAccounts.clear(); renderAccountsTable(); renderStatementsAndChart(); renderGroupedStatements(); renderAccountCards(); updateStatusBadge(); }
+
+  // Sidebar Jahr + Filter
+  function buildYearFilter() {
+    const years = [...new Set(allTransactions.map(tx => tx.year).filter(y => y))].sort();
+    const container = document.getElementById('yearCheckboxesContainer');
+    container.innerHTML = years.map(y => `<div><label><input type="checkbox" value="${y}" class="year-cb"> ${y}</label></div>`).join('');
+    document.querySelectorAll('.year-cb').forEach(cb => cb.addEventListener('change', (e) => {
+      const yearVal = Number(e.target.value);
+      if (e.target.checked) selectedYears.add(yearVal); else selectedYears.delete(yearVal);
+      syncYearCheckboxes(); fullRefresh();
+    }));
+    function syncYearCheckboxes() { document.querySelectorAll('.year-cb').forEach(cb => cb.checked = selectedYears.has(Number(cb.value))); }
+    window.syncYearCheckboxes = syncYearCheckboxes;
+    syncYearCheckboxes();
   }
 
-  function resetAccountFilter() {
-    pendingAccounts.clear();
-    activeAccounts.clear();
-    renderAccountsTable();        // alle Checkboxen entfernen
-    renderStatementsAndChart();   // Chart/Tabelle ohne Kontenfilter
-    renderAccountCards();
-    updateStatusBadge();
-  }
-
-  // Sidebar Sync
   function syncOwnerCheckboxes() { document.querySelectorAll('.owner-cb').forEach(cb => cb.checked = selectedOwners.has(cb.value)); }
   function syncTypeCheckboxes() { document.querySelectorAll('.type-cb').forEach(cb => cb.checked = selectedTypes.has(cb.value)); }
   function syncStatementCheckboxes() { document.querySelectorAll('.stmt-cb').forEach(cb => cb.checked = selectedStatements.has(Number(cb.value))); }
@@ -760,24 +821,22 @@
     const ownerContainer = document.getElementById('ownerCheckboxesContainer');
     ownerContainer.innerHTML = allOwners.map(o => `<div><label><input type="checkbox" value="${escapeHtml(o)}" class="owner-cb"> ${escapeHtml(o)}</label></div>`).join('');
     document.querySelectorAll('.owner-cb').forEach(cb => cb.addEventListener('change', (e) => { toggleSet(selectedOwners, e.target.value, () => { syncOwnerCheckboxes(); fullRefresh(); }); }));
-
     const allTypes = [...new Set(allTransactions.map(tx => tx.accountType))].sort();
     const typeContainer = document.getElementById('typeCheckboxesContainer');
     typeContainer.innerHTML = allTypes.map(t => `<div><label><input type="checkbox" value="${escapeHtml(t)}" class="type-cb"> ${escapeHtml(t)}</label></div>`).join('');
     document.querySelectorAll('.type-cb').forEach(cb => cb.addEventListener('change', (e) => { toggleSet(selectedTypes, e.target.value, () => { syncTypeCheckboxes(); fullRefresh(); }); }));
-
     const allStmt = [...new Set(allTransactions.map(tx => tx.kontoauszugId).filter(id => id !== null && !isNaN(id)))].sort((a,b)=>a-b);
     const stmtContainer = document.getElementById('statementCheckboxesContainer');
     stmtContainer.innerHTML = allStmt.map(id => `<div><label><input type="checkbox" value="${id}" class="stmt-cb"> Auszug ${id}</label></div>`).join('');
     document.querySelectorAll('.stmt-cb').forEach(cb => cb.addEventListener('change', (e) => { toggleSet(selectedStatements, Number(e.target.value), () => { syncStatementCheckboxes(); fullRefresh(); }); }));
-
     syncOwnerCheckboxes(); syncTypeCheckboxes(); syncStatementCheckboxes();
   }
 
+  function resetYears() { const allYears = [...new Set(allTransactions.map(tx => tx.year))]; selectedYears.clear(); allYears.forEach(y=>selectedYears.add(y)); if(window.syncYearCheckboxes) window.syncYearCheckboxes(); fullRefresh(); }
   function resetOwners() { const all = [...new Set(allTransactions.map(tx => tx.owner1).filter(o=>o && o!=="Unbekannt"))]; selectedOwners.clear(); all.forEach(o=>selectedOwners.add(o)); syncOwnerCheckboxes(); fullRefresh(); }
   function resetTypes() { const all = [...new Set(allTransactions.map(tx => tx.accountType))]; selectedTypes.clear(); all.forEach(t=>selectedTypes.add(t)); syncTypeCheckboxes(); fullRefresh(); }
-  function resetStatements() { const all = [...new Set(allTransactions.map(tx => tx.kontoauszugId).filter(id=>id!==null && !isNaN(id)))]; selectedStatements.clear(); all.forEach(id=>selectedStatements.add(id)); syncStatementCheckboxes(); fullRefresh(); }
-  function clearAllFilters() { selectedOwners.clear(); selectedTypes.clear(); selectedStatements.clear(); resetAccountFilter(); syncOwnerCheckboxes(); syncTypeCheckboxes(); syncStatementCheckboxes(); fullRefresh(); }
+  function resetStatements() { const all = [...new Set(allTransactions.map(tx => tx.kontoauszugId).filter(id=>id!==null))]; selectedStatements.clear(); all.forEach(id=>selectedStatements.add(id)); syncStatementCheckboxes(); fullRefresh(); }
+  function clearAllFilters() { resetYears(); resetOwners(); resetTypes(); resetStatements(); resetAccountFilter(); fullRefresh(); }
 
   async function fetchData() {
     const statusEl = document.getElementById('statusBadge');
@@ -787,38 +846,36 @@
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const raw = await resp.json();
       if (!Array.isArray(raw)) throw new Error('Kein Array erhalten');
-      const normalized = [];
-      for (const item of raw) { const n = normalizeTransaction(item); if (n) normalized.push(n); }
+      const normalized = []; for (const item of raw) { const n = normalizeTransaction(item); if (n) normalized.push(n); }
       if (normalized.length === 0) throw new Error('Keine gültigen Buchungen');
       allTransactions = normalized;
+      const allYears = [...new Set(normalized.map(tx => tx.year))]; selectedYears.clear(); allYears.forEach(y=>selectedYears.add(y));
       const allOwners = [...new Set(normalized.map(tx => tx.owner1).filter(o=>o && o!=="Unbekannt"))];
       selectedOwners.clear(); allOwners.forEach(o=>selectedOwners.add(o));
-      const allTypes = [...new Set(normalized.map(tx => tx.accountType))];
-      selectedTypes.clear(); allTypes.forEach(t=>selectedTypes.add(t));
+      const allTypes = [...new Set(normalized.map(tx => tx.accountType))]; selectedTypes.clear(); allTypes.forEach(t=>selectedTypes.add(t));
       const allStmt = [...new Set(normalized.map(tx => tx.kontoauszugId).filter(id=>id!==null && !isNaN(id)))];
       selectedStatements.clear(); allStmt.forEach(id=>selectedStatements.add(id));
-      pendingAccounts.clear();
-      activeAccounts.clear();
-      buildFilterSidebar();
+      pendingAccounts.clear(); activeAccounts.clear();
+      buildYearFilter(); buildFilterSidebar();
       fullRefresh();
-      statusEl.innerHTML = `✅ ${normalized.length} Buchungen · Konten-Checkboxen wirken sofort auf Auswertungen`;
+      statusEl.innerHTML = `✅ ${normalized.length} Buchungen · Jahresfilter & Gruppierung aktiv`;
     } catch (err) {
       console.error(err);
       statusEl.innerHTML = `❌ Fehler: ${err.message} – Service auf Port 5000 benötigt.`;
-      document.getElementById('ownerCardsGrid').innerHTML = '<div class="card">⚠️ Verbindungsfehler</div>';
+      document.getElementById('groupedStatementsBody').innerHTML = '<tr><td colspan="6">⚠️ Verbindungsfehler</td></tr>';
     }
   }
 
   function escapeHtml(str) { if (!str) return ''; return String(str).replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
 
   document.getElementById('refreshDataBtn').addEventListener('click', fetchData);
-  document.getElementById('resetOwnersBtn').addEventListener('click', () => { if (allTransactions.length) resetOwners(); });
-  document.getElementById('resetTypesBtn').addEventListener('click', () => { if (allTransactions.length) resetTypes(); });
-  document.getElementById('resetStatementsBtn').addEventListener('click', () => { if (allTransactions.length) resetStatements(); });
-  document.getElementById('clearAllFiltersBtn').addEventListener('click', () => { if (allTransactions.length) clearAllFilters(); });
-  document.getElementById('applyAccountFilterBtn').addEventListener('click', () => { if (allTransactions.length) applyAccountFilter(); });
-  document.getElementById('resetAccountFilterBtn').addEventListener('click', () => { if (allTransactions.length) resetAccountFilter(); });
-
+  document.getElementById('resetYearsBtn').addEventListener('click', () => { if(allTransactions.length) resetYears(); });
+  document.getElementById('resetOwnersBtn').addEventListener('click', () => { if(allTransactions.length) resetOwners(); });
+  document.getElementById('resetTypesBtn').addEventListener('click', () => { if(allTransactions.length) resetTypes(); });
+  document.getElementById('resetStatementsBtn').addEventListener('click', () => { if(allTransactions.length) resetStatements(); });
+  document.getElementById('clearAllFiltersBtn').addEventListener('click', () => { if(allTransactions.length) clearAllFilters(); });
+  document.getElementById('applyAccountFilterBtn').addEventListener('click', () => { if(allTransactions.length) applyAccountFilter(); });
+  document.getElementById('resetAccountFilterBtn').addEventListener('click', () => { if(allTransactions.length) resetAccountFilter(); });
   fetchData();
 </script>
 </body>

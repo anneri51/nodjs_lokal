@@ -192,6 +192,46 @@ select  		 		 	  	  	 	 	 	 	 	 	 	 	  	$1,$2`,
     }
 });
 
+app.post("/person/bild/ins", async (req, res) => {
+    try {
+        const { category, description, files } = req.body;
+        if (!files || !files.length) {
+            return res.status(400).json({ success: false, error: "No files" });
+        }
+
+        const file = files[0];
+        const filename = file["name"];
+        let fileData = file["data"];
+
+        // Remove data URL prefix (if present)
+        const base64Data = fileData.replace(/^data:[^;]+;base64,/, '');
+        
+        // Always convert to binary buffer
+        const binaryData = Buffer.from(base64Data, 'base64');
+
+        // Optional: validate file size
+        if (binaryData.length > 10 * 1024 * 1024) {
+            return res.status(400).json({ success: false, error: "File too large (max 10MB)" });
+        }
+
+        const result = await pool.query(
+            `INSERT INTO "COMPANY"."T_BILD_BILDER" 
+             ("FILECONTENT", "FILENAME", "KLASSIFIKATION_1", "KLASSIFIKATION_2") 
+             VALUES ($1::bytea, $2, $3, $4) 
+             RETURNING "PK_BILD_BILDER"`,
+            [binaryData, filename, category, description]
+        );
+
+        res.status(201).json({ 
+            success: true, 
+            PK_BILD_BILDER: result.rows[0].PK_BILD_BILDER 
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 
 // Image retrieval endpoint with caching - updated to handle all file types
 app.get("/accounts/bild/1/1/:id", async (req, res) => {

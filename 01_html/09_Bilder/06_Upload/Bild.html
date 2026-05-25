@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-File Upload & PDF Base64 Debugger – Korrekte Base64-String-Lesung</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+        h1, h2, h3 { color: #1e3c72; text-align: center; }
+        .upload-container {
+            border: 2px dashed #90b4ce;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 25px;
+            background-color: white;
+            border-radius: 20px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .upload-container:hover { border-color: #2c7da0; background-color: #f8fafc; }
+        .preview-container {
+            background-color: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin: 20px 0;
+        }
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: left; vertical-align: middle; }
+        th { background-color: #eef2f6; font-weight: 600; }
+        .preview-image { max-width: 80px; max-height: 80px; border-radius: 8px; border: 1px solid #cbd5e1; object-fit: cover; cursor: pointer; }
+        .file-icon { font-size: 44px; }
+        .remove-btn, .delete-btn { background: #e53e3e; color: white; border: none; padding: 6px 14px; border-radius: 40px; cursor: pointer; font-weight: 500; transition: 0.2s; }
+        .remove-btn:hover, .delete-btn:hover { background: #c53030; transform: scale(0.96); }
+        .btn { background: #2c7da0; color: white; border: none; padding: 10px 20px; border-radius: 40px; font-weight: 600; cursor: pointer; font-size: 14px; transition: 0.2s; }
+        .btn:hover { background: #1f5e7a; transform: translateY(-1px); }
+        .button-group { display: flex; gap: 18px; margin-top: 20px; flex-wrap: wrap; }
+        #submit-btn, #link-btn { background: #2c7da0; font-size: 16px; padding: 12px 28px; }
+        #submit-btn:disabled, #link-btn:disabled { background: #a0c4d4; cursor: not-allowed; transform: none; }
+        .progress-container { background-color: #e2e8f0; border-radius: 40px; overflow: hidden; margin: 20px 0; display: none; }
+        .progress-bar { width: 0%; height: 28px; background-color: #2c7da0; text-align: center; line-height: 28px; color: white; font-weight: bold; transition: width 0.25s; }
+        .success-box { background-color: #d1fae5; border-left: 6px solid #10b981; padding: 16px; border-radius: 16px; margin: 16px 0; }
+        .error-box { background-color: #fee2e2; border-left: 6px solid #ef4444; padding: 16px; border-radius: 16px; }
+        .uploaded-images-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 24px; margin-top: 24px; }
+        .image-card { background: white; border-radius: 20px; padding: 16px; box-shadow: 0 6px 14px rgba(0,0,0,0.08); text-align: center; transition: 0.2s; }
+        .image-card:hover { transform: translateY(-4px); box-shadow: 0 12px 22px rgba(0,0,0,0.12); }
+        .filename { font-weight: 700; margin: 12px 0 4px; word-break: break-word; font-size: 0.9rem; }
+        .image-id { color: #4a5568; font-size: 0.75rem; background: #edf2f7; display: inline-block; padding: 2px 10px; border-radius: 40px; }
+        .debug-area { background: white; border-radius: 28px; padding: 20px; margin: 30px 0; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        textarea { width: 100%; height: 150px; font-family: monospace; border-radius: 16px; border: 1px solid #cbd5e1; padding: 12px; font-size: 12px; resize: vertical; }
+        iframe#viewer { width: 100%; height: 65vh; border: 1px solid #ccc; border-radius: 20px; background: white; margin-top: 15px; }
+        .raw-content { background: #1e1e2e; color: #ddd; padding: 16px; border-radius: 20px; font-family: monospace; font-size: 12px; overflow-x: auto; margin-top: 20px; }
+        .collapsible { background-color: #e2e8f0; cursor: pointer; padding: 14px; width: 100%; border: none; text-align: left; font-size: 1.1rem; font-weight: bold; border-radius: 60px; margin: 10px 0; }
+        .download-control { display: flex; gap: 12px; margin: 12px 0; flex-wrap: wrap; }
+        .input-container { display: flex; align-items: center; gap: 8px; }
+        .btn-decrement, .btn-increment { width: 42px; height: 42px; background: #2c7da0; border-radius: 60px; }
+        select, input[type="text"] { padding: 10px; border-radius: 60px; border: 1px solid #cbd5e1; font-size: 14px; }
+        .file-type-badge { background: #cbd5e1; border-radius: 40px; padding: 2px 8px; font-size: 11px; margin-left: 8px; }
+    </style>
+</head>
+<body>
+
+<div style="margin-bottom: 20px;">
+    <button type="button" class="collapsible">📁 XML Datei Downloader ▼</button>
+    <div class="collapsible-content" style="display: none; padding: 16px; background: #f9f9ff; border-radius: 20px;">
+        <p>XML von Zoll-URLs herunterladen:</p>
+        <div class="download-control"><input type="text" id="url" value="https://www.einfuhr.internetzollanmeldung.de/iza/codierungen/EINFUHR/10.0/xml/I0400.xml"><button class="btn" id="downloadBtn">Download</button></div>
+        <div class="download-control"><input type="text" id="url1" value="https://www.einfuhr.internetzollanmeldung.de/iza/codierungen/EINFUHR/10.1/xml/I0400.xml"><button class="btn" id="downloadBtn1">Download</button></div>
+        <div class="download-control"><input type="text" id="url2" value="https://www.einfuhr.internetzollanmeldung.de/iza/codierungen/EINFUHR/10.2/xml/I0400.xml"><button class="btn" id="downloadBtn2">Download</button></div>
+        <div class="download-control"><input type="text" id="part1" placeholder="Dateiname (z.B. C0008)"><input type="text" id="url3" placeholder="Basis-URL"><button class="btn" id="downloadBtn3">Download XML</button></div>
+        <div id="downloadStatus"></div>
+    </div>
+</div>
+
+<h1>📎 Dateien hochladen & verwalten</h1>
+
+<form id="uploadForm">
+    <div class="form-group">
+        <label>📂 Kategorie:</label>
+        <select id="category" required>
+            <option value="">-- auswählen --</option>
+            <option value="Portrait">Portrait</option><option value="Landscape">Landscape</option>
+            <option value="Product">Product</option><option value="Document" selected>Document</option>
+            <option value="Tanken">Auto - Tanken</option><option value="Auto - Reparatur">Auto - Reparatur</option>
+            <option value="Steuer">Steuer</option><option value="Restaurant">Restaurant</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label>🆔 Dokumenten-ID (PK_INP_BELEGE_ALL):</label>
+        <div class="input-container">
+            <button type="button" class="btn btn-decrement" id="decDocIdBtn">−</button>
+            <input type="text" id="documentId" value="1001" style="width: 120px; text-align:center;">
+            <button type="button" class="btn btn-increment" id="incDocIdBtn">+</button>
+        </div>
+    </div>
+
+    <div class="upload-container">
+        <input type="file" id="fileInput" multiple accept="image/*,.pdf,.csv,.xlsx,.xml" style="display: none;">
+        <button type="button" id="selectFilesBtn" class="btn">📂 Dateien auswählen</button>
+        <p>oder Drag & Drop (Bilder, PDF, CSV, XLSX, XML)</p>
+    </div>
+
+    <div class="preview-container">
+        <table id="fileTable">
+            <thead><tr><th>Vorschau</th><th>Dateiname</th><th>Größe</th><th>Typ</th><th>Aktion</th></tr></thead>
+            <tbody id="fileTableBody"></tbody>
+        </table>
+    </div>
+
+    <div class="progress-container" id="uploadProgressContainer"><div class="progress-bar" id="uploadProgressBar">0%</div></div>
+
+    <div class="button-group">
+        <button type="submit" id="submit-btn" disabled>🚀 Alle hochladen</button>
+        <button type="button" id="link-btn" disabled>🔗 Mit Dokument verknüpfen</button>
+    </div>
+</form>
+
+<div id="status"></div>
+
+<!-- PDF Base64 Debugger Bereich -->
+<div class="debug-area">
+    <h2>🔍 PDF Base64 Debugger & FILECONTENT Viewer</h2>
+    <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 20px;">
+        <div style="flex: 1;">
+            <label>📷 Bild-ID aus Datenbank:</label>
+            <input type="text" id="debugImageId" placeholder="z.B. 123" style="width: 100%;">
+        </div>
+        <div>
+            <button id="fetchFilecontentBtn" class="btn">📥 FILECONTENT als Base64-String abrufen</button>
+        </div>
+    </div>
+    <div>
+        <label>🔧 Base64-String (PDF, data:application/pdf;base64,...):</label>
+        <textarea id="b64" placeholder="Hier Base64-PDF einfügen oder automatisch laden..."></textarea>
+    </div>
+    <div style="margin: 15px 0; display: flex; gap: 15px;">
+        <button id="show" class="btn">📄 PDF anzeigen (Base64)</button>
+        <button id="clearViewer" class="btn" style="background: #6c757d;">🗑 Viewer leeren</button>
+    </div>
+    <div>
+        <label>📄 PDF-Vorschau (iframe):</label>
+        <iframe id="viewer" title="PDF Viewer"></iframe>
+    </div>
+    <div style="margin-top: 20px;">
+        <label>📦 Rohdaten FILECONTENT (Base64-String & Info):</label>
+        <div id="rawContentDisplay" class="raw-content">— noch nicht geladen —</div>
+    </div>
+</div>
+
+<script>
+    // ---------- DOM Elements ----------
+    const fileInput = document.getElementById('fileInput');
+    const selectFilesBtn = document.getElementById('selectFilesBtn');
+    const fileTableBody = document.getElementById('fileTableBody');
+    const uploadForm = document.getElementById('uploadForm');
+    const submitBtn = document.getElementById('submit-btn');
+    const linkBtn = document.getElementById('link-btn');
+    const statusDiv = document.getElementById('status');
+    const progressContainer = document.getElementById('uploadProgressContainer');
+    const progressBar = document.getElementById('uploadProgressBar');
+    const docIdInput = document.getElementById('documentId');
+    const categorySelect = document.getElementById('category');
+
+    let selectedFiles = [];
+    let uploadedItems = []; // { id, filename }
+
+    // Helper DocID +/-
+    document.getElementById('incDocIdBtn').onclick = () => { let v = parseInt(docIdInput.value) || 0; docIdInput.value = v+1; };
+    document.getElementById('decDocIdBtn').onclick = () => { let v = parseInt(docIdInput.value) || 0; if(v>0) docIdInput.value = v-1; };
+
+    function formatBytes(bytes) {
+        if(bytes===0) return '0 Bytes';
+        const k=1024, sizes=['Bytes','KB','MB','GB'];
+        let i = Math.floor(Math.log(bytes)/Math.log(k));
+        return parseFloat((bytes/Math.pow(k,i)).toFixed(1))+' '+sizes[i];
+    }
+
+    function updateFileTable() {
+        fileTableBody.innerHTML = '';
+        if(selectedFiles.length === 0) {
+            fileTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center">📭 Keine Dateien ausgewählt</td></tr>';
+            submitBtn.disabled = true;
+            return;
+        }
+        selectedFiles.forEach((file, idx) => {
+            const row = document.createElement('tr');
+            const ext = file.name.split('.').pop().toLowerCase();
+            const previewCell = document.createElement('td');
+            if(file.type.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.className = 'preview-image';
+                previewCell.appendChild(img);
+            } else {
+                previewCell.innerHTML = `<div class="file-icon">${ext==='pdf'?'📑':'📄'}</div>`;
+            }
+            const nameCell = document.createElement('td'); nameCell.textContent = file.name;
+            const sizeCell = document.createElement('td'); sizeCell.textContent = formatBytes(file.size);
+            const typeCell = document.createElement('td'); typeCell.innerHTML = `${file.type || 'application/octet'} <span class="file-type-badge">${ext.toUpperCase()}</span>`;
+            const actionCell = document.createElement('td');
+            const removeBtn = document.createElement('button'); removeBtn.textContent = 'Entfernen'; removeBtn.className = 'remove-btn';
+            removeBtn.onclick = () => { selectedFiles.splice(idx,1); updateFileTable(); submitBtn.disabled = selectedFiles.length===0; };
+            actionCell.appendChild(removeBtn);
+            row.append(previewCell, nameCell, sizeCell, typeCell, actionCell);
+            fileTableBody.appendChild(row);
+        });
+        submitBtn.disabled = false;
+    }
+
+    selectFilesBtn.onclick = () => fileInput.click();
+    fileInput.addEventListener('change', (e) => {
+        if(e.target.files.length) {
+            const allowed = ['jpg','jpeg','png','gif','webp','pdf','csv','xlsx','xml'];
+            const newFiles = Array.from(e.target.files).filter(f => allowed.includes(f.name.split('.').pop().toLowerCase()));
+            if(newFiles.length !== e.target.files.length) statusDiv.innerHTML = '<div class="error-box">Einige Dateien wurden ignoriert (nur Bilder, PDF, CSV, XLSX, XML)</div>';
+            selectedFiles.push(...newFiles);
+            updateFileTable();
+        }
+    });
+
+    const dropZone = document.querySelector('.upload-container');
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor = '#2c7da0'; });
+    dropZone.addEventListener('dragleave', () => dropZone.style.borderColor = '#90b4ce');
+    dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropZone.style.borderColor = '#90b4ce';
+        const allowed = ['jpg','jpeg','png','gif','webp','pdf','csv','xlsx','xml'];
+        const items = Array.from(e.dataTransfer.files).filter(f => allowed.includes(f.name.split('.').pop().toLowerCase()));
+        if(items.length) selectedFiles.push(...items);
+        updateFileTable();
+    });
+
+    // ---------- Hilfsfunktionen für Base64 zu Blob (für PDF-Anzeige) ----------
+    function base64ToBlob(base64String, mimeType = 'application/pdf') {
+        let pureBase64 = base64String;
+        if (pureBase64.includes(',')) {
+            pureBase64 = pureBase64.split(',')[1];
+        }
+        pureBase64 = pureBase64.replace(/\s/g, '');
+        const binaryString = atob(pureBase64);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        return new Blob([bytes], { type: mimeType });
+    }
+
+    function displayPdfFromBase64(base64Str) {
+        try {
+            const blob = base64ToBlob(base64Str, 'application/pdf');
+            const viewer = document.getElementById('viewer');
+            const oldUrl = viewer.src;
+            if (oldUrl && oldUrl.startsWith('blob:')) URL.revokeObjectURL(oldUrl);
+            const url = URL.createObjectURL(blob);
+            viewer.src = url;
+            viewer.onload = () => URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('PDF-Anzeige fehlgeschlagen:', err);
+            alert('PDF konnte nicht dargestellt werden: ' + err.message);
+        }
+    }
+
+    document.getElementById("show").addEventListener("click", () => {
+        const raw = document.getElementById("b64").value.trim();
+        if (!raw) {
+            alert("Bitte Base64-String einfügen!");
+            return;
+        }
+        displayPdfFromBase64(raw);
+    });
+
+    document.getElementById("clearViewer").addEventListener("click", () => {
+        const viewer = document.getElementById("viewer");
+        if (viewer.src && viewer.src.startsWith('blob:')) URL.revokeObjectURL(viewer.src);
+        viewer.src = "";
+    });
+
+    // --- Konvertierung des Buffer-Arrays in UTF-8-String (Base64-Text) ---
+    function bufferDataToString(dataArray) {
+        // dataArray is array of numbers (byte values) representing UTF-8 characters
+        const uint8Array = new Uint8Array(dataArray);
+        const decoder = new TextDecoder('utf-8');
+        return decoder.decode(uint8Array);
+    }
+
+    // ----- FILECONTENT aus Datenbank abrufen: Die Daten sind ein UTF-8-String, der den Base64-Code enthält -----
+    async function fetchFilecontentAndDisplay() {
+        const imageId = document.getElementById("debugImageId").value.trim();
+        if (!imageId) {
+            alert("Bitte eine Bild-ID eingeben!");
+            return;
+        }
+        const rawDiv = document.getElementById("rawContentDisplay");
+        const textarea = document.getElementById("b64");
+        rawDiv.innerHTML = "⏳ Lade Daten...";
+        try {
+            const response = await fetch(`http://localhost:5000/bild/1/${imageId}`);
+            if (!response.ok) throw new Error(`HTTP ${response.status} - Datei nicht gefunden`);
+            const data = await response.json();
+            if (!data || !data[0]) throw new Error("Kein Datensatz gefunden");
+
+            // FILECONTENT liegt als Buffer-Objekt mit "data"-Array vor (Zeichencodes des Base64-Strings)
+            let fileContentData = null;
+            if (data[0].FILECONTENT && data[0].FILECONTENT.type === 'Buffer' && Array.isArray(data[0].FILECONTENT.data)) {
+                fileContentData = data[0].FILECONTENT.data;
+            } else if (typeof data[0].FILECONTENT === 'string') {
+                // Fallback: direkter String
+                fileContentData = data[0].FILECONTENT;
+            } else if (data[0].FILECONTENT && data[0].FILECONTENT.data && typeof data[0].FILECONTENT.data === 'string') {
+                fileContentData = data[0].FILECONTENT.data;
+            } else {
+                throw new Error("FILECONTENT nicht als Buffer oder String erkannt");
+            }
+
+            let base64String = '';
+            if (Array.isArray(fileContentData)) {
+                // Buffer-Daten -> in UTF-8 String umwandeln (das ist der reine Base64-Text)
+                base64String = bufferDataToString(fileContentData);
+            } else {
+                base64String = fileContentData;
+            }
+
+            const mime = data[0].MIMETYPE || 'application/pdf';
+            const filename = data[0].FILENAME || `datei_${imageId}`;
+
+            // Prüfen, ob der String bereits eine Data-URL ist (beginnt mit "data:"), sonst prefix hinzufügen
+            let fullBase64 = base64String;
+            if (!fullBase64.startsWith('data:')) {
+                fullBase64 = `data:${mime};base64,${base64String}`;
+            }
+            textarea.value = fullBase64;
+
+            // Anzeige von Metadaten und erstem Teil des Base64-Strings
+            const previewBase64 = base64String.substring(0, 200) + (base64String.length > 200 ? '...' : '');
+            rawDiv.innerHTML = `
+                <strong>✅ Direkter Base64-String aus FILECONTENT (als UTF-8 interpretiert)</strong><br>
+                <strong>Datei:</strong> ${filename}<br>
+                <strong>MIME-Typ:</strong> ${mime}<br>
+                <strong>Gesamtlänge Base64:</strong> ${base64String.length} Zeichen<br>
+                <strong>Beginnt mit PDF-Header (JVBERi0):</strong> ${base64String.startsWith('JVBERi0') ? '✅ Ja' : '❌ Nein (bitte prüfen)'}<br>
+                <strong>Base64-Preview (erste 200 Zeichen):</strong><br><pre style="font-size: 11px; white-space: pre-wrap;">${previewBase64}</pre>
+                <hr><em>Der gesamte Base64-String wurde in das Textfeld übernommen.</em>
+            `;
+
+            // Wenn es ein PDF ist, sofort im iframe anzeigen
+            if (mime === 'application/pdf' || filename.toLowerCase().endsWith('.pdf')) {
+                displayPdfFromBase64(fullBase64);
+            } else {
+                document.getElementById("viewer").src = "";
+                rawDiv.innerHTML += '<div class="error-box" style="margin-top:12px;">⚠️ Die Datei ist kein PDF, kann nicht im Viewer angezeigt werden.</div>';
+            }
+        } catch (err) {
+            rawDiv.innerHTML = `<div class="error-box">Fehler: ${err.message}</div>`;
+            textarea.value = '';
+        }
+    }
+    document.getElementById("fetchFilecontentBtn").addEventListener("click", fetchFilecontentAndDisplay);
+
+    // ---------- PDF Modal mit Tabs (für hochgeladene PDFs) - Verwendung des Base64-Strings ----------
+    function showPdfInModalWithTabs(base64String, filename, imageId) {
+        // Basis-Base64 bereinigen (ohne Data-URL-Prefix)
+        let pureBase64 = base64String;
+        if (pureBase64.includes(',')) pureBase64 = pureBase64.split(',')[1];
+        pureBase64 = pureBase64.replace(/\s/g, '');
+        
+        let blobDirect = null;
+        try {
+            blobDirect = base64ToBlob(pureBase64, 'application/pdf');
+        } catch(e) {
+            console.error("Fehler bei Blob-Erstellung", e);
+            alert("PDF kann nicht geladen werden: Base64 ungültig.");
+            return;
+        }
+        const pdfUrl = URL.createObjectURL(blobDirect);
+        const pdfUrlBase64 = URL.createObjectURL(base64ToBlob(pureBase64, 'application/pdf'));
+        
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:3000; cursor:pointer;';
+        const modalContent = document.createElement('div');
+        modalContent.style.cssText = 'background:#1e293b; border-radius:28px; padding:20px; max-width:90vw; max-height:90vh; cursor:default; position:relative; box-shadow:0 25px 40px black;';
+        modalContent.style.width = '80vw';
+        modalContent.style.maxWidth = '1100px';
+        
+        const tabBar = document.createElement('div');
+        tabBar.style.cssText = 'display:flex; gap:12px; margin-bottom:15px; border-bottom:2px solid #475569; padding-bottom:8px;';
+        const tab1Btn = document.createElement('button'); tab1Btn.textContent = '📄 PDF Viewer (Blob)'; tab1Btn.className = 'tab-btn'; tab1Btn.style.cssText = 'background:none; border:none; padding:10px 22px; font-size:1rem; font-weight:600; cursor:pointer; color:#cbd5e1; border-radius:40px;';
+        const tab2Btn = document.createElement('button'); tab2Btn.textContent = '🔐 Base64 Mechanismus'; tab2Btn.className = 'tab-btn'; tab2Btn.style.cssText = tab1Btn.style.cssText;
+        const tab3Btn = document.createElement('button'); tab3Btn.textContent = '🌐 Neuer Tab öffnen'; tab3Btn.className = 'tab-btn'; tab3Btn.style.cssText = tab1Btn.style.cssText;
+        tabBar.append(tab1Btn, tab2Btn, tab3Btn);
+        
+        const panel1 = document.createElement('div'); panel1.className = 'tab-pane';
+        const iframe = document.createElement('iframe'); iframe.style.width = '100%'; iframe.style.height = '85vh'; iframe.style.border = 'none'; iframe.style.borderRadius = '20px'; iframe.style.background = 'white';
+        iframe.src = pdfUrl;
+        panel1.appendChild(iframe);
+        
+        const panel2 = document.createElement('div'); panel2.className = 'tab-pane';
+        const infoDiv = document.createElement('div'); infoDiv.style.background = '#0f172a'; infoDiv.style.color = '#e2e8f0'; infoDiv.style.padding = '20px'; infoDiv.style.borderRadius = '20px'; infoDiv.style.fontFamily = 'monospace'; infoDiv.style.fontSize = '12px'; infoDiv.style.overflow = 'auto'; infoDiv.style.maxHeight = '70vh';
+        infoDiv.innerHTML = `<strong>✅ PDF via Base64 (direkt aus FILECONTENT als String)</strong><br>Datei: ${filename}<br>ID: ${imageId}<br>Base64 Länge: ${pureBase64.length} Zeichen<br><hr><iframe id="base64PdfFrame" style="width:100%; height:65vh; border:none; background:white;"></iframe>`;
+        panel2.appendChild(infoDiv);
+        
+        const panel3 = document.createElement('div'); panel3.className = 'tab-pane'; panel3.style.textAlign = 'center'; panel3.style.padding = '40px';
+        const newTabBtn = document.createElement('button'); newTabBtn.textContent = '📂 PDF in neuem Tab öffnen'; newTabBtn.className = 'btn'; newTabBtn.style.fontSize = '1.2rem';
+        newTabBtn.onclick = () => window.open(pdfUrl, '_blank');
+        panel3.appendChild(newTabBtn);
+        panel3.appendChild(document.createElement('br'));
+        const altInfo = document.createElement('p'); altInfo.innerHTML = '🔁 Base64-PDF in zweitem Tab:';
+        const altBtn = document.createElement('button'); altBtn.textContent = '📑 Base64-PDF öffnen'; altBtn.className = 'delete-btn'; altBtn.style.background = '#2c7da0';
+        altBtn.onclick = () => window.open(pdfUrlBase64, '_blank');
+        panel3.appendChild(altInfo);
+        panel3.appendChild(altBtn);
+        
+        modalContent.appendChild(tabBar);
+        modalContent.appendChild(panel1);
+        modalContent.appendChild(panel2);
+        modalContent.appendChild(panel3);
+        
+        const closeBtn = document.createElement('button'); closeBtn.textContent = '✕'; closeBtn.style.cssText = 'position:absolute; top:-15px; right:-15px; background:#ef4444; color:white; border:none; width:38px; height:38px; border-radius:50%; font-size:24px; cursor:pointer; font-weight:bold;';
+        closeBtn.onclick = () => { document.body.removeChild(modal); URL.revokeObjectURL(pdfUrl); URL.revokeObjectURL(pdfUrlBase64); };
+        modalContent.appendChild(closeBtn);
+        modal.appendChild(modalContent);
+        document.body.appendChild(modal);
+        
+        const panels = [panel1, panel2, panel3];
+        const setActiveTab = (activeIndex) => {
+            [tab1Btn, tab2Btn, tab3Btn].forEach((btn, idx) => {
+                if (idx === activeIndex) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+            panels.forEach((p, idx) => {
+                if (idx === activeIndex) p.style.display = 'block';
+                else p.style.display = 'none';
+            });
+        };
+        tab1Btn.onclick = () => { setActiveTab(0); };
+        tab2Btn.onclick = () => { setActiveTab(1); if(!infoDiv.querySelector('#base64PdfFrame').src) infoDiv.querySelector('#base64PdfFrame').src = pdfUrlBase64; };
+        tab3Btn.onclick = () => { setActiveTab(2); };
+        setActiveTab(0);
+        modal.addEventListener('click', (e) => { if(e.target === modal) closeBtn.click(); });
+    }
+    
+    // ---------- Datenbankelemente anzeigen (Bild/PDF) mit korrekter Interpretation als Base64-String ----------
+    async function fetchAndDisplayItem(itemId, containerElement) {
+        try {
+            containerElement.innerHTML = '<div style="padding:20px;">⏳ Lade...</div>';
+            const response = await fetch(`http://localhost:5000/bild/1/${itemId}`);
+            if(!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            if(!data[0]) throw new Error("Kein Datensatz");
+            
+            let base64Raw = null;
+            if (data[0].FILECONTENT && data[0].FILECONTENT.type === 'Buffer' && Array.isArray(data[0].FILECONTENT.data)) {
+                base64Raw = bufferDataToString(data[0].FILECONTENT.data);
+            } else if (typeof data[0].FILECONTENT === 'string') {
+                base64Raw = data[0].FILECONTENT;
+            } else if (data[0].FILECONTENT && data[0].FILECONTENT.data && typeof data[0].FILECONTENT.data === 'string') {
+                base64Raw = data[0].FILECONTENT.data;
+            } else {
+                throw new Error("FILECONTENT nicht als Base64-String verfügbar");
+            }
+            
+            const mime = data[0].MIMETYPE || '';
+            const filename = data[0].FILENAME || `dokument_${itemId}`;
+            const isPdf = mime === 'application/pdf' || filename.toLowerCase().endsWith('.pdf');
+            
+            if(isPdf) {
+                containerElement.innerHTML = '';
+                const iconDiv = document.createElement('div'); iconDiv.style.fontSize = '64px'; iconDiv.textContent = '📘';
+                const nameDiv = document.createElement('div'); nameDiv.className = 'filename'; nameDiv.textContent = filename;
+                const idSpan = document.createElement('div'); idSpan.className = 'image-id'; idSpan.textContent = `ID: ${itemId}`;
+                const btnGroup = document.createElement('div'); btnGroup.style.display = 'flex'; btnGroup.style.gap = '12px'; btnGroup.style.justifyContent = 'center'; btnGroup.style.marginTop = '14px';
+                const viewPdfBtn = document.createElement('button'); viewPdfBtn.textContent = '📖 Modal anzeigen (Base64+Tabs)'; viewPdfBtn.className = 'pdf-btn'; viewPdfBtn.style.background = '#2c7da0'; viewPdfBtn.style.color = 'white'; viewPdfBtn.style.border = 'none'; viewPdfBtn.style.padding = '6px 14px'; viewPdfBtn.style.borderRadius = '40px'; viewPdfBtn.style.cursor = 'pointer';
+                viewPdfBtn.onclick = () => showPdfInModalWithTabs(base64Raw, filename, itemId);
+                const delBtn = document.createElement('button'); delBtn.textContent = '🗑 Löschen'; delBtn.className = 'delete-btn';
+                delBtn.onclick = () => deleteItemFromDb(itemId, containerElement);
+                btnGroup.appendChild(viewPdfBtn); btnGroup.appendChild(delBtn);
+                containerElement.append(iconDiv, nameDiv, idSpan, btnGroup);
+                return;
+            }
+            // Bild: Base64 in Blob umwandeln
+            let pureBase64 = base64Raw;
+            if (pureBase64.includes(',')) pureBase64 = pureBase64.split(',')[1];
+            pureBase64 = pureBase64.replace(/\s/g, '');
+            const binaryString = atob(pureBase64);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+            const blob = new Blob([bytes], { type: mime || 'image/jpeg' });
+            const imgUrl = URL.createObjectURL(blob);
+            const img = document.createElement('img'); img.src = imgUrl; img.className = 'preview-image'; img.style.maxWidth = '100%'; img.style.maxHeight = '150px'; img.style.cursor = 'pointer';
+            const nameDivImg = document.createElement('div'); nameDivImg.className = 'filename'; nameDivImg.textContent = filename;
+            const idSpanImg = document.createElement('div'); idSpanImg.className = 'image-id'; idSpanImg.textContent = `ID: ${itemId}`;
+            const delImgBtn = document.createElement('button'); delImgBtn.textContent = '🗑 Löschen'; delImgBtn.className = 'delete-btn';
+            delImgBtn.onclick = () => deleteItemFromDb(itemId, containerElement);
+            containerElement.innerHTML = ''; containerElement.append(img, nameDivImg, idSpanImg, delImgBtn);
+            img.onclick = () => {
+                const modalDiv = document.createElement('div'); modalDiv.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:3000; cursor:pointer;';
+                const content = document.createElement('div'); content.style.cssText = 'background:#1e293b; border-radius:28px; padding:20px; max-width:90vw; max-height:90vh; cursor:default; position:relative;';
+                const fullImg = document.createElement('img'); fullImg.src = imgUrl; fullImg.style.maxWidth = '90vw'; fullImg.style.maxHeight = '80vh';
+                const closeM = document.createElement('button'); closeM.textContent = '✕'; closeM.style.cssText = 'position:absolute; top:-15px; right:-15px; background:#ef4444; color:white; border:none; width:38px; height:38px; border-radius:50%; font-size:24px; cursor:pointer;';
+                closeM.onclick = () => { document.body.removeChild(modalDiv); URL.revokeObjectURL(imgUrl); };
+                content.appendChild(fullImg); content.appendChild(closeM); modalDiv.appendChild(content); modalDiv.onclick = (e) => { if(e.target === modalDiv) closeM.click(); };
+                document.body.appendChild(modalDiv);
+            };
+            img.onload = () => URL.revokeObjectURL(imgUrl);
+        } catch(err) { containerElement.innerHTML = `<div class="error-box">Fehler: ${err.message}</div>`; }
+    }
+    
+    async function deleteItemFromDb(itemId, containerElement) {
+        if(!confirm(`Datei ID ${itemId} löschen?`)) return;
+        containerElement.innerHTML = '<div>⌛ Lösche...</div>';
+        try {
+            const resp = await fetch(`http://localhost:5000/bild/delete/${itemId}`, { method: 'DELETE' });
+            if(resp.ok) {
+                uploadedItems = uploadedItems.filter(i => i.id !== itemId);
+                const parentCard = containerElement.closest('.image-card');
+                if(parentCard) parentCard.remove();
+                else containerElement.innerHTML = '<div>Gelöscht</div>';
+                statusDiv.innerHTML += `<div class="success-box">✅ ID ${itemId} gelöscht.</div>`;
+                if(uploadedItems.length === 0) linkBtn.disabled = true;
+                renderUploadedGrid();
+            } else throw new Error('Löschfehler');
+        } catch(e) { containerElement.innerHTML = `<div class="error-box">Fehler: ${e.message}</div>`; fetchAndDisplayItem(itemId, containerElement); }
+    }
+    
+    function renderUploadedGrid() {
+        let grid = document.querySelector('.uploaded-images-grid');
+        if(!grid) { grid = document.createElement('div'); grid.className = 'uploaded-images-grid'; statusDiv.appendChild(grid); }
+        grid.innerHTML = '';
+        if(uploadedItems.length === 0) return;
+        uploadedItems.forEach(item => {
+            const card = document.createElement('div'); card.className = 'image-card';
+            const previewDiv = document.createElement('div'); previewDiv.id = `preview-${item.id}`;
+            card.appendChild(previewDiv); grid.appendChild(card);
+            fetchAndDisplayItem(item.id, previewDiv);
+        });
+    }
+    
+    // ----- Upload aller Dateien (unverändert) -----
+    uploadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const category = categorySelect.value;
+        if(!category) { statusDiv.innerHTML = '<div class="error-box">Kategorie wählen</div>'; return; }
+        if(selectedFiles.length === 0) { statusDiv.innerHTML = '<div class="error-box">Keine Dateien</div>'; return; }
+        submitBtn.disabled = true;
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressBar.textContent = '0%';
+        statusDiv.innerHTML = '<p>📤 Upload läuft...</p>';
+        let success = 0, errors = 0;
+        const newUploaded = [];
+        for(let i=0; i<selectedFiles.length; i++) {
+            const file = selectedFiles[i];
+            const percent = Math.floor((i/selectedFiles.length)*100);
+            progressBar.style.width = `${percent}%`; progressBar.textContent = `${percent}%`;
+            try {
+                const fileData = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = ev => resolve({ name: file.name, type: file.type, size: file.size, data: ev.target.result.split(',')[1] });
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+                const payload = { title: category, description: `${category} - ${file.name}`, category, files: [fileData] };
+                const resp = await fetch('http://localhost:5001/person/bild/ins', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if(resp.ok) {
+                    const result = await resp.json();
+                    if(result.PK_BILD_BILDER) { newUploaded.push({ id: result.PK_BILD_BILDER, filename: file.name }); success++; }
+                    else throw new Error('Keine ID');
+                } else throw new Error(await resp.text());
+            } catch(err) { errors++; statusDiv.innerHTML += `<div class="error-box">❌ ${file.name}: ${err.message}</div>`; }
+        }
+        progressBar.style.width = '100%'; progressBar.textContent = '100%';
+        if(success) { uploadedItems.push(...newUploaded); statusDiv.innerHTML = `<div class="success-box">✅ ${success} hochgeladen. ${errors ? `⚠️ ${errors} Fehler` : ''}</div>`; if(uploadedItems.length) linkBtn.disabled = false; renderUploadedGrid(); }
+        else statusDiv.innerHTML = '<div class="error-box">Upload fehlgeschlagen</div>';
+        if(errors === 0) { selectedFiles = []; updateFileTable(); }
+        submitBtn.disabled = false;
+        setTimeout(() => { progressContainer.style.display = 'none'; }, 2500);
+    });
+    
+    // ----- Verknüpfen mit Dokument -----
+    linkBtn.addEventListener('click', async () => {
+        const docId = docIdInput.value.trim();
+        if(!docId) { statusDiv.innerHTML = '<div class="error-box">Dokument-ID fehlt</div>'; return; }
+        if(uploadedItems.length === 0) { statusDiv.innerHTML = '<div class="error-box">Keine Dateien</div>'; return; }
+        linkBtn.disabled = true;
+        let linked = 0;
+        for(const item of uploadedItems) {
+            try {
+                const resp = await fetch('http://localhost:5000/document/add_bild_rel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fk_inp_belege_all: docId, fk_bild_bilder: item.id }) });
+                if(resp.ok) linked++;
+            } catch(e) { console.warn(e); }
+        }
+        statusDiv.innerHTML += `<div class="success-box">🔗 ${linked} von ${uploadedItems.length} Dateien mit Dokument-ID ${docId} verknüpft.</div>`;
+        linkBtn.disabled = false;
+    });
+    
+    // ----- XML Download Hilfsfunktionen -----
+    async function downloadXml(url) {
+        if(!url) return;
+        const dStatus = document.getElementById('downloadStatus');
+        dStatus.innerHTML = '<div>⬇️ Lade XML...</div>';
+        try {
+            const res = await fetch(url);
+            const text = await res.text();
+            const blob = new Blob([text], {type: 'application/xml'});
+            const a = document.createElement('a');
+            const fname = url.split('/').pop() || 'file.xml';
+            a.href = URL.createObjectURL(blob); a.download = fname; a.click();
+            URL.revokeObjectURL(a.href);
+            dStatus.innerHTML = `<div class="success-box">✅ ${fname} gespeichert</div>`;
+        } catch(err) { dStatus.innerHTML = `<div class="error-box">Fehler: ${err.message}</div>`; }
+    }
+    document.getElementById('downloadBtn').onclick = () => downloadXml(document.getElementById('url').value);
+    document.getElementById('downloadBtn1').onclick = () => downloadXml(document.getElementById('url1').value);
+    document.getElementById('downloadBtn2').onclick = () => downloadXml(document.getElementById('url2').value);
+    document.getElementById('downloadBtn3').onclick = () => {
+        let part = document.getElementById('part1').value;
+        let base = document.getElementById('url3').value;
+        if(part && base) downloadXml(base.replace(/\/?$/, '/') + part + '.xml');
+        else if(base) downloadXml(base);
+    };
+    
+    // Collapsible
+    document.querySelector('.collapsible').addEventListener('click', function(){
+        const content = this.nextElementSibling;
+        const isOpen = content.style.display === 'block';
+        content.style.display = isOpen ? 'none' : 'block';
+        this.innerHTML = isOpen ? "📁 XML Datei Downloader ▼" : "📁 XML Datei Downloader ▲";
+    });
+    
+    updateFileTable();
+</script>
+</body>
+</html>
