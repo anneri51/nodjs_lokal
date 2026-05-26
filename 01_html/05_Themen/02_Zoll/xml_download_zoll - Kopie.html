@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XML Files Batch Downloader</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            margin-top: 50px;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 20px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        #status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+            border: 1px solid #d6e9c6;
+        }
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+            border: 1px solid #ebccd1;
+        }
+        .progress-container {
+            width: 100%;
+            background-color: #f1f1f1;
+            margin-top: 20px;
+            display: none;
+        }
+        .progress-bar {
+            width: 0%;
+            height: 30px;
+            background-color: #4CAF50;
+            text-align: center;
+            line-height: 30px;
+            color: white;
+        }
+        #fileCount {
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        #downloadList {
+            text-align: left;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>XML Files Batch Downloader</h1>
+        <p>Click the button below to download all XML files:</p>
+        
+        <button id="downloadBtn">Download All XML Files</button>
+        <div id="fileCount">Total files to download: 0</div>
+        
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar">0%</div>
+        </div>
+        
+        <div id="downloadList"></div>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        // List of all XML file URLs
+        const xmlFileUrls = [
+"https://www.eas.internetzollanmeldung.de/iia/codierungen/EAS/10.2/xml/A0027.xml",
+"https://www.eas.internetzollanmeldung.de/iia/codierungen/EAS/10.2/xml/A0035.xml",
+"https://www.eas.internetzollanmeldung.de/iia/codierungen/EAS/10.2/xml/A0057.xml",
+"https://www.eas.internetzollanmeldung.de/iia/codierungen/EAS/10.2/xml/A0101.xml",
+"https://www.eas.internetzollanmeldung.de/iia/codierungen/EAS/10.2/xml/A0110.xml",
+"https://www.eas.internetzollanmeldung.de/iia/codierungen/EAS/10.2/xml/A0112.xml",
+"https://www.eas.internetzollanmeldung.de/iia/codierungen/EAS/10.2/xml/A0130.xml",
+"https://www.eas.internetzollanmeldung.de/iia/codierungen/EAS/10.2/xml/A1101.xml",
+"https://www.eas.internetzollanmeldung.de/iia/codierungen/EAS/10.2/xml/A1125.xml",
+"https://www.eas.internetzollanmeldung.de/iia/codierungen/EAS/10.2/xml/A1143.xml",
+"https://www.eas.internetzollanmeldung.de/iia/codierungen/EAS/10.2/xml/A1180.xml",
+"https://www.eas.internetzollanmeldung.de/iia/codierungen/EAS/10.2/xml/A1256.xml",
+"https://www.eas.internetzollanmeldung.de/iia/codierungen/EAS/10.2/xml/A1335.xml",
+"https://www.eas.internetzollanmeldung.de/iia/codierungen/EAS/10.2/xml/A1340.xml",
+"https://www.eas.internetzollanmeldung.de/iia/codierungen/EAS/10.2/xml/A1349.xml",
+"https://www.eas.internetzollanmeldung.de/iia/codierungen/EAS/10.2/xml/A1865.xml",
+"https://www.eas.internetzollanmeldung.de/iia/codierungen/EAS/10.2/xml/A1935.xml",
+"https://www.eas.internetzollanmeldung.de/iia/codierungen/EAS/10.2/xml/A1936.xml",
+"https://www.eas.internetzollanmeldung.de/iia/codierungen/EAS/10.2/xml/A1973.xml",
+"https://www.eas.internetzollanmeldung.de/iia/codierungen/EAS/10.2/xml/A2040.xml",
+"https://www.eas.internetzollanmeldung.de/iia/codierungen/EAS/10.2/xml/A2098.xml"
+
+
+
+        ];
+
+        // Initialize UI
+        document.getElementById('fileCount').textContent = `Total files to download: ${xmlFileUrls.length}`;
+        const downloadList = document.getElementById('downloadList');
+        const statusDiv = document.getElementById('status');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+
+        function formatFilename(url) {
+            try {
+                const urlObj = new URL(url);
+                const pathParts = urlObj.pathname.split('/').filter(part => part.length > 0);
+                
+                if (pathParts.length < 4) {
+                    throw new Error('URL path is too short to extract required information');
+                }
+                
+                // Get the filename (last part)
+                const filenamePart = pathParts[pathParts.length - 1].replace('.xml', '');
+                
+                // Get the last 3 path elements before the filename
+                const lastThreeParts = pathParts.slice(-4, -1); // Get 3 elements before filename
+                
+                // Format the filename as requested: I0400_EINFUHR_10_1_xml.xml
+                const formattedParts = lastThreeParts.map(part => part.replace('.', '_'));
+                return `${filenamePart}_${formattedParts.join('_')}.xml`;
+            } catch (error) {
+                console.error(`Error formatting filename for ${url}:`, error);
+                // Fallback to original filename if there's an error
+                return url.substring(url.lastIndexOf('/') + 1);
+            }
+        }
+
+        document.getElementById('downloadBtn').addEventListener('click', async function() {
+            statusDiv.innerHTML = '';
+            statusDiv.className = '';
+            downloadList.innerHTML = '';
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '0%';
+            progressBar.textContent = '0%';
+            
+            let successCount = 0;
+            let errorCount = 0;
+            
+            for (let i = 0; i < xmlFileUrls.length; i++) {
+                const url = xmlFileUrls[i];
+                const filename = formatFilename(url);
+                
+                try {
+                    // Update progress
+                    const progress = Math.floor((i / xmlFileUrls.length) * 100);
+                    progressBar.style.width = `${progress}%`;
+                    progressBar.textContent = `${progress}%`;
+                    
+                    // Show current file being downloaded
+                    const listItem = document.createElement('div');
+                    listItem.textContent = `Downloading: ${filename}...`;
+                    downloadList.appendChild(listItem);
+                    
+                    // Download the file
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const xmlContent = await response.text();
+                    const blob = new Blob([xmlContent], { type: 'application/xml' });
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = URL.createObjectURL(blob);
+                    downloadLink.download = filename;
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    
+                    // Clean up
+                    setTimeout(() => {
+                        document.body.removeChild(downloadLink);
+                        URL.revokeObjectURL(downloadLink.href);
+                    }, 100);
+                    
+                    listItem.textContent = `✓ Downloaded: ${filename}`;
+                    listItem.style.color = 'green';
+                    successCount++;
+                } catch (error) {
+                    const listItem = document.createElement('div');
+                    listItem.textContent = `✗ Failed to download: ${filename} (${error.message})`;
+                    listItem.style.color = 'red';
+                    downloadList.appendChild(listItem);
+                    errorCount++;
+                    console.error(`Error downloading ${filename}:`, error);
+                }
+            }
+            
+            // Final progress update
+            progressBar.style.width = '100%';
+            progressBar.textContent = '100%';
+            
+            // Show summary
+            statusDiv.innerHTML = `
+                <div class="success">
+                    Download completed!<br>
+                    Success: ${successCount} files<br>
+                    Failed: ${errorCount} files
+                </div>
+            `;
+            
+            // Hide progress bar after 5 seconds
+            setTimeout(() => {
+                progressContainer.style.display = 'none';
+            }, 5000);
+        });
+    </script>
+</body>
+</html>

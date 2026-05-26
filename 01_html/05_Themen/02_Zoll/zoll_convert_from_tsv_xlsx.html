@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSV to XLSX Converter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #status {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>TSV to XLSX Converter</h1>
+    <p>Upload a TSV (Tab-Separated Values) file to convert it to XLSX format:</p>
+    <p>Converts tabs to semicolons and formats date columns.</p>
+    
+    <div class="container">
+        <input type="file" id="fileInput" accept=".tsv,.txt" />
+        <p>or drag and drop file here</p>
+    </div>
+    
+    <button id="convertBtn" disabled>Convert to XLSX</button>
+    
+    <div id="status"></div>
+
+    <script>
+        // Elements
+        const fileInput = document.getElementById('fileInput');
+        const convertBtn = document.getElementById('convertBtn');
+        const statusDiv = document.getElementById('status');
+        const container = document.querySelector('.container');
+        
+        // Handle drag and drop
+        container.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            container.style.borderColor = '#4CAF50';
+        });
+        
+        container.addEventListener('dragleave', () => {
+            container.style.borderColor = '#ccc';
+        });
+        
+        container.addEventListener('drop', (e) => {
+            e.preventDefault();
+            container.style.borderColor = '#ccc';
+            
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                handleFileSelection();
+            }
+        });
+        
+        // Handle file selection
+        fileInput.addEventListener('change', handleFileSelection);
+        
+        function handleFileSelection() {
+            if (fileInput.files.length > 0) {
+                convertBtn.disabled = false;
+                statusDiv.textContent = `Selected file: ${fileInput.files[0].name}`;
+                statusDiv.style.color = 'black';
+            }
+        }
+        
+        // Convert button click
+        convertBtn.addEventListener('click', convertFile);
+        
+        function convertFile() {
+            const file = fileInput.files[0];
+            if (!file) return;
+            
+            statusDiv.textContent = 'Processing...';
+            statusDiv.style.color = 'black';
+            
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const content = e.target.result;
+                    
+                    // Process TSV content
+                    const processedData = processTSV(content);
+                    
+                    // Convert to XLSX
+                    const wb = XLSX.utils.book_new();
+                    const ws = XLSX.utils.aoa_to_sheet(processedData);
+                    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+                    
+                    // Generate XLSX file
+                    const fileName = file.name.replace(/\.tsv$|\.txt$/i, '') + '.xlsx';
+                    XLSX.writeFile(wb, fileName);
+                    
+                    statusDiv.textContent = 'Conversion complete!';
+                    statusDiv.style.color = 'green';
+                } catch (error) {
+                    statusDiv.textContent = 'Error: ' + error.message;
+                    statusDiv.style.color = 'red';
+                    console.error(error);
+                }
+            };
+            
+            reader.onerror = function() {
+                statusDiv.textContent = 'Error reading file';
+                statusDiv.style.color = 'red';
+            };
+            
+            reader.readAsText(file);
+        }
+        
+        function processTSV(content) {
+            // Split into lines
+            const lines = content.split(/\r?\n/);
+            
+            // Process each line
+            return lines.map(line => {
+                if (!line.trim()) return [];
+                
+                // Split by tabs (TSV format)
+                const row = line.split('\t');
+                
+                // Replace empty values if needed and format dates
+                return row.map((value, index) => {
+                    value = value.trim();
+                    
+                    // Format date columns (assuming gültig von is index 0 and gültig bis is index 1)
+                    if (index === 0 || index === 1) {
+                        return convertDateToExcelNumber(value);
+                    }
+                    
+                    return value;
+                });
+            });
+        }
+        
+        function convertDateToExcelNumber(dateStr) {
+            if (!dateStr) return '';
+            
+            // Try to parse different date formats
+            // Assuming German date format DD.MM.YYYY
+            const parts = dateStr.split('.');
+            if (parts.length === 3) {
+                const day = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10);
+                const year = parseInt(parts[2], 10);
+                
+                if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+                    // Create a Date object
+                    const date = new Date(year, month - 1, day);
+                    
+                    // Excel date is number of days since 1900-01-01
+                    const excelEpoch = new Date(1899, 11, 30); // Excel's epoch is 1899-12-31 but JS counts from 0
+                    const diff = date - excelEpoch;
+                    const days = diff / (1000 * 60 * 60 * 24);
+                    
+                    return days;
+                }
+            }
+            
+            // If we can't parse as date, return original value
+            return dateStr;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Belege Tabellen Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            padding: 8px;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            position: sticky;
+            top: 0;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+        .tab-content {
+            margin-top: 20px;
+        }
+        .tab-buttons button {
+            background-color: #ddd;
+            color: black;
+        }
+        .tab-buttons button.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .hidden {
+            display: none;
+        }
+        .file-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .file-item {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .file-item:hover {
+            background-color: #f0f0f0;
+        }
+        .file-item.selected {
+            background-color: #4CAF50;
+            color: white;
+            border-color: #45a049;
+        }
+        .xml-content {
+            white-space: pre-wrap;
+            font-family: monospace;
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .data-table {
+            width: 100%;
+            margin-top: 20px;
+        }
+        .data-table th {
+            background-color: #e0e0e0;
+        }
+        .file-info {
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .raw-content {
+            font-family: monospace;
+            white-space: pre-wrap;
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .download-btn {
+            background-color: #2196F3;
+            margin-bottom: 10px;
+        }
+        .download-btn:hover {
+            background-color: #0b7dda;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Belege Tabellen Viewer</h1>
+        
+        <div class="input-group">
+            <label for="belegId">Beleg ID (PK_INP_BELEGE_ALL):</label>
+            <input type="text" id="belegId" placeholder="Enter Beleg ID">
+            <button id="fetchBtn">Daten abrufen</button>
+        </div>
+        
+        <div id="loading" class="loading hidden">Daten werden geladen...</div>
+        <div id="error" class="error hidden"></div>
+        
+        <div id="fileSelection" class="hidden">
+            <h2>Dateien Auswahl</h2>
+            <div class="file-list" id="fileList"></div>
+        </div>
+        
+        <div class="tab-buttons">
+            <button id="metadataBtn" class="active">Metadaten</button>
+            <button id="contentBtn">Inhalt</button>
+        </div>
+        
+        <div class="tab-content">
+            <div id="metadataTab">
+                <h2>Metadaten</h2>
+                <table id="metadataTable">
+                    <thead>
+                        <tr>
+                            <th>Feld</th>
+                            <th>Wert</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            
+            <div id="contentTab" class="hidden">
+                <h2>Inhalt</h2>
+                <div id="contentTableContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const belegIdInput = document.getElementById('belegId');
+            const fetchBtn = document.getElementById('fetchBtn');
+            const loadingDiv = document.getElementById('loading');
+            const errorDiv = document.getElementById('error');
+            const metadataTable = document.getElementById('metadataTable').querySelector('tbody');
+            const contentTableContainer = document.getElementById('contentTableContainer');
+            const metadataBtn = document.getElementById('metadataBtn');
+            const contentBtn = document.getElementById('contentBtn');
+            const metadataTab = document.getElementById('metadataTab');
+            const contentTab = document.getElementById('contentTab');
+            const fileSelection = document.getElementById('fileSelection');
+            const fileList = document.getElementById('fileList');
+            
+            let currentData = null;
+            let selectedFileIndex = null;
+            let currentTableData = null;
+            let currentTableName = null;
+            
+            // Tab switching
+            metadataBtn.addEventListener('click', function() {
+                metadataTab.classList.remove('hidden');
+                contentTab.classList.add('hidden');
+                metadataBtn.classList.add('active');
+                contentBtn.classList.remove('active');
+            });
+            
+            contentBtn.addEventListener('click', function() {
+                if (!currentData) return;
+                
+                metadataTab.classList.add('hidden');
+                contentTab.classList.remove('hidden');
+                metadataBtn.classList.remove('active');
+                contentBtn.classList.add('active');
+                
+                renderContent();
+            });
+            
+            // Fetch data
+            fetchBtn.addEventListener('click', fetchData);
+            belegIdInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    fetchData();
+                }
+            });
+            
+            function fetchData() {
+                const belegId = belegIdInput.value.trim();
+                if (!belegId) {
+                    showError("Bitte eine Beleg-ID eingeben");
+                    return;
+                }
+                
+                loadingDiv.classList.remove('hidden');
+                errorDiv.classList.add('hidden');
+                fileSelection.classList.add('hidden');
+                selectedFileIndex = null;
+                
+                fetch(`http://localhost:5000/belege_tabellen/${belegId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Handle both array and single object responses
+                        currentData = Array.isArray(data) ? data : [data];
+                        
+                        renderMetadata(currentData);
+                        renderFileList(currentData);
+                        
+                        if (currentData.length > 0) {
+                            fileSelection.classList.remove('hidden');
+                            selectedFileIndex = 0;
+                            renderContent();
+                        }
+                        
+                        loadingDiv.classList.add('hidden');
+                    })
+                    .catch(error => {
+                        loadingDiv.classList.add('hidden');
+                        showError(`Fehler beim Abrufen der Daten: ${error.message}`);
+                        console.error('Error:', error);
+                    });
+            }
+            
+            function renderMetadata(data) {
+                metadataTable.innerHTML = '';
+                
+                if (data.length > 0) {
+                    const firstFile = data[0];
+                    
+                    const fields = [
+                        { name: "PK_INP_BELEGE_ALL", label: "Primärschlüssel" },
+                        { name: "BELEGNUMMER", label: "Belegnummer" },
+                        { name: "BELEGDATUM", label: "Belegdatum" },
+                        { name: "BEZEICHNUNG", label: "Bezeichnung" }
+                    ];
+                    
+                    fields.forEach(field => {
+                        const row = document.createElement('tr');
+                        
+                        const nameCell = document.createElement('td');
+                        nameCell.textContent = field.label;
+                        row.appendChild(nameCell);
+                        
+                        const valueCell = document.createElement('td');
+                        valueCell.textContent = firstFile[field.name] || '';
+                        row.appendChild(valueCell);
+                        
+                        metadataTable.appendChild(row);
+                    });
+                    
+                    // Add row for all file IDs
+                    const row = document.createElement('tr');
+                    const nameCell = document.createElement('td');
+                    nameCell.textContent = "Dateien";
+                    row.appendChild(nameCell);
+                    
+                    const valueCell = document.createElement('td');
+                    valueCell.textContent = data.map(file => 
+                        `${file.FILENAME || 'Unbekannte Datei'} (${file.PK_BILD_BILDER || 'Keine ID'})`
+                    ).join(", ");
+                    row.appendChild(valueCell);
+                    
+                    metadataTable.appendChild(row);
+                }
+                
+                // Switch to metadata tab
+                metadataTab.classList.remove('hidden');
+                contentTab.classList.add('hidden');
+                metadataBtn.classList.add('active');
+                contentBtn.classList.remove('active');
+            }
+            
+            function renderFileList(files) {
+                fileList.innerHTML = '';
+                
+                files.forEach((file, index) => {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    fileItem.textContent = `${file.FILENAME || 'Unbekannte Datei'} (${file.PK_BILD_BILDER || 'Keine ID'})`;
+                    fileItem.dataset.index = index;
+                    
+                    fileItem.addEventListener('click', function() {
+                        // Remove selected class from all items
+                        document.querySelectorAll('.file-item').forEach(item => {
+                            item.classList.remove('selected');
+                        });
+                        
+                        // Add selected class to clicked item
+                        this.classList.add('selected');
+                        selectedFileIndex = index;
+                        
+                        // Render content for this file
+                        renderContent();
+                    });
+                    
+                    fileList.appendChild(fileItem);
+                });
+                
+                // Select first file by default
+                if (files.length > 0) {
+                    fileList.children[0].classList.add('selected');
+                    selectedFileIndex = 0;
+                }
+            }
+            
+            function renderContent() {
+                if (selectedFileIndex === null || !currentData || !currentData[selectedFileIndex]) {
+                    contentTableContainer.innerHTML = '<p>Bitte eine Datei auswählen.</p>';
+                    return;
+                }
+                
+                const file = currentData[selectedFileIndex];
+                contentTableContainer.innerHTML = `<div class="file-info">Datei: ${file.FILENAME || 'Unbekannte Datei'} (${file.PK_BILD_BILDER || 'Keine ID'})</div>`;
+                
+                // Check if we have FILECONTENT
+                if (!file.FILECONTENT) {
+                    contentTableContainer.innerHTML += '<p>Keine Inhaltsdaten verfügbar.</p>';
+                    return;
+                }
+                
+                // Convert buffer to string if needed
+                let content;
+                if (file.FILECONTENT.type === "Buffer" && Array.isArray(file.FILECONTENT.data)) {
+                    // Convert buffer array to string
+                    content = new TextDecoder().decode(new Uint8Array(file.FILECONTENT.data));
+                } else if (typeof file.FILECONTENT === "string") {
+                    content = file.FILECONTENT;
+                } else {
+                    content = JSON.stringify(file.FILECONTENT, null, 2);
+                }
+                
+                // Set current table name based on filename
+                currentTableName = file.FILENAME ? file.FILENAME.replace(/\.[^/.]+$/, "") : "table";
+                
+                // Check file type by extension or content
+                if (file.FILENAME && file.FILENAME.endsWith('.tsv')) {
+                    renderTsvContent(content);
+                } else if (file.FILENAME && file.FILENAME.endsWith('.xml')) {
+                    renderXmlContent(content);
+                } else if (content.trim().startsWith('<?xml') || content.trim().startsWith('<')) {
+                    renderXmlContent(content);
+                } else if (content.includes('\t') && content.split('\n').length > 1) {
+                    renderTsvContent(content);
+                } else {
+                    // Fallback to raw content display
+                    contentTableContainer.innerHTML += `
+                        <p>Dateityp konnte nicht erkannt werden. Rohdaten:</p>
+                        <div class="raw-content">${escapeHtml(content)}</div>
+                    `;
+                }
+            }
+            
+            function renderTsvContent(content) {
+                const lines = content.split('\n').filter(line => line.trim() !== '');
+                if (lines.length === 0) {
+                    contentTableContainer.innerHTML += '<p>Keine TSV-Daten gefunden.</p>';
+                    return;
+                }
+                
+                // Store table data for CSV download
+                currentTableData = [];
+                
+                // Create headers from first line
+                const headers = lines[0].split('\t');
+                currentTableData.push(headers);
+                
+                let tableHTML ='<button class="download-btn" id="downloadCsvBtn">Als CSV herunterladen</button>';
+                tableHTML += '<table class="data-table"><thead><tr>';
+                contentTableContainer.innerHTML += "Anzahl Datensätze: " + (lines.length-1).toString();
+                
+                tableHTML += `<th>ID</th>`;
+                headers.forEach(header => {
+                    tableHTML += `<th>${escapeHtml(header)}</th>`;
+                });
+                tableHTML += '</tr></thead><tbody>';
+                
+                // Add rows
+                for (let i = 1; i < lines.length; i++) {
+                    if (lines[i].trim() === '') continue;
+                    const columns = lines[i].split('\t');
+                    currentTableData.push(columns);
+                    
+                    tableHTML += '<tr>';
+                    // Add index number as first column
+                    tableHTML += `<td>${i}</td>`;
+                    // Add data columns
+                    headers.forEach((_, index) => {
+                        tableHTML += `<td>${escapeHtml(columns[index] || '')}</td>`;
+                    });
+                    tableHTML += '</tr>';
+                }
+                
+                tableHTML += '</tbody></table>';
+               
+                contentTableContainer.innerHTML += tableHTML;
+                
+                // Add download button functionality
+                document.getElementById('downloadCsvBtn').addEventListener('click', function() {
+                    downloadTableAsCsv(currentTableData, currentTableName);
+                });
+            }
+            
+            function renderXmlContent(content) {
+                try {
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(content, "text/xml");
+                    
+                    // Check for parser errors
+                    const parserErrors = xmlDoc.getElementsByTagName("parsererror");
+                    if (parserErrors.length > 0) {
+                        throw new Error("XML parsing error");
+                    }
+                    
+                    // Try to find meaningful structure
+                    const entries = xmlDoc.getElementsByTagName("Entry") || 
+                                  xmlDoc.getElementsByTagName("entry") || 
+                                  xmlDoc.getElementsByTagName("row");
+                    
+                    if (entries.length > 0) {
+                        // Get all possible field names
+                        const fieldNames = new Set();
+                        for (let i = 0; i < entries.length; i++) {
+                            const entry = entries[i];
+                            for (let j = 0; j < entry.children.length; j++) {
+                                fieldNames.add(entry.children[j].tagName);
+                            }
+                        }
+                        
+                        const fields = Array.from(fieldNames);
+                        
+                        // Store table data for CSV download
+                        currentTableData = [fields];
+                        
+                        let tableHTML = '<button class="download-btn" id="downloadCsvBtn">Als CSV herunterladen</button>';
+                        tableHTML += `
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                     <th>ID</th>   ${fields.map(field => `<th>${field}</th>`).join('')}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                        `;
+                        
+                        contentTableContainer.innerHTML += "Anzahl Datensätze: " + entries.length.toString();
+                        
+                        for (let i = 0; i < entries.length; i++) {
+                            const entry = entries[i];
+                            const rowData = [];
+                            
+                            tableHTML += '<tr>';
+                            tableHTML += `<td>${i+1}</td>`;
+                            
+                            fields.forEach(field => {
+                                const element = entry.getElementsByTagName(field)[0];
+                                const value = element ? element.textContent : '';
+                                rowData.push(value);
+                                tableHTML += `<td>${escapeHtml(value)}</td>`;
+                            });
+                            
+                            currentTableData.push(rowData);
+                            tableHTML += '</tr>';
+                        }
+                        
+                        tableHTML += `</tbody></table>`;
+                        contentTableContainer.innerHTML += tableHTML;
+                        
+                        // Add download button functionality
+                        document.getElementById('downloadCsvBtn').addEventListener('click', function() {
+                            downloadTableAsCsv(currentTableData, currentTableName);
+                        });
+                    } else {
+                        // No table structure found, show raw XML
+                        contentTableContainer.innerHTML += `
+                            <p>Keine tabellarische Struktur im XML gefunden. Rohdaten:</p>
+                            <div class="xml-content">${escapeHtml(content)}</div>
+                        `;
+                    }
+                } catch (e) {
+                    console.error('Error parsing XML:', e);
+                    contentTableContainer.innerHTML += `
+                        <p>Fehler beim Parsen des XML-Inhalts. Rohdaten:</p>
+                        <div class="xml-content">${escapeHtml(content)}</div>
+                    `;
+                }
+            }
+            
+            function downloadTableAsCsv(tableData, filename) {
+                // Convert table data to CSV format
+                const csvContent = tableData.map(row => 
+                    row.map(cell => {
+                        // Escape quotes and wrap in quotes if contains comma or quote
+                        //if (typeof cell === 'string' && (cell.includes(',') || cell.includes('"'))) {
+                        //    return `"${cell.replace(/"/g, '""')}"`;
+                       // }
+                        return cell;
+                    }).join(';')
+                ).join('\n');
+                
+                // Create download link
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                
+                link.setAttribute('href', url);
+                link.setAttribute('download', `${filename}.csv`);
+                link.style.visibility = 'hidden';
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+            
+            function escapeHtml(unsafe) {
+                return unsafe
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+            
+            function showError(message) {
+                errorDiv.textContent = message;
+                errorDiv.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

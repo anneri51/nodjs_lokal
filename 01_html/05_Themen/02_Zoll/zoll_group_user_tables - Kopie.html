@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table List</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+        .error {
+            color: red;
+        }
+        .clickable {
+            cursor: pointer;
+            color: blue;
+            text-decoration: underline;
+        }
+        .clickable:hover {
+            color: darkblue;
+        }
+        .active-table {
+            background-color: #e6f7ff;
+        }
+        .active-group {
+            background-color: #e6f7ff;
+            border-left: 4px solid #1890ff;
+        }
+        .group-link {
+            color: blue;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        
+        /* Table styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        /* Group container styles */
+        .group-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .group-box {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            flex: 1 1 300px;
+            min-width: 300px;
+        }
+        .group-box h3 {
+            margin-top: 0;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        .group-box ul {
+            list-style-type: none;
+            padding-left: 0;
+            margin: 0;
+        }
+        .group-box li {
+            padding: 3px 0;
+        }
+        
+        /* Drawer styles */
+        .drawer {
+            position: fixed;
+            top: 0;
+            right: -450px;
+            width: 450px;
+            height: 100%;
+            background: white;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+            transition: right 0.3s ease;
+            z-index: 1000;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .drawer.open {
+            right: 0;
+        }
+        .drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .drawer-close {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #666;
+        }
+        .drawer-content {
+            max-height: calc(100% - 60px);
+            overflow-y: auto;
+        }
+        .drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .drawer-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Database Tables</h1>
+    <div id="loading" class="loading">Loading tables...</div>
+    
+    <div>
+        <h2>Table Groups Overview</h2>
+        <div id="tables-container1" class="table-container1"></div>
+        
+        <h2>Tables by Group</h2>
+        <div id="grouped-tables-container" class="group-container"></div>
+        
+        <h2>Detailed View</h2>
+        <div id="tables-container" class="table-container"></div>
+    </div>
+    
+    <!-- Drawer for table content -->
+    <div class="drawer-overlay" id="drawer-overlay"></div>
+    <div class="drawer" id="drawer">
+        <div class="drawer-header">
+            <h2 id="content-title">Table Content</h2>
+            <button class="drawer-close" id="drawer-close">&times;</button>
+        </div>
+        <div class="drawer-content" id="table-content"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch('http://localhost:5000/zoll_list_user_tables');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const tables = await response.json();
+                
+                document.getElementById('loading').style.display = 'none';
+                
+                if (tables.length === 0) {
+                    document.getElementById('tables-container').innerHTML = '<p>No tables found.</p>';
+                    return;
+                }
+                
+                // Group tables by their prefix or category
+                const groupedTables = groupTables(tables);
+                
+                // Display the grouped tables
+                displayGroupedTables2(groupedTables);
+                displayAllGroupedTables(groupedTables);
+                
+                // Setup drawer close button
+                document.getElementById('drawer-close').addEventListener('click', closeDrawer);
+                document.getElementById('drawer-overlay').addEventListener('click', closeDrawer);
+                
+            } catch (error) {
+                document.getElementById('loading').className = 'error';
+                document.getElementById('loading').textContent = `Error loading tables: ${error.message}`;
+                console.error('Error:', error);
+            }
+        });
+        
+        function openDrawer() {
+            document.getElementById('drawer').classList.add('open');
+            document.getElementById('drawer-overlay').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeDrawer() {
+            document.getElementById('drawer').classList.remove('open');
+            document.getElementById('drawer-overlay').classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+        
+        function groupTables(tables) {
+            const groups = {};
+            const specialGroups = ['A00', 'A10', 'A11', 'A12', 'A13', 'A14', 'A15', 'A16', 'A17', 'A18', 'A19', 'A20', 
+'A21', 'EIN_DYN', 'AUS_DYN', 'C00', 'C01', 'EIN_DYN',
+'EIN_STAT_A0027',
+'EIN_STAT_A0035',
+'EIN_STAT_A0057',
+'EIN_STAT_A0110',
+'EIN_STAT_A0112',
+'EIN_STAT_A1010',
+'EIN_STAT_A1015',
+'EIN_STAT_A1025',
+'EIN_STAT_A1030',
+'EIN_STAT_A1040',
+'EIN_STAT_A1060',
+'EIN_STAT_A1070',
+'EIN_STAT_A1080',
+'EIN_STAT_A1085',
+'EIN_STAT_A1090',
+'EIN_STAT_A1100',
+'EIN_STAT_A1101',
+'EIN_STAT_A1110',
+'EIN_STAT_A1115',
+'EIN_STAT_A1120',
+'EIN_STAT_A1125',
+'EIN_STAT_A1130',
+'EIN_STAT_A1140',
+'EIN_STAT_A1143',
+'EIN_STAT_A1145',
+'EIN_STAT_A1150',
+'EIN_STAT_A1160',
+'EIN_STAT_A1170',
+'EIN_STAT_A1180',
+'EIN_STAT_A1190',
+'EIN_STAT_A1195',
+'EIN_STAT_A1200',
+'EIN_STAT_A1210',
+'EIN_STAT_A1220',
+'EIN_STAT_A1230',
+'EIN_STAT_A1240',
+'EIN_STAT_A1245',
+'EIN_STAT_A1250',
+'EIN_STAT_A1255',
+'EIN_STAT_A1257',
+'EIN_STAT_A1260',
+'EIN_STAT_A1270',
+'EIN_STAT_A1280',
+'EIN_STAT_A1290',
+'EIN_STAT_A1300',
+'EIN_STAT_A1310',
+'EIN_STAT_A1314',
+'EIN_STAT_A1318',
+'EIN_STAT_A1320',
+'EIN_STAT_A1325',
+'EIN_STAT_A1330',
+'EIN_STAT_A1335',
+'EIN_STAT_A1345',
+'EIN_STAT_A1350',
+'EIN_STAT_A1355',
+'EIN_STAT_A1365',
+'EIN_STAT_A1370',
+'EIN_STAT_A1390',
+'EIN_STAT_A1400',
+'EIN_STAT_A1410',
+'EIN_STAT_A1430',
+'EIN_STAT_A1435',
+'EIN_STAT_A1440',
+'EIN_STAT_A1450',
+'EIN_STAT_A1460',
+'EIN_STAT_A1470',
+'EIN_STAT_A1480',
+'EIN_STAT_A1490',
+'EIN_STAT_A1495',
+'EIN_STAT_A1500',
+'EIN_STAT_A1505',
+'EIN_STAT_A1510',
+'EIN_STAT_A1520',
+'EIN_STAT_A1530',
+'EIN_STAT_A1532',
+'EIN_STAT_A1535',
+'EIN_STAT_A1536',
+'EIN_STAT_A1540',
+'EIN_STAT_A1542',
+'EIN_STAT_A1545',
+'EIN_STAT_A1560',
+'EIN_STAT_A1570',
+'EIN_STAT_A1575',
+'EIN_STAT_A1580',
+'EIN_STAT_A1590',
+'EIN_STAT_A1600',
+'EIN_STAT_A1610',
+'EIN_STAT_A1615',
+'EIN_STAT_A1620',
+'EIN_STAT_A1622',
+'EIN_STAT_A1623',
+'EIN_STAT_A1624',
+'EIN_STAT_A1625',
+'EIN_STAT_A1627',
+'EIN_STAT_A1630',
+'EIN_STAT_A1635',
+'EIN_STAT_A1642',
+'EIN_STAT_A1645',
+'EIN_STAT_A1650',
+'EIN_STAT_A1652',
+'EIN_STAT_A1660',
+'EIN_STAT_A1665',
+'EIN_STAT_A1670',
+'EIN_STAT_A1680',
+'EIN_STAT_A1690',
+'EIN_STAT_A1700',
+'EIN_STAT_A1705',
+'EIN_STAT_A1706',
+'EIN_STAT_A1707',
+'EIN_STAT_A1708',
+'EIN_STAT_A1730',
+'EIN_STAT_A1735',
+'EIN_STAT_A1740',
+'EIN_STAT_A1750',
+'EIN_STAT_A1760',
+'EIN_STAT_A1765',
+'EIN_STAT_A1770',
+'EIN_STAT_A1775',
+'EIN_STAT_A1780',
+'EIN_STAT_A1790',
+'EIN_STAT_A1795',
+'EIN_STAT_A1800',
+'EIN_STAT_A1805',
+'EIN_STAT_A1810',
+'EIN_STAT_A1820',
+'EIN_STAT_A1830',
+'EIN_STAT_A1833',
+'EIN_STAT_A1835',
+'EIN_STAT_A1840',
+'EIN_STAT_A1850',
+'EIN_STAT_A1865',
+'EIN_STAT_A1870',
+'EIN_STAT_A1875',
+'EIN_STAT_A1880',
+'EIN_STAT_A1890',
+'EIN_STAT_A1895',
+'EIN_STAT_A1920',
+'EIN_STAT_A1925',
+'EIN_STAT_A1930',
+'EIN_STAT_A1940',
+'EIN_STAT_A1950',
+'EIN_STAT_A1970',
+'EIN_STAT_A1972',
+'EIN_STAT_A1973',
+'EIN_STAT_A1980',
+'EIN_STAT_A1990',
+'EIN_STAT_A2010',
+'EIN_STAT_A2020',
+'EIN_STAT_A2021',
+'EIN_STAT_A2030',
+'EIN_STAT_A2040',
+'EIN_STAT_A2050',
+'EIN_STAT_A2055',
+'EIN_STAT_A2060',
+'EIN_STAT_A2070',
+'EIN_STAT_A2080',
+'EIN_STAT_A2090',
+'EIN_STAT_A2095',
+'EIN_STAT_A2097',
+'EIN_STAT_A2100',
+'EIN_STAT_A2110',
+'EIN_STAT_S0012',
+'EIN_STAT_S0042',
+'EIN_STAT_S0093',
+'EIN_STAT_S0094',
+'EIN_STAT_S0239'];
+            
+            tables.forEach(table => {
+                const tableName = table.table_name || table;
+                const parts = tableName.split('_');
+                
+                for (let i = 0; i < Math.min(parts.length, 6); i++) {
+                    const groupName = parts[i] || 'Other';
+                    
+                    if (!groups[groupName]) {
+                        groups[groupName] = [];
+                    }
+                    
+                    if (!groups[groupName].includes(table)) {
+                        groups[groupName].push(table);
+                    }
+                }
+                
+                if (parts.length > 1) {
+                    const combinedGroup = parts.slice(0, 2).join('_');
+                    if (!groups[combinedGroup]) {
+                        groups[combinedGroup] = [];
+                    }
+                    if (!groups[combinedGroup].includes(table)) {
+                        groups[combinedGroup].push(table);
+                    }
+                }
+                
+                specialGroups.forEach(groupName => {
+                    if (!groups[groupName]) {
+                        groups[groupName] = [];
+                    }
+                    
+                    if (tableName.includes(groupName)) {
+                        if (!groups[groupName].includes(table)) {
+                            groups[groupName].push(table);
+                        }
+                    }
+                });
+            });
+            
+            return groups;
+        }
+
+        function displayGroupedTables2(groups) {
+            const container = document.getElementById('tables-container1');
+            container.innerHTML = '';
+            
+            const table = document.createElement('table');
+            
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            const headerCell1 = document.createElement('th');
+            headerCell1.textContent = 'Group Name';
+            const headerCell2 = document.createElement('th');
+            headerCell2.textContent = 'Table Count';
+            headerRow.appendChild(headerCell1);
+            headerRow.appendChild(headerCell2);
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+            
+            const tbody = document.createElement('tbody');
+            
+            Object.entries(groups).forEach(([groupName, tables]) => {
+                const row = document.createElement('tr');
+                
+                const groupCell = document.createElement('td');
+                const groupLink = document.createElement('span');
+                groupLink.textContent = groupName;
+                groupLink.className = 'group-link';
+                groupLink.addEventListener('click', () => {
+                    displayTablesInGroup(groupName, tables);
+                    
+                    const groupBoxId = `group-${groupName}`;
+                    document.querySelectorAll('.group-box').forEach(box => {
+                        box.classList.remove('active-group');
+                    });
+                    const groupBox = document.getElementById(groupBoxId);
+                    if (groupBox) {
+                        groupBox.classList.add('active-group');
+                        groupBox.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'nearest'
+                        });
+                    }
+                });
+                groupCell.appendChild(groupLink);
+                row.appendChild(groupCell);
+                
+                const countCell = document.createElement('td');
+                countCell.innerHTML = tables.length === 3 
+                    ? `<span style="color:green">${tables.length}</span>` 
+                    : tables.length;
+                row.appendChild(countCell);
+                
+                tbody.appendChild(row);
+            });
+            
+            table.appendChild(tbody);
+            container.appendChild(table);
+        }
+
+        function displayAllGroupedTables(groups) {
+            const container = document.getElementById('grouped-tables-container');
+            container.innerHTML = '';
+            
+            const sortedGroupNames = Object.keys(groups).sort();
+            
+            sortedGroupNames.forEach(groupName => {
+                const groupBox = document.createElement('div');
+                groupBox.className = 'group-box';
+                groupBox.id = `group-${groupName}`;
+                
+                const title = document.createElement('h3');
+                title.textContent = `${groupName} (${groups[groupName].length})`;
+                groupBox.appendChild(title);
+                
+                const tableList = document.createElement('ul');
+                
+                groups[groupName].sort((a, b) => {
+                    const nameA = a.table_name || a;
+                    const nameB = b.table_name || b;
+                    return nameA.localeCompare(nameB);
+                }).forEach(tableObj => {
+                    const tableName = tableObj.table_name || tableObj;
+                    const listItem = document.createElement('li');
+                    
+                    const link = document.createElement('span');
+                    link.textContent = tableName;
+                    link.className = 'clickable';
+                    link.addEventListener('click', () => {
+                        // Highlight the selected table
+                        document.querySelectorAll('.clickable').forEach(el => {
+                            el.classList.remove('active-table');
+                        });
+                        link.classList.add('active-table');
+                        
+                        showTableContent(tableName);
+                    });
+                    
+                    listItem.appendChild(link);
+                    tableList.appendChild(listItem);
+                });
+                
+                groupBox.appendChild(tableList);
+                container.appendChild(groupBox);
+            });
+        }
+        
+        function displayTablesInGroup(groupName, tables) {
+            const container = document.getElementById('tables-container');
+            container.innerHTML = '';
+            
+            const title = document.createElement('h2');
+            title.textContent = `Tables in group: ${groupName}`;
+            container.appendChild(title);
+            
+            const table = document.createElement('table');
+            
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            const headerCell = document.createElement('th');
+            headerCell.textContent = 'Table Name';
+            headerRow.appendChild(headerCell);
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+            
+            const tbody = document.createElement('tbody');
+            
+            tables.forEach(tableObj => {
+                const tableName = tableObj.table_name || tableObj;
+                
+                if (tableName.includes(groupName)) {
+                    const row = document.createElement('tr');
+                    const cell = document.createElement('td');
+                    
+                    const link = document.createElement('span');
+                    link.textContent = tableName;
+                    link.className = 'clickable';
+                    link.addEventListener('click', () => {
+                        // Highlight the selected table
+                        document.querySelectorAll('.clickable').forEach(el => {
+                            el.classList.remove('active-table');
+                        });
+                        link.classList.add('active-table');
+                        
+                        showTableContent(tableName);
+                    });
+                    
+                    cell.appendChild(link);
+                    row.appendChild(cell);
+                    tbody.appendChild(row);
+                }
+            });
+            
+            table.appendChild(tbody);
+            container.appendChild(table);
+        }
+        
+        async function showTableContent(tableName) {
+            const contentTitle = document.getElementById('content-title');
+            const contentDisplay = document.getElementById('table-content');
+            
+            contentTitle.textContent = `Content of table: ${tableName}`;
+            contentDisplay.innerHTML = '<div class="loading">Loading table content...</div>';
+            
+            openDrawer();
+            
+            try {
+                const response = await fetch(`http://localhost:5000/show_table_content/${tableName}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                if (data.length === 0) {
+                    contentDisplay.innerHTML = '<p>No data found in this table.</p>';
+                    return;
+                }
+                
+                const table = document.createElement('table');
+                
+                const thead = document.createElement('thead');
+                const headerRow = document.createElement('tr');
+                
+                const firstRow = data[0];
+                for (const key in firstRow) {
+                    const th = document.createElement('th');
+                    th.textContent = key;
+                    headerRow.appendChild(th);
+                }
+                
+                thead.appendChild(headerRow);
+                table.appendChild(thead);
+                
+                const tbody = document.createElement('tbody');
+                data.forEach(rowData => {
+                    const row = document.createElement('tr');
+                    
+                    for (const key in firstRow) {
+                        const td = document.createElement('td');
+                        td.textContent = rowData[key] !== null ? rowData[key] : 'NULL';
+                        row.appendChild(td);
+                    }
+                    
+                    tbody.appendChild(row);
+                });
+                
+                table.appendChild(tbody);
+                contentDisplay.innerHTML = '';
+                contentDisplay.innerHTML += "Anzahl Datensätze: " + data.length;
+                contentDisplay.appendChild(table);
+                
+            } catch (error) {
+                contentDisplay.className = 'error';
+                contentDisplay.textContent = `Error loading table content: ${error.message}`;
+                console.error('Error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

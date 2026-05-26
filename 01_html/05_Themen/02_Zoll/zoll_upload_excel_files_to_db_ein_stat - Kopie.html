@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Excel to Database Importer</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .section { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 8px 15px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #45a049; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+        #file-list { margin-top: 10px; }
+        .file-item { padding: 5px; cursor: pointer; }
+        .file-item:hover { background-color: #f0f0f0; }
+        .selected { background-color: #e0e0e0; }
+        #status { margin-top: 20px; padding: 10px; }
+        .success { background-color: #dff0d8; color: #3c763d; }
+        .error { background-color: #f2dede; color: #a94442; }
+        #folder-selector { display: none; }
+        .folder-btn { padding: 8px 15px; background-color: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        #progress-bar { width: 100%; background-color: #f1f1f1; margin-top: 10px; }
+        #progress { height: 20px; background-color: #4CAF50; width: 0%; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Excel to Database Importer</h1>
+        
+        <div class="section">
+            <h2>1. Select Folder</h2>
+            <button class="folder-btn" onclick="document.getElementById('folder-selector').click()">Choose Folder</button>
+            <input type="file" id="folder-selector" webkitdirectory directory multiple />
+            <div id="selected-folder"></div>
+        </div>
+        
+        <div class="section">
+            <h2>2. Select Excel File</h2>
+            <div id="file-list">Please select a folder first</div>
+        </div>
+        
+        <div class="section">
+            <h2>3. Import to Database</h2>
+            <button id="import-btn" disabled>Import Selected File</button>
+            <div id="progress-bar"><div id="progress"></div></div>
+            <div id="status"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:3000'; // Node.js server URL
+        let selectedFolder = null;
+        let selectedFile = null;
+        let folderFiles = [];
+        
+        document.getElementById('folder-selector').addEventListener('change', async (event) => {
+            const files = event.target.files;
+            if (files.length > 0) {
+                selectedFolder = files[0].webkitRelativePath.split('/')[0];
+                document.getElementById('selected-folder').innerHTML = 
+                    `<strong>Selected Folder:</strong> ${selectedFolder}`;
+                
+                folderFiles = Array.from(files).filter(file => 
+                    file.name.toLowerCase().endsWith('.tsv'));
+                
+                const fileList = document.getElementById('file-list');
+                fileList.innerHTML = '';
+                
+                if (folderFiles.length === 0) {
+                    fileList.innerHTML = '<p>No Excel files found in this folder.</p>';
+                    document.getElementById('import-btn').disabled = true;
+                    return;
+                }
+                
+                folderFiles.forEach(file => {
+                    const div = document.createElement('div');
+                    div.className = 'file-item';
+                    div.textContent = file.name;
+                    div.addEventListener('click', () => {
+                        document.querySelectorAll('.file-item').forEach(item => 
+                            item.classList.remove('selected'));
+                        div.classList.add('selected');
+                        selectedFile = file;
+                        document.getElementById('import-btn').disabled = false;
+                    });
+                    fileList.appendChild(div);
+                });
+            }
+        });
+        
+        document.getElementById('import-btn').addEventListener('click', async () => {
+            if (!selectedFolder || !selectedFile) {
+                showStatus('Please select both a folder and a file.', 'error');
+                return;
+            }
+            
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = '';
+            statusDiv.innerHTML = 'Importing...';
+            
+            const importBtn = document.getElementById('import-btn');
+            importBtn.disabled = true;
+            importBtn.textContent = 'Importing...';
+            
+            const progressBar = document.getElementById('progress');
+            progressBar.style.width = '0%';
+            
+            try {
+                // Read file content
+                const fileContent = await readFileAsText(selectedFile);
+                const chunkSize = 100000; // 100KB chunks
+                const totalChunks = Math.ceil(fileContent.length / chunkSize);
+                
+                for (let i = 0; i < totalChunks; i++) {
+                    const start = i * chunkSize;
+                    const end = (i + 1) * chunkSize;
+                    const chunk = fileContent.slice(start, end);
+                    
+                    const formData = new FormData();
+                    formData.append('folder_path', selectedFolder);
+                    formData.append('filename', selectedFile.name);
+                    formData.append('filecontent', chunk);
+                    formData.append('chunk_index', i);
+                    formData.append('total_chunks', totalChunks);
+                    
+                    const response = await fetch(`${API_BASE_URL}/import`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const progress = Math.round(((i + 1) / totalChunks) * 100);
+                    progressBar.style.width = `${progress}%`;
+                    
+                    const result = await response.json();
+                    if (result.error) {
+                        throw new Error(result.message);
+                    }
+                }
+                
+                showStatus(`Successfully imported file: ${selectedFile.name}`, 'success');
+            } catch (error) {
+                showStatus(`Error: ${error.message}`, 'error');
+                console.error('Error:', error);
+            } finally {
+                importBtn.disabled = false;
+                importBtn.textContent = 'Import Selected File';
+            }
+        });
+        
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = event => resolve(event.target.result);
+                reader.onerror = error => reject(error);
+                reader.readAsText(file);
+            });
+        }
+        
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = type;
+            statusDiv.innerHTML = message;
+        }
+    </script>
+</body>
+</html>
