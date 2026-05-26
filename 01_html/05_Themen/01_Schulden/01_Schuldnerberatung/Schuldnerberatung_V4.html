@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Schuldnerberatung · Tabelle · Diagramme · CRUD</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Inter', 'Segoe UI', Roboto, system-ui, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: #f0f4f8;
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+        }
+        .dashboard {
+            max-width: 2000px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .title-section h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #0b2b4f, #1b4a7a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .title-section p {
+            color: #4a627a;
+            font-size: 0.9rem;
+            margin-top: 0.3rem;
+        }
+        .endpoint-badge {
+            background: #e6eefc;
+            padding: 0.3rem 1rem;
+            border-radius: 30px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #0b2b4f;
+            border: 1px solid #b9cfec;
+        }
+        .controls {
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            background: white;
+            border: 1px solid #cbd5e1;
+            padding: 0.6rem 1.4rem;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: #1e3a5f;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.15s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .btn-primary { background: #0b2b4f; border-color: #0b2b4f; color: white; }
+        .btn-primary:hover { background: #143b66; }
+        .btn-success { background: #0f5c3a; border-color: #0f5c3a; color: white; }
+        .btn-success:hover { background: #1a734a; }
+        .btn-warning { background: #b6560c; border-color: #b6560c; color: white; }
+        .btn-warning:hover { background: #cf6919; }
+        .btn-danger { background: #b91c1c; border-color: #b91c1c; color: white; }
+        .btn-danger:hover { background: #d32f2f; }
+        .btn-sm { padding: 0.3rem 1rem; font-size: 0.8rem; }
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: white;
+            padding: 0.3rem 1rem 0.3rem 0.8rem;
+            border-radius: 40px;
+            border: 1px solid #dde3e9;
+        }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #94a3b8; }
+        .status-dot.connected { background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,0.2); }
+        .status-dot.error { background: #ef4444; }
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.8rem;
+            border-bottom: 2px solid #dde3e9;
+            padding-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .tab {
+            padding: 0.6rem 2rem;
+            border-radius: 40px 40px 0 0;
+            background: transparent;
+            border: none;
+            font-weight: 600;
+            color: #5f7694;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+        .tab.active {
+            background: #0b2b4f;
+            color: white;
+        }
+        .tab:not(.active):hover { background: #e2eaf5; color: #0b2b4f; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.2rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 24px;
+            padding: 1.3rem 1.5rem;
+            border: 1px solid #e9eef2;
+        }
+        .stat-label { color: #64748b; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.3rem; }
+        .stat-value { font-size: 2rem; font-weight: 600; color: #0b2b4f; }
+        .table-container {
+            background: white;
+            border-radius: 28px;
+            border: 1px solid #e2e8f0;
+            overflow-x: auto;
+            box-shadow: 0 12px 30px -8px rgba(0,34,64,0.08);
+            margin-bottom: 2rem;
+            max-height: 65vh;
+            overflow-y: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1300px;
+        }
+        th {
+            text-align: left;
+            padding: 1rem 1.2rem;
+            background: #f8fafd;
+            color: #1e3a5f;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            border-bottom: 1px solid #dde3e9;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        td {
+            padding: 0.85rem 1.2rem;
+            border-bottom: 1px solid #ecf1f7;
+            color: #1e2f40;
+            font-size: 0.9rem;
+        }
+        .group-row-level1 { background: #e8f0fe; cursor: pointer; font-weight: 600; }
+        .group-row-level1 td { background: #e8f0fe; border-bottom: 2px solid #b9cfec; padding: 1rem 1.2rem; }
+        .group-row-level1.expanded td { background: #d4e3fd; }
+        .group-row-level2 { background: #f0f4fa; cursor: pointer; }
+        .group-row-level2 td { background: #f0f4fa; border-bottom: 1px dashed #b9cfec; padding: 0.9rem 1.2rem 0.9rem 3rem; }
+        .group-row-level2.expanded td { background: #e6eefc; }
+        .group-toggle { font-size: 1.2rem; margin-right: 0.8rem; display: inline-block; width: 24px; text-align: center; }
+        .level2-toggle { margin-left: 1.5rem; }
+        .badge {
+            background: #e6f0fc;
+            color: #0b2b4f;
+            padding: 0.2rem 0.8rem;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .badge-group { background: #0b2b4f; color: white; margin-left: 0.6rem; }
+        .badge-group-level2 { background: #5f7694; color: white; margin-left: 0.6rem; }
+        .badge-brutto { background: #d9f0ec; color: #0c6b58; }
+        .teile-badge { background: #0b2b4f; color: white; font-size: 0.7rem; padding: 0.2rem 0.6rem; border-radius: 12px; margin-right: 0.5rem; }
+        .indent-2 { padding-left: 4rem !important; }
+        .level-indent { display: inline-block; width: 20px; margin-right: 0.5rem; color: #8a9bb5; }
+        .pk-highlight { font-weight: 600; background: #eef6ff; border-radius: 20px; padding: 0.1rem 0.5rem; display: inline-block; }
+        .forecast-value { font-weight: 600; color: #92400e; }
+        .detail-panel {
+            background: white;
+            border-radius: 20px;
+            padding: 1.2rem 1.5rem;
+            border: 1px solid #e2e8f0;
+            margin-top: 1rem;
+        }
+        .key-val-list { display: flex; flex-wrap: wrap; gap: 1rem 2rem; max-height: 280px; overflow-y: auto; }
+        .expand-all-btn {
+            background: #e2eaf5;
+            border: 1px solid #b9cfec;
+            padding: 0.4rem 1.2rem;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            margin-right: 0.5rem;
+        }
+        /* Diagramm Styles */
+        .diagram-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(550px, 1fr));
+            gap: 1.8rem;
+            margin-top: 1rem;
+        }
+        .diagram-card {
+            background: white;
+            border-radius: 28px;
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+        }
+        .diagram-header {
+            background: #f8fafd;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .diagram-header h3 { font-size: 1.1rem; font-weight: 600; color: #0b2b4f; }
+        .diagram-body { padding: 1.5rem; }
+        .bar-item { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.9rem; }
+        .bar-label { width: 200px; font-size: 0.85rem; font-weight: 500; color: #1e3a5f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .bar-bg { flex: 1; height: 32px; background-color: #e2e8f0; border-radius: 20px; overflow: hidden; }
+        .bar-fill { height: 100%; background: linear-gradient(90deg, #2c7da0, #1b4a7a); width: 0%; border-radius: 20px; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; color: white; font-size: 0.75rem; font-weight: 600; transition: width 0.4s ease; }
+        .bar-value { min-width: 80px; text-align: right; font-weight: 700; color: #0c6b58; }
+        .diagram-summary { margin-top: 1rem; padding-top: 0.8rem; border-top: 1px dashed #cbd5e1; display: flex; justify-content: space-between; font-size: 0.85rem; color: #2c4c6e; }
+        .no-subgroups { padding: 2rem; text-align: center; color: #8ba0bc; font-style: italic; }
+        .crud-form {
+            background: white;
+            border-radius: 24px;
+            padding: 1.5rem;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 1.8rem;
+        }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+        .form-group { display: flex; flex-direction: column; gap: 0.3rem; }
+        .form-group label { font-size: 0.75rem; font-weight: 600; color: #3f5e7e; text-transform: uppercase; }
+        .form-group input, .form-group textarea { padding: 0.7rem 1rem; border: 1px solid #cbd5e1; border-radius: 30px; font-size: 0.9rem; background: #f9fcff; }
+        .form-group input:focus { outline: none; border-color: #0b2b4f; }
+        .form-actions { display: flex; gap: 0.8rem; margin-top: 1.5rem; justify-content: flex-end; }
+        .message-area { margin-bottom: 1.5rem; }
+        .success-message { background: #e2f7e7; border: 1px solid #a0d9b6; color: #0f5c3a; padding: 0.8rem 1.5rem; border-radius: 40px; }
+        .error-message { background: #fee9e7; border: 1px solid #f5b5ad; color: #aa302a; padding: 0.8rem 1.5rem; border-radius: 40px; }
+        .footer { text-align: center; color: #6f85a2; font-size: 0.8rem; margin-top: 2rem; }
+        .crud-table-wrapper { max-height: 400px; overflow-y: auto; margin-top: 1rem; }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <div class="header">
+        <div class="title-section">
+            <h1>📋 Schuldnerberatung · Tabelle · Diagramme · CRUD</h1>
+            <p><span class="endpoint-badge">http://localhost:5000</span> Zwei-Ebenen-Gruppierung: FK_STD_INSO_TEILE → rel_comm | Vollständige CRUD-Operationen</p>
+        </div>
+        <div class="controls">
+            <div class="status-indicator" id="statusIndicator"><span class="status-dot" id="statusDot"></span><span id="statusText">Prüfen</span></div>
+            <button class="btn" id="refreshBtn">🔄 Aktualisieren</button>
+        </div>
+    </div>
+    <div class="tabs">
+        <button class="tab active" data-tab="table">📋 Tabellarische Ansicht</button>
+        <button class="tab" data-tab="diagrams">📊 Diagramme</button>
+        <button class="tab" data-tab="crud">⚙️ CRUD Verwaltung</button>
+    </div>
+    <div id="messageArea" class="message-area"></div>
+
+    <!-- TAB 1: TABLE VIEW -->
+    <div id="tab-table" class="tab-content active">
+        <div class="stats-grid" id="statsContainer"></div>
+        <div style="display: flex; gap: 0.8rem; margin-bottom: 1rem; flex-wrap: wrap;">
+            <button class="expand-all-btn" id="expandAllTableBtn">▼▼ Alle ausklappen</button>
+            <button class="expand-all-btn" id="collapseAllTableBtn">▶▶ Alle einklappen</button>
+            <button class="expand-all-btn" id="expandLevel1TableBtn">▼ Nur Ebene1 ausklappen</button>
+            <span class="badge badge-brutto" id="totalBruttoBadge">BRUTTO Gesamt: 0,00 €</span>
+        </div>
+        <div class="table-container">
+            <table id="dataTable">
+                <thead><tr><th style="min-width:260px">Gruppe (FK_STD_INSO_TEILE)</th><th>PK_REL</th><th>Projekt</th><th>Teil Bez.</th><th>FK_INSO_TEIL</th><th>FK_MDT</th><th>rel_comm</th><th>FK_INP_BELEGE</th><th>BRUTTO_BETRAG</th><th>Status</th><th>FORECAST</th><th>COMM</th><th>Aktionen</th></tr></thead>
+                <tbody id="tableBody"><tr class="empty-row"><td colspan="13">🔍 Bitte Daten laden – klicke auf „Aktualisieren“</td></tr>
+            </table>
+        </div>
+        <div class="detail-panel" id="detailPanel">
+            <div class="detail-title"><span>🔎 Zeilen-Detail (Klick auf Datensatz)</span><span class="badge" id="detailRowCount">0</span></div>
+            <div id="detailContent" class="key-val-list">Klicke auf eine Zeile für Details</div>
+        </div>
+    </div>
+
+    <!-- TAB 2: DIAGRAMS VIEW -->
+    <div id="tab-diagrams" class="tab-content">
+        <div class="stats-grid" id="diagramStatsContainer"></div>
+        <div id="diagramsContainer" class="diagram-grid">
+            <div style="grid-column:1/-1; text-align:center; padding:3rem;">📊 Diagramme erscheinen nach Datenladung</div>
+        </div>
+    </div>
+
+    <!-- TAB 3: CRUD VIEW -->
+    <div id="tab-crud" class="tab-content">
+        <!-- INSERT Form -->
+        <div class="crud-form">
+            <h3 style="margin-bottom: 1rem;">➕ Neue Relation anlegen</h3>
+            <div class="form-grid">
+                <div class="form-group"><label>FK_MDT_MANDANT *</label><input type="number" id="insert_fk_mandant" placeholder="Mandant ID"></div>
+                <div class="form-group"><label>FK_INSO_SCHULDNERBERATUNG_TEIL *</label><input type="number" id="insert_fk_teil" placeholder="Teil ID"></div>
+                <div class="form-group"><label>FK_INP_BELEGE_ALL *</label><input type="number" id="insert_fk_belege" placeholder="Beleg ID"></div>
+                <div class="form-group"><label>FK_STD_INSO_STATUS</label><input type="text" id="insert_status" placeholder="z.B. aktiv"></div>
+                <div class="form-group"><label>FORECAST</label><input type="text" id="insert_forecast" placeholder="z.B. Q1/2026"></div>
+                <div class="form-group"><label>COMM (Kommentar)</label><textarea id="insert_comm" rows="2" maxlength="255"></textarea></div>
+                <div class="form-group"><label>DESCR (Beschreibung)</label><textarea id="insert_descr" rows="2" maxlength="255"></textarea></div>
+                <div class="form-group"><label>CREATED_BY</label><input type="text" id="insert_created_by" placeholder="Ersteller"></div>
+                <div class="form-group"><label>MODIFIED_BY</label><input type="text" id="insert_modified_by" placeholder="Bearbeiter"></div>
+            </div>
+            <div class="form-actions"><button class="btn btn-success" id="insertBtn">📝 Insert</button><button class="btn" id="clearInsertBtn">🧹 Leeren</button></div>
+        </div>
+
+        <!-- UPDATE Form -->
+        <div class="crud-form">
+            <h3 style="margin-bottom: 1rem;">✏️ Relation aktualisieren</h3>
+            <div class="form-grid">
+                <div class="form-group"><label>PK_REL (ID) *</label><input type="number" id="update_id" placeholder="Primärschlüssel"></div>
+                <div class="form-group"><label>FK_MDT_MANDANT</label><input type="number" id="update_fk_mandant" placeholder="Neuer Mandant"></div>
+                <div class="form-group"><label>FK_INSO_TEIL</label><input type="number" id="update_fk_teil" placeholder="Neuer Teil"></div>
+                <div class="form-group"><label>FK_INP_BELEGE</label><input type="number" id="update_fk_belege" placeholder="Neuer Beleg"></div>
+                <div class="form-group"><label>FK_STD_INSO_STATUS</label><input type="text" id="update_status" placeholder="Neuer Status"></div>
+                <div class="form-group"><label>FORECAST</label><input type="text" id="update_forecast" placeholder="Neuer Forecast"></div>
+                <div class="form-group"><label>COMM</label><textarea id="update_comm" rows="2"></textarea></div>
+                <div class="form-group"><label>DESCR</label><textarea id="update_descr" rows="2"></textarea></div>
+                <div class="form-group"><label>MODIFIED_BY</label><input type="text" id="update_modified_by" placeholder="Bearbeiter"></div>
+            </div>
+            <div class="form-actions"><button class="btn btn-warning" id="updateBtn">🔄 Update</button><button class="btn" id="clearUpdateBtn">🧹 Leeren</button></div>
+        </div>
+
+        <!-- DELETE Form -->
+        <div class="crud-form">
+            <h3 style="margin-bottom: 1rem;">🗑️ Relation löschen</h3>
+            <div class="form-grid">
+                <div class="form-group"><label>PK_REL (ID) *</label><input type="number" id="delete_id" placeholder="Primärschlüssel"></div>
+            </div>
+            <div class="form-actions"><button class="btn btn-danger" id="deleteBtn">❌ Löschen</button></div>
+        </div>
+
+        <!-- Current Relations Table (CRUD Tab) -->
+        <div class="detail-panel">
+            <div class="detail-title"><span>📋 Vorhandene Relationen (Übersicht)</span><span class="badge" id="relationsCount">0</span></div>
+            <div class="crud-table-wrapper">
+                <table style="min-width: 1000px;">
+                    <thead><tr><th>PK_REL</th><th>Mandant</th><th>Teil</th><th>Beleg</th><th>Status</th><th>FORECAST</th><th>rel_comm</th><th>COMM</th><th>Aktionen</th></tr></thead>
+                    <tbody id="relationsTableBody"><tr><td colspan="9">Keine Daten geladen</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">⚡ Zwei-Ebenen-Gruppierung: FK_STD_INSO_TEILE → rel_comm | Diagramme zeigen BRUTTO_BETRAG Summen | CRUD mit API (localhost:5000)</div>
+</div>
+
+<script>
+    (function(){
+        let cachedData = [];
+        let expandedLevel1 = new Set();
+        let expandedLevel2 = new Map();
+        
+        const API_BASE = 'http://localhost:5000';
+        const VIEW_API = `${API_BASE}/schuldnerberatung`;
+        const INSERT_API = `${API_BASE}/schuldnerberatung-rel/insert`;
+        const UPDATE_API = `${API_BASE}/schuldnerberatung-rel/update`;
+        const DELETE_API = `${API_BASE}/schuldnerberatung-rel/delete`;
+
+        function escapeHtml(str){ if(!str) return ''; return String(str).replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+        function showMessage(msg, isErr=false, dur=5000){ const div = document.getElementById('messageArea'); div.innerHTML = `<div class="${isErr?'error-message':'success-message'}">${msg}</div>`; setTimeout(()=>{if(div.innerHTML.includes(msg)) div.innerHTML='';}, dur);}
+        
+        function buildGroupStructure(data){
+            const level1Map = new Map();
+            data.forEach(item => {
+                const l1Key = item.FK_STD_INSO_TEILE ?? 'NULL';
+                const l2Key = item.rel_comm ?? '— (kein Kommentar)';
+                const brutto = parseFloat(item.BRUTTO_BETRAG) || 0;
+                if(!level1Map.has(l1Key)){
+                    level1Map.set(l1Key, { id: l1Key, name: item.SCHULDNERBERATUNG_TEIL || 'Unbekannt', subMap: new Map(), totalBrutto: 0, itemCount: 0, forecastSum: 0 });
+                }
+                const grp = level1Map.get(l1Key);
+                grp.totalBrutto += brutto;
+                grp.itemCount++;
+                if(item.FORECAST && !isNaN(parseFloat(item.FORECAST))) grp.forecastSum += parseFloat(item.FORECAST);
+                if(!grp.subMap.has(l2Key)) grp.subMap.set(l2Key, { id: l2Key, items: [], totalBrutto: 0, count:0, forecastSum:0 });
+                const sub = grp.subMap.get(l2Key);
+                sub.items.push(item);
+                sub.totalBrutto += brutto;
+                sub.count++;
+                if(item.FORECAST && !isNaN(parseFloat(item.FORECAST))) sub.forecastSum += parseFloat(item.FORECAST);
+            });
+            const level1Array = Array.from(level1Map.values()).sort((a,b)=> (a.id==='NULL'?1:0)-(b.id==='NULL'?1:0) || String(a.id).localeCompare(String(b.id)));
+            level1Array.forEach(g => { g.subGroups = Array.from(g.subMap.values()).sort((a,b)=> (a.id==='— (kein Kommentar)'?1:0)-(b.id==='— (kein Kommentar)'?1:0) || String(a.id).localeCompare(String(b.id))); });
+            return { level1Groups: level1Array, totalLevel2: level1Array.reduce((acc,g)=> acc+g.subGroups.length,0) };
+        }
+        
+        // ---------- TABLE RENDER ----------
+        function renderTable(){
+            if(!cachedData.length){ document.getElementById('tableBody').innerHTML = '<tr class="empty-row"><td colspan="13">📭 Keine Daten</td></tr>'; return; }
+            const { level1Groups } = buildGroupStructure(cachedData);
+            const totalBrutto = level1Groups.reduce((s,g)=> s+g.totalBrutto,0);
+            document.getElementById('totalBruttoBadge').innerHTML = `💰 BRUTTO Gesamt: ${totalBrutto.toFixed(2)} €`;
+            let html = '';
+            for(const l1 of level1Groups){
+                const l1Id = String(l1.id);
+                const isExpanded = expandedLevel1.has(l1Id);
+                const l1Display = l1.id === 'NULL' ? '— (ohne Gruppe)' : l1.id;
+                const avgForecast = l1.forecastSum && l1.itemCount ? (l1.forecastSum / l1.itemCount).toFixed(2) : '—';
+                html += `<tr class="group-row-level1 ${isExpanded?'expanded':''}" data-level1-id="${escapeHtml(l1Id)}">
+                    <td colspan="13">
+                        <span class="group-toggle ${isExpanded?'expanded':''}">${isExpanded?'▼':'▶'}</span>
+                        <span class="teile-badge">TEILE</span>
+                        <strong>FK_STD_INSO_TEILE: ${escapeHtml(l1Display)} (${escapeHtml(l1.name)})</strong>
+                        <span class="badge badge-group">${l1.itemCount} Einträge</span>
+                        <span class="badge badge-brutto">💰 Brutto-Summe: ${l1.totalBrutto.toFixed(2)} €</span>
+                        <span class="badge">Ø Forecast: ${avgForecast}</span>
+                        <span>📊 ${l1.subGroups.length} Untergruppen</span>
+                    </td>
+                </tr>`;
+                if(isExpanded){
+                    const l2ExpandedSet = expandedLevel2.get(l1Id) || new Set();
+                    for(const sub of l1.subGroups){
+                        const subId = String(sub.id);
+                        const isSubExp = l2ExpandedSet.has(subId);
+                        const subAvg = sub.forecastSum && sub.count ? (sub.forecastSum/sub.count).toFixed(2) : '—';
+                        html += `<tr class="group-row-level2 ${isSubExp?'expanded':''}" data-level1-id="${escapeHtml(l1Id)}" data-level2-id="${escapeHtml(subId)}">
+                            <td colspan="13">
+                                <span class="level-indent">↳</span><span class="group-toggle level2-toggle ${isSubExp?'expanded':''}">${isSubExp?'▼':'▶'}</span>
+                                <strong>📝 rel_comm: “${escapeHtml(sub.id.length>45?sub.id.substring(0,42)+'…':sub.id)}”</strong>
+                                <span class="badge badge-group-level2">${sub.count} Zeilen</span>
+                                <span class="badge badge-brutto">💰 Brutto-Summe: ${sub.totalBrutto.toFixed(2)} €</span>
+                                <span class="badge">Ø Forecast: ${subAvg}</span>
+                            </td>
+                        </tr>`;
+                        if(isSubExp){
+                            for(const item of sub.items){
+                                const pk = item.PK_REL_INSO_SCHULDNERBERATUNG_TEIL_INP_BELEGE_ALL;
+                                const bruttoVal = (item.BRUTTO_BETRAG ? parseFloat(item.BRUTTO_BETRAG).toFixed(2) : '0.00');
+                                html += `<tr data-pk="${escapeHtml(pk)}" style="cursor:pointer;">
+                                    <td class="indent-2"></td>
+                                    <td class="pk-highlight">${escapeHtml(pk??'—')}</td>
+                                    <td>${escapeHtml(item.PROJEKT_BEZEICHNUNG || item.PROJEKT || '—')}</td>
+                                    <td>${escapeHtml(item.SCHULDNERBERATUNG_TEIL ?? '—')}</td>
+                                    <td>${escapeHtml(item.FK_INSO_SCHULDNERBERATUNG_TEIL ?? '—')}</td>
+                                    <td>${escapeHtml(item.FK_MDT_MANDANT ?? '—')}</td>
+                                    <td><span class="badge" style="background:#e0e7ff;">${escapeHtml((item.rel_comm||'—').substring(0,30))}</span></td>
+                                    <td>${escapeHtml(item.FK_INP_BELEGE_ALL ?? '—')}</td>
+                                    <td class="forecast-value">${bruttoVal} €</td>
+                                    <td><span class="badge" style="background:#e0f2e2;">${escapeHtml(item.FK_STD_INSO_STATUS ?? '—')}</span></td>
+                                    <td>${escapeHtml(item.FORECAST ?? '—')}</td>
+                                    <td>${escapeHtml(item.COMM ? item.COMM.substring(0,15) : '—')}</td>
+                                    <td><button class="btn btn-sm btn-warning inline-update" data-pk="${escapeHtml(pk)}">✏️</button> <button class="btn btn-sm btn-danger inline-delete" data-pk="${escapeHtml(pk)}">🗑️</button></td>
+                                </tr>`;
+                            }
+                        }
+                    }
+                }
+            }
+            document.getElementById('tableBody').innerHTML = html;
+            attachTableEvents();
+        }
+        
+        function attachTableEvents(){
+            document.querySelectorAll('.group-row-level1').forEach(r=>{ r.addEventListener('click',(e)=>{ e.stopPropagation(); const id = r.dataset.level1Id; toggleLevel1(id); }); });
+            document.querySelectorAll('.group-row-level2').forEach(r=>{ r.addEventListener('click',(e)=>{ e.stopPropagation(); toggleLevel2(r.dataset.level1Id, r.dataset.level2Id); }); });
+            document.querySelectorAll('tr[data-pk]').forEach(row=>{
+                row.addEventListener('click',(e)=>{ if(e.target.closest('.btn')) return; const pk = row.dataset.pk; const item = cachedData.find(i=>String(i.PK_REL_INSO_SCHULDNERBERATUNG_TEIL_INP_BELEGE_ALL)===pk); if(item) showDetail(item); });
+            });
+            document.querySelectorAll('.inline-update').forEach(btn=>{ btn.addEventListener('click',(e)=>{ e.stopPropagation(); fillUpdateFormInCRUD(btn.dataset.pk); document.querySelector('[data-tab="crud"]').click(); }); });
+            document.querySelectorAll('.inline-delete').forEach(btn=>{ btn.addEventListener('click',(e)=>{ e.stopPropagation(); fillDeleteFormInCRUD(btn.dataset.pk); document.querySelector('[data-tab="crud"]').click(); }); });
+        }
+        
+        function toggleLevel1(id){ if(expandedLevel1.has(id)) expandedLevel1.delete(id); else expandedLevel1.add(id); renderTable(); updateStats(); }
+        function toggleLevel2(l1Id, l2Id){ if(!expandedLevel2.has(l1Id)) expandedLevel2.set(l1Id, new Set()); const set = expandedLevel2.get(l1Id); if(set.has(l2Id)) set.delete(l2Id); else set.add(l2Id); renderTable(); updateStats(); }
+        function expandAllTable(){ if(!cachedData.length) return; const {level1Groups}=buildGroupStructure(cachedData); level1Groups.forEach(g=>{ expandedLevel1.add(String(g.id)); const subSet = new Set(); g.subGroups.forEach(sg=> subSet.add(String(sg.id))); expandedLevel2.set(String(g.id), subSet); }); renderTable(); }
+        function collapseAllTable(){ expandedLevel1.clear(); expandedLevel2.clear(); renderTable(); }
+        function expandLevel1OnlyTable(){ if(!cachedData.length) return; const {level1Groups}=buildGroupStructure(cachedData); level1Groups.forEach(g=> expandedLevel1.add(String(g.id))); expandedLevel2.clear(); renderTable(); }
+        function showDetail(item){
+            const entries = Object.entries(item).filter(([_,v])=> v!==null);
+            document.getElementById('detailContent').innerHTML = entries.map(([k,v])=>`<div class="key-val-item"><span class="key">${escapeHtml(k)}</span><span class="val">${escapeHtml(String(v).substring(0,70))}</span></div>`).join('');
+            document.getElementById('detailRowCount').innerText = `${entries.length} Felder`;
+        }
+        function updateStats(){
+            if(!cachedData.length){ document.getElementById('statsContainer').innerHTML = `<div class="stat-card"><div class="stat-value">0</div></div>`; return; }
+            const { level1Groups, totalLevel2 } = buildGroupStructure(cachedData);
+            const totalBrutto = level1Groups.reduce((s,g)=> s+g.totalBrutto,0);
+            document.getElementById('statsContainer').innerHTML = `<div class="stat-card"><div class="stat-label">Einträge</div><div class="stat-value">${cachedData.length}</div></div><div class="stat-card"><div class="stat-label">FK_TEILE Gruppen</div><div class="stat-value">${level1Groups.length}</div></div><div class="stat-card"><div class="stat-label">rel_comm Gruppen</div><div class="stat-value">${totalLevel2}</div></div><div class="stat-card"><div class="stat-label">BRUTTO Gesamt</div><div class="stat-value">${totalBrutto.toFixed(2)} €</div></div>`;
+        }
+        
+        // ---------- DIAGRAMS ----------
+        function renderDiagrams(){
+            if(!cachedData.length){ document.getElementById('diagramsContainer').innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:3rem;">📭 Keine Daten</div>'; return; }
+            const { level1Groups } = buildGroupStructure(cachedData);
+            const totalOverall = level1Groups.reduce((s,g)=> s+g.totalBrutto,0);
+            document.getElementById('diagramStatsContainer').innerHTML = `<div class="stat-card"><div class="stat-label">Gruppen</div><div class="stat-value">${level1Groups.length}</div></div><div class="stat-card"><div class="stat-label">Gesamt BRUTTO</div><div class="stat-value">${totalOverall.toFixed(2)} €</div></div><div class="stat-card"><div class="stat-label">Datensätze</div><div class="stat-value">${cachedData.length}</div></div>`;
+            let diagramsHtml = '';
+            for(const group of level1Groups){
+                const groupTitle = group.id === 'NULL' ? 'Ohne Gruppe (NULL)' : `${group.id} · ${group.name}`;
+                if(group.subGroups.length === 0){
+                    diagramsHtml += `<div class="diagram-card"><div class="diagram-header"><h3>📁 ${escapeHtml(groupTitle)}</h3><span class="badge">keine Subgruppen</span></div><div class="diagram-body"><div class="no-subgroups">Keine rel_comm Einträge</div></div></div>`;
+                    continue;
+                }
+                const maxBrutto = Math.max(...group.subGroups.map(sg => sg.totalBrutto), 0.01);
+                const bars = group.subGroups.map(sub => {
+                    const percent = maxBrutto > 0 ? (sub.totalBrutto / maxBrutto) * 100 : 0;
+                    const label = sub.id.length > 45 ? sub.id.substring(0,42)+'…' : sub.id;
+                    return `<div class="bar-item"><div class="bar-label" title="${escapeHtml(sub.id)}">${escapeHtml(label)}</div><div class="bar-bg"><div class="bar-fill" style="width: ${percent}%;">${percent>=15 ? Math.round(percent)+'%' : ''}</div></div><div class="bar-value">${sub.totalBrutto.toFixed(2)} €</div></div>`;
+                }).join('');
+                diagramsHtml += `<div class="diagram-card"><div class="diagram-header"><h3>📊 FK_STD_INSO_TEILE: ${escapeHtml(groupTitle)}</h3><span class="badge badge-brutto">Summe: ${group.totalBrutto.toFixed(2)} €</span></div><div class="diagram-body">${bars}<div class="diagram-summary"><span>📋 ${group.subGroups.length} Gruppen</span><span>📈 Max: ${maxBrutto.toFixed(2)} €</span><span>🧾 ${group.itemCount} Zeilen</span></div></div></div>`;
+            }
+            document.getElementById('diagramsContainer').innerHTML = diagramsHtml;
+        }
+        
+        // ---------- CRUD Logic ----------
+        async function refreshAll(){
+            await loadData();
+            renderTable();
+            updateStats();
+            renderDiagrams();
+            renderRelationsTable();
+        }
+        
+        async function insertRelation(){
+            const payload = {
+                FK_MDT_MANDANT: parseInt(document.getElementById('insert_fk_mandant').value),
+                FK_INSO_SCHULDNERBERATUNG_TEIL: parseInt(document.getElementById('insert_fk_teil').value),
+                FK_INP_BELEGE_ALL: parseInt(document.getElementById('insert_fk_belege').value),
+                FK_STD_INSO_STATUS: document.getElementById('insert_status').value,
+                FORECAST: document.getElementById('insert_forecast').value,
+                COMM: document.getElementById('insert_comm').value,
+                DESCR: document.getElementById('insert_descr').value,
+                CREATED_BY: document.getElementById('insert_created_by').value,
+                MODIFIED_BY: document.getElementById('insert_modified_by').value
+            };
+            if(isNaN(payload.FK_MDT_MANDANT) || isNaN(payload.FK_INSO_SCHULDNERBERATUNG_TEIL) || isNaN(payload.FK_INP_BELEGE_ALL)){
+                showMessage('Bitte alle Pflichtfelder (Mandant, Teil, Beleg) ausfüllen', true); return;
+            }
+            try{
+                const resp = await fetch(INSERT_API, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+                if(!resp.ok) throw new Error(await resp.text());
+                showMessage('✅ Insert erfolgreich');
+                clearInsertForm();
+                await refreshAll();
+            } catch(e){ showMessage(`Fehler: ${e.message}`, true); }
+        }
+        
+        async function updateRelation(){
+            const id = document.getElementById('update_id').value;
+            if(!id){ showMessage('PK_REL eingeben', true); return; }
+            const payload = {};
+            if(document.getElementById('update_fk_mandant').value) payload.FK_MDT_MANDANT = parseInt(document.getElementById('update_fk_mandant').value);
+            if(document.getElementById('update_fk_teil').value) payload.FK_INSO_SCHULDNERBERATUNG_TEIL = parseInt(document.getElementById('update_fk_teil').value);
+            if(document.getElementById('update_fk_belege').value) payload.FK_INP_BELEGE_ALL = parseInt(document.getElementById('update_fk_belege').value);
+            if(document.getElementById('update_status').value) payload.FK_STD_INSO_STATUS = document.getElementById('update_status').value;
+            if(document.getElementById('update_forecast').value) payload.FORECAST = document.getElementById('update_forecast').value;
+            if(document.getElementById('update_comm').value) payload.COMM = document.getElementById('update_comm').value;
+            if(document.getElementById('update_descr').value) payload.DESCR = document.getElementById('update_descr').value;
+            if(document.getElementById('update_modified_by').value) payload.MODIFIED_BY = document.getElementById('update_modified_by').value;
+            if(Object.keys(payload).length === 0){ showMessage('Mindestens ein Feld zum Update angeben', true); return; }
+            try{
+                const resp = await fetch(`${UPDATE_API}/${id}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+                if(!resp.ok) throw new Error();
+                showMessage(`✅ Update PK ${id} erfolgreich`);
+                clearUpdateForm();
+                await refreshAll();
+            } catch(e){ showMessage('Update fehlgeschlagen', true); }
+        }
+        
+        async function deleteRelation(){
+            const id = document.getElementById('delete_id').value;
+            if(!id){ showMessage('PK_REL zum Löschen eingeben', true); return; }
+            if(!confirm(`Relation mit ID ${id} unwiderruflich löschen?`)) return;
+            try{
+                const resp = await fetch(`${DELETE_API}/${id}`, { method: 'DELETE' });
+                if(!resp.ok) throw new Error();
+                showMessage(`✅ Gelöscht (ID ${id})`);
+                document.getElementById('delete_id').value = '';
+                await refreshAll();
+            } catch(e){ showMessage('Löschen fehlgeschlagen', true); }
+        }
+        
+        function renderRelationsTable(){
+            const tbody = document.getElementById('relationsTableBody');
+            if(!cachedData.length){ tbody.innerHTML='<tr><td colspan="9">Keine Daten</td></tr>'; document.getElementById('relationsCount').innerText='0'; return; }
+            const unique = new Map();
+            cachedData.forEach(d=>{ const pk = d.PK_REL_INSO_SCHULDNERBERATUNG_TEIL_INP_BELEGE_ALL; if(pk && !unique.has(pk)) unique.set(pk,d); });
+            document.getElementById('relationsCount').innerText = unique.size;
+            const rows = Array.from(unique.values()).map(d=>`<tr><td class="pk-highlight">${d.PK_REL_INSO_SCHULDNERBERATUNG_TEIL_INP_BELEGE_ALL}</td><td>${d.FK_MDT_MANDANT??''}</td><td>${d.FK_INSO_SCHULDNERBERATUNG_TEIL??''}</td><td>${d.FK_INP_BELEGE_ALL??''}</td><td><span class="badge-status">${d.FK_STD_INSO_STATUS||'—'}</span></td><td>${d.FORECAST||'—'}</td><td>${(d.rel_comm||'—').substring(0,25)}</td><td>${(d.COMM||'').substring(0,20)}</td><td><button class="btn btn-sm btn-warning" onclick="window.fillUpdateForm(${d.PK_REL_INSO_SCHULDNERBERATUNG_TEIL_INP_BELEGE_ALL})">✏️</button> <button class="btn btn-sm btn-danger" onclick="window.fillDeleteForm(${d.PK_REL_INSO_SCHULDNERBERATUNG_TEIL_INP_BELEGE_ALL})">🗑️</button></td></tr>`).join('');
+            tbody.innerHTML = rows;
+        }
+        
+        window.fillUpdateForm = (pk) => { fillUpdateFormInCRUD(pk); document.querySelector('[data-tab="crud"]').click(); };
+        window.fillDeleteForm = (pk) => { fillDeleteFormInCRUD(pk); document.querySelector('[data-tab="crud"]').click(); };
+        function fillUpdateFormInCRUD(pk){
+            const item = cachedData.find(i=>String(i.PK_REL_INSO_SCHULDNERBERATUNG_TEIL_INP_BELEGE_ALL)===String(pk));
+            if(item){
+                document.getElementById('update_id').value = pk;
+                document.getElementById('update_fk_mandant').value = item.FK_MDT_MANDANT || '';
+                document.getElementById('update_fk_teil').value = item.FK_INSO_SCHULDNERBERATUNG_TEIL || '';
+                document.getElementById('update_fk_belege').value = item.FK_INP_BELEGE_ALL || '';
+                document.getElementById('update_status').value = item.FK_STD_INSO_STATUS || '';
+                document.getElementById('update_forecast').value = item.FORECAST || '';
+                document.getElementById('update_comm').value = item.COMM || '';
+                document.getElementById('update_descr').value = item.DESCR || '';
+                document.getElementById('update_modified_by').value = item.MODIFIED_BY || '';
+                showMessage(`Update-Formular für PK ${pk} befüllt`, false, 2000);
+            }
+        }
+        function fillDeleteFormInCRUD(pk){ document.getElementById('delete_id').value = pk; showMessage(`Lösch-ID ${pk} gesetzt`, false, 1500); }
+        
+        function clearInsertForm(){ document.querySelectorAll('#insertForm input, #insertForm textarea').forEach(i=>i.value=''); }
+        function clearUpdateForm(){ document.getElementById('update_id').value=''; document.getElementById('update_fk_mandant').value=''; document.getElementById('update_fk_teil').value=''; document.getElementById('update_fk_belege').value=''; document.getElementById('update_status').value=''; document.getElementById('update_forecast').value=''; document.getElementById('update_comm').value=''; document.getElementById('update_descr').value=''; document.getElementById('update_modified_by').value=''; }
+        
+        async function loadData(){
+            try{
+                const resp = await fetch(VIEW_API, { signal: AbortSignal.timeout? AbortSignal.timeout(100000): undefined });
+                if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const json = await resp.json();
+                cachedData = Array.isArray(json) ? json : (json.data || []);
+                expandedLevel1.clear(); expandedLevel2.clear();
+                renderTable(); updateStats(); renderDiagrams(); renderRelationsTable();
+                document.getElementById('statusDot').classList.add('connected'); document.getElementById('statusText').innerText = 'verbunden';
+                showMessage(`✅ ${cachedData.length} Datensätze geladen`);
+            } catch(e){ showMessage(`Fehler: ${e.message}`, true); document.getElementById('statusDot').classList.add('error'); document.getElementById('statusText').innerText = 'fehlgeschlagen'; }
+        }
+        
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+                if(tab.dataset.tab === 'diagrams' && cachedData.length) renderDiagrams();
+                if(tab.dataset.tab === 'table' && cachedData.length) renderTable();
+                if(tab.dataset.tab === 'crud' && cachedData.length) renderRelationsTable();
+            });
+        });
+        
+        document.getElementById('refreshBtn').addEventListener('click', loadData);
+        document.getElementById('expandAllTableBtn').addEventListener('click', expandAllTable);
+        document.getElementById('collapseAllTableBtn').addEventListener('click', collapseAllTable);
+        document.getElementById('expandLevel1TableBtn').addEventListener('click', expandLevel1OnlyTable);
+        document.getElementById('insertBtn').addEventListener('click', insertRelation);
+        document.getElementById('clearInsertBtn').addEventListener('click', clearInsertForm);
+        document.getElementById('updateBtn').addEventListener('click', updateRelation);
+        document.getElementById('clearUpdateBtn').addEventListener('click', clearUpdateForm);
+        document.getElementById('deleteBtn').addEventListener('click', deleteRelation);
+        
+        loadData();
+        setInterval(() => { fetch(VIEW_API, {method:'HEAD'}).catch(()=>{}); }, 30000);
+    })();
+</script>
+</body>
+</html>

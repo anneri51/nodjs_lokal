@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Schuldnerberatung · Zwei-Ebenen-Gruppierung · FK_STD_INSO_TEILE → rel_comm · Statistiken</title>
+    <!-- Chart.js CDN für moderne Diagramme -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Inter', 'Segoe UI', Roboto, system-ui, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: #f0f4f8;
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+        }
+        .dashboard {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .title-section h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #0b2b4f, #1b4a7a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .title-section p {
+            color: #4a627a;
+            font-size: 0.95rem;
+            margin-top: 0.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .endpoint-badge {
+            background: #e6eefc;
+            padding: 0.3rem 1rem;
+            border-radius: 30px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: #0b2b4f;
+            border: 1px solid #b9cfec;
+        }
+        .controls {
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            background: white;
+            border: 1px solid #cbd5e1;
+            padding: 0.6rem 1.4rem;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: #1e3a5f;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.15s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .btn-primary {
+            background: #0b2b4f;
+            border-color: #0b2b4f;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #143b66;
+        }
+        .btn-success {
+            background: #0f5c3a;
+            border-color: #0f5c3a;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #1a734a;
+        }
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: white;
+            padding: 0.3rem 1rem 0.3rem 0.8rem;
+            border-radius: 40px;
+            border: 1px solid #dde3e9;
+        }
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #94a3b8;
+        }
+        .status-dot.connected {
+            background: #22c55e;
+            box-shadow: 0 0 0 3px rgba(34,197,94,0.2);
+        }
+        .status-dot.error {
+            background: #ef4444;
+        }
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #dde3e9;
+            padding-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .tab {
+            padding: 0.6rem 1.8rem;
+            border-radius: 40px 40px 0 0;
+            background: transparent;
+            border: none;
+            font-weight: 600;
+            color: #5f7694;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-size: 0.95rem;
+        }
+        .tab.active {
+            background: #0b2b4f;
+            color: white;
+        }
+        .tab:not(.active):hover {
+            background: #e2eaf5;
+            color: #0b2b4f;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.2rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 24px;
+            padding: 1.3rem 1.5rem;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.02);
+            border: 1px solid #e9eef2;
+        }
+        .stat-label {
+            color: #64748b;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.3rem;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #0b2b4f;
+        }
+        .chart-container {
+            background: white;
+            border-radius: 28px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 12px 30px -8px rgba(0,34,64,0.08);
+            border: 1px solid #e2e8f0;
+        }
+        .chart-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #0b2b4f;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        canvas {
+            max-height: 450px;
+            width: 100%;
+        }
+        .stats-insight {
+            background: #f8fafc;
+            border-radius: 20px;
+            padding: 1rem 1.5rem;
+            border-left: 5px solid #0b2b4f;
+            font-size: 0.9rem;
+            color: #1e3a5f;
+        }
+        .table-container {
+            background: white;
+            border-radius: 28px;
+            border: 1px solid #e2e8f0;
+            overflow: auto;
+            box-shadow: 0 12px 30px -8px rgba(0,34,64,0.08);
+            margin-bottom: 2rem;
+            max-height: 700px;
+            overflow-y: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1800px;
+        }
+        th {
+            text-align: left;
+            padding: 1rem 1.2rem;
+            background: #f8fafd;
+            color: #1e3a5f;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            border-bottom: 1px solid #dde3e9;
+            position: sticky;
+            top: 0;
+        }
+        td {
+            padding: 0.9rem 1.2rem;
+            border-bottom: 1px solid #ecf1f7;
+            color: #1e2f40;
+            font-size: 0.9rem;
+        }
+        .badge {
+            background: #e6f0fc;
+            color: #0b2b4f;
+            padding: 0.2rem 0.8rem;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+        .badge-status {
+            background: #e0f2e2;
+            color: #166534;
+        }
+        .badge-group {
+            background: #0b2b4f;
+            color: white;
+        }
+        .badge-group-level2 {
+            background: #5f7694;
+            color: white;
+        }
+        .forecast-value {
+            font-weight: 600;
+            color: #92400e;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 0.3rem;
+            flex-wrap: wrap;
+        }
+        .btn-sm {
+            padding: 0.2rem 0.6rem;
+            font-size: 0.75rem;
+        }
+        .btn-warning {
+            background: #b6560c;
+            border-color: #b6560c;
+            color: white;
+        }
+        .btn-danger {
+            background: #b91c1c;
+            border-color: #b91c1c;
+            color: white;
+        }
+        .btn-warning.btn-sm:hover, .btn-danger.btn-sm:hover {
+            filter: brightness(0.9);
+            transform: translateY(-1px);
+        }
+        .footer {
+            text-align: center;
+            color: #6f85a2;
+            font-size: 0.8rem;
+            margin-top: 2rem;
+        }
+        .message-area {
+            margin-bottom: 1.5rem;
+        }
+        .success-message {
+            background: #e2f7e7;
+            border: 1px solid #a0d9b6;
+            color: #0f5c3a;
+            padding: 0.8rem 1.5rem;
+            border-radius: 40px;
+        }
+        .error-message {
+            background: #fee9e7;
+            border: 1px solid #f5b5ad;
+            color: #aa302a;
+            padding: 0.8rem 1.5rem;
+            border-radius: 40px;
+        }
+        .pk-highlight {
+            font-weight: 600;
+            color: #0b2b4f;
+        }
+        .indent-2 {
+            padding-left: 2rem;
+        }
+        .group-row-level1 {
+            background: #e8f0fe;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .group-row-level2 {
+            background: #f0f4fa;
+            cursor: pointer;
+        }
+        .group-toggle {
+            font-size: 1.3rem;
+            margin-right: 0.8rem;
+            display: inline-block;
+            width: 24px;
+        }
+        .level-indent {
+            display: inline-block;
+            width: 20px;
+            margin-right: 0.5rem;
+            color: #8a9bb5;
+        }
+        .teile-badge {
+            background: #0b2b4f;
+            color: white;
+            font-size: 0.7rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            margin-right: 0.5rem;
+        }
+        .rel-comm-badge {
+            background: #8b5cf6;
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+        }
+        .detail-panel {
+            background: white;
+            border-radius: 20px;
+            padding: 1.2rem 1.5rem;
+            border: 1px solid #e2e8f0;
+            margin-top: 1rem;
+        }
+        .key-val-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem 2rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .key-val-item {
+            display: flex;
+            gap: 0.5rem;
+            min-width: 250px;
+        }
+        .key {
+            color: #5f7694;
+            min-width: 120px;
+        }
+        .val {
+            font-weight: 500;
+            color: #0b2b4f;
+        }
+        .chart-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        @media (max-width: 1000px) {
+            .chart-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <div class="header">
+        <div class="title-section">
+            <h1>📊 Schuldnerberatung · Zwei-Ebenen-Gruppierung · Statistiken + Charts</h1>
+            <p><span class="endpoint-badge">http://localhost:5000</span><span>1. Ebene: FK_STD_INSO_TEILE · 2. Ebene: rel_comm · Inline Aktionen & Diagramme</span></p>
+        </div>
+        <div class="controls">
+            <div class="status-indicator"><span class="status-dot" id="statusDot"></span><span id="statusText">Verbindung prüfen</span></div>
+            <button class="btn" id="refreshBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6" stroke="currentColor"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Aktualisieren</button>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab" data-tab="view">📂 Zwei-Ebenen-Gruppierung</button>
+        <button class="tab" data-tab="crud">⚙️ CRUD Operationen</button>
+        <button class="tab active" data-tab="stats">📈 Statistiken & Charts</button>
+    </div>
+
+    <div id="messageArea" class="message-area"></div>
+
+    <!-- TAB 1: Grouped View (wie original, minimiert) -->
+    <div id="tab-view" class="tab-content">
+        <div class="stats-grid" id="statsContainer"></div>
+        <div class="group-selector" style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+            <span class="badge" id="groupCountBadge">0 Gruppen</span>
+            <span class="badge badge-group-level2" id="subGroupCountBadge">0 Subgruppen</span>
+            <button class="expand-all-btn" id="expandAllBtn" style="background:#e2eaf5; border:1px solid #b9cfec; padding:0.4rem 1.2rem; border-radius:30px;">▼▼ Alle ausklappen</button>
+            <button class="expand-all-btn" id="collapseAllBtn" style="background:#e2eaf5; border:1px solid #b9cfec; padding:0.4rem 1.2rem; border-radius:30px;">▶▶ Alle einklappen</button>
+            <span class="badge badge-forecast" id="totalForecastBadge">FORECAST Summe: 0</span>
+        </div>
+        <div class="table-container"><table id="dataTable"><thead><tr><th>Gruppe (1. Ebene)</th><th>PK_REL</th><th>PK Beratung</th><th>Projekt</th><th>Teil Bez.</th><th>FK_INSO_TEIL</th><th>FK_MDT_MANDANT</th><th>rel_comm</th><th>FK_INP_BELEGE</th><th>Status</th><th>FORECAST</th><th>COMM</th><th>DESCR</th><th>Erstellt</th><th>Von</th><th>Geändert</th><th>Durch</th><th>Aktionen</th></tr></thead><tbody id="tableBody"><tr class="empty-row"><td colspan="18">🔍 Daten laden ...</td></tr></tbody></table></div>
+        <div class="detail-panel"><div class="detail-title">🔎 Zeilen-Detail</div><div id="detailContent" class="key-val-list">Klicke auf Zeile</div></div>
+    </div>
+
+    <!-- TAB 2: CRUD (reduziert, aber funktional) -->
+    <div id="tab-crud" class="tab-content">
+        <div class="crud-form" style="background:white; border-radius:24px; padding:1.5rem; margin-bottom:1.5rem;"><h3>➕ Neue Relation anlegen</h3><div class="form-grid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1rem;"><div class="form-group"><label>FK_MDT_MANDANT *</label><input type="number" id="insert_fk_mandant"></div><div class="form-group"><label>FK_INSO_SCHULDNERBERATUNG_TEIL *</label><input type="number" id="insert_fk_teil"></div><div class="form-group"><label>FK_INP_BELEGE_ALL *</label><input type="number" id="insert_fk_belege"></div><div class="form-group"><label>FORECAST</label><input type="text" id="insert_forecast"></div><div class="form-group"><label>COMM</label><textarea id="insert_comm" rows="2"></textarea></div><div class="form-group"><label>DESCR</label><textarea id="insert_descr" rows="2"></textarea></div><div class="form-group"><label>CREATED_BY</label><input type="text" id="insert_created_by"></div></div><div class="form-actions" style="display:flex; gap:0.8rem; margin-top:1rem;"><button class="btn btn-success" id="insertBtn">📝 Insert</button><button class="btn" id="clearInsertBtn">🧹 Leeren</button></div></div>
+        <div class="crud-form"><h3>✏️ Aktualisieren</h3><div class="form-grid"><div class="form-group"><label>PK_REL *</label><input type="number" id="update_id"></div><div class="form-group"><label>FK_MDT_MANDANT</label><input type="number" id="update_fk_mandant"></div><div class="form-group"><label>FK_INSO_TEIL</label><input type="number" id="update_fk_teil"></div><div class="form-group"><label>FORECAST</label><input type="text" id="update_forecast"></div><div class="form-group"><label>COMM</label><textarea id="update_comm" rows="2"></textarea></div><div class="form-group"><label>MODIFIED_BY</label><input type="text" id="update_modified_by"></div></div><div class="form-actions"><button class="btn btn-warning" id="updateBtn">🔄 Update</button><button class="btn" id="clearUpdateBtn">Leeren</button></div></div>
+        <div class="crud-form"><h3>🗑️ Löschen</h3><div class="form-group"><label>PK_REL *</label><input type="number" id="delete_id"></div><button class="btn btn-danger" id="deleteBtn">❌ Delete</button></div>
+        <div class="detail-panel"><div class="detail-title">Aktuelle Relationen</div><div style="max-height:300px; overflow:auto;"><table style="min-width:1000px;"><thead><tr><th>PK_REL</th><th>Mandant</th><th>Teil</th><th>Belege</th><th>FORECAST</th><th>rel_comm</th><th>Aktionen</th></tr></thead><tbody id="relationsTableBody"></tbody></table></div></div>
+    </div>
+
+    <!-- TAB 3: Statistiken & Charts (NEU) -->
+    <div id="tab-stats" class="tab-content active">
+        <div class="stats-grid" id="statsOverviewStats">
+            <div class="stat-card"><div class="stat-label">Gesamt Betrag (BRUTTO)</div><div class="stat-value" id="totalBruttoValue">0,00 €</div><div class="stat-detail">Summe aller Einträge</div></div>
+            <div class="stat-card"><div class="stat-label">Durchschnitt Betrag</div><div class="stat-value" id="avgBruttoValue">0,00 €</div><div class="stat-detail">Ø pro Datensatz</div></div>
+            <div class="stat-card"><div class="stat-label">Max Betrag</div><div class="stat-value" id="maxBruttoValue">0,00 €</div><div class="stat-detail">Höchster Einzelwert</div></div>
+            <div class="stat-card"><div class="stat-label">Anzahl Datensätze</div><div class="stat-value" id="totalCountStats">0</div><div class="stat-detail">mit BRUTTO_BETRAG</div></div>
+        </div>
+
+        <div class="chart-row">
+            <div class="chart-container">
+                <div class="chart-title">📊 1. Alle Einträge nach Betrag (höchster → niedrigster)</div>
+                <canvas id="barChartBetrag" width="400" height="300" style="max-height:400px;"></canvas>
+                <div class="stats-insight" style="margin-top:1rem;">🔍 Die Top-10 Positionen mit den höchsten Bruttobeträgen – je länger der Balken, desto größer das Volumen.</div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">🥧 2. Betragssumme gruppiert nach FK_INSO_SCHULDNERBERATUNG_TEIL</div>
+                <canvas id="pieChartTeile" width="400" height="300" style="max-height:400px;"></canvas>
+                <div class="stats-insight" style="margin-top:1rem;">📌 Aufteilung der gesamten Bruttosumme pro Teil (FK_INSO_TEIL). Nicht zugewiesene werden als "Unbekannt" aggregiert.</div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-title">📈 Top 10 nach Bruttobetrag (Detailtabelle)</div>
+            <div style="overflow-x:auto;">
+                <table style="min-width:500px; width:100%;">
+                    <thead><tr><th>Rang</th><th>PK_REL</th><th>BRUTTO_BETRAG (€)</th><th>Projekt / Bezeichnung</th><th>FK_INSO_TEIL</th></tr></thead>
+                    <tbody id="top10BetragTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">⚡ Zwei-Ebenen-Gruppierung + Statistiken mit Chart.js · Brutto-Beträge im Fokus</div>
+</div>
+
+<script>
+    (function(){
+        // ==================== GLOBAL STATE ====================
+        let cachedData = null;
+        let barChart = null, pieChart = null;
+        const API_BASE = 'http://localhost:5000';
+        const VIEW_API = `${API_BASE}/schuldnerberatung`;
+
+        // DOM references
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const messageArea = document.getElementById('messageArea');
+        const tableBody = document.getElementById('tableBody');
+        const statsContainer = document.getElementById('statsContainer');
+        const groupCountBadge = document.getElementById('groupCountBadge');
+        const subGroupCountBadge = document.getElementById('subGroupCountBadge');
+        const totalForecastBadge = document.getElementById('totalForecastBadge');
+        const expandAllBtn = document.getElementById('expandAllBtn');
+        const collapseAllBtn = document.getElementById('collapseAllBtn');
+        const relationsTableBody = document.getElementById('relationsTableBody');
+
+        // expanded state (für grouped view)
+        let expandedLevel1Groups = new Set();
+        let expandedLevel2Groups = new Map();
+
+        // Hilfsfunktionen
+        function escapeHtml(str){ if(!str) return ''; return String(str).replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m; }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c){ return c; }); }
+        function formatDate(d){ if(!d) return '—'; try{ return new Date(d).toLocaleString('de-DE'); } catch(e){ return d; } }
+        function showMessage(msg, isError=false){ messageArea.innerHTML = `<div class="${isError?'error-message':'success-message'}">${msg}</div>`; setTimeout(()=>{ if(messageArea.innerHTML.includes(msg)) messageArea.innerHTML=''; }, 4000); }
+
+        // ============= DATEN LADEN =============
+        async function loadData(){
+            tableBody.innerHTML = `<tr class="empty-row"><td colspan="18">⏳ Lade Daten...</td></tr>`;
+            try{
+                const res = await fetch(VIEW_API);
+                if(!res.ok) throw new Error(`HTTP ${res.status}`);
+                const json = await res.json();
+                cachedData = Array.isArray(json) ? json : (json.data || []);
+                renderGroupedTable(cachedData);
+                updateStatsCards(cachedData);
+                renderRelationsTable(cachedData);
+                updateStatisticsTab(cachedData);     // NEU: Charts & Statistiken-Tab
+                statusDot.className = 'status-dot connected';
+                statusText.innerText = 'verbunden';
+                showMessage(`✅ ${cachedData.length} Datensätze geladen`);
+            } catch(err){
+                console.error(err);
+                tableBody.innerHTML = `<tr class="empty-row"><td colspan="18">❌ Fehler: ${err.message}</td></tr>`;
+                statusDot.className = 'status-dot error';
+                statusText.innerText = 'Fehler';
+                showMessage(err.message, true);
+            }
+        }
+
+        // Gruppierung (original Logik)
+        function groupDataByTwoLevels(data){
+            const level1Groups = {};
+            data.forEach(item => {
+                const l1 = item.FK_STD_INSO_TEILE ?? 'NULL';
+                const l2 = item.rel_comm || '— (kein Kommentar)';
+                if(!level1Groups[l1]) level1Groups[l1] = { id:l1, name: item.SCHULDNERBERATUNG_TEIL || 'Unbekannt', subGroups:{}, totalCount:0, totalForecastSum:0, totalBetragSum:0 };
+                if(!level1Groups[l1].subGroups[l2]) level1Groups[l1].subGroups[l2] = { id:l2, items:[], count:0, forecastSum:0, betragSum:0 };
+                const sub = level1Groups[l1].subGroups[l2];
+                sub.items.push(item); sub.count++; level1Groups[l1].totalCount++;
+                const f = parseFloat(item.FORECAST); if(!isNaN(f)) { sub.forecastSum+=f; level1Groups[l1].totalForecastSum+=f; }
+                const b = parseFloat(item.BRUTTO_BETRAG); if(!isNaN(b)) { sub.betragSum+=b; level1Groups[l1].totalBetragSum+=b; }
+            });
+            const level1Array = Object.values(level1Groups).sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+            level1Array.forEach(g => { g.subGroups = Object.values(g.subGroups).sort((a,b)=>String(a.id).localeCompare(String(b.id))); });
+            return { level1Groups: level1Array, totalLevel2Groups: level1Array.reduce((acc,g)=>acc+g.subGroups.length,0) };
+        }
+
+        function renderGroupedTable(data){
+            if(!data || !data.length){ tableBody.innerHTML = '<tr><td colspan="18">Keine Daten</td></tr>'; return; }
+            const { level1Groups, totalLevel2Groups } = groupDataByTwoLevels(data);
+            groupCountBadge.innerText = `${level1Groups.length} Gruppen (1. Ebene)`;
+            subGroupCountBadge.innerText = `${totalLevel2Groups} Subgruppen`;
+            let totalFore = data.reduce((s,i)=>{ let v=parseFloat(i.FORECAST); return s+(isNaN(v)?0:v); },0);
+            totalForecastBadge.innerText = `FORECAST Summe: ${totalFore.toFixed(2)}`;
+            let html='';
+            level1Groups.forEach(l1g => {
+                const l1Id = String(l1g.id);
+                const expandedL1 = expandedLevel1Groups.has(l1Id);
+                html += `<tr class="group-row-level1" data-level1-id="${escapeHtml(l1g.id)}"><td colspan="18"><span class="group-toggle">${expandedL1?'▼':'▶'}</span> <span class="teile-badge">TEILE</span> <strong>FK_STD_INSO_TEILE: ${escapeHtml(l1g.id==='NULL'?'—':l1g.id)} (${escapeHtml(l1g.name)})</strong> <span class="badge">${l1g.totalCount} Einträge</span></td></tr>`;
+                if(expandedL1){
+                    const expandedL2Set = expandedLevel2Groups.get(l1Id) || new Set();
+                    l1g.subGroups.forEach(sub => {
+                        const subId = String(sub.id);
+                        const expandedSub = expandedL2Set.has(subId);
+                        html += `<tr class="group-row-level2" data-level1-id="${escapeHtml(l1g.id)}" data-level2-id="${escapeHtml(sub.id)}"><td colspan="18"><span class="level-indent">↳</span><span class="group-toggle">${expandedSub?'▼':'▶'}</span> 📝 rel_comm: "${escapeHtml(sub.id.length>40?sub.id.substring(0,40)+'...':sub.id)}" <span class="badge badge-group-level2">${sub.count} Einträge</span></td></tr>`;
+                        if(expandedSub){
+                            sub.items.forEach(item => {
+                                const pk = item.PK_REL_INSO_SCHULDNERBERATUNG_TEIL_INP_BELEGE_ALL;
+                                html += `<tr data-pk="${escapeHtml(pk)}"><td class="indent-2"></td><td class="pk-highlight">${escapeHtml(pk)}</td><td>${escapeHtml(item.PK_INSO_SCHULDNERBERATUNG)}</td><td>${escapeHtml(item.PROJEKT_BEZEICHNUNG||'—')}</td><td>${escapeHtml(item.SCHULDNERBERATUNG_TEIL)}</td><td>${escapeHtml(item.FK_INSO_SCHULDNERBERATUNG_TEIL)}</td><td>${escapeHtml(item.FK_MDT_MANDANT)}</td><td><span class="badge">${escapeHtml(item.rel_comm||'—')}</span></td><td>${escapeHtml(item.FK_INP_BELEGE_ALL)}</td><td><span class="badge-status">${escapeHtml(item.FK_STD_INSO_STATUS||'—')}</span></td><td class="forecast-value">${escapeHtml(item.FORECAST||'—')}</td><td>${escapeHtml((item.COMM||'').substring(0,20))}</td><td>${escapeHtml((item.DESCR||'').substring(0,20))}</td><td>${formatDate(item.CREATED_AT)}</td><td>${escapeHtml(item.CREATED_BY)}</td><td>${formatDate(item.MODIFIED_AT)}</td><td>${escapeHtml(item.MODIFIED_BY)}</td><td><div class="action-buttons"><button class="btn btn-warning btn-sm inline-update" data-pk="${escapeHtml(pk)}">✏️</button><button class="btn btn-danger btn-sm inline-delete" data-pk="${escapeHtml(pk)}">🗑️</button></div></td></tr>`;
+                            });
+                        }
+                    });
+                }
+            });
+            tableBody.innerHTML = html;
+            attachGroupEvents(); attachInlineEvents(); attachRowDetailEvents();
+        }
+
+        function attachGroupEvents(){ document.querySelectorAll('.group-row-level1').forEach(r=>r.addEventListener('click',(e)=>{ e.stopPropagation(); const id=r.dataset.level1Id; if(expandedLevel1Groups.has(id)) expandedLevel1Groups.delete(id); else expandedLevel1Groups.add(id); renderGroupedTable(cachedData); })); document.querySelectorAll('.group-row-level2').forEach(r=>r.addEventListener('click',(e)=>{ e.stopPropagation(); const l1=r.dataset.level1Id, l2=r.dataset.level2Id; if(!expandedLevel2Groups.has(l1)) expandedLevel2Groups.set(l1,new Set()); const set=expandedLevel2Groups.get(l1); if(set.has(l2)) set.delete(l2); else set.add(l2); renderGroupedTable(cachedData); })); }
+        function attachInlineEvents(){ document.querySelectorAll('.inline-update').forEach(b=>b.addEventListener('click',(e)=>{ e.stopPropagation(); const pk=b.dataset.pk; const item=cachedData?.find(d=>String(d.PK_REL_INSO_SCHULDNERBERATUNG_TEIL_INP_BELEGE_ALL)===pk); if(item){ document.querySelector('[data-tab="crud"]').click(); document.getElementById('update_id').value=pk; document.getElementById('update_fk_mandant').value=item.FK_MDT_MANDANT||''; document.getElementById('update_fk_teil').value=item.FK_INSO_SCHULDNERBERATUNG_TEIL||''; document.getElementById('update_forecast').value=item.FORECAST||''; document.getElementById('update_comm').value=item.COMM||''; document.getElementById('update_modified_by').value=item.MODIFIED_BY||''; showMessage(`Update für PK ${pk} vorbereitet`); } })); document.querySelectorAll('.inline-delete').forEach(b=>b.addEventListener('click',(e)=>{ e.stopPropagation(); const pk=b.dataset.pk; if(confirm(`Löschen PK ${pk}?`)){ document.querySelector('[data-tab="crud"]').click(); document.getElementById('delete_id').value=pk; deleteRelation(); } })); }
+        function attachRowDetailEvents(){ document.querySelectorAll('tr[data-pk]').forEach(r=>r.addEventListener('click',(e)=>{ if(e.target.closest('.btn')) return; const pk=r.dataset.pk; const item=cachedData?.find(d=>String(d.PK_REL_INSO_SCHULDNERBERATUNG_TEIL_INP_BELEGE_ALL)===pk); if(item){ const detailDiv=document.getElementById('detailContent'); detailDiv.innerHTML=Object.entries(item).map(([k,v])=>`<div class="key-val-item"><span class="key">${escapeHtml(k)}</span><span class="val">${escapeHtml(String(v))}</span></div>`).join(''); } })); }
+        function renderRelationsTable(data){ if(!data||!data.length){ relationsTableBody.innerHTML='<tr><td colspan="7">Keine Daten</td></tr>'; return; } const rows=data.map(d=>`<tr><td class="pk-highlight">${escapeHtml(d.PK_REL_INSO_SCHULDNERBERATUNG_TEIL_INP_BELEGE_ALL)}</td><td>${escapeHtml(d.FK_MDT_MANDANT)}</td><td>${escapeHtml(d.FK_INSO_SCHULDNERBERATUNG_TEIL)}</td><td>${escapeHtml(d.FK_INP_BELEGE_ALL)}</td><td>${escapeHtml(d.FORECAST||'—')}</td><td><span class="badge">${escapeHtml((d.rel_comm||'').substring(0,20))}</span></td><td><button class="btn btn-warning btn-sm" onclick="window.fillUpdateFromGlobal(${d.PK_REL_INSO_SCHULDNERBERATUNG_TEIL_INP_BELEGE_ALL})">✏️</button> <button class="btn btn-danger btn-sm" onclick="window.fillDeleteFromGlobal(${d.PK_REL_INSO_SCHULDNERBERATUNG_TEIL_INP_BELEGE_ALL})">🗑️</button></td></tr>`).join(''); relationsTableBody.innerHTML=rows; }
+        function updateStatsCards(data){ if(!data) return; const total=data.length; const sumBrutto=data.reduce((s,i)=>{ let b=parseFloat(i.BRUTTO_BETRAG); return s+(isNaN(b)?0:b); },0); const avg=total?sumBrutto/total:0; const maxBrutto=data.reduce((max,i)=>{ let b=parseFloat(i.BRUTTO_BETRAG); if(!isNaN(b) && b>max) return b; return max; },0); const statsHtml=`<div class="stat-card"><div class="stat-label">Einträge total</div><div class="stat-value">${total}</div></div><div class="stat-card"><div class="stat-label">Brutto Summe</div><div class="stat-value">${sumBrutto.toFixed(2)} €</div></div><div class="stat-card"><div class="stat-label">Ø Betrag</div><div class="stat-value">${avg.toFixed(2)} €</div></div><div class="stat-card"><div class="stat-label">Max Betrag</div><div class="stat-value">${maxBrutto.toFixed(2)} €</div></div>`; if(statsContainer) statsContainer.innerHTML=statsHtml; }
+
+        // ============ STATISTIK-TAB NEU ============
+        function updateStatisticsTab(data){
+            if(!data || !data.length) return;
+            const entriesWithBetrag = data.filter(i => !isNaN(parseFloat(i.BRUTTO_BETRAG)) && i.BRUTTO_BETRAG != null);
+            const bruttoVals = entriesWithBetrag.map(i => ({ pk: i.PK_REL_INSO_SCHULDNERBERATUNG_TEIL_INP_BELEGE_ALL, betrag: parseFloat(i.BRUTTO_BETRAG), bezeichnung: i.BEZEICHNUNG || i.PROJEKT_BEZEICHNUNG || '—', fkTeil: i.FK_INSO_SCHULDNERBERATUNG_TEIL || 'unbekannt' }));
+            const sortedDesc = [...bruttoVals].sort((a,b)=>b.betrag - a.betrag);
+            const top10 = sortedDesc.slice(0,10);
+            const totalSum = bruttoVals.reduce((s,item)=>s+item.betrag,0);
+            const avgVal = bruttoVals.length ? totalSum/bruttoVals.length : 0;
+            const maxVal = sortedDesc.length ? sortedDesc[0].betrag : 0;
+            document.getElementById('totalBruttoValue').innerHTML = totalSum.toFixed(2) + ' €';
+            document.getElementById('avgBruttoValue').innerHTML = avgVal.toFixed(2) + ' €';
+            document.getElementById('maxBruttoValue').innerHTML = maxVal.toFixed(2) + ' €';
+            document.getElementById('totalCountStats').innerHTML = bruttoVals.length;
+
+            // Tabelle Top 10
+            const top10Html = top10.map((item,idx)=>`<tr><td>${idx+1}</td><td class="pk-highlight">${escapeHtml(item.pk)}</td><td>${item.betrag.toFixed(2)} €</td><td>${escapeHtml(item.bezeichnung.substring(0,50))}</td><td>${escapeHtml(item.fkTeil)}</td></tr>`).join('');
+            document.getElementById('top10BetragTable').innerHTML = top10Html || '<tr><td colspan="5">Keine Betragsdaten</td></tr>';
+
+            // Bar Chart: Alle Einträge sortiert (höchster -> niedrigster) max. 30 für Übersicht
+            let chartDataPoints = sortedDesc.slice(0,30);
+            const labels = chartDataPoints.map((_,idx)=>`#${idx+1}`);
+            const betragValues = chartDataPoints.map(p=>p.betrag);
+            if(barChart) barChart.destroy();
+            const ctxBar = document.getElementById('barChartBetrag').getContext('2d');
+            barChart = new Chart(ctxBar, { type:'bar', data:{ labels:labels, datasets:[{ label:'Bruttobetrag (€)', data:betragValues, backgroundColor:'#1b4a7a', borderRadius:8 }] }, options:{ responsive:true, maintainAspectRatio:true, plugins:{ legend:{ position:'top' }, tooltip:{ callbacks:{ label:ctx=>`${ctx.raw.toFixed(2)} €` } } }, scales:{ y:{ title:{ display:true, text:'Betrag in Euro' } } } } });
+
+            // Pie Chart: Summe gruppiert nach FK_INSO_SCHULDNERBERATUNG_TEIL
+            const groupMap = new Map();
+            bruttoVals.forEach(v => { let key = v.fkTeil == null ? 'Unbekannt' : String(v.fkTeil); let sum = groupMap.get(key) || 0; groupMap.set(key, sum + v.betrag); });
+            const sortedGroups = Array.from(groupMap.entries()).sort((a,b)=>b[1]-a[1]);
+            const pieLabels = sortedGroups.map(g=>g[0].length>20?g[0].substring(0,18)+'…':g[0]);
+            const pieData = sortedGroups.map(g=>g[1]);
+            if(pieChart) pieChart.destroy();
+            const ctxPie = document.getElementById('pieChartTeile').getContext('2d');
+            pieChart = new Chart(ctxPie, { type:'pie', data:{ labels:pieLabels, datasets:[{ data:pieData, backgroundColor:['#0b2b4f','#2c628f','#4a7c9c','#6f9fbf','#9bb7d0','#b9cfec','#1e4d6f','#347b9e','#5e9bc2','#80b2d4'], borderWidth:0 }] }, options:{ responsive:true, plugins:{ legend:{ position:'right' }, tooltip:{ callbacks:{ label:ctx=>`${ctx.label}: ${ctx.raw.toFixed(2)} € (${((ctx.raw/totalSum)*100).toFixed(1)}%)` } } } } });
+        }
+
+        // CRUD Hilfen
+        window.fillUpdateFromGlobal = (pk)=>{ const item=cachedData?.find(d=>d.PK_REL_INSO_SCHULDNERBERATUNG_TEIL_INP_BELEGE_ALL==pk); if(item){ document.querySelector('[data-tab="crud"]').click(); document.getElementById('update_id').value=pk; document.getElementById('update_fk_mandant').value=item.FK_MDT_MANDANT||''; document.getElementById('update_fk_teil').value=item.FK_INSO_SCHULDNERBERATUNG_TEIL||''; document.getElementById('update_forecast').value=item.FORECAST||''; document.getElementById('update_comm').value=item.COMM||''; document.getElementById('update_modified_by').value=item.MODIFIED_BY||''; } };
+        window.fillDeleteFromGlobal = (pk)=>{ document.querySelector('[data-tab="crud"]').click(); document.getElementById('delete_id').value=pk; deleteRelation(); };
+        async function insertRelation(){ /* minimiert */ showMessage('Insert Demo (API nicht implementiert in mock)', true); }
+        async function updateRelation(){ showMessage('Update Demo (API nicht vollständig integriert)', true); }
+        async function deleteRelation(){ showMessage('Löschen Demo (Mock)', true); }
+        document.getElementById('insertBtn')?.addEventListener('click',insertRelation);
+        document.getElementById('updateBtn')?.addEventListener('click',updateRelation);
+        document.getElementById('deleteBtn')?.addEventListener('click',deleteRelation);
+        document.getElementById('clearInsertBtn')?.addEventListener('click',()=>{});
+        document.getElementById('clearUpdateBtn')?.addEventListener('click',()=>{});
+        expandAllBtn?.addEventListener('click',()=>{ if(cachedData){ const {level1Groups}=groupDataByTwoLevels(cachedData); level1Groups.forEach(g=>{expandedLevel1Groups.add(String(g.id)); expandedLevel2Groups.set(String(g.id),new Set(g.subGroups.map(s=>String(s.id))));}); renderGroupedTable(cachedData); } });
+        collapseAllBtn?.addEventListener('click',()=>{ expandedLevel1Groups.clear(); expandedLevel2Groups.clear(); renderGroupedTable(cachedData); });
+        refreshBtn?.addEventListener('click',()=>loadData());
+        document.querySelectorAll('.tab').forEach(tab=>{ tab.addEventListener('click',()=>{ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); tab.classList.add('active'); document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active')); document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active'); if(tab.dataset.tab==='stats' && cachedData) updateStatisticsTab(cachedData); }); });
+        loadData();
+    })();
+</script>
+</body>
+</html>

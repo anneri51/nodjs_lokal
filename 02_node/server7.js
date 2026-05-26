@@ -4963,6 +4963,28 @@ app.get("/kon_person", async (req, res) => {
     }
 });
 
+app.get("/bahn_europa", async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT 
+                   *
+                    FROM 
+                        "COMPANY"."T_VERK_OEFF_BAHN_EUROPA" vpers
+                   
+                  
+                     
+                    ;`
+        );
+        res.json(result.rows);
+    } catch (error) {
+        console.error("Database error:", error.message);
+        res.status(500).json({ 
+            error: "Failed to fetch accounts",
+            details: process.env.NODE_ENV === "development" ? error.message : undefined
+        });
+    }
+});
+
 app.get("/kon_person_group", async (req, res) => {
     try {
         const result = await pool.query(

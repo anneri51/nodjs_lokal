@@ -2,102 +2,552 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Land-Daten anzeigen</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Länderverwaltung – durchsuchbare Tabelle</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Segoe UI', Roboto, Arial, sans-serif;
       margin: 2rem;
-      background-color: #f4f4f4;
+      background-color: #eef2f5;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 28px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+      padding: 1.5rem 2rem 2rem 2rem;
     }
 
     h1 {
-      color: #333;
+      color: #1a2c3e;
+      font-weight: 600;
+      font-size: 1.9rem;
+      margin-top: 0;
+      margin-bottom: 0.25rem;
+      letter-spacing: -0.3px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: space-between;
+    }
+
+    h1 small {
+      font-size: 0.85rem;
+      font-weight: normal;
+      background: #e9ecef;
+      padding: 5px 12px;
+      border-radius: 40px;
+      color: #2c3e4e;
+    }
+
+    /* Suchbereich */
+    .search-panel {
+      margin: 1.8rem 0 1.5rem 0;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      background: #f8fafc;
+      padding: 0.9rem 1.2rem;
+      border-radius: 60px;
+      border: 1px solid #e2e8f0;
+      transition: all 0.2s;
+    }
+
+    .search-icon {
+      font-size: 1.3rem;
+      color: #3b7cbf;
+    }
+
+    .search-input-wrapper {
+      flex: 3;
+      min-width: 200px;
+      position: relative;
+    }
+
+    #searchInput {
+      width: 100%;
+      padding: 12px 18px;
+      font-size: 1rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 48px;
+      background: white;
+      outline: none;
+      transition: 0.2s;
+      font-family: inherit;
+    }
+
+    #searchInput:focus {
+      border-color: #007bff;
+      box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
+    }
+
+    .search-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .clear-btn {
+      background: #f1f5f9;
+      border: none;
+      font-size: 1.3rem;
+      font-weight: bold;
+      cursor: pointer;
+      width: 44px;
+      height: 44px;
+      border-radius: 40px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: 0.2s;
+      color: #334155;
+    }
+
+    .clear-btn:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+      transform: scale(0.96);
+    }
+
+    .stats-badge {
+      background: #e9ecef;
+      padding: 8px 16px;
+      border-radius: 32px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #1e4663;
+      white-space: nowrap;
+    }
+
+    /* Tabelle */
+    .table-responsive {
+      overflow-x: auto;
+      border-radius: 20px;
+      border: 1px solid #e2edf2;
+      background: white;
     }
 
     table {
-      border-collapse: collapse;
       width: 100%;
-      background-color: #fff;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-
-    th, td {
-      padding: 10px;
-      border: 1px solid #ccc;
-      text-align: left;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      min-width: 860px;
     }
 
     th {
-      background-color: #007bff;
+      background: #0a2942;
       color: white;
+      padding: 14px 12px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      border-bottom: 2px solid #1e4a76;
     }
 
-    tr:nth-child(even) {
-      background-color: #f9f9f9;
+    td {
+      padding: 12px 10px;
+      border-bottom: 1px solid #e9edf2;
+      color: #1f2d3d;
+      vertical-align: top;
+    }
+
+    tr:hover td {
+      background-color: #fef9e3;
+      transition: 0.1s;
+    }
+
+    .empty-state-row td {
+      text-align: center;
+      padding: 3rem;
+      background: #fef9ef;
+      color: #9e7e5e;
+      font-style: italic;
+      font-size: 1rem;
+    }
+
+    .no-result-msg {
+      background: #fff6e8;
+      text-align: center;
+      padding: 2rem;
+      border-radius: 28px;
+      margin-top: 1rem;
+      color: #b45309;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 1px dashed #ffd8a9;
     }
 
     .error {
-      color: red;
-      margin-top: 1rem;
+      background: #ffe6e5;
+      border-left: 5px solid #e03a3a;
+      padding: 12px 18px;
+      border-radius: 16px;
+      margin: 1rem 0;
+      font-weight: 500;
+    }
+
+    footer {
+      margin-top: 1.8rem;
+      font-size: 0.75rem;
+      text-align: right;
+      color: #6c7a8e;
+      border-top: 1px solid #e2edf2;
+      padding-top: 1rem;
+    }
+
+    @media (max-width: 680px) {
+      body {
+        margin: 1rem;
+      }
+      .container {
+        padding: 1rem;
+      }
+      .search-panel {
+        flex-wrap: wrap;
+        border-radius: 28px;
+      }
     }
   </style>
 </head>
 <body>
+<div class="container">
+  <h1>
+    🌍 Länder & Kontinente
+    <small>Zuordnung & ISO-Codes</small>
+  </h1>
 
-  <h1>Länder mit Kontinent-Zuordnung</h1>
-  <div id="error" class="error"></div>
-  <table id="landTable">
-    <thead>
-      <tr>
-        <th>PK_ADR_KONTINENT</th>
-        <th>KONTINENT</th>
-        <th>PK_REL_ADR_KONTINENT_LAND</th>
-        <th>REL_FK_ADR_KONTINENT</th>
-        <th>REL_FK_ADR_LAND</th>
-        <th>PK_ADR_LAND</th>
-        <th>LAND</th>
-        <th>COUNTRY_ISO_2</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!-- Dynamisch gefüllt -->
-    </tbody>
-  </table>
+  <!-- Suchleiste mit erweiterten Funktionen -->
+  <div class="search-panel">
+    <span class="search-icon">🔍</span>
+    <div class="search-input-wrapper">
+      <input type="text" id="searchInput" placeholder="Land, Kontinent, ISO-Code, Schlüsselnummer ... (alles durchsuchbar)" autocomplete="off">
+    </div>
+    <div class="search-actions">
+      <button class="clear-btn" id="clearSearchBtn" title="Suche zurücksetzen">✖</button>
+      <div class="stats-badge" id="resultStats">Alle Einträge</div>
+    </div>
+  </div>
 
-  <script>
-    async function loadLandData() {
-      const tableBody = document.querySelector("#landTable tbody");
-      const errorDiv = document.getElementById("error");
+  <!-- Fehlerbereich -->
+  <div id="error" class="error" style="display: none;"></div>
 
-      try {
-        const res = await fetch("http://localhost:5000/land");
-        if (!res.ok) throw new Error("Fehler beim Abrufen der Daten");
+  <!-- Tabelle: dynamisch befüllt + durchsuchbar -->
+  <div class="table-responsive">
+    <table id="landTable">
+      <thead>
+        <tr>
+          <th>PK_ADR_KONTINENT</th>
+          <th>KONTINENT</th>
+          <th>PK_REL_ADR_KONTINENT_LAND</th>
+          <th>REL_FK_ADR_KONTINENT</th>
+          <th>REL_FK_ADR_LAND</th>
+          <th>PK_ADR_LAND</th>
+          <th>LAND</th>
+          <th>COUNTRY_ISO_2</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr class="loading-row">
+          <td colspan="8" style="text-align:center; padding: 2rem;">⏳ Daten werden geladen ...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
-        const data = await res.json();
-        tableBody.innerHTML = "";
+  <!-- Dynamischer Hinweis falls keine Suchergebnisse -->
+  <div id="noResultsMessage" class="no-result-msg" style="display: none;">
+    🔎 Keine Einträge gefunden – versuche einen anderen Suchbegriff.
+  </div>
+  <footer>
+    ✅ Echtzeit-Filterung | Alle Spalten durchsuchbar | API: http://localhost:5000/land
+  </footer>
+</div>
 
-        data.forEach(item => {
-          const row = document.createElement("tr");
-          row.innerHTML = `
-            <td>${item.PK_ADR_KONTINENT || ""}</td>
-            <td>${item.KONTINENT || ""}</td>
-            <td>${item.PK_REL_ADR_KONTINENT_LAND || ""}</td>
-            <td>${item.REL_FK_ADR_KONTINENT || ""}</td>
-            <td>${item.REL_FK_ADR_LAND || ""}</td>
-            <td>${item.PK_ADR_LAND || ""}</td>
-            <td>${item.LAND || ""}</td>
-            <td>${item.COUNTRY_ISO_2 || ""}</td>
-          `;
-          tableBody.appendChild(row);
-        });
+<script>
+  (function() {
+    // DOM-Elemente
+    const tableBody = document.getElementById("tableBody");
+    const errorDiv = document.getElementById("error");
+    const searchInput = document.getElementById("searchInput");
+    const clearBtn = document.getElementById("clearSearchBtn");
+    const resultStatsSpan = document.getElementById("resultStats");
+    const noResultsDiv = document.getElementById("noResultsMessage");
 
-      } catch (err) {
-        errorDiv.textContent = "❌ Fehler: " + err.message;
+    // Globale Variable: speichert, ob überhaupt echte Datensätze geladen wurden (ohne Leer-Placeholder)
+    let hasRealData = false;
+    // Aktuelle Suchanfrage (für dynamisches Update)
+    let currentSearchTerm = "";
+
+    // Hilfsfunktion: Fehler anzeigen / ausblenden
+    function showError(message) {
+      errorDiv.style.display = "block";
+      errorDiv.textContent = `❌ ${message}`;
+    }
+
+    function hideError() {
+      errorDiv.style.display = "none";
+      errorDiv.textContent = "";
+    }
+
+    // Entfernt jegliche Lade-/Platzhalterzeilen ohne Daten-Klasse
+    function removePlaceholderRows() {
+      const rows = tableBody.querySelectorAll("tr");
+      rows.forEach(row => {
+        // Loading- oder leere Statushinweise entfernen (nur wenn sie keine echten Daten repräsentieren)
+        if (row.classList && (row.classList.contains("loading-row") || row.classList.contains("empty-state-row"))) {
+          row.remove();
+        } else if (row.cells && row.cells.length === 1 && row.cells[0].innerText.includes("Daten werden geladen")) {
+          row.remove();
+        } else if (row.cells && row.cells.length === 1 && row.cells[0].innerText.includes("Keine Datensätze")) {
+          row.remove();
+        }
+      });
+    }
+
+    // Hauptfunktion: Filterung der Tabelle basierend auf Suchbegriff (case-insensitiv)
+    // Berücksichtigt alle Zellen einer Datenzeile. Leere / Platzhalter-Zeilen werden ignoriert
+    function filterTable() {
+      const searchTermRaw = searchInput.value;
+      const term = searchTermRaw.trim().toLowerCase();
+      currentSearchTerm = term;
+
+      // Alle Zeilen des TBODY (echte Datenzeilen, die keine Steuerzeilen sind)
+      const rows = Array.from(tableBody.querySelectorAll("tr"));
+      // Wir müssen Zeilen mit Klasse 'data-row' markieren? Alle Zeilen, die keine empty-state-row oder loading sind
+      // aber sicherheitshalber filtern wir nur echte Datenzeilen: dynamisch erzeugte Zeilen haben keine spezielle Klasse.
+      // Wir definieren: eine echte Datenzeile enthält mindestens 8 Zellen UND ist nicht .empty-state-row
+      let visibleCount = 0;
+      let totalDataRows = 0;
+
+      rows.forEach(row => {
+        // Überspringe spezielle Platzhalter (leere Zustandszeilen)
+        if (row.classList && (row.classList.contains("empty-state-row") || row.classList.contains("loading-row"))) {
+          // Diese Zeilen bleiben immer sichtbar, zählen aber nicht als Datenzeilen
+          row.style.display = "";
+          return;
+        }
+
+        // Prüfen ob es sich um eine Zeile mit tatsächlichen Daten handelt (min. 8 Zellen und nicht "Keine Datensätze" Inhalt)
+        const cells = row.querySelectorAll("td");
+        if (cells.length < 8) {
+          // Fallback – sollte nicht vorkommen, aber sicherheitshalber nicht ausblenden
+          row.style.display = "";
+          return;
+        }
+
+        // Prüfen ob der Text "Keine Datensätze vorhanden" o.ä. drin steht (zusätzliche Absicherung)
+        const firstCellText = cells[0]?.innerText?.toLowerCase() || "";
+        if (firstCellText.includes("keine datensätze") || firstCellText.includes("keine einträge")) {
+          row.style.display = "";
+          return;
+        }
+
+        totalDataRows++;
+
+        // Wenn kein Suchbegriff eingegeben -> alle anzeigen
+        if (term === "") {
+          row.style.display = "";
+          visibleCount++;
+          return;
+        }
+
+        // Durchsuche alle Zellen der Zeile
+        let matchFound = false;
+        for (let i = 0; i < cells.length; i++) {
+          const cellText = cells[i].innerText?.toLowerCase() || "";
+          if (cellText.includes(term)) {
+            matchFound = true;
+            break;
+          }
+        }
+
+        if (matchFound) {
+          row.style.display = "";
+          visibleCount++;
+        } else {
+          row.style.display = "none";
+        }
+      });
+
+      // Update der Statistik-Anzeige
+      if (totalDataRows === 0 && hasRealData === false) {
+        // Wir haben keine Daten geladen – zeige Hinweis an, dass kein Datensatz existiert
+        if (term === "") {
+          resultStatsSpan.innerText = `0 Einträge`;
+        } else {
+          resultStatsSpan.innerText = `0 / 0`;
+        }
+        // Keine Ergebnisse Meldung nur anzeigen wenn Suche aktiv, aber keine Daten da sind
+        if (term !== "" && visibleCount === 0 && totalDataRows === 0) {
+          noResultsDiv.style.display = "flex";
+        } else {
+          noResultsDiv.style.display = "none";
+        }
+        return;
+      }
+
+      // Statistiktext aktualisieren
+      if (term === "") {
+        resultStatsSpan.innerText = `📋 ${totalDataRows} Einträge gesamt`;
+      } else {
+        resultStatsSpan.innerText = `🔎 ${visibleCount} / ${totalDataRows} Treffer`;
+      }
+
+      // Meldung "Keine Ergebnisse" ein-/ausblenden
+      if (term !== "" && visibleCount === 0 && totalDataRows > 0) {
+        noResultsDiv.style.display = "flex";
+      } else {
+        noResultsDiv.style.display = "none";
       }
     }
 
-    loadLandData();
-  </script>
+    // Leere den Such-Input und setze Filter zurück
+    function resetSearch() {
+      if (searchInput.value !== "") {
+        searchInput.value = "";
+        filterTable();
+        // Fokussiere das Suchfeld nach Reset für bessere UX
+        searchInput.focus();
+      } else {
+        // Falls schon leer, trotzdem filter triggern (stellt sicher)
+        filterTable();
+      }
+    }
 
+    // Befüllt die Tabelle mit den API-Daten (original)
+    async function loadLandData() {
+      // Reset-Fehler und temporäre Meldungen
+      hideError();
+      // Ladezustand anzeigen (falls alte Daten oder leere Tabelle)
+      tableBody.innerHTML = `<tr class="loading-row"><td colspan="8" style="text-align:center; padding: 2rem;">🌐 Lade Länderdaten von API ...</td></tr>`;
+      hasRealData = false;
+      noResultsDiv.style.display = "none";
+      
+      try {
+        const res = await fetch("http://localhost:5000/land");
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status} – Daten konnten nicht abgerufen werden`);
+        }
+        
+        const data = await res.json();
+        
+        // Datenvalidierung: muss ein Array sein
+        if (!Array.isArray(data)) {
+          throw new Error("Antwortformat ungültig (kein Array)");
+        }
+        
+        // Tabelle leeren (Placeholder entfernen)
+        tableBody.innerHTML = "";
+        
+        if (data.length === 0) {
+          // Keine Daten vom Server: Zeige eine informative Zeile an
+          const emptyRow = document.createElement("tr");
+          emptyRow.classList.add("empty-state-row");
+          emptyRow.innerHTML = `<td colspan="8" style="text-align:center; padding: 2.5rem;">📭 Keine Datensätze vom Server empfangen. Bitte API-Endpoint prüfen.</td>`;
+          tableBody.appendChild(emptyRow);
+          hasRealData = false;
+          resultStatsSpan.innerText = `0 Einträge`;
+          noResultsDiv.style.display = "none";
+          return;
+        }
+        
+        // Echte Daten vorhanden: Zeilen rendern
+        data.forEach(item => {
+          const row = document.createElement("tr");
+          // data-row markiert keine besondere Funktion, nur zur Lesbarkeit
+          row.classList.add("data-entry");
+          row.innerHTML = `
+            <td>${escapeHtml(item.PK_ADR_KONTINENT ?? "")}</td>
+            <td>${escapeHtml(item.KONTINENT ?? "")}</td>
+            <td>${escapeHtml(item.PK_REL_ADR_KONTINENT_LAND ?? "")}</td>
+            <td>${escapeHtml(item.REL_FK_ADR_KONTINENT ?? "")}</td>
+            <td>${escapeHtml(item.REL_FK_ADR_LAND ?? "")}</td>
+            <td>${escapeHtml(item.PK_ADR_LAND ?? "")}</td>
+            <td>${escapeHtml(item.LAND ?? "")}</td>
+            <td>${escapeHtml(item.COUNTRY_ISO_2 ?? "")}</td>
+          `;
+          tableBody.appendChild(row);
+        });
+        
+        hasRealData = true;
+        
+        // Nachdem die Daten geladen wurden, existierenden Suchfilter anwenden (wenn der Benutzer schon getippt hatte)
+        // Behalte den aktuellen Suchbegriff bei, aktualisiere Ansicht
+        filterTable();
+        
+      } catch (err) {
+        console.error("Fetch Error:", err);
+        tableBody.innerHTML = `<tr class="empty-state-row"><td colspan="8" style="text-align:center; padding: 2rem; color:#b91c1c;">⚠️ Verbindungsfehler: ${err.message}<br><span style="font-size:0.8rem;">Stelle sicher, dass der Server unter http://localhost:5000/land läuft.</span></td></tr>`;
+        hasRealData = false;
+        showError(err.message);
+        resultStatsSpan.innerText = `❌ Fehler`;
+        noResultsDiv.style.display = "none";
+      }
+    }
+    
+    // Einfache Escaping-Funktion gegen XSS (sicherer Umgang mit API-Daten)
+    function escapeHtml(str) {
+      if (str === undefined || str === null) return "";
+      return String(str).replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+      }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+        return c;
+      });
+    }
+    
+    // Event-Listener für dynamische Suche + Reset mit Entprellung (für bessere Performance)
+    let debounceTimer;
+    function onSearchInput() {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        filterTable();
+      }, 180);
+    }
+    
+    // Initialisierung: Event-Handler setzen & Daten laden
+    function init() {
+      // Suchfeld-Events
+      searchInput.addEventListener("input", onSearchInput);
+      clearBtn.addEventListener("click", () => {
+        resetSearch();
+        // Nach reset wird filterTable aufgerufen, fokussieren nicht störend
+        searchInput.focus();
+      });
+      
+      // Optional: Escape-Taste löscht Suche (nice-to-have)
+      searchInput.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          resetSearch();
+          e.preventDefault();
+        }
+      });
+      
+      // Daten erstmal laden
+      loadLandData().catch(e => {
+        console.warn(e);
+        showError("Netzwerk-/API-Problem: " + e.message);
+      });
+    }
+    
+    // Starte Anwendung
+    init();
+  })();
+</script>
 </body>
 </html>

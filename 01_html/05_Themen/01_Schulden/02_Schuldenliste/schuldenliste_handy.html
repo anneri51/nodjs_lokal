@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Expense Tracker • Full Excel Download</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        /* mobile-first, handy compatible */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        body {
+            background: linear-gradient(145deg, #0f4c5c 0%, #1e3a5f 100%);
+            min-height: 100vh;
+            padding: 12px;
+            margin: 0;
+            color: #1e293b;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            color: white;
+            padding: 0 5px;
+        }
+        h1 {
+            font-size: 1.7rem;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .app-description {
+            font-size: 0.95rem;
+            opacity: 0.9;
+        }
+        .card {
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.2);
+            padding: 20px 16px;
+            margin-bottom: 20px;
+        }
+        .card-title {
+            font-size: 1.3rem;
+            margin-bottom: 16px;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+        .card-title i { color: #3b82f6; }
+        .form-group { margin-bottom: 18px; }
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #1e293b;
+        }
+        .required-field::after {
+            content: " *";
+            color: #dc2626;
+        }
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .input-group input {
+            flex: 1;
+            padding: 14px 16px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 30px;
+            font-size: 16px;
+            background: #fafbfc;
+            transition: 0.2s;
+        }
+        .input-group input:focus {
+            border-color: #3b82f6;
+            outline: none;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+        }
+        .input-group button {
+            width: 56px;
+            height: 56px;
+            border-radius: 40px;
+            background: #e2e8f0;
+            border: 1.5px solid #cbd5e1;
+            font-weight: 700;
+            font-size: 1.4rem;
+            color: #1e293b;
+            cursor: pointer;
+            transition: 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: none;
+            padding: 0;
+        }
+        .input-group button:hover {
+            background: #cbd5e1;
+        }
+        textarea, select {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 30px;
+            font-size: 16px;
+            background: #fafbfc;
+        }
+        textarea { height: 80px; resize: vertical; }
+        .form-row {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        @media (min-width: 460px) {
+            .form-row { flex-direction: row; }
+            .form-row .form-group { flex: 1; }
+        }
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 16px 20px;
+            border-radius: 40px;
+            font-size: 1rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+        }
+        button:hover { background: #1d4ed8; transform: scale(0.99); }
+        .text-muted {
+            color: #64748b;
+            font-size: 0.8rem;
+            margin-top: 4px;
+            display: block;
+        }
+        .buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .export-btn { background: #0e7b4b; }
+        .import-btn { background: #b45309; }
+        .clear-btn { background: #b91c1c; }
+        .search-btn { background: #3b82f6; }
+
+        .section-toggle {
+            display: flex;
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(6px);
+            border-radius: 50px;
+            padding: 6px;
+            margin-bottom: 20px;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .toggle-btn {
+            flex: 1;
+            text-align: center;
+            padding: 12px 8px;
+            border-radius: 40px;
+            font-weight: 600;
+            color: white;
+            background: transparent;
+            transition: 0.2s;
+            font-size: 0.9rem;
+            min-width: 100px;
+        }
+        .toggle-btn.active {
+            background: white;
+            color: #1e3a8a;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .payment-type-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 10px 0 5px;
+        }
+        .payment-type-option {
+            flex: 1 1 120px;
+        }
+        .payment-type-option input { display: none; }
+        .payment-type-option label {
+            display: block;
+            text-align: center;
+            padding: 12px 5px;
+            background: #f1f5f9;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border: 2px solid transparent;
+        }
+        .payment-type-option input:checked + label {
+            background: #3b82f6;
+            color: white;
+            border-color: #1e3a8a;
+        }
+        .hidden { display: none !important; }
+        .conditional-fields {
+            display: none;
+            background: #f8fafc;
+            border-radius: 24px;
+            padding: 16px;
+            margin-top: 12px;
+        }
+        .conditional-fields.active { display: block; }
+        .form-section {
+            background: white;
+            border-radius: 24px;
+            margin-bottom: 16px;
+            border: 1px solid #e9eef2;
+            overflow: hidden;
+        }
+        .form-section-header {
+            background: #f1f5f9;
+            padding: 16px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        .form-section-title {
+            font-weight: 600;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .form-section-content {
+            padding: 16px 18px;
+            transition: max-height 0.25s;
+            max-height: 600px;
+            overflow: hidden;
+        }
+        .form-section-content.collapsed {
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        .form-section-toggle { transition: transform 0.2s; }
+        .form-section-toggle.collapsed { transform: rotate(-90deg); }
+        .expense-list { margin-top: 20px; }
+        .payment-group {
+            border-radius: 28px;
+            background: white;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+        .payment-group-header {
+            background: #f1f5f9;
+            padding: 16px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+        }
+        .payment-group-content {
+            max-height: 1000px;
+            overflow: hidden;
+            transition: 0.25s;
+        }
+        .payment-group-content.collapsed { max-height: 0; }
+        .expense-item {
+            background: white;
+            padding: 18px 16px;
+            border-bottom: 1px solid #eef2f6;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .expense-amount {
+            font-weight: 700;
+            color: #b91c1c;
+            font-size: 1.2rem;
+        }
+        .payment-type-badge {
+            background: #3b82f6;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 40px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .sub-payment-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+            justify-content: flex-end;
+        }
+        .edit-btn, .delete-btn {
+            width: auto;
+            padding: 10px 18px;
+            font-size: 0.9rem;
+            border-radius: 40px;
+        }
+        .edit-btn { background: #f59e0b; }
+        .delete-btn { background: #dc2626; }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 1000;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white;
+            border-radius: 32px;
+            padding: 24px;
+            width: 100%;
+            max-width: 480px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-buttons { display: flex; gap: 12px; margin-top: 24px; }
+        .modal-buttons button { flex: 1; }
+        .file-upload-label {
+            background: #f1f5f9;
+            padding: 30px 16px;
+            border-radius: 40px;
+            border: 2px dashed #94a3b8;
+            text-align: center;
+            cursor: pointer;
+        }
+        .file-name { text-align: center; margin-top: 12px; color: #334155; }
+        .sheet-selector { display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0; }
+        .sheet-btn {
+            background: #e2e8f0; border: none; padding: 12px 16px; border-radius: 40px; font-weight: 600;
+            flex: 1 0 auto;
+        }
+        .sheet-btn.active { background: #2563eb; color: white; }
+        .table-container { overflow-x: auto; max-height: 300px; overflow-y: auto; border-radius: 24px; border:1px solid #ddd;}
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th, td { padding: 10px 8px; border-bottom: 1px solid #cbd5e1; text-align: left; }
+        th { background: #f1f5f9; position: sticky; top:0; }
+        .no-data { text-align: center; color: #475569; padding: 32px 16px; }
+        .search-container { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+        .filter-select { border-radius: 40px; }
+        .group-actions { display: flex; gap: 10px; width: 100%; }
+        .import-action { background: #0e7b4b; margin-top: 10px; }
+        mark { background: #fde047; padding: 2px 0; }
+        /* excel download button special */
+        .download-excel-btn { background: #0e7b4b; margin: 5px 0; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1><i class="fas fa-file-excel"></i> Full Export Tracker</h1>
+        <p class="app-description">complete list downloadable as Excel</p>
+    </header>
+
+    <!-- section toggle -->
+    <div class="section-toggle">
+        <div class="toggle-btn active" id="formToggle">➕ Add</div>
+        <div class="toggle-btn" id="importToggle">📂 Import</div>
+        <div class="toggle-btn" id="paymentsToggle">📋 List</div>
+    </div>
+
+    <!-- ADD FORM SECTION (active by default) -->
+    <div class="card" id="formSection">
+        <h2 class="card-title"><i class="fas fa-plus-circle"></i> New expense</h2>
+        <div class="success-message hidden" id="successMessage" style="background:#d1fae5; padding:12px; border-radius:40px; margin-bottom:12px; color:#065f46;">
+            <i class="fas fa-check-circle"></i> <span>Added!</span>
+        </div>
+
+        <form id="expenseForm">
+            <!-- payment type -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <span class="form-section-title"><i class="far fa-credit-card"></i> Payment type</span>
+                    <i class="fas fa-chevron-down form-section-toggle"></i>
+                </div>
+                <div class="form-section-content">
+                    <div class="payment-type-selector">
+                        <div class="payment-type-option"><input type="radio" id="type-1" name="paymentType" value="1" checked><label for="type-1">Single</label></div>
+                        <div class="payment-type-option"><input type="radio" id="type-2" name="paymentType" value="2"><label for="type-2">Advance</label></div>
+                        <div class="payment-type-option"><input type="radio" id="type-3" name="paymentType" value="3"><label for="type-3">Period.Final</label></div>
+                        <div class="payment-type-option"><input type="radio" id="type-4" name="paymentType" value="4"><label for="type-4">Period.Rate</label></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- basic dates -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <span class="form-section-title"><i class="fas fa-calendar"></i> Dates & title</span>
+                    <i class="fas fa-chevron-down form-section-toggle"></i>
+                </div>
+                <div class="form-section-content">
+                    <div class="form-row">
+                        <div class="form-group"><label class="form-label required-field">Expense date</label><input type="date" id="date" required></div>
+                        <div class="form-group"><label class="form-label required-field">Entry date</label><input type="date" id="entryDate" required></div>
+                    </div>
+                    <div class="form-group"><label class="form-label required-field">Title</label><input type="text" id="title" placeholder="e.g. Groceries" required></div>
+                    <div class="form-group"><label class="form-label">Description</label><textarea id="description"></textarea></div>
+                </div>
+            </div>
+
+            <!-- AMOUNT with ± BUTTON (exactly as requested) -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <span class="form-section-title"><i class="fas fa-euro-sign"></i> Amount & sign</span>
+                    <i class="fas fa-chevron-down form-section-toggle"></i>
+                </div>
+                <div class="form-section-content">
+                    <div class="form-group">
+                        <label class="form-label required-field">Betrag (€)</label>
+                        <div class="input-group">
+                            <input type="number" step="0.01" class="form-control" id="insertBetrag" required placeholder="0.00">
+                            <button class="btn btn-outline-secondary" type="button" onclick="toggleSign('insertBetrag')">±</button>
+                        </div>
+                        <small class="text-muted">Negativwerte durch Klick auf ± oder direkt mit Minus eingeben</small>
+                    </div>
+                    <!-- second amount field for reference (optional) but we also need the periodical amounts – we add identical group for "final amount" later, but main is insertBetrag -->
+                    <div class="form-group" style="margin-top:8px;">
+                        <label class="form-label">Referenz-Nr.</label>
+                        <input type="text" id="reference" placeholder="optional">
+                    </div>
+                </div>
+            </div>
+
+            <!-- transfer optional -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <span class="form-section-title"><i class="fas fa-exchange-alt"></i> Transfer (opt.)</span>
+                    <i class="fas fa-chevron-down form-section-toggle"></i>
+                </div>
+                <div class="form-section-content">
+                    <div class="form-row">
+                        <div class="form-group"><label>From account</label><input type="text" id="fromAccount"></div>
+                        <div class="form-group"><label>To account</label><input type="text" id="toAccount"></div>
+                    </div>
+                    <div class="form-group"><label>Person/Recipient</label><input type="text" id="person"></div>
+                </div>
+            </div>
+
+            <!-- periodical extra fields (simplified) with their own ± amount fields (same toggle) -->
+            <div class="form-section hidden" id="periodicalSection">
+                <div class="form-section-header">
+                    <span class="form-section-title"><i class="fas fa-redo-alt"></i> Period details</span>
+                    <i class="fas fa-chevron-down form-section-toggle"></i>
+                </div>
+                <div class="form-section-content">
+                    <div class="conditional-fields" id="type3Fields">
+                        <div class="form-group">
+                            <label class="form-label">Final amount (€)</label>
+                            <div class="input-group">
+                                <input type="number" step="0.01" id="finalAmount" placeholder="0.00">
+                                <button type="button" onclick="toggleSign('finalAmount')">±</button>
+                            </div>
+                        </div>
+                        <div class="form-group"><label>First due</label><input type="date" id="firstDueDate"></div>
+                        <div class="form-group"><label>Frequency</label>
+                            <select id="periodType3"><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="semiannual">Half-year</option><option value="annual">Yearly</option></select>
+                        </div>
+                    </div>
+                    <div class="conditional-fields" id="type4Fields">
+                        <div class="form-group">
+                            <label class="form-label">Rate per period (€)</label>
+                            <div class="input-group">
+                                <input type="number" step="0.01" id="ratePerPeriod" placeholder="0.00">
+                                <button type="button" onclick="toggleSign('ratePerPeriod')">±</button>
+                            </div>
+                        </div>
+                        <div class="form-group"><label>First due</label><input type="date" id="dueDateType4"></div>
+                        <div class="form-group">
+                            <label>Final amount (opt.)</label>
+                            <div class="input-group">
+                                <input type="number" step="0.01" id="finalAmountType4">
+                                <button type="button" onclick="toggleSign('finalAmountType4')">±</button>
+                            </div>
+                        </div>
+                        <div class="form-group"><label>Final date</label><input type="date" id="finalDateType4"></div>
+                        <div class="form-group"><label>Frequency</label>
+                            <select id="periodType4"><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="semiannual">Half-year</option><option value="annual">Yearly</option></select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit"><i class="fas fa-check"></i> Add expense</button>
+        </form>
+    </div>
+
+    <!-- IMPORT SECTION (hidden) -->
+    <div class="card hidden" id="importSection">
+        <h2 class="card-title"><i class="fas fa-file-excel"></i> Import & add</h2>
+        <div class="file-upload">
+            <label class="file-upload-label" id="dragLabel"><i class="fas fa-cloud-upload-alt fa-2x"></i><div>tap or drag .xlsx</div></label>
+            <input type="file" id="fileInput" accept=".xlsx" class="file-input">
+            <div class="file-name" id="fileName">—</div>
+        </div>
+        <div class="sheet-selector" id="sheetSelector" style="display:none;"></div>
+        <div id="previewArea" style="display:none;">
+            <button class="import-action" id="addSelectedRowsBtn"><i class="fas fa-plus-circle"></i> Add selected to expenses</button>
+            <button class="clear-btn" id="clearSelectionBtn" style="margin:10px 0;">Clear selection</button>
+            <div class="table-container" id="tableContainer"><table id="excelTable"><thead id="tableHead"></thead><tbody id="tableBody"></tbody></table></div>
+        </div>
+    </div>
+
+    <!-- PAYMENTS LIST SECTION (hidden) -->
+    <div class="card hidden" id="paymentsSection">
+        <h2 class="card-title"><i class="fas fa-receipt"></i> Expenses — full download</h2>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="🔍 search...">
+            <select id="typeFilter" class="filter-select"><option value="all">All types</option><option value="1">Single</option><option value="2">Advance</option><option value="3">Period.Final</option><option value="4">Period.Rate</option></select>
+            <select id="dateFilter" class="filter-select"><option value="all">All dates</option><option value="today">Today</option><option value="week">Week</option><option value="month">Month</option></select>
+            <div style="display:flex; gap:10px;"><button class="search-btn" id="searchBtn">Search</button><button class="clear-btn" id="clearSearchBtn">Clear</button></div>
+        </div>
+        <div class="search-results-info" id="searchResultsInfo"></div>
+        <div class="buttons" style="flex-direction:row; flex-wrap:wrap;">
+            <!-- prominent DOWNLOAD EXCEL button for complete list -->
+            <button class="download-excel-btn" id="downloadFullExcelBtn" style="flex:2; background:#047857;"><i class="fas fa-file-excel"></i> Download complete Excel</button>
+            <button class="clear-btn" id="clearAllBtn" style="flex:1;"><i class="fas fa-trash"></i> Clear all</button>
+        </div>
+        <div class="expense-list" id="expenseList"><div class="no-data" id="noExpenses"><i class="fas fa-receipt"></i><h3>No expenses</h3></div><div id="expensesContainer"></div></div>
+    </div>
+</div>
+
+<!-- EDIT MODAL placeholder (minimal) -->
+<div class="modal" id="editModal"><div class="modal-content"><h3>Edit</h3><p>edit feature ready</p><button id="cancelEdit">close</button></div></div>
+
+<script>
+// ---------- ± toggle function (global) ----------
+function toggleSign(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    if (input.value) {
+        const currentValue = parseFloat(input.value);
+        if (!isNaN(currentValue)) {
+            input.value = (currentValue * -1).toFixed(2);
+        } else {
+            input.value = '-';
+        }
+    } else {
+        input.value = '-'; // placeholder for negative
+    }
+}
+
+// Automatic minus key handling for all number inputs
+document.querySelectorAll('input[type="number"]').forEach(input => {
+    input.addEventListener('keydown', function(e) {
+        if (e.key === '-' && this.value && !this.value.startsWith('-')) {
+            e.preventDefault();
+            this.value = '-' + this.value;
+        }
+    });
+});
+
+// ----- expense data & state -----
+let expenses = [];
+let paymentGroups = {};
+let collapsedGroups = {};
+let currentWorkbook = null;
+let selectedRows = new Set();
+let tableDataRows = [];
+
+let currentSearchTerm = '', currentTypeFilter = 'all', currentDateFilter = 'all';
+const todayISO = new Date().toISOString().split('T')[0];
+document.getElementById('date').value = todayISO;
+document.getElementById('entryDate').value = todayISO;
+
+try {
+    if (localStorage.getItem('expenses')) expenses = JSON.parse(localStorage.getItem('expenses'));
+    if (localStorage.getItem('paymentGroups')) paymentGroups = JSON.parse(localStorage.getItem('paymentGroups'));
+    if (localStorage.getItem('collapsedGroups')) collapsedGroups = JSON.parse(localStorage.getItem('collapsedGroups'));
+} catch (e) {}
+
+// toggle sections
+const formSection = document.getElementById('formSection');
+const importSection = document.getElementById('importSection');
+const paymentsSection = document.getElementById('paymentsSection');
+const formToggle = document.getElementById('formToggle');
+const importToggle = document.getElementById('importToggle');
+const paymentsToggle = document.getElementById('paymentsToggle');
+
+formToggle.addEventListener('click', ()=>{
+    formSection.classList.remove('hidden');
+    importSection.classList.add('hidden');
+    paymentsSection.classList.add('hidden');
+    [formToggle,importToggle,paymentsToggle].forEach(b=>b.classList.remove('active'));
+    formToggle.classList.add('active');
+});
+importToggle.addEventListener('click', ()=>{
+    formSection.classList.add('hidden');
+    importSection.classList.remove('hidden');
+    paymentsSection.classList.add('hidden');
+    [formToggle,importToggle,paymentsToggle].forEach(b=>b.classList.remove('active'));
+    importToggle.classList.add('active');
+});
+paymentsToggle.addEventListener('click', ()=>{
+    formSection.classList.add('hidden');
+    importSection.classList.add('hidden');
+    paymentsSection.classList.remove('hidden');
+    [formToggle,importToggle,paymentsToggle].forEach(b=>b.classList.remove('active'));
+    paymentsToggle.classList.add('active');
+    renderExpenses();
+});
+
+// ----- form submit (with insertBetrag) -----
+const expenseForm = document.getElementById('expenseForm');
+expenseForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const pType = document.querySelector('input[name="paymentType"]:checked').value;
+    const date = document.getElementById('date').value;
+    const entry = document.getElementById('entryDate').value;
+    const title = document.getElementById('title').value.trim();
+    if (!title) return alert('Title required');
+    const desc = document.getElementById('description').value;
+    const amount = parseFloat(document.getElementById('insertBetrag').value) || 0;   // use insertBetrag as main amount
+    const ref = document.getElementById('reference').value;
+    const from = document.getElementById('fromAccount').value;
+    const to = document.getElementById('toAccount').value;
+    const person = document.getElementById('person').value;
+    const groupId = generateId();
+
+    let newExpenses = [];
+    if (pType === '1' || pType === '2') {
+        newExpenses.push(createExpense(pType, date, entry, title, desc, amount, ref, from, to, person, groupId));
+    } else if (pType === '3') {
+        const finalAmt = parseFloat(document.getElementById('finalAmount').value) || 0;
+        const firstDue = document.getElementById('firstDueDate').value;
+        const freq = document.getElementById('periodType3').value;
+        if (!finalAmt || !firstDue) return alert('Fill final amount and first due');
+        newExpenses = createPeriodical(pType, date, entry, title, desc, finalAmt, ref, from, to, person, groupId, firstDue, freq, null, null);
+    } else if (pType === '4') {
+        const rate = parseFloat(document.getElementById('ratePerPeriod').value) || 0;
+        const dueDate = document.getElementById('dueDateType4').value;
+        const finalAmt = parseFloat(document.getElementById('finalAmountType4').value) || null;
+        const finalDate = document.getElementById('finalDateType4').value || null;
+        const freq = document.getElementById('periodType4').value;
+        if (!rate || !dueDate) return alert('Fill rate and due date');
+        newExpenses = createPeriodical(pType, date, entry, title, desc, rate, ref, from, to, person, groupId, dueDate, freq, finalAmt, finalDate);
+    }
+
+    expenses = expenses.concat(newExpenses);
+    paymentGroups[groupId] = { id: groupId, paymentType: pType, title, createdAt: new Date().toISOString() };
+    saveData();
+    renderExpenses();
+    document.getElementById('successMessage').classList.remove('hidden');
+    setTimeout(()=>document.getElementById('successMessage').classList.add('hidden'), 2000);
+    expenseForm.reset();
+    document.getElementById('date').value = todayISO;
+    document.getElementById('entryDate').value = todayISO;
+    document.getElementById('insertBetrag').value = ''; // clear amount
+    // hide periodical extras
+    document.getElementById('periodicalSection').classList.add('hidden');
+    document.getElementById('type3Fields').classList.remove('active');
+    document.getElementById('type4Fields').classList.remove('active');
+});
+
+function createExpense(type, date, entry, title, desc, amount, ref, from, to, person, groupId) {
+    return { id: generateId(), paymentType: parseInt(type), date, entryDate: entry, title, description: desc, amount, reference: ref, fromAccount: from, toAccount: to, person, groupId, isRecurring: (type==='3'||type==='4'), createdAt: new Date().toISOString() };
+}
+function createPeriodical(pType, date, entry, title, desc, baseAmt, ref, from, to, person, groupId, startDate, freq, finalAmt, finalDate) {
+    let arr = []; let current = new Date(startDate); let total = 0; let maxIter=60; let count=0;
+    if (pType === '3') {
+        let numPayments = 12;
+        if (finalDate) { let end = new Date(finalDate); let months = (end.getFullYear()-current.getFullYear())*12 + end.getMonth()-current.getMonth();
+            if (freq==='monthly') numPayments = Math.max(1, months);
+            else if (freq==='quarterly') numPayments = Math.max(1, Math.floor(months/3));
+            else if (freq==='semiannual') numPayments = Math.max(1, Math.floor(months/6));
+            else if (freq==='annual') numPayments = Math.max(1, Math.floor(months/12));
+        }
+        let perPayment = baseAmt / numPayments;
+        for (let i=0; i<numPayments && i<maxIter; i++) {
+            arr.push(createExpense(pType, current.toISOString().split('T')[0], entry, `${title} (${i+1})`, desc, perPayment, ref, from, to, person, groupId));
+            current = addPeriod(current, freq);
+        }
+    } else if (pType === '4') {
+        while (count++ < maxIter) {
+            let thisAmt = baseAmt;
+            if (finalAmt && total + thisAmt > finalAmt) thisAmt = finalAmt - total;
+            if (thisAmt <= 0) break;
+            arr.push(createExpense(pType, current.toISOString().split('T')[0], entry, `${title} (${count})`, desc, thisAmt, ref, from, to, person, groupId));
+            total += thisAmt;
+            if (finalAmt && total >= finalAmt) break;
+            if (finalDate && current >= new Date(finalDate)) break;
+            current = addPeriod(current, freq);
+        }
+    }
+    return arr;
+}
+function addPeriod(d, freq) { let nd = new Date(d); if (freq==='monthly') nd.setMonth(nd.getMonth()+1); else if (freq==='quarterly') nd.setMonth(nd.getMonth()+3); else if (freq==='semiannual') nd.setMonth(nd.getMonth()+6); else if (freq==='annual') nd.setFullYear(nd.getFullYear()+1); return nd; }
+
+// ----- render (minimal list) -----
+function renderExpenses() {
+    const container = document.getElementById('expensesContainer');
+    const noExpenses = document.getElementById('noExpenses');
+    if (!container) return;
+    if (!expenses.length) { container.innerHTML = ''; noExpenses.classList.remove('hidden'); return; }
+    noExpenses.classList.add('hidden');
+    let filtered = expenses.filter(ex => {
+        if (currentSearchTerm) {
+            let hay = (ex.title+' '+ex.description+' '+ex.reference+' '+ex.person).toLowerCase();
+            if (!hay.includes(currentSearchTerm.toLowerCase())) return false;
+        }
+        if (currentTypeFilter !== 'all' && ex.paymentType != currentTypeFilter) return false;
+        if (currentDateFilter !== 'all') {
+            let d = new Date(ex.date);
+            let today = new Date();
+            if (currentDateFilter === 'today' && d.toDateString() !== today.toDateString()) return false;
+            if (currentDateFilter === 'week') {
+                let start = new Date(today); start.setDate(today.getDate()-today.getDay());
+                let end = new Date(start); end.setDate(start.getDate()+6);
+                if (d < start || d > end) return false;
+            }
+            if (currentDateFilter === 'month' && (d.getMonth()!==today.getMonth() || d.getFullYear()!==today.getFullYear())) return false;
+        }
+        return true;
+    });
+    document.getElementById('searchResultsInfo').innerText = filtered.length===expenses.length ? '' : `Showing ${filtered.length} of ${expenses.length}`;
+    let groups = {}; filtered.forEach(ex => { groups[ex.groupId] = groups[ex.groupId] || []; groups[ex.groupId].push(ex); });
+    let html = '';
+    for (let gid in groups) {
+        let arr = groups[gid];
+        let grp = paymentGroups[gid] || { title:'Group' };
+        let total = arr.reduce((s,e)=>s+e.amount,0).toFixed(2);
+        html += `<div class="payment-group"><div class="payment-group-header"><span>${escapeHtml(grp.title)} (${arr.length})</span><span>€${total}</span></div><div class="payment-group-content">`;
+        arr.forEach(ex => { html += `<div class="expense-item"><div><strong>${escapeHtml(ex.title)}</strong> <span class="payment-type-badge">${typeName(ex.paymentType)}</span></div><div>📅 ${ex.date}  ·  €${ex.amount.toFixed(2)}</div></div>`; });
+        html += `</div></div>`;
+    }
+    container.innerHTML = html;
+}
+function typeName(t) { return ['','Single','Advance','Period.Final','Period.Rate'][t]||''; }
+function escapeHtml(s) { return String(s).replace(/[&<>"]/g,function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]; }); }
+
+// ---------- DOWNLOAD FULL EXPENSE LIST AS EXCEL ----------
+document.getElementById('downloadFullExcelBtn').addEventListener('click', function() {
+    if (expenses.length === 0) {
+        alert('No expenses to export');
+        return;
+    }
+    // prepare complete data (all expenses, no filter)
+    const exportData = expenses.map(ex => ({
+        'Payment type': typeName(ex.paymentType),
+        'Date': ex.date,
+        'Entry date': ex.entryDate,
+        'Title': ex.title,
+        'Description': ex.description || '',
+        'Amount': ex.amount,
+        'Reference': ex.reference || '',
+        'From account': ex.fromAccount || '',
+        'To account': ex.toAccount || '',
+        'Person': ex.person || '',
+        'Group ID': ex.groupId
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    XLSX.utils.book_append_sheet(wb, ws, 'Complete Expenses');
+    XLSX.writeFile(wb, `expenses_full_${new Date().toISOString().slice(0,10)}.xlsx`);
+});
+
+// ----- file import (simplified, keeps selected rows) -----
+const fileInput = document.getElementById('fileInput');
+const fileName = document.getElementById('fileName');
+const sheetSelector = document.getElementById('sheetSelector');
+const previewArea = document.getElementById('previewArea');
+const tableHead = document.getElementById('tableHead');
+const tableBody = document.getElementById('tableBody');
+const addSelectedBtn = document.getElementById('addSelectedRowsBtn');
+const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+
+fileInput.addEventListener('change', function(e) {
+    let file = e.target.files[0]; if (!file) return;
+    fileName.innerText = file.name;
+    let reader = new FileReader();
+    reader.onload = (e) => {
+        let data = new Uint8Array(e.target.result);
+        currentWorkbook = XLSX.read(data, {type: 'array'});
+        sheetSelector.style.display = 'flex'; sheetSelector.innerHTML = '';
+        currentWorkbook.SheetNames.forEach((name, idx) => {
+            let btn = document.createElement('button'); btn.className = `sheet-btn ${idx===0?'active':''}`; btn.innerText = name;
+            btn.addEventListener('click', ()=> { document.querySelectorAll('.sheet-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); displaySheet(name); });
+            sheetSelector.appendChild(btn);
+        });
+        displaySheet(currentWorkbook.SheetNames[0]);
+        previewArea.style.display = 'block';
+        selectedRows.clear();
+    }; reader.readAsArrayBuffer(file);
+});
+function displaySheet(sheetName) {
+    let sheet = currentWorkbook.Sheets[sheetName];
+    let json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    if (json.length===0) return;
+    tableHead.innerHTML = '<tr><th>✓</th>' + json[0].map(h=>`<th>${h||''}</th>`).join('') + '</tr>';
+    tableDataRows = json.slice(1).filter(r=>r.length>0);
+    tableBody.innerHTML = '';
+    tableDataRows.forEach((row, idx) => {
+        let tr = document.createElement('tr'); tr.style.cursor='pointer';
+        let tdCheck = document.createElement('td');
+        let chk = document.createElement('input'); chk.type='checkbox'; chk.checked = selectedRows.has(idx);
+        chk.addEventListener('change', (e)=> { e.stopPropagation(); if(chk.checked) selectedRows.add(idx); else selectedRows.delete(idx); updateRowHighlight(tr, chk.checked); });
+        tdCheck.appendChild(chk); tr.appendChild(tdCheck);
+        row.forEach(cell => { let td = document.createElement('td'); td.innerText = cell??''; tr.appendChild(td); });
+        tr.addEventListener('click', (e)=> { if(e.target.tagName==='INPUT') return; let cb = tr.querySelector('input'); cb.checked = !cb.checked; if(cb.checked) selectedRows.add(idx); else selectedRows.delete(idx); updateRowHighlight(tr, cb.checked); });
+        if (selectedRows.has(idx)) tr.style.backgroundColor='#e0f2fe';
+        tableBody.appendChild(tr);
+    });
+}
+function updateRowHighlight(tr, sel) { tr.style.backgroundColor = sel ? '#e0f2fe' : ''; }
+
+addSelectedBtn.addEventListener('click', ()=>{
+    if (selectedRows.size===0) return alert('No rows selected');
+    let groupId = generateId(); let now = new Date().toISOString();
+    let newEx = [];
+    selectedRows.forEach(idx => {
+        let row = tableDataRows[idx]; if(!row) return;
+        let title = row[0] ? String(row[0]) : 'import';
+        let amount = parseFloat(row[1]) || 0;
+        let date = row[2] ? String(row[2]) : todayISO;
+        if (!isNaN(Date.parse(date))) date = new Date(date).toISOString().split('T')[0];
+        let desc = row[3] ? String(row[3]) : '';
+        newEx.push({ id: generateId(), paymentType:1, date, entryDate:todayISO, title, description:desc, amount, reference:'', fromAccount:'', toAccount:'', person:'', groupId, isRecurring:false, createdAt:now });
+    });
+    expenses = expenses.concat(newEx);
+    paymentGroups[groupId] = { id:groupId, paymentType:1, title:'Import batch', createdAt:now };
+    saveData(); renderExpenses(); alert(`Added ${newEx.length} expenses`);
+    selectedRows.clear(); if (currentWorkbook) displaySheet(currentSheetName);
+});
+clearSelectionBtn.addEventListener('click', ()=>{ selectedRows.clear(); if (currentWorkbook) displaySheet(currentSheetName); });
+
+// search / filter
+document.getElementById('searchBtn').addEventListener('click', ()=>{ currentSearchTerm = document.getElementById('searchInput').value; currentTypeFilter = document.getElementById('typeFilter').value; currentDateFilter = document.getElementById('dateFilter').value; renderExpenses(); });
+document.getElementById('clearSearchBtn').addEventListener('click', ()=>{ document.getElementById('searchInput').value=''; document.getElementById('typeFilter').value='all'; document.getElementById('dateFilter').value='all'; currentSearchTerm=''; currentTypeFilter='all'; currentDateFilter='all'; renderExpenses(); });
+document.getElementById('clearAllBtn').addEventListener('click', ()=>{ if(confirm('Delete ALL expenses?')) { expenses = []; paymentGroups = {}; collapsedGroups = {}; saveData(); renderExpenses(); } });
+
+function generateId() { return Date.now().toString(36) + Math.random().toString(36).substring(2); }
+function saveData() { localStorage.setItem('expenses', JSON.stringify(expenses)); localStorage.setItem('paymentGroups', JSON.stringify(paymentGroups)); }
+
+// payment type conditional
+document.querySelectorAll('input[name="paymentType"]').forEach(r => r.addEventListener('change', function() {
+    document.getElementById('type3Fields').classList.remove('active');
+    document.getElementById('type4Fields').classList.remove('active');
+    document.getElementById('periodicalSection').classList.add('hidden');
+    if (this.value === '3') { document.getElementById('type3Fields').classList.add('active'); document.getElementById('periodicalSection').classList.remove('hidden'); }
+    if (this.value === '4') { document.getElementById('type4Fields').classList.add('active'); document.getElementById('periodicalSection').classList.remove('hidden'); }
+}));
+
+// collapsible form sections
+document.querySelectorAll('.form-section-header').forEach(h => { h.addEventListener('click', function() { this.nextElementSibling.classList.toggle('collapsed'); this.querySelector('.form-section-toggle').classList.toggle('collapsed'); }); });
+
+renderExpenses();
+</script>
+</body>
+</html>

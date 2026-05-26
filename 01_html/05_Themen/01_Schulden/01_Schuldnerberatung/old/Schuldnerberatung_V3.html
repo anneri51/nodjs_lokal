@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Schuldnerberatung · FK_STD_INSO_TEILE · Teilweise Diagramme (Werte absteigend)</title>
+    <!-- Chart.js CDN für moderne Diagramme -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Inter', 'Segoe UI', Roboto, system-ui, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: #f0f4f8;
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+        }
+        .dashboard {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .title-section h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #0b2b4f, #1b4a7a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .title-section p {
+            color: #4a627a;
+            font-size: 0.95rem;
+            margin-top: 0.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .endpoint-badge {
+            background: #e6eefc;
+            padding: 0.3rem 1rem;
+            border-radius: 30px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: #0b2b4f;
+            border: 1px solid #b9cfec;
+        }
+        .controls {
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            background: white;
+            border: 1px solid #cbd5e1;
+            padding: 0.6rem 1.4rem;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: #1e3a5f;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.15s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .btn-primary {
+            background: #0b2b4f;
+            border-color: #0b2b4f;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #143b66;
+        }
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: white;
+            padding: 0.3rem 1rem 0.3rem 0.8rem;
+            border-radius: 40px;
+            border: 1px solid #dde3e9;
+        }
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #94a3b8;
+        }
+        .status-dot.connected {
+            background: #22c55e;
+            box-shadow: 0 0 0 3px rgba(34,197,94,0.2);
+        }
+        .status-dot.error {
+            background: #ef4444;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.2rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 24px;
+            padding: 1.3rem 1.5rem;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.02);
+            border: 1px solid #e9eef2;
+        }
+        .stat-label {
+            color: #64748b;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.3rem;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #0b2b4f;
+        }
+        .chart-container {
+            background: white;
+            border-radius: 28px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 12px 30px -8px rgba(0,34,64,0.08);
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s;
+        }
+        .chart-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #0b2b4f;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+        .chart-title span {
+            background: #eef2ff;
+            padding: 0.2rem 0.8rem;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            font-weight: normal;
+            color: #1e40af;
+        }
+        canvas {
+            max-height: 450px;
+            width: 100%;
+        }
+        .stats-insight {
+            background: #f8fafc;
+            border-radius: 20px;
+            padding: 1rem 1.5rem;
+            border-left: 5px solid #0b2b4f;
+            font-size: 0.9rem;
+            color: #1e3a5f;
+            margin-top: 1rem;
+        }
+        .teil-section {
+            margin-bottom: 2.5rem;
+            scroll-margin-top: 1rem;
+        }
+        .teil-header {
+            background: linear-gradient(90deg, #eef2ff, #ffffff);
+            padding: 0.8rem 1.5rem;
+            border-radius: 60px;
+            margin-bottom: 1.2rem;
+            display: inline-flex;
+            align-items: baseline;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+            border: 1px solid #cfdfed;
+        }
+        .teil-badge {
+            background: #0b2b4f;
+            color: white;
+            font-weight: 600;
+            padding: 0.3rem 1rem;
+            border-radius: 40px;
+            font-size: 0.9rem;
+        }
+        .teil-summary {
+            color: #2c628f;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .empty-chart-message {
+            background: #fef9e6;
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            color: #b45309;
+            border: 1px dashed #fdba74;
+        }
+        .footer {
+            text-align: center;
+            color: #6f85a2;
+            font-size: 0.8rem;
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #dce5ec;
+        }
+        .message-area {
+            margin-bottom: 1.5rem;
+        }
+        .success-message {
+            background: #e2f7e7;
+            border: 1px solid #a0d9b6;
+            color: #0f5c3a;
+            padding: 0.8rem 1.5rem;
+            border-radius: 40px;
+        }
+        .error-message {
+            background: #fee9e7;
+            border: 1px solid #f5b5ad;
+            color: #aa302a;
+            padding: 0.8rem 1.5rem;
+            border-radius: 40px;
+        }
+        .grid-charts {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+        .badge {
+            background: #e6f0fc;
+            color: #0b2b4f;
+            padding: 0.2rem 0.8rem;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        @media (max-width: 700px) {
+            body {
+                padding: 1rem;
+            }
+            .chart-title {
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <div class="header">
+        <div class="title-section">
+            <h1>📊 FK_STD_INSO_TEILE · separate Diagramme</h1>
+            <p><span class="endpoint-badge">http://localhost:5000/schuldnerberatung</span> <span>🎯 Pro "Teil" (FK_STD_INSO_TEILE) ein eigenes Diagramm – Werte absteigend sortiert (BRUTTO_BETRAG)</span></p>
+        </div>
+        <div class="controls">
+            <div class="status-indicator"><span class="status-dot" id="statusDot"></span><span id="statusText">Verbindung prüfen</span></div>
+            <button class="btn" id="refreshBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6" stroke="currentColor"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Aktualisieren</button>
+        </div>
+    </div>
+
+    <div id="messageArea" class="message-area"></div>
+
+    <!-- Überblick Statistik Karten -->
+    <div class="stats-grid" id="statsOverview">
+        <div class="stat-card"><div class="stat-label">Anzahl Teile (FK_STD_INSO_TEILE)</div><div class="stat-value" id="teilCount">0</div><div class="stat-detail">unterschiedliche Teil-IDs</div></div>
+        <div class="stat-card"><div class="stat-label">Datensätze gesamt</div><div class="stat-value" id="totalRecords">0</div><div class="stat-detail">mit Bruttobetrag</div></div>
+        <div class="stat-card"><div class="stat-label">Summe Brutto (alle Teile)</div><div class="stat-value" id="totalBruttoSum">0,00 €</div><div class="stat-detail">aggregierter Wert</div></div>
+        <div class="stat-card"><div class="stat-label">Max Einzelbetrag</div><div class="stat-value" id="globalMax">0,00 €</div><div class="stat-detail">höchster Wert</div></div>
+    </div>
+
+    <!-- Container für alle Teil-Diagramme (jedes FK_STD_INSO_TEILE bekommt eigenes Chart) -->
+    <div id="chartsContainer" class="grid-charts">
+        <div class="stats-insight" style="margin-bottom: 0.5rem;">📌 Lade Daten und generiere individuelle Balkendiagramme – für jeden Teil (FK_STD_INSO_TEILE) werden die dazugehörigen Bruttobeträge absteigend sortiert dargestellt.</div>
+    </div>
+    <div class="footer">⚡ Jedes Diagramm repräsentiert genau ein FK_STD_INSO_TEILE · Sortierung absteigend nach BRUTTO_BETRAG · Chart.js Darstellung</div>
+</div>
+
+<script>
+    (function(){
+        // API & STATE
+        const API_BASE = 'http://localhost:5000';
+        const VIEW_API = `${API_BASE}/schuldnerberatung`;
+        let cachedData = null;
+        let chartInstances = new Map(); // speichert Chart-Objekte pro Teil-ID (um bei Refresh zu zerstören)
+        
+        // DOM references
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const messageArea = document.getElementById('messageArea');
+        const chartsContainer = document.getElementById('chartsContainer');
+        const teilCountSpan = document.getElementById('teilCount');
+        const totalRecordsSpan = document.getElementById('totalRecords');
+        const totalBruttoSumSpan = document.getElementById('totalBruttoSum');
+        const globalMaxSpan = document.getElementById('globalMax');
+
+        // Hilfsfunktionen
+        function escapeHtml(str){ if(!str) return ''; return String(str).replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m; }); }
+        function showMessage(msg, isError=false){ 
+            messageArea.innerHTML = `<div class="${isError?'error-message':'success-message'}">${msg}</div>`; 
+            setTimeout(()=>{ if(messageArea.innerHTML.includes(msg)) messageArea.innerHTML=''; }, 5000); 
+        }
+
+        // Kernfunktion: Daten gruppieren nach FK_STD_INSO_TEILE, dann für jede Gruppe Werte (BRUTTO_BETRAG) extrahieren, sortieren (desc)
+        function groupByTeilAndSortDesc(data) {
+            // filtere alle Datensätze, die einen gültigen Bruttobetrag haben
+            const validEntries = data.filter(item => {
+                const betrag = parseFloat(item.BRUTTO_BETRAG);
+                return !isNaN(betrag) && betrag !== null && item.FK_STD_INSO_TEILE !== undefined;
+            });
+            
+            const groups = new Map(); // key: FK_STD_INSO_TEILE (als string) , value: { name, entries: [{betrag, label, pk, desc}] }
+            for (let item of validEntries) {
+                let teilIdRaw = item.FK_STD_INSO_TEILE;
+                // falls NULL oder undefined -> als "Ohne Zuordnung" behandeln
+                let teilKey = (teilIdRaw === null || teilIdRaw === undefined || teilIdRaw === 'NULL') ? 'NULL' : String(teilIdRaw);
+                let teilDisplayName = item.SCHULDNERBERATUNG_TEIL || `Teil ${teilKey}`;
+                if (teilKey === 'NULL') teilDisplayName = '🔹 Ohne Teil-Zuordnung (NULL)';
+                
+                if (!groups.has(teilKey)) {
+                    groups.set(teilKey, { 
+                        id: teilKey, 
+                        displayName: teilDisplayName,
+                        entries: [],
+                        totalSum: 0,
+                        maxValue: -Infinity
+                    });
+                }
+                const group = groups.get(teilKey);
+                const betragValue = parseFloat(item.BRUTTO_BETRAG);
+                let description = item.BEZEICHNUNG || item.PROJEKT_BEZEICHNUNG || `PK: ${item.PK_REL_INSO_SCHULDNERBERATUNG_TEIL_INP_BELEGE_ALL}`;
+                if (description.length > 45) description = description.substring(0, 42) + '…';
+                group.entries.push({
+                    betrag: betragValue,
+                    label: description,
+                    pk: item.PK_REL_INSO_SCHULDNERBERATUNG_TEIL_INP_BELEGE_ALL,
+                    rawItem: item
+                });
+                group.totalSum += betragValue;
+                if (betragValue > group.maxValue) group.maxValue = betragValue;
+            }
+            
+            // für jede Gruppe: Einträge absteigend sortieren (höchster Betrag zuerst)
+            for (let [key, group] of groups.entries()) {
+                group.entries.sort((a,b) => b.betrag - a.betrag);
+                // Maxwert aktualisieren nach sortierung (bleibt gleich)
+            }
+            // Gruppen sortieren nach Gesamtsumme (optional) oder nach Teil-ID alphabetisch -> nach ID für Konsistenz
+            const sortedGroups = Array.from(groups.values()).sort((a,b) => {
+                if (a.id === 'NULL') return 1; // NULL ans Ende
+                if (b.id === 'NULL') return -1;
+                return a.id.localeCompare(b.id);
+            });
+            return sortedGroups;
+        }
+
+        // Zerstört alle existierenden Charts im Container (um Speicherlecks zu vermeiden)
+        function destroyAllCharts() {
+            for (let [teilId, chart] of chartInstances.entries()) {
+                if (chart && typeof chart.destroy === 'function') {
+                    chart.destroy();
+                }
+            }
+            chartInstances.clear();
+        }
+
+        // Rendert die gesamte Oberfläche: Statistik-Karten und jedes Teil-Diagramm
+        function renderAllTeilDiagrams(data) {
+            if (!data || !data.length) {
+                chartsContainer.innerHTML = `<div class="empty-chart-message">⚠️ Keine Daten geladen oder keine gültigen Bruttobeträge vorhanden. Bitte API prüfen.</div>`;
+                teilCountSpan.innerText = '0';
+                totalRecordsSpan.innerText = '0';
+                totalBruttoSumSpan.innerText = '0,00 €';
+                globalMaxSpan.innerText = '0,00 €';
+                return;
+            }
+            
+            const groups = groupByTeilAndSortDesc(data);
+            if (groups.length === 0) {
+                chartsContainer.innerHTML = `<div class="empty-chart-message">📭 Es wurden keine Datensätze mit gültigem BRUTTO_BETRAG und FK_STD_INSO_TEILE gefunden.</div>`;
+                teilCountSpan.innerText = '0';
+                totalRecordsSpan.innerText = '0';
+                totalBruttoSumSpan.innerText = '0,00 €';
+                globalMaxSpan.innerText = '0,00 €';
+                return;
+            }
+            
+            // Global Stats berechnen
+            let totalRecords = 0;
+            let totalBruttoSumAll = 0;
+            let globalMaxValue = 0;
+            for (let group of groups) {
+                totalRecords += group.entries.length;
+                totalBruttoSumAll += group.totalSum;
+                if (group.maxValue > globalMaxValue) globalMaxValue = group.maxValue;
+            }
+            teilCountSpan.innerText = groups.length;
+            totalRecordsSpan.innerText = totalRecords;
+            totalBruttoSumSpan.innerText = totalBruttoSumAll.toFixed(2) + ' €';
+            globalMaxSpan.innerText = globalMaxValue.toFixed(2) + ' €';
+            
+            // Charts Container aufbauen (zuerst leeren, aber vorher Charts zerstören)
+            destroyAllCharts();
+            chartsContainer.innerHTML = ''; 
+            
+            // Für jede Gruppe ein eigenes Diagramm erstellen (separater Container)
+            for (let idx = 0; idx < groups.length; idx++) {
+                const group = groups[idx];
+                const entries = group.entries;
+                if (entries.length === 0) continue;
+                
+                // Erstelle Section für dieses Teil
+                const sectionDiv = document.createElement('div');
+                sectionDiv.className = 'teil-section';
+                sectionDiv.id = `teil-section-${group.id.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                
+                // Header: Name, Anzahl, Summe
+                const headerDiv = document.createElement('div');
+                headerDiv.className = 'teil-header';
+                const teilBadge = document.createElement('span');
+                teilBadge.className = 'teil-badge';
+                teilBadge.innerText = `FK_STD_INSO_TEILE: ${group.id === 'NULL' ? '— (ohne Zuordnung)' : group.id}`;
+                const summarySpan = document.createElement('span');
+                summarySpan.className = 'teil-summary';
+                summarySpan.innerHTML = `📌 ${group.displayName} · ${entries.length} Einträge · Σ ${group.totalSum.toFixed(2)} € · max: ${group.maxValue.toFixed(2)} €`;
+                headerDiv.appendChild(teilBadge);
+                headerDiv.appendChild(summarySpan);
+                
+                // Canvas für Chart
+                const canvasWrapper = document.createElement('div');
+                canvasWrapper.className = 'chart-container';
+                const chartTitleDiv = document.createElement('div');
+                chartTitleDiv.className = 'chart-title';
+                chartTitleDiv.innerHTML = `<span>📊 Werte absteigend sortiert (höchster → niedrigster)</span> <span class="badge">Top ${Math.min(entries.length, 15)} angezeigt</span>`;
+                const canvas = document.createElement('canvas');
+                canvas.id = `chart-canvas-${group.id.replace(/[^a-zA-Z0-9]/g, '_')}-${idx}`;
+                canvas.width = 400;
+                canvas.height = 300;
+                canvas.style.maxHeight = '400px';
+                canvasWrapper.appendChild(chartTitleDiv);
+                canvasWrapper.appendChild(canvas);
+                
+                // Insight Box (kleine Beschreibung)
+                const insightDiv = document.createElement('div');
+                insightDiv.className = 'stats-insight';
+                const topBetrag = entries.length > 0 ? entries[0].betrag : 0;
+                insightDiv.innerHTML = `🔍 <strong>Teil ${group.id === 'NULL' ? 'ohne Zuordnung' : group.id}</strong> – Höchster Wert: ${topBetrag.toFixed(2)} € · ${entries.length} Datensätze absteigend sortiert. Balkenlänge repräsentiert Bruttobetrag.`;
+                
+                sectionDiv.appendChild(headerDiv);
+                sectionDiv.appendChild(canvasWrapper);
+                sectionDiv.appendChild(insightDiv);
+                chartsContainer.appendChild(sectionDiv);
+                
+                // Daten für das Diagramm vorbereiten: Labels und Werte (absteigend sortiert sind sie bereits)
+                // Für bessere Lesbarkeit: max. 20 Balken anzeigen, falls mehr vorhanden -> gruppieren oder limitieren? Wir zeigen max 20 an, da sonst unübersichtlich.
+                let displayEntries = entries;
+                let truncMsg = '';
+                if (entries.length > 25) {
+                    displayEntries = entries.slice(0, 25);
+                    truncMsg = ` (erste 25 von ${entries.length} angezeigt)`;
+                }
+                const labels = displayEntries.map((entry, i) => {
+                    let labelBase = entry.label.length > 28 ? entry.label.substring(0, 25) + '…' : entry.label;
+                    return `#${i+1}: ${labelBase}`;
+                });
+                const betragData = displayEntries.map(entry => entry.betrag);
+                
+                // Erstelle das Chart.js Diagramm (Balkendiagramm)
+                const ctx = canvas.getContext('2d');
+                const newChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: `Bruttobetrag (€) · ${group.id}`,
+                            data: betragData,
+                            backgroundColor: '#1b4a7a',
+                            borderRadius: 6,
+                            borderSkipped: false,
+                            barPercentage: 0.7,
+                            categoryPercentage: 0.85
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { position: 'top', labels: { font: { size: 11 } } },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let val = context.raw;
+                                        let originalEntry = displayEntries[context.dataIndex];
+                                        return [`💰 Wert: ${val.toFixed(2)} €`, `📋 PK: ${originalEntry.pk}`];
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: 'Betrag in Euro', font: { weight: 'bold' } },
+                                ticks: { callback: (val) => val.toFixed(2) + ' €' }
+                            },
+                            x: {
+                                title: { display: true, text: `Einträge (absteigend sortiert)${truncMsg}`, font: { size: 10 } },
+                                ticks: { autoSkip: true, maxRotation: 35, minRotation: 25, font: { size: 9 } }
+                            }
+                        },
+                        layout: {
+                            padding: { top: 10, bottom: 10, left: 5, right: 5 }
+                        }
+                    }
+                });
+                chartInstances.set(group.id, newChart);
+                
+                // Falls truncMsg vorhanden, zusätzliche kleine Notiz im Container anzeigen
+                if (entries.length > 25) {
+                    const noteSpan = document.createElement('div');
+                    noteSpan.style.fontSize = '0.75rem';
+                    noteSpan.style.color = '#5f6c84';
+                    noteSpan.style.marginTop = '0.5rem';
+                    noteSpan.style.textAlign = 'right';
+                    noteSpan.innerHTML = `ℹ️ Dieses Teil enthält ${entries.length} Einträge – aus Platzgründen werden die Top 25 (nach Betrag) dargestellt.`;
+                    canvasWrapper.appendChild(noteSpan);
+                }
+            }
+            
+            // Falls nach dem Filtern gar keine Gruppen mehr mit Einträgen existieren
+            if (groups.length === 0 || chartsContainer.children.length === 0) {
+                chartsContainer.innerHTML = `<div class="empty-chart-message">⚠️ Keine gültigen Bruttobeträge in den Daten vorhanden. Bitte überprüfen Sie die API-Antwort (Feld BRUTTO_BETRAG).</div>`;
+            }
+        }
+        
+        // Lade Daten von der API
+        async function loadData() {
+            // Reset UI Ladezustand
+            chartsContainer.innerHTML = `<div class="stats-insight" style="text-align:center;">🔄 Lade Daten von ${VIEW_API} ...</div>`;
+            try {
+                const res = await fetch(VIEW_API);
+                if (!res.ok) throw new Error(`HTTP ${res.status} - ${res.statusText}`);
+                const json = await res.json();
+                // Erwartetes Format: Array oder Objekt mit data-Feld
+                let records = Array.isArray(json) ? json : (json.data || []);
+                if (!records.length) {
+                    cachedData = [];
+                    renderAllTeilDiagrams([]);
+                    statusDot.className = 'status-dot error';
+                    statusText.innerText = 'Keine Daten';
+                    showMessage('API lieferte leeres Array. Keine Datensätze vorhanden.', true);
+                    return;
+                }
+                cachedData = records;
+                renderAllTeilDiagrams(cachedData);
+                statusDot.className = 'status-dot connected';
+                statusText.innerText = `verbunden (${records.length} Datensätze)`;
+                showMessage(`✅ Erfolgreich geladen: ${records.length} Datensätze, davon ${records.filter(i=>!isNaN(parseFloat(i.BRUTTO_BETRAG))).length} mit Bruttobetrag.`);
+            } catch (err) {
+                console.error(err);
+                statusDot.className = 'status-dot error';
+                statusText.innerText = 'Fehler';
+                chartsContainer.innerHTML = `<div class="empty-chart-message">❌ Fehler beim Laden: ${err.message}<br><br>Stellen Sie sicher, dass der Backend-Server unter ${API_BASE} läuft und die Route /schuldnerberatung verfügbar ist.</div>`;
+                showMessage(`Fehler: ${err.message}`, true);
+            }
+        }
+        
+        // Mock-Daten-Fallback für Demonstration, falls keine API erreichbar ist? Laut Aufgabenstellung soll echter API-Call erfolgen.
+        // Zusätzlich: beim ersten Laden initialisieren
+        refreshBtn.addEventListener('click', () => {
+            loadData();
+        });
+        
+        // Optional: Falls Entwicklungsmodus oder lokale Demo, kann man Test-Daten einblenden, aber wir vertrauen auf API.
+        // Für den Fall dass die API nicht antwortet oder cross-origin, geben wir einen Hinweis.
+        // Starte Ladevorgang
+        loadData();
+        
+        // kleine Hilfsfunktion: bei Klick auf Refresh wird auch alles sauber neu aufgebaut
+        window.addEventListener('load', () => {
+            // nochmal sicherheitshalber
+            if (!cachedData) setTimeout(() => loadData(), 200);
+        });
+    })();
+</script>
+</body>
+</html>
