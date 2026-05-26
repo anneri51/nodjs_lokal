@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Offline Schach · Mensch vs Computer · Random Moves</title>
+    <style>
+        * {
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: linear-gradient(145deg, #2a3b2c 0%, #1e2a1f 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', 'Roboto', 'Noto Sans', system-ui, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .chess-container {
+            background: #2c1e12;
+            padding: 1rem;
+            border-radius: 3rem;
+            box-shadow: 0 25px 40px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.1);
+        }
+
+        .board-wrapper {
+            background: #deb887;
+            padding: 0.8rem;
+            border-radius: 1.8rem;
+            box-shadow: inset 0 0 0 2px #f5e2b0, 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border-radius: 0.8rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            cursor: pointer;
+            width: 100%;
+            height: auto;
+            background-color: #f0d9b5;
+        }
+
+        .info-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1.2rem;
+            gap: 1rem;
+            flex-wrap: wrap;
+            background: #1f2a1b;
+            padding: 0.6rem 1.2rem;
+            border-radius: 3rem;
+            backdrop-filter: blur(2px);
+        }
+
+        .status {
+            background: #2c2e2a;
+            padding: 0.4rem 1.2rem;
+            border-radius: 2rem;
+            font-weight: bold;
+            color: #f7f3e0;
+            text-shadow: 0 1px 1px black;
+            font-size: 1rem;
+            letter-spacing: 0.5px;
+            box-shadow: inset 0 1px 2px #4a5a44, 0 2px 4px black;
+        }
+
+        button {
+            background: #e3b87c;
+            border: none;
+            font-weight: bold;
+            font-size: 1rem;
+            padding: 0.5rem 1.4rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            transition: 0.1s linear;
+            font-family: inherit;
+            box-shadow: 0 3px 0 #7a582e;
+            color: #2c1e12;
+        }
+
+        button:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 #7a582e;
+        }
+
+        .turn-indicator {
+            background: #00000066;
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #ffecb3;
+            font-weight: bold;
+        }
+
+        .piece-symbol {
+            font-size: 1.4rem;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.4));
+        }
+        
+        .move-counter {
+            background: #00000055;
+            padding: 0.3rem 0.9rem;
+            border-radius: 2rem;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 0.85rem;
+            color: #ffd966;
+        }
+
+        @media (max-width: 550px) {
+            .status { font-size: 0.75rem; padding: 0.3rem 1rem; }
+            button { padding: 0.4rem 1rem; font-size: 0.8rem; }
+            .turn-indicator { font-size: 0.75rem; }
+            .piece-symbol { font-size: 1.2rem; }
+            .move-counter { font-size: 0.7rem; }
+        }
+    </style>
+</head>
+<body>
+<div>
+    <div class="chess-container">
+        <div class="board-wrapper">
+            <canvas id="chessCanvas" width="480" height="480"></canvas>
+        </div>
+        <div class="info-panel">
+            <div class="turn-indicator" id="turnDisplay">
+                <span>♔</span> <span id="turnText">Weiß (Du)</span>
+            </div>
+            <div class="status" id="statusMsg">✨ Dein Zug – wähle eine Figur</div>
+            <div class="move-counter" id="moveCounter">Züge: 0</div>
+            <button id="resetBtn">🔄 Neustart</button>
+        </div>
+    </div>
+    <div style="text-align: center; margin-top: 12px; font-size: 13px; color: #d6d0b0; font-weight: 500;">
+        ♔ Abwechselnd spielen · Computer wählt zufälligen legalen Zug · Offline-fähig
+    </div>
+</div>
+
+<script>
+    // ======================== SCHACHLOGIK ========================
+    // Board: 8x8, jedes Feld: { type, color } oder null
+    // Figuren-Typen: 'p'(Bauer), 'n'(Springer), 'b'(Läufer), 'r'(Turm), 'q'(Dame), 'k'(König)
+    // Farben: 'w' (weiß, Mensch), 'b' (schwarz, Computer)
+
+    let board = Array(8).fill().map(() => Array(8).fill(null));
+    let currentTurn = 'w';      // 'w' = Mensch (weiß), 'b' = Computer (schwarz)
+    let gameOver = false;
+    let winner = null;           // 'w', 'b' oder null für Patt
+    let selectedRow = null;
+    let selectedCol = null;
+    let legalMovesForSelected = [];   // [{toRow, toCol}]
+    let fullMoveCount = 0;             // Anzahl der ausgeführten Züge (jeder Halbzug zählt)
+
+    // Canvas
+    const canvas = document.getElementById('chessCanvas');
+    const ctx = canvas.getContext('2d');
+    const cellSize = 480 / 8; // 60px
+
+    // Unicode Symbole für Figuren
+    const pieceMap = {
+        'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
+        'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
+    };
+
+    // Initiale Grundaufstellung (Standard)
+    function initBoard() {
+        for(let i = 0; i < 8; i++) {
+            for(let j = 0; j < 8; j++) {
+                board[i][j] = null;
+            }
+        }
+        // Bauern
+        for(let i = 0; i < 8; i++) {
+            board[1][i] = { type: 'p', color: 'b' }; // schwarz oben (Reihe 1)
+            board[6][i] = { type: 'p', color: 'w' }; // weiß unten (Reihe 6)
+        }
+        // Offiziere schwarz (Reihe 0)
+        const backBlack = ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'];
+        for(let i = 0; i < 8; i++) board[0][i] = { type: backBlack[i], color: 'b' };
+        // Offiziere weiß (Reihe 7)
+        const backWhite = ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'];
+        for(let i = 0; i < 8; i++) board[7][i] = { type: backWhite[i], color: 'w' };
+    }
+
+    // Kopiert das Board
+    function copyBoard(boardSrc) {
+        const newBoard = Array(8).fill().map(() => Array(8).fill(null));
+        for(let i = 0; i < 8; i++) {
+            for(let j = 0; j < 8; j++) {
+                if(boardSrc[i][j]) newBoard[i][j] = { ...boardSrc[i][j] };
+            }
+        }
+        return newBoard;
+    }
+
+    // Prüft ob Feld existiert
+    function inBounds(r,c) { return r >= 0 && r < 8 && c >= 0 && c < 8; }
+
+    // Gibt alle pseudolegalen Züge einer Figur (ohne Schachprüfung)
+    function getPiecePseudoMoves(piece, row, col, boardState) {
+        const moves = [];
+        const type = piece.type;
+        const color = piece.color;
+        const dirs = {
+            rook: [[1,0],[-1,0],[0,1],[0,-1]],
+            bishop: [[1,1],[1,-1],[-1,1],[-1,-1]],
+            queen: [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]
+        };
+        
+        // BAUER
+        if(type === 'p') {
+            const direction = (color === 'w') ? -1 : 1;
+            const startRow = (color === 'w') ? 6 : 1;
+            const oneStepRow = row + direction;
+            if(inBounds(oneStepRow, col) && !boardState[oneStepRow][col]) {
+                moves.push([oneStepRow, col]);
+                if(row === startRow) {
+                    const twoStepRow = row + 2*direction;
+                    if(inBounds(twoStepRow, col) && !boardState[twoStepRow][col] && !boardState[oneStepRow][col]) {
+                        moves.push([twoStepRow, col]);
+                    }
+                }
+            }
+            // Schräg schlagen
+            for(const dc of [-1, 1]) {
+                const newRow = row + direction;
+                const newCol = col + dc;
+                if(inBounds(newRow, newCol) && boardState[newRow][newCol] && boardState[newRow][newCol].color !== color) {
+                    moves.push([newRow, newCol]);
+                }
+            }
+        }
+        // SPRINGER
+        else if(type === 'n') {
+            const offsets = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+            for(const [dr, dc] of offsets) {
+                const nr = row+dr, nc = col+dc;
+                if(inBounds(nr,nc) && (!boardState[nr][nc] || boardState[nr][nc].color !== color)) {
+                    moves.push([nr,nc]);
+                }
+            }
+        }
+        // LÄUFER
+        else if(type === 'b') {
+            for(const [dr, dc] of dirs.bishop) {
+                for(let step = 1; step <= 7; step++) {
+                    const nr = row + dr*step, nc = col + dc*step;
+                    if(!inBounds(nr,nc)) break;
+                    if(!boardState[nr][nc]) { moves.push([nr,nc]); continue; }
+                    if(boardState[nr][nc].color !== color) moves.push([nr,nc]);
+                    break;
+                }
+            }
+        }
+        // TURM
+        else if(type === 'r') {
+            for(const [dr, dc] of dirs.rook) {
+                for(let step = 1; step <= 7; step++) {
+                    const nr = row + dr*step, nc = col + dc*step;
+                    if(!inBounds(nr,nc)) break;
+                    if(!boardState[nr][nc]) { moves.push([nr,nc]); continue; }
+                    if(boardState[nr][nc].color !== color) moves.push([nr,nc]);
+                    break;
+                }
+            }
+        }
+        // DAME
+        else if(type === 'q') {
+            for(const [dr, dc] of dirs.queen) {
+                for(let step = 1; step <= 7; step++) {
+                    const nr = row + dr*step, nc = col + dc*step;
+                    if(!inBounds(nr,nc)) break;
+                    if(!boardState[nr][nc]) { moves.push([nr,nc]); continue; }
+                    if(boardState[nr][nc].color !== color) moves.push([nr,nc]);
+                    break;
+                }
+            }
+        }
+        // KÖNIG
+        else if(type === 'k') {
+            const kingSteps = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+            for(const [dr, dc] of kingSteps) {
+                const nr = row+dr, nc = col+dc;
+                if(inBounds(nr,nc) && (!boardState[nr][nc] || boardState[nr][nc].color !== color)) {
+                    moves.push([nr,nc]);
+                }
+            }
+            // Keine Rochade (einfache Version, trotzdem fair für Random-Moves)
+        }
+        return moves;
+    }
+
+    // Prüft ob König einer Farbe im Schach steht
+    function isKingInCheck(boardState, color) {
+        let kingPos = null;
+        for(let i=0;i<8;i++){
+            for(let j=0;j<8;j++){
+                const p = boardState[i][j];
+                if(p && p.type === 'k' && p.color === color) {
+                    kingPos = [i,j];
+                    break;
+                }
+            }
+        }
+        if(!kingPos) return false;
+        const [kr, kc] = kingPos;
+        const opponent = color === 'w' ? 'b' : 'w';
+        for(let i=0;i<8;i++){
+            for(let j=0;j<8;j++){
+                const p = boardState[i][j];
+                if(p && p.color === opponent) {
+                    const pseudo = getPiecePseudoMoves(p, i, j, boardState);
+                    for(const [tr,tc] of pseudo) {
+                        if(tr === kr && tc === kc) return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    // Prüft ob ein bestimmter Zug legal ist (nach Schachregel)
+    function isMoveLegal(boardState, fromRow, fromCol, toRow, toCol, color) {
+        const piece = boardState[fromRow][fromCol];
+        if(!piece || piece.color !== color) return false;
+        const pseudoMoves = getPiecePseudoMoves(piece, fromRow, fromCol, boardState);
+        let isValidPseudo = false;
+        for(const [mr,mc] of pseudoMoves) {
+            if(mr === toRow && mc === toCol) { isValidPseudo = true; break; }
+        }
+        if(!isValidPseudo) return false;
+        
+        // Teste, ob nach dem Zug der eigene König im Schach wäre
+        const testBoard = copyBoard(boardState);
+        testBoard[toRow][toCol] = testBoard[fromRow][fromCol];
+        testBoard[fromRow][fromCol] = null;
+        
+        // Bei Bauernumwandlung simulieren wir erstmal normal (wird im ApplyMove behandelt)
+        // Für Legalitätscheck reicht die figurgleiche Verschiebung
+        return !isKingInCheck(testBoard, color);
+    }
+
+    // Alle legalen Züge einer Farbe (für Computer & Mattprüfung)
+    function getAllLegalMoves(boardState, color) {
+        const moves = [];
+        for(let i=0;i<8;i++){
+            for(let j=0;j<8;j++){
+                const p = boardState[i][j];
+                if(p && p.color === color){
+                    for(let tr=0;tr<8;tr++){
+                        for(let tc=0;tc<8;tc++){
+                            if(isMoveLegal(boardState, i, j, tr, tc, color)){
+                                moves.push({ from: {row:i, col:j}, to: {row:tr, col:tc} });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return moves;
+    }
+
+    // Führt einen Zug aus (mit Bauernumwandlung zu Dame)
+    function applyMove(fromRow, fromCol, toRow, toCol) {
+        const piece = board[fromRow][fromCol];
+        if(!piece) return false;
+        
+        let promoted = false;
+        if(piece.type === 'p') {
+            const isPromotion = (piece.color === 'w' && toRow === 0) || (piece.color === 'b' && toRow === 7);
+            if(isPromotion) {
+                board[toRow][toCol] = { type: 'q', color: piece.color };
+                board[fromRow][fromCol] = null;
+                promoted = true;
+            }
+        }
+        if(!promoted) {
+            board[toRow][toCol] = board[fromRow][fromCol];
+            board[fromRow][fromCol] = null;
+        }
+        return true;
+    }
+
+    // Prüft auf Matt oder Patt, setzt gameOver und winner
+    function checkGameOver() {
+        const moves = getAllLegalMoves(board, currentTurn);
+        if(moves.length === 0) {
+            if(isKingInCheck(board, currentTurn)) {
+                gameOver = true;
+                winner = (currentTurn === 'w') ? 'b' : 'w';
+            } else {
+                gameOver = true;
+                winner = null; // Patt
+            }
+            return true;
+        }
+        return false;
+    }
+
+    // Wechselt den Spieler und prüft Spielende, startet ggf. Computerzug
+    function switchTurnAndContinue() {
+        if(gameOver) return;
+        currentTurn = (currentTurn === 'w') ? 'b' : 'w';
+        if(checkGameOver()) {
+            drawBoard();
+            updateUI();
+            return;
+        }
+        drawBoard();
+        updateUI();
+        // Falls Computer am Zug ist, verzögert starten
+        if(!gameOver && currentTurn === 'b') {
+            setTimeout(() => computerMove(), 60);
+        }
+    }
+
+    // Computerzug: wählt zufällig einen legalen Zug aus (randomized moves)
+    function computerMove() {
+        if(gameOver) return;
+        if(currentTurn !== 'b') return;
+        
+        const legalMoves = getAllLegalMoves(board, 'b');
+        if(legalMoves.length === 0) {
+            if(checkGameOver()) {
+                drawBoard();
+                updateUI();
+            }
+            return;
+        }
+        
+        // ZUFALLS-ZUG (randomized)
+        const randomIndex = Math.floor(Math.random() * legalMoves.length);
+        const move = legalMoves[randomIndex];
+        const { from, to } = move;
+        
+        // Zug ausführen
+        applyMove(from.row, from.col, to.row, to.col);
+        fullMoveCount++;
+        
+        // Neu zeichnen
+        drawBoard();
+        
+        // Nach dem Zug: Wechsel zu Mensch, aber vorher GameOver prüfen
+        if(!gameOver) {
+            currentTurn = 'w';
+            if(checkGameOver()) {
+                drawBoard();
+                updateUI();
+                return;
+            }
+            updateUI();
+            drawBoard();
+        } else {
+            updateUI();
+            drawBoard();
+        }
+    }
+
+    // Menschlicher Zugversuch (wird bei Canvas-Klick ausgelöst)
+    function tryHumanMove(fromRow, fromCol, toRow, toCol) {
+        if(gameOver) {
+            updateUI();
+            return false;
+        }
+        if(currentTurn !== 'w') return false;
+        const piece = board[fromRow][fromCol];
+        if(!piece || piece.color !== 'w') return false;
+        
+        if(isMoveLegal(board, fromRow, fromCol, toRow, toCol, 'w')) {
+            applyMove(fromRow, fromCol, toRow, toCol);
+            fullMoveCount++;
+            drawBoard();
+            
+            // Spielerwechsel prüfen
+            if(!gameOver) {
+                currentTurn = 'b';
+                if(checkGameOver()) {
+                    drawBoard();
+                    updateUI();
+                    return true;
+                }
+                updateUI();
+                drawBoard();
+                // Computer zieht nach kurzer Pause
+                setTimeout(() => computerMove(), 80);
+            } else {
+                updateUI();
+                drawBoard();
+            }
+            return true;
+        }
+        return false;
+    }
+
+    // ======================== ZEICHNEN & UI ========================
+    function drawBoard() {
+        if(!ctx) return;
+        for(let row = 0; row < 8; row++) {
+            for(let col = 0; col < 8; col++) {
+                const isLight = (row + col) % 2 === 0;
+                const fillColor = isLight ? '#f0d9b5' : '#b58863';
+                ctx.fillStyle = fillColor;
+                ctx.fillRect(col*cellSize, row*cellSize, cellSize, cellSize);
+                
+                // Markierung der aktuell selektierten Figur
+                if(selectedRow === row && selectedCol === col && !gameOver && currentTurn === 'w') {
+                    ctx.fillStyle = 'rgba(70, 200, 100, 0.5)';
+                    ctx.fillRect(col*cellSize, row*cellSize, cellSize, cellSize);
+                }
+                // Markiere legale Ziel-Felder
+                for(const mv of legalMovesForSelected) {
+                    if(mv.toRow === row && mv.toCol === col) {
+                        ctx.fillStyle = 'rgba(50, 180, 70, 0.45)';
+                        ctx.fillRect(col*cellSize, row*cellSize, cellSize, cellSize);
+                        ctx.beginPath();
+                        ctx.arc(col*cellSize + cellSize/2, row*cellSize + cellSize/2, cellSize/6, 0, 2*Math.PI);
+                        ctx.fillStyle = '#2b7a2b';
+                        ctx.fill();
+                    }
+                }
+            }
+        }
+        
+        // Figuren zeichnen
+        for(let row = 0; row < 8; row++) {
+            for(let col = 0; col < 8; col++) {
+                const piece = board[row][col];
+                if(piece) {
+                    let pieceChar = (piece.color === 'w') ? piece.type.toUpperCase() : piece.type.toLowerCase();
+                    let symbol = pieceMap[pieceChar] || '?';
+                    ctx.font = `500 ${cellSize * 0.58}px 'Segoe UI', 'Noto Sans', system-ui`;
+                    ctx.fillStyle = piece.color === 'w' ? '#ffffff' : '#2d2d2d';
+                    ctx.shadowBlur = 0;
+                    ctx.fillText(symbol, col*cellSize + cellSize*0.2, row*cellSize + cellSize*0.75);
+                    // Leichter Kontrast für bessere Sichtbarkeit
+                    ctx.fillStyle = piece.color === 'w' ? '#f9f3e0' : '#191919';
+                    ctx.fillText(symbol, col*cellSize + cellSize*0.2, row*cellSize + cellSize*0.75);
+                }
+            }
+        }
+        
+        // Gitternachzeichnung
+        ctx.strokeStyle = '#c9a87b';
+        ctx.lineWidth = 1.2;
+        for(let i=0;i<=8;i++) {
+            ctx.beginPath();
+            ctx.moveTo(i*cellSize, 0);
+            ctx.lineTo(i*cellSize, 480);
+            ctx.stroke();
+            ctx.moveTo(0, i*cellSize);
+            ctx.lineTo(480, i*cellSize);
+            ctx.stroke();
+        }
+    }
+    
+    function updateUI() {
+        const turnSpan = document.getElementById('turnText');
+        const statusDiv = document.getElementById('statusMsg');
+        const moveCounterSpan = document.getElementById('moveCounter');
+        moveCounterSpan.innerText = `Züge: ${fullMoveCount}`;
+        
+        if(gameOver) {
+            if(winner === 'w') {
+                statusDiv.innerText = '🏆 Weiß gewinnt! Schachmatt!';
+                turnSpan.innerText = 'Weiß (Du) siegt!';
+            } else if(winner === 'b') {
+                statusDiv.innerText = '🏆 Schwarz (Computer) gewinnt!';
+                turnSpan.innerText = 'Computer siegt!';
+            } else {
+                statusDiv.innerText = '♟️ Patt – Unentschieden!';
+                turnSpan.innerText = 'Spiel endet Remis';
+            }
+            return;
+        }
+        
+        if(currentTurn === 'w') {
+            turnSpan.innerHTML = '♔ Weiß (Du)';
+            statusDiv.innerText = '👑 Dein Zug – klicke eine weiße Figur an, dann das Zielfeld';
+        } else {
+            turnSpan.innerHTML = '♚ Schwarz (Computer · random)';
+            statusDiv.innerText = '💻 Computer denkt ... wählt zufälligen Zug';
+        }
+    }
+    
+    // Canvas Interaktion
+    function handleCanvasClick(e) {
+        if(gameOver) return;
+        if(currentTurn !== 'w') return; // nur mensch bei weiß
+        
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        let clientX, clientY;
+        if(e.touches) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+            e.preventDefault();
+        } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
+        const canvasX = (clientX - rect.left) * scaleX;
+        const canvasY = (clientY - rect.top) * scaleY;
+        if(canvasX < 0 || canvasY < 0 || canvasX > 480 || canvasY > 480) return;
+        const col = Math.floor(canvasX / cellSize);
+        const row = Math.floor(canvasY / cellSize);
+        if(row<0 || row>=8 || col<0 || col>=8) return;
+        
+        // Fall 1: Keine Figur selektiert
+        if(selectedRow === null) {
+            const piece = board[row][col];
+            if(piece && piece.color === 'w') {
+                selectedRow = row;
+                selectedCol = col;
+                legalMovesForSelected = [];
+                for(let tr=0;tr<8;tr++){
+                    for(let tc=0;tc<8;tc++){
+                        if(isMoveLegal(board, selectedRow, selectedCol, tr, tc, 'w')) {
+                            legalMovesForSelected.push({toRow: tr, toCol: tc});
+                        }
+                    }
+                }
+                drawBoard();
+            } else {
+                // Klick auf leeres oder gegnerisches Feld -> keine Aktion
+                if(board[row][col] && board[row][col].color !== 'w') {
+                    statusDiv.innerText = 'Du kannst nur deine weißen Figuren bewegen!';
+                    setTimeout(() => updateUI(), 800);
+                }
+            }
+        } else {
+            // Figur selektiert: versuche Zug
+            const success = tryHumanMove(selectedRow, selectedCol, row, col);
+            selectedRow = null;
+            selectedCol = null;
+            legalMovesForSelected = [];
+            drawBoard();
+            if(!success && !gameOver && currentTurn === 'w') {
+                statusDiv.innerText = '❌ Ungültiger Zug! Versuch es erneut.';
+                setTimeout(() => updateUI(), 700);
+            } else {
+                updateUI();
+            }
+        }
+    }
+    
+    // Reset des Spiels
+    function resetGame() {
+        initBoard();
+        currentTurn = 'w';
+        gameOver = false;
+        winner = null;
+        selectedRow = null;
+        selectedCol = null;
+        legalMovesForSelected = [];
+        fullMoveCount = 0;
+        drawBoard();
+        updateUI();
+        // Eventuellen laufenden Computerzug abbrechen (Timeout wird nicht mehr ausgeführt)
+    }
+    
+    // Events
+    canvas.addEventListener('click', handleCanvasClick);
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        const fakeEvent = { clientX: touch.clientX, clientY: touch.clientY };
+        handleCanvasClick(fakeEvent);
+    });
+    document.getElementById('resetBtn').addEventListener('click', () => { resetGame(); });
+    
+    // SERVICE WORKER für echte Offline-Fähigkeit (Cache)
+    if('serviceWorker' in navigator) {
+        // Dynamischer ServiceWorker, der die aktuelle Seite cached
+        const swCode = `self.addEventListener('fetch', event => {
+            event.respondWith(
+                fetch(event.request).catch(() => caches.match(event.request))
+            );
+        });`;
+        const blob = new Blob([swCode], {type: 'application/javascript'});
+        const swUrl = URL.createObjectURL(blob);
+        navigator.serviceWorker.register(swUrl).then(reg => {
+            console.log("✅ Offline Service Worker registriert");
+            URL.revokeObjectURL(swUrl);
+        }).catch(e => console.log("ServiceWorker nicht kritisch", e));
+    }
+    
+    // Start
+    initBoard();
+    drawBoard();
+    updateUI();
+</script>
+</body>
+</html>

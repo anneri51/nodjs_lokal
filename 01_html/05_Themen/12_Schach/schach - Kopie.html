@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Offline Schach · Zugdatenbank · Mensch vs Computer</title>
+    <style>
+        * {
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: linear-gradient(145deg, #2a3b2c 0%, #1e2a1f 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', 'Roboto', 'Noto Sans', system-ui, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .main-container {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .chess-container {
+            background: #2c1e12;
+            padding: 1rem;
+            border-radius: 3rem;
+            box-shadow: 0 25px 40px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.1);
+        }
+
+        .board-wrapper {
+            background: #deb887;
+            padding: 0.8rem;
+            border-radius: 1.8rem;
+            box-shadow: inset 0 0 0 2px #f5e2b0, 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border-radius: 0.8rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            cursor: pointer;
+            width: 100%;
+            height: auto;
+            background-color: #f0d9b5;
+        }
+
+        .info-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1.2rem;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+            background: #1f2a1b;
+            padding: 0.6rem 1.2rem;
+            border-radius: 3rem;
+        }
+
+        .status {
+            background: #2c2e2a;
+            padding: 0.4rem 1.2rem;
+            border-radius: 2rem;
+            font-weight: bold;
+            color: #f7f3e0;
+            font-size: 0.9rem;
+            box-shadow: inset 0 1px 2px #4a5a44, 0 2px 4px black;
+        }
+
+        button {
+            background: #e3b87c;
+            border: none;
+            font-weight: bold;
+            font-size: 0.85rem;
+            padding: 0.5rem 1.2rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            transition: 0.1s linear;
+            font-family: inherit;
+            box-shadow: 0 3px 0 #7a582e;
+            color: #2c1e12;
+        }
+
+        button:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 #7a582e;
+        }
+
+        .turn-indicator {
+            background: #00000066;
+            padding: 0.3rem 1rem;
+            border-radius: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #ffecb3;
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+
+        .database-panel {
+            background: #1f2a1bdd;
+            backdrop-filter: blur(4px);
+            border-radius: 2rem;
+            padding: 1rem;
+            width: 280px;
+            max-height: 550px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+            border: 1px solid #dbb87c;
+        }
+
+        .db-header {
+            font-weight: bold;
+            color: #ffdd99;
+            text-align: center;
+            border-bottom: 1px solid #dbb87c;
+            padding-bottom: 0.4rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .games-list {
+            flex: 1;
+            max-height: 380px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding-right: 5px;
+        }
+
+        .game-card {
+            background: #2e3a28;
+            border-radius: 1.2rem;
+            padding: 0.5rem 0.7rem;
+            cursor: pointer;
+            transition: 0.1s;
+            border-left: 4px solid #e3b87c;
+            font-size: 0.75rem;
+            color: #f0e2b6;
+        }
+
+        .game-card:hover {
+            background: #3e4e36;
+            transform: translateX(3px);
+        }
+
+        .game-card small {
+            color: #c9b26b;
+            display: block;
+            font-size: 0.65rem;
+        }
+
+        .move-history {
+            background: #00000055;
+            border-radius: 1rem;
+            padding: 0.5rem;
+            font-size: 0.7rem;
+            font-family: monospace;
+            max-height: 120px;
+            overflow-y: auto;
+            color: #ffecb0;
+        }
+
+        .move-history span {
+            display: inline-block;
+            background: #2c2e1e;
+            margin: 2px;
+            padding: 2px 6px;
+            border-radius: 12px;
+        }
+
+        .db-buttons {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        @media (max-width: 830px) {
+            .main-container { flex-direction: column; align-items: center; }
+            .database-panel { width: 95%; max-height: 320px; }
+            .games-list { max-height: 180px; flex-direction: row; flex-wrap: wrap; }
+            .game-card { width: calc(50% - 10px); }
+        }
+    </style>
+</head>
+<body>
+<div class="main-container">
+    <div class="chess-container">
+        <div class="board-wrapper">
+            <canvas id="chessCanvas" width="480" height="480"></canvas>
+        </div>
+        <div class="info-panel">
+            <div class="turn-indicator" id="turnDisplay"><span>♔</span> <span id="turnText">Weiß (Du)</span></div>
+            <div class="status" id="statusMsg">✨ Dein Zug</div>
+            <button id="resetBtn">🔄 Neustart</button>
+            <button id="saveGameBtn" style="background:#7e9a5e;">💾 Spiel speichern</button>
+        </div>
+    </div>
+
+    <div class="database-panel">
+        <div class="db-header">
+            📀 Gespeicherte Partien
+            <button id="refreshGamesBtn" style="background:#5a6e46; padding:0.2rem 0.8rem;">⟳</button>
+        </div>
+        <div class="games-list" id="gamesList">
+            <div style="text-align:center; color:#bba87a;">Keine gespeicherten Spiele</div>
+        </div>
+        <div class="move-history" id="moveHistoryPanel">
+            <strong>📜 Zugverlauf aktuelles Spiel:</strong><br>
+            <div id="currentMoveList">—</div>
+        </div>
+        <div class="db-buttons">
+            <button id="clearAllGamesBtn" style="background:#8b5a2b;">🗑 Alle löschen</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ---------- SCHACHLOGIK  (wie zuvor, erweitert um Zugaufzeichnung) ----------
+    let board = Array(8).fill().map(() => Array(8).fill(null));
+    let currentTurn = 'w';      // 'w' Mensch, 'b' Computer
+    let gameOver = false;
+    let winner = null;
+    let selectedRow = null, selectedCol = null;
+    let legalMovesForSelected = [];
+    
+    // ZUGVERLAUF (für aktuelle Partie)
+    let moveHistory = [];        // [{ from: "e2", to: "e4", piece: "P", color: "w", moveNotation: "e4" }, ...]
+    let fullMoveCount = 0;
+    
+    // Datenbank-Interface (IndexedDB)
+    const DB_NAME = "ChessGamesDB";
+    const STORE_NAME = "games";
+    let db = null;
+    
+    // Hilfsfunktion: Koordinate zu Schachnotation (z.B. [0,0] -> a8, [7,7] -> h1)
+    function coordToAlgebraic(row, col) {
+        const files = ['a','b','c','d','e','f','g','h'];
+        const ranks = ['8','7','6','5','4','3','2','1'];
+        return files[col] + ranks[row];
+    }
+    
+    function algebraicToCoord(alg) {
+        const files = ['a','b','c','d','e','f','g','h'];
+        const ranks = ['8','7','6','5','4','3','2','1'];
+        const col = files.indexOf(alg[0]);
+        const row = ranks.indexOf(alg[1]);
+        return { row, col };
+    }
+    
+    // Figurensymbol für Notation (Kurzform)
+    function pieceToChar(piece) {
+        if(!piece) return '';
+        const map = { 'k':'K', 'q':'Q', 'r':'R', 'b':'B', 'n':'N', 'p':'' };
+        let char = map[piece.type] || '';
+        if(piece.type === 'p') char = '';
+        return char;
+    }
+    
+    // Erstellt eine lesbare Zug-Notation
+    function createMoveNotation(fromRow, fromCol, toRow, toCol, piece, isCapture) {
+        const fromSquare = coordToAlgebraic(fromRow, fromCol);
+        const toSquare = coordToAlgebraic(toRow, toCol);
+        const pieceSymbol = pieceToChar(piece);
+        const captureSymbol = isCapture ? 'x' : '';
+        let notation = pieceSymbol + captureSymbol + toSquare;
+        if(piece.type === 'p' && isCapture) notation = fromSquare[0] + 'x' + toSquare;
+        else if(piece.type === 'p' && !isCapture) notation = toSquare;
+        return notation;
+    }
+    
+    // Fügt Zug zum aktuellen Verlauf hinzu
+    function addMoveToHistory(fromRow, fromCol, toRow, toCol, piece, isCapture) {
+        const notation = createMoveNotation(fromRow, fromCol, toRow, toCol, piece, isCapture);
+        const moveObj = {
+            id: moveHistory.length + 1,
+            from: coordToAlgebraic(fromRow, fromCol),
+            to: coordToAlgebraic(toRow, toCol),
+            fromRow, fromCol, toRow, toCol,
+            pieceType: piece.type,
+            pieceColor: piece.color,
+            notation: notation,
+            timestamp: Date.now()
+        };
+        moveHistory.push(moveObj);
+        fullMoveCount++;
+        updateMoveHistoryUI();
+    }
+    
+    function updateMoveHistoryUI() {
+        const container = document.getElementById('currentMoveList');
+        if(!container) return;
+        if(moveHistory.length === 0) {
+            container.innerHTML = '— noch keine Züge —';
+            return;
+        }
+        let html = '';
+        moveHistory.forEach((move, idx) => {
+            const prefix = (idx % 2 === 0) ? `${Math.floor(idx/2)+1}. ` : '';
+            const colorSym = move.pieceColor === 'w' ? '⬜' : '⬛';
+            html += `<span>${prefix}${colorSym} ${move.notation}</span>`;
+        });
+        container.innerHTML = html;
+    }
+    
+    // ---------- INITIAL BOARD & SCHACHREGELN (wiederverwendet aus vorheriger Version) ----------
+    function initBoard() {
+        for(let i=0;i<8;i++) for(let j=0;j<8;j++) board[i][j] = null;
+        for(let i=0;i<8;i++) { board[1][i] = { type:'p', color:'b' }; board[6][i] = { type:'p', color:'w' }; }
+        const backBlack = ['r','n','b','q','k','b','n','r'];
+        const backWhite = ['r','n','b','q','k','b','n','r'];
+        for(let i=0;i<8;i++) { board[0][i] = { type:backBlack[i], color:'b' }; board[7][i] = { type:backWhite[i], color:'w' }; }
+    }
+    
+    function copyBoard(src) {
+        const newBoard = Array(8).fill().map(()=>Array(8).fill(null));
+        for(let i=0;i<8;i++) for(let j=0;j<8;j++) if(src[i][j]) newBoard[i][j] = {...src[i][j]};
+        return newBoard;
+    }
+    
+    function inBounds(r,c) { return r>=0 && r<8 && c>=0 && c<8; }
+    
+    function getPiecePseudoMoves(piece, row, col, boardState) {
+        const moves = [];
+        const type = piece.type, color = piece.color;
+        const dirs = { rook:[[1,0],[-1,0],[0,1],[0,-1]], bishop:[[1,1],[1,-1],[-1,1],[-1,-1]],
+            queen:[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]] };
+        if(type === 'p') {
+            const dir = (color === 'w') ? -1 : 1;
+            const startRow = (color === 'w') ? 6 : 1;
+            const one = row+dir;
+            if(inBounds(one,col) && !boardState[one][col]) { moves.push([one,col]);
+                if(row===startRow && !boardState[one+dir]?.[col]) moves.push([row+2*dir,col]); }
+            for(const dc of [-1,1]) { const nr=row+dir, nc=col+dc;
+                if(inBounds(nr,nc) && boardState[nr][nc] && boardState[nr][nc].color !== color) moves.push([nr,nc]); }
+        } else if(type === 'n') { const offsets = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+            for(const [dr,dc] of offsets) { const nr=row+dr, nc=col+dc; if(inBounds(nr,nc) && (!boardState[nr][nc] || boardState[nr][nc].color!==color)) moves.push([nr,nc]); }
+        } else if(type === 'b') { for(const [dr,dc] of dirs.bishop) { for(let s=1;s<=7;s++) { const nr=row+dr*s, nc=col+dc*s; if(!inBounds(nr,nc)) break; if(!boardState[nr][nc]) moves.push([nr,nc]); else { if(boardState[nr][nc].color!==color) moves.push([nr,nc]); break; } } }
+        } else if(type === 'r') { for(const [dr,dc] of dirs.rook) { for(let s=1;s<=7;s++) { const nr=row+dr*s, nc=col+dc*s; if(!inBounds(nr,nc)) break; if(!boardState[nr][nc]) moves.push([nr,nc]); else { if(boardState[nr][nc].color!==color) moves.push([nr,nc]); break; } } }
+        } else if(type === 'q') { for(const [dr,dc] of dirs.queen) { for(let s=1;s<=7;s++) { const nr=row+dr*s, nc=col+dc*s; if(!inBounds(nr,nc)) break; if(!boardState[nr][nc]) moves.push([nr,nc]); else { if(boardState[nr][nc].color!==color) moves.push([nr,nc]); break; } } }
+        } else if(type === 'k') { const steps = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+            for(const [dr,dc] of steps) { const nr=row+dr, nc=col+dc; if(inBounds(nr,nc) && (!boardState[nr][nc] || boardState[nr][nc].color!==color)) moves.push([nr,nc]); } }
+        return moves;
+    }
+    
+    function isKingInCheck(boardState, color) {
+        let kr,kc;
+        for(let i=0;i<8;i++) for(let j=0;j<8;j++) { const p=boardState[i][j]; if(p && p.type==='k' && p.color===color) { kr=i; kc=j; break; } }
+        if(kr===undefined) return false;
+        const opp = color==='w'?'b':'w';
+        for(let i=0;i<8;i++) for(let j=0;j<8;j++) { const p=boardState[i][j]; if(p && p.color===opp) { const pseudo = getPiecePseudoMoves(p,i,j,boardState); for(const [tr,tc] of pseudo) if(tr===kr && tc===kc) return true; } }
+        return false;
+    }
+    
+    function isMoveLegal(boardState, fromRow,fromCol,toRow,toCol,color) {
+        const piece = boardState[fromRow][fromCol];
+        if(!piece || piece.color!==color) return false;
+        let pseudoOk=false;
+        const pseudo=getPiecePseudoMoves(piece,fromRow,fromCol,boardState);
+        for(const [mr,mc] of pseudo) if(mr===toRow && mc===toCol) { pseudoOk=true; break; }
+        if(!pseudoOk) return false;
+        const testBoard = copyBoard(boardState);
+        testBoard[toRow][toCol] = testBoard[fromRow][fromCol];
+        testBoard[fromRow][fromCol] = null;
+        return !isKingInCheck(testBoard, color);
+    }
+    
+    function getAllLegalMoves(boardState, color) {
+        const moves=[];
+        for(let i=0;i<8;i++) for(let j=0;j<8;j++) { const p=boardState[i][j]; if(p && p.color===color) { for(let tr=0;tr<8;tr++) for(let tc=0;tc<8;tc++) if(isMoveLegal(boardState,i,j,tr,tc,color)) moves.push({from:{row:i,col:j},to:{row:tr,col:tc}}); } }
+        return moves;
+    }
+    
+    function applyMoveWithRecording(fromRow,fromCol,toRow,toCol) {
+        const piece = board[fromRow][fromCol];
+        if(!piece) return false;
+        const targetPiece = board[toRow][toCol];
+        const isCapture = !!targetPiece;
+        let promoted=false;
+        if(piece.type==='p' && ((piece.color==='w' && toRow===0) || (piece.color==='b' && toRow===7))) {
+            board[toRow][toCol] = { type:'q', color:piece.color };
+            board[fromRow][fromCol]=null;
+            promoted=true;
+        }
+        if(!promoted) { board[toRow][toCol]=board[fromRow][fromCol]; board[fromRow][fromCol]=null; }
+        addMoveToHistory(fromRow,fromCol,toRow,toCol,piece,isCapture);
+        return true;
+    }
+    
+    function checkGameOverState() {
+        const moves = getAllLegalMoves(board, currentTurn);
+        if(moves.length===0) {
+            if(isKingInCheck(board, currentTurn)) { gameOver=true; winner = (currentTurn==='w')?'b':'w'; }
+            else { gameOver=true; winner=null; }
+            return true;
+        }
+        return false;
+    }
+    
+    function switchTurnAndContinue() {
+        if(gameOver) return;
+        currentTurn = (currentTurn==='w')?'b':'w';
+        checkGameOverState();
+        drawBoard(); updateUI();
+        if(!gameOver && currentTurn==='b') setTimeout(()=>computerMove(), 60);
+    }
+    
+    async function computerMove() {
+        if(gameOver || currentTurn!=='b') return;
+        const legalMoves = getAllLegalMoves(board, 'b');
+        if(legalMoves.length===0) { checkGameOverState(); drawBoard(); updateUI(); return; }
+        const randomMove = legalMoves[Math.floor(Math.random()*legalMoves.length)];
+        const {from,to}=randomMove;
+        await applyMoveWithRecording(from.row,from.col,to.row,to.col);
+        drawBoard();
+        if(!gameOver) {
+            currentTurn='w';
+            checkGameOverState();
+            updateUI(); drawBoard();
+        } else { updateUI(); drawBoard(); }
+    }
+    
+    async function tryHumanMove(fromRow,fromCol,toRow,toCol) {
+        if(gameOver || currentTurn!=='w') return false;
+        if(!isMoveLegal(board,fromRow,fromCol,toRow,toCol,'w')) return false;
+        await applyMoveWithRecording(fromRow,fromCol,toRow,toCol);
+        drawBoard();
+        if(!gameOver) { currentTurn='b'; if(checkGameOverState()) { updateUI(); drawBoard(); return true; } updateUI(); drawBoard(); setTimeout(()=>computerMove(),80); }
+        else { updateUI(); drawBoard(); }
+        return true;
+    }
+    
+    // ---------- INDEXEDDB FUNKTIONEN ----------
+    function openDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, 1);
+            request.onupgradeneeded = (e) => {
+                const dbStore = e.target.result;
+                if(!dbStore.objectStoreNames.contains(STORE_NAME)) {
+                    const store = dbStore.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
+                    store.createIndex("timestamp", "timestamp", { unique: false });
+                }
+            };
+            request.onsuccess = (e) => { db = e.target.result; resolve(db); };
+            request.onerror = (e) => reject(e.target.error);
+        });
+    }
+    
+    async function saveCurrentGameToDB() {
+        if(!db) await openDB();
+        const gameData = {
+            timestamp: Date.now(),
+            date: new Date().toLocaleString(),
+            moveHistory: JSON.parse(JSON.stringify(moveHistory)), // tiefe Kopie
+            winner: winner,
+            gameOver: gameOver,
+            totalMoves: moveHistory.length
+        };
+        const transaction = db.transaction([STORE_NAME], "readwrite");
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.add(gameData);
+        return new Promise((resolve, reject) => {
+            request.onsuccess = () => { updateGamesList(); resolve(); };
+            request.onerror = (e) => reject(e);
+        });
+    }
+    
+    async function getAllGames() {
+        if(!db) await openDB();
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction([STORE_NAME], "readonly");
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.getAll();
+            request.onsuccess = () => resolve(request.result.sort((a,b)=>b.timestamp - a.timestamp));
+            request.onerror = (e) => reject(e);
+        });
+    }
+    
+    async function deleteGame(id) {
+        if(!db) await openDB();
+        const transaction = db.transaction([STORE_NAME], "readwrite");
+        const store = transaction.objectStore(STORE_NAME);
+        store.delete(id);
+        return new Promise((resolve) => { transaction.oncomplete = () => { updateGamesList(); resolve(); }; });
+    }
+    
+    async function clearAllGames() {
+        if(!db) await openDB();
+        const transaction = db.transaction([STORE_NAME], "readwrite");
+        const store = transaction.objectStore(STORE_NAME);
+        store.clear();
+        return new Promise((resolve) => { transaction.oncomplete = () => { updateGamesList(); resolve(); }; });
+    }
+    
+    async function updateGamesList() {
+        const games = await getAllGames();
+        const container = document.getElementById('gamesList');
+        if(!container) return;
+        if(games.length===0) { container.innerHTML = '<div style="text-align:center; color:#bba87a;">📭 Keine gespeicherten Partien</div>'; return; }
+        container.innerHTML = '';
+        games.forEach(game => {
+            const card = document.createElement('div');
+            card.className = 'game-card';
+            card.innerHTML = `<strong>🗓️ ${game.date}</strong><br>📊 Züge: ${game.totalMoves} | ${game.winner ? (game.winner==='w'?'Weiß gewann':'Schwarz gewann') : (game.gameOver?'Patt':'Laufend')}<br><small>🔍 Klicken zum Laden</small>`;
+            card.onclick = () => loadGameToBoard(game);
+            container.appendChild(card);
+        });
+    }
+    
+    async function loadGameToBoard(game) {
+        if(!confirm(`Partie vom ${game.date} laden? Aktuelles Spiel wird ersetzt.`)) return;
+        resetGameState();
+        // Replay aller Züge
+        const moves = game.moveHistory;
+        if(!moves || moves.length===0) return;
+        initBoard();
+        moveHistory = [];
+        fullMoveCount = 0;
+        for(const move of moves) {
+            // Zug anwenden ohne erneute Aufzeichnung (direkt Board + manuell)
+            const piece = board[move.fromRow][move.fromCol];
+            if(piece) {
+                const targetPiece = board[move.toRow][move.toCol];
+                const isCapture = !!targetPiece;
+                board[move.toRow][move.toCol] = board[move.fromRow][move.fromCol];
+                board[move.fromRow][move.fromCol] = null;
+                moveHistory.push({...move, notation: move.notation});
+                fullMoveCount++;
+            }
+        }
+        gameOver = game.gameOver;
+        winner = game.winner;
+        currentTurn = 'w';
+        if(game.gameOver) currentTurn = game.winner ? (game.winner==='w'?'b':'w') : 'w';
+        else currentTurn = (moveHistory.length % 2 === 0) ? 'w' : 'b';
+        checkGameOverState();
+        drawBoard();
+        updateUI();
+        updateMoveHistoryUI();
+        if(!gameOver && currentTurn === 'b') setTimeout(()=>computerMove(), 100);
+    }
+    
+    function resetGameState() {
+        initBoard();
+        currentTurn = 'w';
+        gameOver = false;
+        winner = null;
+        selectedRow = null; selectedCol = null;
+        legalMovesForSelected = [];
+        moveHistory = [];
+        fullMoveCount = 0;
+        drawBoard();
+        updateUI();
+        updateMoveHistoryUI();
+    }
+    
+    // Zeichnung & UI
+    const canvas = document.getElementById('chessCanvas');
+    const ctx = canvas.getContext('2d');
+    const cellSize = 60;
+    const pieceMap = { 'K':'♔','Q':'♕','R':'♖','B':'♗','N':'♘','P':'♙','k':'♚','q':'♛','r':'♜','b':'♝','n':'♞','p':'♟' };
+    
+    function drawBoard() {
+        for(let r=0;r<8;r++) for(let c=0;c<8;c++) {
+            ctx.fillStyle = (r+c)%2===0 ? '#f0d9b5' : '#b58863';
+            ctx.fillRect(c*cellSize,r*cellSize,cellSize,cellSize);
+            if(selectedRow===r && selectedCol===c && !gameOver && currentTurn==='w') { ctx.fillStyle='rgba(70,200,100,0.5)'; ctx.fillRect(c*cellSize,r*cellSize,cellSize,cellSize); }
+            if(legalMovesForSelected.some(mv=>mv.toRow===r && mv.toCol===c)) { ctx.fillStyle='rgba(50,180,70,0.45)'; ctx.fillRect(c*cellSize,r*cellSize,cellSize,cellSize); }
+        }
+        for(let r=0;r<8;r++) for(let c=0;c<8;c++) { const p=board[r][c]; if(p){ let ch = (p.color==='w')?p.type.toUpperCase():p.type.toLowerCase(); ctx.font=`500 ${cellSize*0.58}px 'Segoe UI'`; ctx.fillStyle=p.color==='w'?'#fff':'#2d2d2d'; ctx.fillText(pieceMap[ch], c*cellSize+cellSize*0.2, r*cellSize+cellSize*0.75); } }
+    }
+    
+    function updateUI() {
+        const turnSpan=document.getElementById('turnText'), statusDiv=document.getElementById('statusMsg');
+        if(gameOver){ turnSpan.innerText=winner==='w'?'Weiß siegt!':winner==='b'?'Computer siegt!':'Patt'; statusDiv.innerText=winner? 'Spiel beendet':'Patt – Unentschieden'; return; }
+        turnSpan.innerHTML = currentTurn==='w'?'♔ Weiß (Du)':'♚ Computer (random)';
+        statusDiv.innerText = currentTurn==='w'?'Dein Zug: wähle eine Figur':'Computer überlegt...';
+    }
+    
+    function handleCanvasClick(e) {
+        if(gameOver || currentTurn!=='w') return;
+        const rect = canvas.getBoundingClientRect(), scale=canvas.width/rect.width;
+        let cx,cy; if(e.touches){ cx=e.touches[0].clientX; cy=e.touches[0].clientY; e.preventDefault(); } else { cx=e.clientX; cy=e.clientY; }
+        const x=(cx-rect.left)*scale, y=(cy-rect.top)*scale;
+        if(x<0||y<0||x>480||y>480) return;
+        const col=Math.floor(x/cellSize), row=Math.floor(y/cellSize);
+        if(selectedRow===null){
+            if(board[row][col] && board[row][col].color==='w'){ selectedRow=row; selectedCol=col; legalMovesForSelected=[]; for(let tr=0;tr<8;tr++) for(let tc=0;tc<8;tc++) if(isMoveLegal(board,selectedRow,selectedCol,tr,tc,'w')) legalMovesForSelected.push({toRow:tr,toCol:tc}); drawBoard(); }
+        } else { tryHumanMove(selectedRow,selectedCol,row,col); selectedRow=null; selectedCol=null; legalMovesForSelected=[]; drawBoard(); updateUI(); }
+    }
+    
+    canvas.addEventListener('click',handleCanvasClick);
+    canvas.addEventListener('touchstart',(e)=>{ e.preventDefault(); handleCanvasClick(e); });
+    document.getElementById('resetBtn').onclick = () => { resetGameState(); };
+    document.getElementById('saveGameBtn').onclick = async () => { if(moveHistory.length===0){ alert('Keine Züge zum Speichern!'); return; } await saveCurrentGameToDB(); alert('Partie gespeichert!'); };
+    document.getElementById('refreshGamesBtn').onclick = () => updateGamesList();
+    document.getElementById('clearAllGamesBtn').onclick = async () => { if(confirm('Alle gespeicherten Partien unwiderruflich löschen?')){ await clearAllGames(); } };
+    
+    (async function init() { await openDB(); await updateGamesList(); initBoard(); drawBoard(); updateUI(); })();
+</script>
+</body>
+</html>

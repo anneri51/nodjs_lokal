@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Rechnungsdashboard | Tag-Liste mit Markierungen (offen, mit Rechnung, nicht beauftragt)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Inter', 'Roboto', sans-serif;
+        }
+        body {
+            background: #eef2f5;
+            margin: 0;
+            padding: 24px 20px;
+        }
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        .data-source-bar {
+            background: #f1f5f9;
+            padding: 12px 24px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+        .data-source-group {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            background: white;
+            padding: 6px 18px;
+            border-radius: 60px;
+        }
+        .data-source-group label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .refresh-btn {
+            background: #2c7da0;
+            border: none;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .status-badge {
+            font-size: 0.75rem;
+            background: #e6f7e6;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+        .tabs {
+            display: flex;
+            gap: 4px;
+            background: #f8fafc;
+            padding: 12px 24px 0 24px;
+            border-bottom: 1px solid #e2e8f0;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            background: transparent;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 20px 20px 0 0;
+            cursor: pointer;
+            transition: 0.2s;
+            color: #334155;
+        }
+        .tab-btn.active {
+            background: white;
+            color: #0f3b5c;
+            border-bottom: 3px solid #2c7da0;
+        }
+        .tab-content {
+            display: none;
+            padding: 24px;
+            animation: fade 0.2s ease;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        @keyframes fade {
+            from { opacity: 0; transform: translateY(4px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+        .split-layout {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 28px;
+        }
+        .left-panel, .right-panel {
+            background: white;
+            border-radius: 24px;
+            border: 1px solid #e9edf2;
+            overflow: hidden;
+        }
+        .left-panel { flex: 1.2; min-width: 280px; }
+        .right-panel { flex: 2.2; min-width: 340px; }
+        .panel-header {
+            background: #fefce8;
+            padding: 14px 18px;
+            border-bottom: 1px solid #e2e8f0;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .sort-actions { display: flex; gap: 12px; flex-wrap: wrap; margin: 8px 16px; }
+        .sort-group-btns { display: flex; gap: 6px; background: #f1f5f9; padding: 4px 8px; border-radius: 40px; }
+        .tiny-btn {
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 30px;
+            padding: 4px 12px;
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+        .tiny-btn.active-sort { background: #2c7da0; color: white; }
+        .reset-filter-btn { background: #e9ecef; border: none; border-radius: 30px; padding: 5px 14px; font-size: 0.75rem; cursor: pointer; }
+        .kw-card { margin-bottom: 24px; border: 1px solid #e2edf7; border-radius: 20px; overflow: hidden; }
+        .kw-header { background: #eef4ff; padding: 12px 20px; font-weight: 700; display: flex; justify-content: space-between; }
+        .kw-badge { background: #2c7da0; color: white; padding: 4px 14px; border-radius: 40px; font-size: 0.8rem; }
+        .date-subgroup { border-bottom: 1px solid #f0f4f9; margin: 0 12px; }
+        .date-head { background: #fafcff; padding: 10px 16px 6px 20px; font-weight: 600; border-left: 4px solid #9bc1d9; }
+        .ort-list { padding: 2px 0 8px 40px; display: flex; flex-wrap: wrap; gap: 12px; }
+        .ort-chip { background: #f1f5f9; border-radius: 40px; padding: 4px 14px; font-size: 0.8rem; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; min-width: 100px; }
+        .filter-group label { font-size: 0.7rem; font-weight: 600; }
+        .filter-group input, .filter-group select { padding: 6px 10px; border-radius: 20px; border: 1px solid #cbd5e1; font-size: 0.8rem; }
+        .table-wrapper { overflow-x: auto; max-height: 500px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        th { text-align: left; padding: 10px 8px; background: #f9fafb; font-weight: 600; cursor: pointer; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; }
+        td { padding: 8px 8px; border-bottom: 1px solid #f0f2f5; }
+        .clickable-row { cursor: pointer; transition: background 0.1s; }
+        .clickable-row:hover { background-color: #f1f9fe; }
+        .selected-row { background-color: #e0f0fa !important; border-left: 3px solid #2c7da0; }
+        /* Highlight Klassen für Auftragsliste */
+        .row-open {
+            background-color: #fff4e5 !important;
+            border-left: 3px solid #f39c12;
+        }
+        .row-no-rechnung {
+            background-color: #ffe6e6 !important;
+            border-left: 3px solid #e74c3c;
+        }
+        /* Markierungen für Tag-Tabelle */
+        .tag-row-offen { background-color: #fff4e5 !important; }
+        .tag-row-mit-rechnung { background-color: #e6f9e6 !important; border-left: 3px solid #2ecc71; }
+        .tag-row-nicht-beauftragt { background-color: #ffe6e6 !important; border-left: 3px solid #e74c3c; }
+        .footer-note { font-size: 0.7rem; color: #5b6e8c; margin-top: 12px; text-align: right; padding: 0 12px 8px; }
+        .tag-card {
+            background: #fefce8;
+            margin: 12px;
+            padding: 12px;
+            border-radius: 16px;
+            border-left: 5px solid #2c7da0;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .tag-card.missing-required { background: #ffe6e6 !important; border-left: 5px solid #e74c3c; }
+        .tag-field { display: inline-block; background: white; padding: 2px 8px; border-radius: 20px; font-size: 0.7rem; margin: 3px; }
+        .btn-small { background: #2c7da0; color: white; border: none; border-radius: 30px; padding: 4px 12px; font-size: 0.7rem; cursor: pointer; margin-top: 6px; }
+        .btn-small:hover { background: #1f5e7a; }
+        .no-data { padding: 30px; text-align: center; color: #6c86a3; }
+        .loading-spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #ccc; border-top-color: #2c7da0; border-radius: 50%; animation: spin 0.6s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .legend { display: inline-flex; gap: 16px; font-size: 0.7rem; margin-left: 16px; align-items: center; flex-wrap: wrap; }
+        .legend-color { width: 16px; height: 16px; display: inline-block; border-radius: 4px; margin-right: 4px; }
+        .legend-color.orange { background-color: #fff4e5; border-left: 3px solid #f39c12; }
+        .legend-color.red { background-color: #ffe6e6; border-left: 3px solid #e74c3c; }
+        .legend-color.green { background-color: #e6f9e6; border-left: 3px solid #2ecc71; }
+        .filter-bar { background: #f9fafc; padding: 12px 16px; border-bottom: 1px solid #e2e8f0; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+        .filter-bar input { flex: 2; padding: 8px 12px; border-radius: 40px; border: 1px solid #cbd5e1; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="data-source-bar">
+        <div class="data-source-group">
+            <label><input type="radio" name="dataSource" value="mock" checked> 📦 Mock-Daten</label>
+            <label><input type="radio" name="dataSource" value="db"> 🗄️ DB (Webservice Sim)</label>
+        </div>
+        <button id="refreshDataSourceBtn" class="refresh-btn">🔄 Daten laden</button>
+        <div id="dataStatus" class="status-badge">✅ Mock aktiv</div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="tab1">📊 Gruppierte Ansicht</button>
+        <button class="tab-btn" data-tab="tab2">📋 Flache Tabelle (Rechnungen)</button>
+        <button class="tab-btn" data-tab="tab3">📋 Auftragsliste + Tag-Details</button>
+        <button class="tab-btn" data-tab="tab4">🏷️ Tag-Liste (flache Tabelle)</button>
+    </div>
+
+    <!-- TAB 1: Gruppiert -->
+    <div id="tab1" class="tab-content active">
+        <div class="split-layout">
+            <div class="left-panel">
+                <div class="panel-header"><span>📑 Rechnungsübersicht</span><span style="font-size:0.7rem;">Klick = Details filtern</span></div>
+                <div style="overflow-x: auto;"><table id="leftGroupTable"><thead><th data-sort-left="rechnung">🔢 Rechnungsnummer</th><th data-sort-left="sum">💰 Gesamtpreis (€)</th></thead><tbody id="leftGroupBody"></tbody></table></div>
+                <div class="footer-note">⇨ Klick auf Zeile → rechte Seite filtert</div>
+            </div>
+            <div class="right-panel">
+                <div class="panel-header"><span>📅 KW-Ansicht · Datum & Ort</span><button id="resetRechnungFilterBtn" class="reset-filter-btn">✖ Alle anzeigen</button></div>
+                <div class="sort-actions">
+                    <div class="sort-group-btns"><span>KW:</span><button id="sortKwAscBtn" class="tiny-btn">⬆ aufst.</button><button id="sortKwDescBtn" class="tiny-btn">⬇ ab.</button></div>
+                    <div class="sort-group-btns"><span>📆 DATUM</span><button id="sortDateGroupAsc" class="tiny-btn">aufst.</button><button id="sortDateGroupDesc" class="tiny-btn">abst.</button></div>
+                    <div class="sort-group-btns"><span>📍 ORT</span><button id="sortOrtAsc" class="tiny-btn">A→Z</button><button id="sortOrtDesc" class="tiny-btn">Z→A</button></div>
+                </div>
+                <div id="rightKWGroupContainer" style="padding: 16px; max-height: 560px; overflow-y: auto;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: Flache Tabelle Rechnungen -->
+    <div id="tab2" class="tab-content">
+        <div class="advanced-filters" style="background:#f9fafc; border-radius:24px; padding:16px 20px; margin-bottom:20px;">
+            <div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
+                <div class="filter-group"><label>Rechnungsnummer</label><input type="text" id="filterRechnung" placeholder="z.B. R-101"></div>
+                <div class="filter-group"><label>Region</label><input type="text" id="filterRegion" placeholder="Region"></div>
+                <div class="filter-group"><label>KW</label><input type="number" id="filterKW" placeholder="z.B. 12"></div>
+                <div class="filter-group"><label>Ort</label><input type="text" id="filterOrt" placeholder="Stadt"></div>
+                <div class="filter-group"><label>Belegnummer</label><input type="text" id="filterBelegnummer" placeholder="Belegnr."></div>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end;">
+                <div class="filter-group"><label>Datum von</label><input type="date" id="filterDatumVon"></div>
+                <div class="filter-group"><label>Datum bis</label><input type="date" id="filterDatumBis"></div>
+                <div class="filter-group"><label>Status</label><select id="filterStatus"><option value="">Alle</option><option value="offen">Offen</option><option value="bezahlt">Bezahlt</option><option value="storniert">Storniert</option><option value="in Prüfung">In Prüfung</option></select></div>
+                <div class="filter-group"><label>Geprüft</label><select id="filterGeprueft"><option value="">Alle</option><option value="ja">Ja</option><option value="nein">Nein</option></select></div>
+                <div class="filter-group"><label>Beauftragt</label><select id="filterBeauftragt"><option value="">Alle</option><option value="ja">Ja</option><option value="nein">Nein</option></select></div>
+                <div><button id="applyFiltersBtn" class="refresh-btn" style="background:#2c7da0;">🔍 Filtern</button><button id="resetFiltersBtn" class="reset-filter-btn" style="margin-left:8px;">Zurücksetzen</button></div>
+            </div>
+        </div>
+        <div class="table-wrapper"><table id="flatTable"><thead><th data-flat-sort="rechnung">Rechnungsnr</th><th data-flat-sort="preis">Preis (€)</th><th data-flat-sort="region">Region</th><th data-flat-sort="kw">KW</th><th data-flat-sort="datum">Datum</th><th data-flat-sort="ort">Ort</th><th data-flat-sort="belegnummer">Belegnr</th><th data-flat-sort="status">Status</th><th data-flat-sort="geprueft">Geprüft</th><th data-flat-sort="beauftragt">Beauftragt</th></thead><tbody id="flatTableBody"></tbody></table></div>
+        <div class="footer-note" id="flatTableFooter">⬅️ Klick auf Zeile zeigt die Rechnung in Tab 1 (gruppiert)</div>
+    </div>
+
+    <!-- TAB 3: Auftragsliste + Tag-Details -->
+    <div id="tab3" class="tab-content">
+        <div class="split-layout">
+            <div class="left-panel" style="flex:1.5;">
+                <div class="panel-header">
+                    <span>📋 Auftragsliste (WebService)</span>
+                    <div class="legend">
+                        <span><span class="legend-color orange"></span> offen</span>
+                        <span><span class="legend-color red"></span> ohne Rechnungsnr.</span>
+                    </div>
+                    <button id="refreshAuftragBtn" class="refresh-btn">🔄 Reload</button>
+                </div>
+                <div class="filter-bar"><input type="text" id="auftragSearchInput" placeholder="🔍 Suchen..."></div>
+                <div class="table-wrapper" style="max-height:500px;"><table id="auftragTable"><thead><th data-auftrag-sort="PK_WORK_DIENSTLEISTUNG_AUFTRAGSLISTE">ID</th><th data-auftrag-sort="JAHR">Jahr</th><th data-auftrag-sort="SEASON">Season</th><th data-auftrag-sort="FIRMA">Firma</th><th data-auftrag-sort="MARKT">Markt</th><th data-auftrag-sort="ORT">Ort</th><th data-auftrag-sort="STATUS">Status</th><th data-auftrag-sort="PREIS_GESAMT">Gesamtpreis</th><th data-auftrag-sort="REGION">Region</th></thead><tbody id="auftragTableBody"><tr><td colspan="9" style="text-align:center;"><span class="loading-spinner"></span> Laden...</td></tr></tbody></table></div>
+                <div class="footer-note" id="auftragTableFooter"></div>
+            </div>
+            <div class="right-panel" style="flex:1.2;">
+                <div class="right-header" style="background:#eef4ff; padding:12px; display:flex; justify-content:space-between;">
+                    <span>📌 Tag-Liste zum ausgewählten Auftrag <span id="selectedAuftragInfo" style="font-size:0.7rem;"></span></span>
+                    <span class="legend"><span class="legend-color red-tag" style="background:#ffe6e6; border-left:5px solid #e74c3c;"></span> fehlt beauftragt_am / FK_Auftrag</span>
+                </div>
+                <div id="tagDetailsContainer" style="padding:12px; max-height:560px; overflow-y:auto;">Klicken Sie auf einen Auftrag.</div>
+                <div class="footer-note" id="tagFooter"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 4: Flache Tag-Tabelle mit Markierungen -->
+    <div id="tab4" class="tab-content">
+        <div class="panel-header">
+            <span>🏷️ Tag-Liste (alle Einträge aus Webservice)</span>
+            <div class="legend">
+                <span><span class="legend-color orange"></span> offen/in Arbeit</span>
+                <span><span class="legend-color green"></span> mit Rechnung</span>
+                <span><span class="legend-color red"></span> nicht beauftragt (beauftragt_am fehlt)</span>
+            </div>
+            <button id="refreshTagTableBtn" class="refresh-btn">🔄 Tag-Daten neu laden</button>
+        </div>
+        <div class="filter-bar">
+            <input type="text" id="tagSearchInput" placeholder="🔍 Suchen in allen Feldern...">
+            <button id="clearTagSearchBtn" class="reset-filter-btn">Zurücksetzen</button>
+        </div>
+        <div class="table-wrapper">
+            <table id="tagTable">
+                <thead>
+                    <tr>
+                        <th data-tag-sort="PK_WORK_DIENSTLEISTUNG_TAG">Tag-ID</th>
+                        <th data-tag-sort="DATUM">Datum</th>
+                        <th data-tag-sort="KW">KW</th>
+                        <th data-tag-sort="JAHR">Jahr</th>
+                        <th data-tag-sort="FIRMA">Firma</th>
+                        <th data-tag-sort="ORT">Ort</th>
+                        <th data-tag-sort="STATUS">Status</th>
+                        <th data-tag-sort="RECHNUNGSNUMMER">Rechnungsnummer</th>
+                        <th data-tag-sort="PREIS_GESAMT">Gesamtpreis (€)</th>
+                        <th data-tag-sort="beauftragt_am">Beauftragt am</th>
+                        <th data-tag-sort="FK_WORK_DIENSTLEISTUNG_AUFTRAGSLISTE">FK Auftrag</th>
+                        <th data-tag-sort="BESCHREIBUNG">Beschreibung</th>
+                    </tr>
+                </thead>
+                <tbody id="tagTableBody">
+                    <tr><td colspan="12" style="text-align:center;"><span class="loading-spinner"></span> Lade Tag-Daten...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="footer-note" id="tagTableFooter"></div>
+    </div>
+</div>
+
+<script>
+    // -------------------- MOCK / DB DATA für Rechnungen (Tab1 & Tab2) --------------------
+    const mockRawData = [
+        { rechnungsnummer: "R-101", gesamtpreis: 250.00, kw: 12, datum: "2023-03-20", ort: "Berlin", region: "Berlin", belegnummer: "B-1001", status: "bezahlt", geprueft: true, beauftragt: true },
+        { rechnungsnummer: "R-101", gesamtpreis: 100.00, kw: 13, datum: "2023-03-27", ort: "Hamburg", region: "Hamburg", belegnummer: "B-1002", status: "bezahlt", geprueft: true, beauftragt: true },
+        { rechnungsnummer: "R-102", gesamtpreis: 75.50, kw: 12, datum: "2023-03-21", ort: "München", region: "Bayern", belegnummer: "B-1003", status: "offen", geprueft: false, beauftragt: true },
+        { rechnungsnummer: "R-102", gesamtpreis: 50.25, kw: 14, datum: "2023-04-03", ort: "Frankfurt", region: "Hessen", belegnummer: "B-1004", status: "bezahlt", geprueft: true, beauftragt: true },
+        { rechnungsnummer: "R-103", gesamtpreis: 300.00, kw: 12, datum: "2023-03-19", ort: "Berlin", region: "Berlin", belegnummer: "B-1005", status: "in Prüfung", geprueft: false, beauftragt: false },
+        { rechnungsnummer: "R-103", gesamtpreis: 120.00, kw: 13, datum: "2023-03-28", ort: "Köln", region: "NRW", belegnummer: "B-1006", status: "bezahlt", geprueft: true, beauftragt: true },
+        { rechnungsnummer: "R-103", gesamtpreis: 80.00, kw: 15, datum: "2023-04-10", ort: "Düsseldorf", region: "NRW", belegnummer: "B-1007", status: "storniert", geprueft: false, beauftragt: false },
+        { rechnungsnummer: "R-104", gesamtpreis: 400.00, kw: 14, datum: "2023-04-05", ort: "Stuttgart", region: "Baden-Württemberg", belegnummer: "B-1008", status: "bezahlt", geprueft: true, beauftragt: true },
+        { rechnungsnummer: "R-104", gesamtpreis: 60.00, kw: 15, datum: "2023-04-12", ort: "Leipzig", region: "Sachsen", belegnummer: "B-1009", status: "offen", geprueft: false, beauftragt: false },
+        { rechnungsnummer: "R-105", gesamtpreis: 199.99, kw: 16, datum: "2023-04-18", ort: "Wien", region: "Österreich", belegnummer: "B-1010", status: "bezahlt", geprueft: true, beauftragt: true },
+        { rechnungsnummer: "R-101", gesamtpreis: 45.00, kw: 14, datum: "2023-04-02", ort: "Bremen", region: "Bremen", belegnummer: "B-1011", status: "bezahlt", geprueft: true, beauftragt: false },
+        { rechnungsnummer: "R-106", gesamtpreis: 88.00, kw: 12, datum: "2023-03-22", ort: "Berlin", region: "Berlin", belegnummer: "B-1012", status: "offen", geprueft: false, beauftragt: true },
+        { rechnungsnummer: "R-106", gesamtpreis: 32.50, kw: 12, datum: "2023-03-22", ort: "Potsdam", region: "Brandenburg", belegnummer: "B-1013", status: "offen", geprueft: false, beauftragt: false }
+    ];
+    let currentData = [...mockRawData];
+    let dataSource = "mock";
+    let selectedRechnung = null;
+    let leftSortBy = "rechnung", leftSortDir = "asc";
+    let kwSortDir = "asc", dateGroupSortDir = "asc", ortSubSortDir = "asc";
+    let flatSortColumn = "rechnung", flatSortDir = "asc";
+
+    // ---------- Hilfsfunktionen für Tab1 ----------
+    function computeInvoiceGroups() { const m=new Map(); currentData.forEach(i=>m.set(i.rechnungsnummer,(m.get(i.rechnungsnummer)||0)+i.gesamtpreis)); return Array.from(m.entries()).map(([r,s])=>({rechnung:r,sum:s})); }
+    function renderLeftGrouped() { let g=computeInvoiceGroups(); g.sort((a,b)=>leftSortBy==="rechnung"? (leftSortDir==="asc"?a.rechnung.localeCompare(b.rechnung):b.rechnung.localeCompare(a.rechnung)):(leftSortDir==="asc"?a.sum-b.sum:b.sum-a.sum)); const tbody=document.getElementById("leftGroupBody"); tbody.innerHTML=""; g.forEach(gr=>{ const r=tbody.insertRow(); r.classList.add("clickable-row"); if(selectedRechnung===gr.rechnung) r.classList.add("selected-row"); r.insertCell(0).innerText=gr.rechnung; r.insertCell(1).innerHTML=`<strong>${gr.sum.toFixed(2)} €</strong>`; r.addEventListener("click",()=>{ setSelectedRechnungAndRefreshTab1(gr.rechnung); }); }); }
+    function setSelectedRechnungAndRefreshTab1(rechnung) { selectedRechnung=rechnung; renderLeftGrouped(); renderRightGrouped(); }
+    function resetSelectedRechnung() { selectedRechnung=null; renderLeftGrouped(); renderRightGrouped(); }
+    function getFilteredRight() { return selectedRechnung?currentData.filter(i=>i.rechnungsnummer===selectedRechnung):currentData; }
+    function buildKWData() { const m=new Map(); getFilteredRight().forEach(e=>{ if(!m.has(e.kw)) m.set(e.kw,[]); m.get(e.kw).push({datum:e.datum,ort:e.ort,datumObj:new Date(e.datum)}); }); return m; }
+    function getDateGroups(entries,dateDir,ortDir) { const gmap=new Map(); entries.forEach(e=>{if(!gmap.has(e.datum)) gmap.set(e.datum,[]); gmap.get(e.datum).push(e.ort);}); let groups=Array.from(gmap.entries()).map(([d,o])=>({datum:d,datumObj:new Date(d),orts:[...new Set(o)]})); groups.sort((a,b)=>dateDir==="asc"?a.datumObj-b.datumObj:b.datumObj-a.datumObj); groups.forEach(g=>g.orts.sort((a,b)=>ortDir==="asc"?a.localeCompare(b):b.localeCompare(a))); return groups; }
+    function renderRightGrouped() { const kwMap=buildKWData(); let keys=Array.from(kwMap.keys()).sort((a,b)=>kwSortDir==="asc"?a-b:b-a); const cont=document.getElementById("rightKWGroupContainer"); cont.innerHTML=""; if(keys.length===0){cont.innerHTML="<div class='no-data'>Keine Detaildaten</div>";return;} for(let kw of keys){ const entries=kwMap.get(kw); const dateGroups=getDateGroups(entries,dateGroupSortDir,ortSubSortDir); const card=document.createElement("div"); card.className="kw-card"; card.innerHTML=`<div class="kw-header"><div><span class="kw-badge">KW ${kw}</span> ${entries.length} Einträge</div><div style="font-size:0.7rem;">Sort: Datum ${dateGroupSortDir==='asc'?'↑':'↓'} | Ort ${ortSubSortDir==='asc'?'A→Z':'Z→A'}</div></div>`; dateGroups.forEach(g=>{ const fd=new Date(g.datum).toLocaleDateString('de-DE'); const ortHtml=g.orts.map(o=>`<div class="ort-chip">📍 ${o}</div>`).join(''); card.innerHTML+=`<div class="date-subgroup"><div class="date-head">📅 ${fd} (Detail)</div><div class="ort-list">${ortHtml}</div></div>`; }); cont.appendChild(card); } }
+    function renderTab1() { renderLeftGrouped(); renderRightGrouped(); }
+
+    // ---------- Tab2: Flache Tabelle ----------
+    function applyFiltersToData() { let f=[...currentData]; const r=document.getElementById("filterRechnung")?.value.trim().toLowerCase(); if(r) f=f.filter(i=>i.rechnungsnummer.toLowerCase().includes(r)); const reg=document.getElementById("filterRegion")?.value.trim().toLowerCase(); if(reg) f=f.filter(i=>(i.region||"").toLowerCase().includes(reg)); const kw=document.getElementById("filterKW")?.value; if(kw!=="") f=f.filter(i=>i.kw===parseInt(kw)); const ort=document.getElementById("filterOrt")?.value.trim().toLowerCase(); if(ort) f=f.filter(i=>i.ort.toLowerCase().includes(ort)); const bl=document.getElementById("filterBelegnummer")?.value.trim().toLowerCase(); if(bl) f=f.filter(i=>(i.belegnummer||"").toLowerCase().includes(bl)); const von=document.getElementById("filterDatumVon")?.value; if(von) f=f.filter(i=>new Date(i.datum)>=new Date(von)); const bis=document.getElementById("filterDatumBis")?.value; if(bis) f=f.filter(i=>new Date(i.datum)<=new Date(bis)); const st=document.getElementById("filterStatus")?.value; if(st) f=f.filter(i=>i.status===st); const gp=document.getElementById("filterGeprueft")?.value; if(gp==="ja") f=f.filter(i=>i.geprueft===true); if(gp==="nein") f=f.filter(i=>i.geprueft===false); const bt=document.getElementById("filterBeauftragt")?.value; if(bt==="ja") f=f.filter(i=>i.beauftragt===true); if(bt==="nein") f=f.filter(i=>i.beauftragt===false); return f; }
+    function renderFlatTable() { let filtered=applyFiltersToData(); filtered.sort((a,b)=>{ let va,vb; switch(flatSortColumn){ case "rechnung": va=a.rechnungsnummer; vb=b.rechnungsnummer; return flatSortDir==="asc"?va.localeCompare(vb):vb.localeCompare(va); case "preis": return flatSortDir==="asc"?a.gesamtpreis-b.gesamtpreis:b.gesamtpreis-a.gesamtpreis; case "region": va=a.region||""; vb=b.region||""; return flatSortDir==="asc"?va.localeCompare(vb):vb.localeCompare(va); case "kw": return flatSortDir==="asc"?a.kw-b.kw:b.kw-a.kw; case "datum": return flatSortDir==="asc"?new Date(a.datum)-new Date(b.datum):new Date(b.datum)-new Date(a.datum); case "ort": va=a.ort; vb=b.ort; return flatSortDir==="asc"?va.localeCompare(vb):vb.localeCompare(va); case "belegnummer": va=a.belegnummer||""; vb=b.belegnummer||""; return flatSortDir==="asc"?va.localeCompare(vb):vb.localeCompare(va); case "status": va=a.status||""; vb=b.status||""; return flatSortDir==="asc"?va.localeCompare(vb):vb.localeCompare(va); case "geprueft": return flatSortDir==="asc"?(a.geprueft===b.geprueft?0:a.geprueft?1:-1):(a.geprueft===b.geprueft?0:a.geprueft?-1:1); case "beauftragt": return flatSortDir==="asc"?(a.beauftragt===b.beauftragt?0:a.beauftragt?1:-1):(a.beauftragt===b.beauftragt?0:a.beauftragt?-1:1); default: return 0; } }); const tbody=document.getElementById("flatTableBody"); tbody.innerHTML=""; filtered.forEach(r=>{ const tr=tbody.insertRow(); tr.classList.add("clickable-row"); tr.insertCell(0).innerText=r.rechnungsnummer; tr.insertCell(1).innerHTML=`${r.gesamtpreis.toFixed(2)} €`; tr.insertCell(2).innerText=r.region||"-"; tr.insertCell(3).innerText=r.kw; tr.insertCell(4).innerText=new Date(r.datum).toLocaleDateString('de-DE'); tr.insertCell(5).innerText=r.ort; tr.insertCell(6).innerText=r.belegnummer||"-"; tr.insertCell(7).innerText=r.status||"-"; tr.insertCell(8).innerText=r.geprueft?"Ja":"Nein"; tr.insertCell(9).innerText=r.beauftragt?"Ja":"Nein"; tr.addEventListener("click", (e) => { e.stopPropagation(); selectedRechnung = r.rechnungsnummer; document.querySelector(".tab-btn[data-tab='tab1']").click(); renderTab1(); }); }); document.getElementById("flatTableFooter").innerHTML=`📋 ${filtered.length} von ${currentData.length} Einträgen | Klick auf Zeile → Tab1 gruppiert`; }
+    function resetFiltersTab2() { ["filterRechnung","filterRegion","filterKW","filterOrt","filterBelegnummer","filterDatumVon","filterDatumBis","filterStatus","filterGeprueft","filterBeauftragt"].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=""; }); renderFlatTable(); }
+    async function loadDataFromSource() { if(dataSource==="mock") { currentData=[...mockRawData]; document.getElementById("dataStatus").innerHTML="✅ Mock-Daten geladen"; } else { document.getElementById("dataStatus").innerHTML="🔄 Lade DB..."; await new Promise(r=>setTimeout(r,500)); currentData=[...mockRawData, { rechnungsnummer: "R-201", gesamtpreis: 512, kw:20, datum:"2023-05-15", ort:"Zürich", region:"Schweiz", belegnummer:"DB-2001", status:"bezahlt", geprueft:true, beauftragt:true }]; document.getElementById("dataStatus").innerHTML="🗄️ DB-Daten geladen (Simulation)"; } resetSelectedRechnung(); renderTab1(); renderFlatTable(); }
+
+    // ---------- TAB 3: Auftragsliste & Tag-Details (wie gehabt) ----------
+    let auftragData = [];
+    let tagData = [];
+    let selectedAuftragPK = null;
+    let auftragSortColumn = "PK_WORK_DIENSTLEISTUNG_AUFTRAGSLISTE";
+    let auftragSortDir = "asc";
+    let auftragFilterText = "";
+
+    const fallbackAuftrag = [
+        { PK_WORK_DIENSTLEISTUNG_AUFTRAGSLISTE: "1", JAHR: 2024, SEASON: "Winter", FIRMA: "xxx", MARKT: "Duisburg", ORT: "Duisburg", STATUS: "abgeschlossen", PREIS_GESAMT: 3900, REGION: "Nord" },
+        { PK_WORK_DIENSTLEISTUNG_AUFTRAGSLISTE: "2", JAHR: 2024, SEASON: "Sommer", FIRMA: "ABC GmbH", MARKT: "Köln", ORT: "Köln", STATUS: "in Arbeit", PREIS_GESAMT: 1950, REGION: "West" },
+        { PK_WORK_DIENSTLEISTUNG_AUFTRAGSLISTE: "3", JAHR: 2024, SEASON: "Frühling", FIRMA: "Sample", MARKT: "Berlin", ORT: "Berlin", STATUS: "offen", PREIS_GESAMT: 1200, REGION: "Ost" }
+    ];
+    const fallbackTag = [
+        { PK_WORK_DIENSTLEISTUNG_TAG: "1", DATUM: "2024-12-22T23:00:00.000Z", ANZAHL_TAGE: 2, KW: 53, JAHR: 2024, FIRMA: "xxx", MARKT: "Duisburg", ORT: "Duisburg", STATUS: "in Arbeit", RECHNUNGSNUMMER: "R-101", PREIS_POSITION: 234, PREIS_GESAMT: 435, BESCHREIBUNG: "1. Arbeitschritt abgeschlossen", GEPRUEFT: "nein", REGION: "Nord", FK_WORK_DIENSTLEISTUNG_AUFTRAGSLISTE: "1", beauftragt_am: "2025-11-14T23:00:00.000Z" },
+        { PK_WORK_DIENSTLEISTUNG_TAG: "2", DATUM: "2024-12-24T23:00:00.000Z", ANZAHL_TAGE: 4, KW: 54, JAHR: 2024, FIRMA: "xxx", MARKT: "Duisburg", ORT: "Duisburg", STATUS: "in Arbeit", RECHNUNGSNUMMER: "", PREIS_POSITION: 300, PREIS_GESAMT: 700, BESCHREIBUNG: "weiterer Schritt", GEPRUEFT: "ja", REGION: "Nord", FK_WORK_DIENSTLEISTUNG_AUFTRAGSLISTE: "2", beauftragt_am: null },
+        { PK_WORK_DIENSTLEISTUNG_TAG: "3", DATUM: "2024-12-25T23:00:00.000Z", ANZAHL_TAGE: 1, KW: 54, JAHR: 2024, FIRMA: "Sample", MARKT: "Berlin", ORT: "Berlin", STATUS: "offen", RECHNUNGSNUMMER: null, PREIS_POSITION: 150, PREIS_GESAMT: 150, BESCHREIBUNG: "Test ohne Rechnung", GEPRUEFT: "nein", REGION: "Ost", FK_WORK_DIENSTLEISTUNG_AUFTRAGSLISTE: null, beauftragt_am: "2023-12-31T23:00:00.000Z" }
+    ];
+
+    async function fetchAuftragsliste() { const tbody=document.getElementById("auftragTableBody"); tbody.innerHTML='<tr><td colspan="9" style="text-align:center;"><span class="loading-spinner"></span> Lade Aufträge...</td></tr>'; try { const response=await fetch("http://localhost:5000/beruf_dienstl_auftragsliste"); if(!response.ok) throw new Error(`HTTP ${response.status}`); const data=await response.json(); auftragData=Array.isArray(data)?data:(data.data&&Array.isArray(data.data)?data.data:[]); } catch(err) { console.warn("Auftrag-Webservice nicht erreichbar",err); auftragData=[...fallbackAuftrag]; } renderAuftragTable(); }
+    async function fetchTagData() { try { const response=await fetch("http://localhost:5000/beruf_dienstl_tag"); if(!response.ok) throw new Error(`HTTP ${response.status}`); const data=await response.json(); tagData=Array.isArray(data)?data:(data.data&&Array.isArray(data.data)?data.data:[]); } catch(err) { console.warn("Tag-Webservice nicht erreichbar",err); tagData=[...fallbackTag]; } if(selectedAuftragPK) showTagDetailsForAuftrag(selectedAuftragPK); renderAuftragTable(); renderTagTable(); }
+    function renderAuftragTable() { const hasRechnungMap=new Map(); tagData.forEach(tag=>{ const fk=tag.FK_WORK_DIENSTLEISTUNG_AUFTRAGSLISTE; if(fk&&tag.RECHNUNGSNUMMER&&tag.RECHNUNGSNUMMER.trim()!=="") hasRechnungMap.set(fk.toString(),true); }); let filtered=auftragData.filter(row=>{ if(!auftragFilterText) return true; const search=auftragFilterText.toLowerCase(); return Object.values(row).some(v=>v!=null&&v.toString().toLowerCase().includes(search)); }); filtered.sort((a,b)=>{ let valA=a[auftragSortColumn], valB=b[auftragSortColumn]; if(valA==null) valA=""; if(valB==null) valB=""; if(typeof valA==="number"&&typeof valB==="number") return auftragSortDir==="asc"?valA-valB:valB-valA; valA=valA.toString().toLowerCase(); valB=valB.toString().toLowerCase(); return auftragSortDir==="asc"?valA.localeCompare(valB):valB.localeCompare(valA); }); const tbody=document.getElementById("auftragTableBody"); tbody.innerHTML=""; filtered.forEach(item=>{ const row=tbody.insertRow(); const pk=item.PK_WORK_DIENSTLEISTUNG_AUFTRAGSLISTE?.toString(); const hasRechnung=hasRechnungMap.get(pk)===true; const isOpen=(item.STATUS==="offen"||item.STATUS==="in Arbeit"); let highlight=""; if(!hasRechnung) highlight="row-no-rechnung"; else if(isOpen) highlight="row-open"; if(highlight) row.classList.add(highlight); row.classList.add("clickable-row"); if(selectedAuftragPK===pk) row.classList.add("selected-row"); row.insertCell(0).innerText=item.PK_WORK_DIENSTLEISTUNG_AUFTRAGSLISTE??"-"; row.insertCell(1).innerText=item.JAHR??"-"; row.insertCell(2).innerText=item.SEASON??"-"; row.insertCell(3).innerText=item.FIRMA??"-"; row.insertCell(4).innerText=item.MARKT??"-"; row.insertCell(5).innerText=item.ORT??"-"; row.insertCell(6).innerText=item.STATUS??"-"; row.insertCell(7).innerHTML=item.PREIS_GESAMT!=null?`${item.PREIS_GESAMT.toFixed(2)} €`:"-"; row.insertCell(8).innerText=item.REGION??"-"; row.addEventListener("click",()=>{ selectedAuftragPK=pk; renderAuftragTable(); showTagDetailsForAuftrag(selectedAuftragPK); }); }); document.getElementById("auftragTableFooter").innerHTML=`📋 ${filtered.length} von ${auftragData.length} Aufträgen | 🟠 offen | 🔴 ohne Rechnungsnr.`; }
+    function showTagDetailsForAuftrag(pk) { const container=document.getElementById("tagDetailsContainer"); const infoSpan=document.getElementById("selectedAuftragInfo"); const auftrag=auftragData.find(a=>a.PK_WORK_DIENSTLEISTUNG_AUFTRAGSLISTE==pk); infoSpan.innerHTML=auftrag?` (${auftrag.FIRMA} - ${auftrag.MARKT})`:""; if(!pk){ container.innerHTML='<div class="no-data">Kein Auftrag ausgewählt.</div>'; return; } const relatedTags=tagData.filter(t=>t.FK_WORK_DIENSTLEISTUNG_AUFTRAGSLISTE==pk); if(relatedTags.length===0){ container.innerHTML='<div class="no-data">Keine zugehörigen Tag-Einträge.</div>'; return; } container.innerHTML=""; relatedTags.forEach(tag=>{ const card=document.createElement("div"); card.className="tag-card"; const missingBeauftragt=!tag.beauftragt_am; const missingFK=!tag.FK_WORK_DIENSTLEISTUNG_AUFTRAGSLISTE; if(missingBeauftragt||missingFK) card.classList.add("missing-required"); const datumFormatted=tag.DATUM?new Date(tag.DATUM).toLocaleDateString('de-DE'):"-"; const rechnungNr=tag.RECHNUNGSNUMMER&&tag.RECHNUNGSNUMMER.trim()!==""?tag.RECHNUNGSNUMMER:"-"; const beauftragtAmFormatted=tag.beauftragt_am?new Date(tag.beauftragt_am).toLocaleDateString('de-DE'):"❌ fehlt"; const fkStr=tag.FK_WORK_DIENSTLEISTUNG_AUFTRAGSLISTE?tag.FK_WORK_DIENSTLEISTUNG_AUFTRAGSLISTE:"❌ fehlt"; card.innerHTML=`<div style="display:flex; justify-content:space-between;"><span>📅 ${datumFormatted} | KW ${tag.KW??"-"}</span><span>💰 ${tag.PREIS_GESAMT!=null?tag.PREIS_GESAMT.toFixed(2)+" €":"-"}</span></div><div><span class="tag-field">🏢 ${tag.FIRMA??"-"}</span> <span class="tag-field">📍 ${tag.ORT??"-"}</span> <span class="tag-field">📄 Re: ${rechnungNr}</span></div><div><span class="tag-field">⚙️ Status: ${tag.STATUS??"-"}</span> <span class="tag-field">📅 beauftragt_am: ${beauftragtAmFormatted}</span> <span class="tag-field">🔗 FK: ${fkStr}</span></div><div class="tag-field">📝 ${tag.BESCHREIBUNG??"-"}</div>`; if(rechnungNr!=="-"){ const btn=document.createElement("button"); btn.innerText="🔍 Rechnung in Tab 1"; btn.className="btn-small"; btn.addEventListener("click",(e)=>{ e.stopPropagation(); selectedRechnung=rechnungNr; document.querySelector(".tab-btn[data-tab='tab1']").click(); renderTab1(); }); card.appendChild(btn); } container.appendChild(card); }); }
+    function initAuftragEvents() { const searchInput=document.getElementById("auftragSearchInput"); if(searchInput) searchInput.addEventListener("input",(e)=>{ auftragFilterText=e.target.value; renderAuftragTable(); }); const refreshBtn=document.getElementById("refreshAuftragBtn"); if(refreshBtn) refreshBtn.addEventListener("click",async()=>{ await fetchAuftragsliste(); await fetchTagData(); }); const ths=document.querySelectorAll("#auftragTable th[data-auftrag-sort]"); ths.forEach(th=>{ th.addEventListener("click",()=>{ const col=th.getAttribute("data-auftrag-sort"); if(auftragSortColumn===col) auftragSortDir=auftragSortDir==="asc"?"desc":"asc"; else{ auftragSortColumn=col; auftragSortDir="asc"; } renderAuftragTable(); }); }); }
+
+    // ---------- TAB 4: Flache Tag-Tabelle mit Markierungen ----------
+    let tagSortColumn = "PK_WORK_DIENSTLEISTUNG_TAG";
+    let tagSortDir = "asc";
+    let tagFilterText = "";
+
+    function renderTagTable() {
+        let filtered = tagData.filter(tag => {
+            if (!tagFilterText) return true;
+            const search = tagFilterText.toLowerCase();
+            return Object.values(tag).some(val => val != null && val.toString().toLowerCase().includes(search));
+        });
+        filtered.sort((a,b) => {
+            let valA = a[tagSortColumn];
+            let valB = b[tagSortColumn];
+            if (valA == null) valA = "";
+            if (valB == null) valB = "";
+            if (typeof valA === "number" && typeof valB === "number") return tagSortDir === "asc" ? valA - valB : valB - valA;
+            valA = valA.toString().toLowerCase();
+            valB = valB.toString().toLowerCase();
+            return tagSortDir === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        });
+        const tbody = document.getElementById("tagTableBody");
+        tbody.innerHTML = "";
+        filtered.forEach(tag => {
+            const row = tbody.insertRow();
+            // Markierungen:
+            const isOpen = (tag.STATUS === "offen" || tag.STATUS === "in Arbeit");
+            const hasRechnung = (tag.RECHNUNGSNUMMER && tag.RECHNUNGSNUMMER.trim() !== "" && tag.RECHNUNGSNUMMER !== "null");
+            const missingBeauftragt = (!tag.beauftragt_am || tag.beauftragt_am === null || tag.beauftragt_am === "");
+            if (isOpen) row.classList.add("tag-row-offen");
+            if (hasRechnung) row.classList.add("tag-row-mit-rechnung");
+            if (missingBeauftragt) row.classList.add("tag-row-nicht-beauftragt");
+            row.insertCell(0).innerText = tag.PK_WORK_DIENSTLEISTUNG_TAG ?? "-";
+            row.insertCell(1).innerText = tag.DATUM ? new Date(tag.DATUM).toLocaleDateString('de-DE') : "-";
+            row.insertCell(2).innerText = tag.KW ?? "-";
+            row.insertCell(3).innerText = tag.JAHR ?? "-";
+            row.insertCell(4).innerText = tag.FIRMA ?? "-";
+            row.insertCell(5).innerText = tag.ORT ?? "-";
+            row.insertCell(6).innerText = tag.STATUS ?? "-";
+            row.insertCell(7).innerText = (tag.RECHNUNGSNUMMER && tag.RECHNUNGSNUMMER.trim() !== "") ? tag.RECHNUNGSNUMMER : "-";
+            row.insertCell(8).innerHTML = tag.PREIS_GESAMT != null ? `${tag.PREIS_GESAMT.toFixed(2)} €` : "-";
+            row.insertCell(9).innerText = tag.beauftragt_am ? new Date(tag.beauftragt_am).toLocaleDateString('de-DE') : "❌ fehlt";
+            row.insertCell(10).innerText = tag.FK_WORK_DIENSTLEISTUNG_AUFTRAGSLISTE ?? "-";
+            row.insertCell(11).innerText = (tag.BESCHREIBUNG && tag.BESCHREIBUNG.length > 50) ? tag.BESCHREIBUNG.substring(0,50)+"…" : (tag.BESCHREIBUNG || "-");
+        });
+        document.getElementById("tagTableFooter").innerHTML = `📋 ${filtered.length} von ${tagData.length} Tag-Einträgen | 🟠 offen/in Arbeit | 🟢 mit Rechnung | 🔴 nicht beauftragt (beauftragt_am fehlt)`;
+    }
+
+    function initTagTableEvents() {
+        const searchInput = document.getElementById("tagSearchInput");
+        if (searchInput) {
+            searchInput.addEventListener("input", (e) => { tagFilterText = e.target.value; renderTagTable(); });
+            document.getElementById("clearTagSearchBtn")?.addEventListener("click", () => { searchInput.value = ""; tagFilterText = ""; renderTagTable(); });
+        }
+        const refreshTagBtn = document.getElementById("refreshTagTableBtn");
+        if (refreshTagBtn) refreshTagBtn.addEventListener("click", async () => { await fetchTagData(); renderTagTable(); });
+        const ths = document.querySelectorAll("#tagTable th[data-tag-sort]");
+        ths.forEach(th => {
+            th.addEventListener("click", () => {
+                const col = th.getAttribute("data-tag-sort");
+                if (tagSortColumn === col) tagSortDir = tagSortDir === "asc" ? "desc" : "asc";
+                else { tagSortColumn = col; tagSortDir = "asc"; }
+                renderTagTable();
+            });
+        });
+    }
+
+    // ---------- TABS & EVENT BINDINGS ----------
+    function initTabs() { const btns=document.querySelectorAll(".tab-btn"); const contents=document.querySelectorAll(".tab-content"); btns.forEach(btn=>btn.addEventListener("click",async()=>{ const target=btn.getAttribute("data-tab"); btns.forEach(b=>b.classList.remove("active")); btn.classList.add("active"); contents.forEach(c=>c.classList.remove("active")); document.getElementById(target).classList.add("active"); if(target==="tab2") renderFlatTable(); if(target==="tab1") renderTab1(); if(target==="tab3"){ if(auftragData.length===0) await fetchAuftragsliste(); if(tagData.length===0) await fetchTagData(); } if(target==="tab4"){ if(tagData.length===0) await fetchTagData(); else renderTagTable(); } })); }
+    function bindCoreEvents() { document.getElementById("refreshDataSourceBtn").addEventListener("click",()=>loadDataFromSource()); document.querySelectorAll("input[name='dataSource']").forEach(r=>r.addEventListener("change",(e)=>{ dataSource=e.target.value; loadDataFromSource(); })); document.getElementById("resetRechnungFilterBtn").addEventListener("click",()=>resetSelectedRechnung()); document.getElementById("sortKwAscBtn").addEventListener("click",()=>{ kwSortDir="asc"; renderRightGrouped(); }); document.getElementById("sortKwDescBtn").addEventListener("click",()=>{ kwSortDir="desc"; renderRightGrouped(); }); document.getElementById("sortDateGroupAsc").addEventListener("click",()=>{ dateGroupSortDir="asc"; renderRightGrouped(); }); document.getElementById("sortDateGroupDesc").addEventListener("click",()=>{ dateGroupSortDir="desc"; renderRightGrouped(); }); document.getElementById("sortOrtAsc").addEventListener("click",()=>{ ortSubSortDir="asc"; renderRightGrouped(); }); document.getElementById("sortOrtDesc").addEventListener("click",()=>{ ortSubSortDir="desc"; renderRightGrouped(); }); document.getElementById("applyFiltersBtn").addEventListener("click",()=>renderFlatTable()); document.getElementById("resetFiltersBtn").addEventListener("click",()=>resetFiltersTab2()); const flatThs=document.querySelectorAll("#flatTable th"); flatThs.forEach(th=>th.addEventListener("click",()=>{ const key=th.getAttribute("data-flat-sort"); if(key){ if(flatSortColumn===key) flatSortDir=flatSortDir==="asc"?"desc":"asc"; else{ flatSortColumn=key; flatSortDir="asc"; } renderFlatTable(); } })); const leftThs=document.querySelectorAll("#leftGroupTable th"); if(leftThs[0]) leftThs[0].addEventListener("click",()=>{ if(leftSortBy==="rechnung") leftSortDir=leftSortDir==="asc"?"desc":"asc"; else{ leftSortBy="rechnung"; leftSortDir="asc"; } renderLeftGrouped(); }); if(leftThs[1]) leftThs[1].addEventListener("click",()=>{ if(leftSortBy==="sum") leftSortDir=leftSortDir==="asc"?"desc":"asc"; else{ leftSortBy="sum"; leftSortDir="asc"; } renderLeftGrouped(); }); }
+
+    async function start() { initTabs(); bindCoreEvents(); initAuftragEvents(); initTagTableEvents(); await loadDataFromSource(); await fetchAuftragsliste(); await fetchTagData(); }
+    start();
+</script>
+</body>
+</html>
