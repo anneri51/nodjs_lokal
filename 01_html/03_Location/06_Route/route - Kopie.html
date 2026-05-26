@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Routing Information with Map</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .document-group {
+            margin-bottom: 30px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .document-header {
+            background-color: #e0e0e0;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 3px;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+            color: #666;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .map-container {
+            margin-top: 20px;
+            height: 500px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .route-map {
+            height: 100%;
+            width: 100%;
+        }
+        .toggle-map {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .route-info {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+        }
+        .route-point {
+            margin: 5px 0;
+            padding: 5px;
+            background-color: #e9e9e9;
+            border-left: 3px solid #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <h1>Routing Information with Map</h1>
+    <div id="loading" class="loading">Loading data from server...</div>
+    <div id="content"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet Routing Machine -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+    <script>
+        // Known locations with approximate coordinates
+        const knownLocations = {
+            'Bahnhof SBB': { lat: 47.3782, lng: 8.5402 }, // Zurich main station
+            'Mannheim HBF': { lat: 49.4797, lng: 8.4696 }, // Mannheim main station
+            'Basel SBB': { lat: 47.5475, lng: 7.5896 }, // Basel main station
+            'Bern HB': { lat: 46.9496, lng: 7.4390 }, // Bern main station
+            'Genève Cornavin': { lat: 46.2105, lng: 6.1424 }, // Geneva main station
+            'Luzern HB': { lat: 47.0502, lng: 8.3103 } // Lucerne main station
+        };
+
+        function getCoordinatesForRoute(route, index, total) {
+            // First try to use the KOORDINATEN field if available
+            if (route.KOORDINATEN) {
+                const parts = route.KOORDINATEN.split(',').map(coord => parseFloat(coord.trim()));
+                if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                    return { lat: parts[0], lng: parts[1] };
+                }
+            }
+            
+            const locationName = route.LOCATION || `Location ${index + 1}`;
+            
+            // Check if we have predefined coordinates for this location
+            if (knownLocations[locationName]) {
+                return knownLocations[locationName];
+            }
+            
+            // For unknown locations, generate coordinates near Zurich with some spread
+            const baseLat = 47.3769;
+            const baseLng = 8.5417;
+            const lat = baseLat + (Math.random() * 0.02 - 0.01);
+            const lng = baseLng + (index * 0.01 - (total * 0.005));
+            
+            return { lat, lng };
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('http://localhost:5000/routing')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    document.getElementById('loading').style.display = 'none';
+                    
+                    if (data.length === 0) {
+                        document.getElementById('content').innerHTML = '<p>No routing data available.</p>';
+                        return;
+                    }
+                    
+                    // Group data by FK_INP_BELEGE_ALL (document ID)
+                    const groupedData = groupByDocument(data);
+                    
+                    // Render the grouped data
+                    renderGroupedData(groupedData);
+                })
+                .catch(error => {
+                    document.getElementById('loading').innerHTML = 
+                        `<p class="error">Error loading data: ${error.message}</p>`;
+                    console.error('Error:', error);
+                });
+        });
+
+        function groupByDocument(data) {
+            const grouped = {};
+            
+            data.forEach(item => {
+                const docId = item.FK_INP_BELEGE_ALL;
+                if (!grouped[docId]) {
+                    grouped[docId] = {
+                        documentInfo: {
+                            PK_INP_BELEGE_ALL: item.PK_INP_BELEGE_ALL,
+                            BEZEICHNUNG: item.BEZEICHNUNG,
+                            BELEGDATUM: item.BELEGDATUM,
+                            BRUTTO_BETRAG: item.BRUTTO_BETRAG
+                        },
+                        routes: []
+                    };
+                }
+                
+                grouped[docId].routes.push(item);
+            });
+            
+            return grouped;
+        }
+
+        function renderGroupedData(groupedData) {
+            const contentDiv = document.getElementById('content');
+            
+            for (const docId in groupedData) {
+                const group = groupedData[docId];
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'document-group';
+                
+                // Document header
+                const docHeader = document.createElement('div');
+                docHeader.className = 'document-header';
+                docHeader.innerHTML = `
+                    <h2>Document: ${group.documentInfo.BEZEICHNUNG || 'N/A'}</h2>
+                    <p><strong>Document ID:</strong> ${group.documentInfo.PK_INP_BELEGE_ALL || 'N/A'} | 
+                    <strong>Date:</strong> ${group.documentInfo.BELEGDATUM || 'N/A'} | 
+                    <strong>Amount:</strong> ${group.documentInfo.BRUTTO_BETRAG || 'N/A'}</p>
+                `;
+                groupDiv.appendChild(docHeader);
+                
+                // Routes for this document
+                if (group.routes.length > 0) {
+                    // Create a container for the document's route map
+                    const mapContainer = document.createElement('div');
+                    mapContainer.className = 'map-container';
+                    mapContainer.id = `map-${docId}`;
+                    
+                    const mapDiv = document.createElement('div');
+                    mapDiv.className = 'route-map';
+                    mapDiv.id = `map-${docId}-inner`;
+                    mapContainer.appendChild(mapDiv);
+                    
+                    groupDiv.appendChild(mapContainer);
+                    
+                    // Create route info section
+                    const routeInfo = document.createElement('div');
+                    routeInfo.className = 'route-info';
+                    routeInfo.innerHTML = `<h3>Route Points (${group.routes.length} locations)</h3>`;
+                    
+                    // Add each route point
+                    group.routes.forEach((route, index) => {
+                        const locationName = route.LOCATION || `Location ${index + 1}` || route.FK_LOC_LOCATION;
+                        const pointDiv = document.createElement('div');
+                        pointDiv.className = 'route-point';
+                        pointDiv.innerHTML = `
+                            <strong>${locationName}</strong>
+                            <br>${route.ADRESSE || 'Address not specified'} ${route.FK_LOC_LOCATION} ${route.PK_ROUT_ROUTING}
+                            <br>Time: ${route.VON_ZEIT || ''} - ${route.BIS_ZEIT || ''}
+                            ${route.GLEIS ? '<br>Track: ' + route.GLEIS : ''} 
+                            ${route.GLEIS_VAR ? '(' + route.GLEIS_VAR + ')' : ''}
+                            ${route.KOORDINATEN ? '<br>Coordinates: ' + route.KOORDINATEN : ''}
+                        `;
+                        routeInfo.appendChild(pointDiv);
+                    });
+                    
+                    groupDiv.appendChild(routeInfo);
+                    
+                    // Initialize map after it's added to DOM
+                    setTimeout(() => {
+                        initializeDocumentMap(group.routes, docId);
+                    }, 0);
+                } else {
+                    groupDiv.innerHTML += '<p>No routes available for this document.</p>';
+                }
+                
+                contentDiv.appendChild(groupDiv);
+            }
+        }
+
+        function initializeDocumentMap(routes, docId) {
+            const mapId = `map-${docId}-inner`;
+            const map = L.map(mapId);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+            
+            // Generate coordinates for each location
+            const waypoints = [];
+            const markers = [];
+            
+            routes.forEach((route, index) => {
+                const locationName = route.LOCATION || `Location ${index + 1}`;
+                const coords = getCoordinatesForRoute(route, index, routes.length);
+                waypoints.push(L.latLng(coords.lat, coords.lng));
+                
+                const marker = L.marker([coords.lat, coords.lng]).addTo(map)
+                    .bindPopup(`
+                        <b>${locationName}</b><br>
+                        ${route.ADRESSE || ''}<br>
+                        ${route.VON_ZEIT || ''} - ${route.BIS_ZEIT || ''}<br>
+                        ${route.GLEIS ? 'Track: ' + route.GLEIS : ''} 
+                        ${route.GLEIS_VAR ? '(' + route.GLEIS_VAR + ')' : ''}
+                        ${route.KOORDINATEN ? '<br>Coordinates: ' + route.KOORDINATEN : ''}
+                    `);
+                markers.push(marker);
+            });
+            
+            // Create a polyline connecting all points in order
+            if (waypoints.length > 1) {
+                L.Routing.control({
+                    waypoints: waypoints,
+                    routeWhileDragging: false,
+                    show: false, // Hide the instructions panel
+                    createMarker: function() { return null; } // Don't create additional markers
+                }).addTo(map);
+                
+                // Also add a simple polyline for better visualization
+                L.polyline(waypoints, {color: 'blue', weight: 5, opacity: 0.7}).addTo(map);
+            }
+            
+            // Fit bounds to show all markers
+            if (waypoints.length > 0) {
+                const group = new L.featureGroup(markers);
+                map.fitBounds(group.getBounds().pad(0.2));
+            } else {
+                map.setView([47.3769, 8.5417], 13); // Default to Zurich
+            }
+        }
+    </script>
+</body>
+</html>

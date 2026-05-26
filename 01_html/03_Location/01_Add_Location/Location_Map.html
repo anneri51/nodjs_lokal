@@ -1,0 +1,3145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Address, Location & Land Manager - Triple Web Service Integration</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        header h1 {
+            color: #333;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        header h1 i {
+            color: #667eea;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        .api-status-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .api-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .api-status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .api-status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .api-status.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            height: 100%;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .panel-header h2 {
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Tabs Styling */
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 5px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px 20px;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            color: #666;
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 10px;
+            flex-grow: 1;
+            max-width: 400px;
+        }
+
+        .search-container input {
+            flex-grow: 1;
+            padding: 12px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-container input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .search-btn, .refresh-btn {
+            padding: 12px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .search-btn:hover, .refresh-btn:hover {
+            background: #5a67d8;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-card h3 {
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .stat-card .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .list-container {
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+        }
+
+        .address-list, .location-list, .land-list {
+            list-style: none;
+        }
+
+        .address-item, .location-item, .land-item {
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+            transition: background 0.3s ease;
+            cursor: pointer;
+        }
+
+        .address-item:hover, .location-item:hover, .land-item:hover {
+            background: #f8f9fa;
+        }
+
+        .address-item:last-child, .location-item:last-child, .land-item:last-child {
+            border-bottom: none;
+        }
+
+        .address-item.active, .location-item.active, .land-item.active {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .item-title {
+            font-weight: bold;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .item-badge {
+            background: #e0e7ff;
+            color: #4f46e5;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .item-details {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .item-coordinates {
+            color: #888;
+            font-size: 13px;
+            display: flex;
+            gap: 15px;
+            margin-top: 8px;
+        }
+
+        .relation-info {
+            background: #f0f9ff;
+            border-left: 3px solid #3b82f6;
+            padding: 8px 12px;
+            margin-top: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .relation-info strong {
+            color: #1d4ed8;
+        }
+
+        .loading, .error, .empty {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .loading i, .error i, .empty i {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+
+        .error {
+            color: #dc3545;
+        }
+
+        .error i {
+            color: #dc3545;
+        }
+
+        #map {
+            height: 500px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        .map-container {
+            position: relative;
+        }
+
+        .map-overlay {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            z-index: 1000;
+            font-size: 14px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #0da271;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #d97706;
+        }
+
+        .btn-info {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: #2563eb;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1001;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            width: 90%;
+            max-width: 600px;
+            position: relative;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            color: #333;
+        }
+
+        .close {
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .close:hover {
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 1002;
+            animation: slideUp 0.3s ease;
+            max-width: 400px;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .notification.success {
+            border-left: 4px solid #10b981;
+        }
+
+        .notification.error {
+            border-left: 4px solid #ef4444;
+        }
+
+        .notification.info {
+            border-left: 4px solid #3b82f6;
+        }
+
+        .notification.warning {
+            border-left: 4px solid #f59e0b;
+        }
+
+        .notification .close-notification {
+            cursor: pointer;
+            color: #666;
+        }
+
+        .notification .close-notification:hover {
+            color: #333;
+        }
+
+        footer {
+            text-align: center;
+            color: white;
+            margin-top: 30px;
+            padding: 20px;
+            font-size: 14px;
+        }
+
+        footer a {
+            color: white;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .filter-btn:hover {
+            background: #e5e7eb;
+        }
+
+        .filter-btn.active:hover {
+            background: #5a67d8;
+        }
+
+        .legend {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        /* Land Table Styling */
+        .land-table-container {
+            overflow-x: auto;
+            max-height: 500px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+        }
+
+        .land-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 800px;
+        }
+
+        .land-table th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #e0e0e0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .land-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+            color: #666;
+        }
+
+        .land-table tr {
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .land-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .land-table tr.selected {
+            background: #e3f2fd;
+        }
+
+        .land-table .area-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .land-table .small-area {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .land-table .medium-area {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .land-table .large-area {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Map Tabs */
+        .map-tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 5px;
+            margin-top: 10px;
+        }
+
+        .map-tab {
+            flex: 1;
+            padding: 10px 15px;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            color: #666;
+        }
+
+        .map-tab.active {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* Search bar in map panel */
+        .map-search-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            width: 300px;
+        }
+
+        .map-search-input {
+            width: 100%;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            font-size: 14px;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>
+                <i class="fas fa-database"></i>
+                Address, Location & Land Manager
+            </h1>
+            <p class="subtitle">Triple web service integration with interactive map</p>
+            
+            <div class="api-status-container">
+                <div id="address-api-status" class="api-status disconnected">
+                    <i class="fas fa-plug"></i>
+                    <span>Address Service: Connecting...</span>
+                </div>
+                <div id="location-api-status" class="api-status disconnected">
+                    <i class="fas fa-plug"></i>
+                    <span>Location Service: Connecting...</span>
+                </div>
+                <div id="land-api-status" class="api-status disconnected">
+                    <i class="fas fa-plug"></i>
+                    <span>Land Service: Connecting...</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- Left Panel: Data Lists -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-list"></i> Data Management</h2>
+                    <div class="search-container">
+                        <input type="text" id="search-input" placeholder="Search...">
+                        <button id="search-btn" class="search-btn">
+                            <i class="fas fa-search"></i>
+                        </button>
+                        <button id="refresh-btn" class="refresh-btn" title="Refresh all data">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="stats">
+                    <div class="stat-card">
+                        <h3>Total Addresses</h3>
+                        <div id="address-count" class="value">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Locations</h3>
+                        <div id="location-count" class="value">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Land Plots</h3>
+                        <div id="land-count" class="value">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Last Updated</h3>
+                        <div id="last-updated" class="value">--:--</div>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="tabs">
+                    <div class="tab active" data-tab="addresses">Addresses</div>
+                    <div class="tab" data-tab="locations">Locations</div>
+                    <div class="tab" data-tab="land">Land Information</div>
+                    <div class="tab" data-tab="relations">Relations</div>
+                </div>
+
+                <!-- Tab Contents -->
+                <div id="addresses-tab" class="tab-content active">
+                    <div class="controls">
+                        <button id="add-address-btn" class="btn btn-success">
+                            <i class="fas fa-plus"></i> Add Address
+                        </button>
+                        <button id="edit-address-btn" class="btn btn-primary" style="display: none;">
+                            <i class="fas fa-edit"></i> Edit Address
+                        </button>
+                        <button id="show-related-locations-btn" class="btn btn-info" style="display: none;">
+                            <i class="fas fa-link"></i> Show Related
+                        </button>
+                    </div>
+
+                    <div class="list-container">
+                        <ul id="address-list" class="address-list">
+                            <!-- Address list will be loaded here -->
+                        </ul>
+                    </div>
+                </div>
+
+                <div id="locations-tab" class="tab-content">
+                    <div class="controls">
+                        <button id="add-location-btn" class="btn btn-success">
+                            <i class="fas fa-plus"></i> Add Location
+                        </button>
+                        <button id="edit-location-btn" class="btn btn-primary" style="display: none;">
+                            <i class="fas fa-edit"></i> Edit Location
+                        </button>
+                        <button id="show-related-addresses-btn" class="btn btn-info" style="display: none;">
+                            <i class="fas fa-link"></i> Show Related
+                        </button>
+                    </div>
+
+                    <div class="list-container">
+                        <ul id="location-list" class="location-list">
+                            <!-- Location list will be loaded here -->
+                        </ul>
+                    </div>
+                </div>
+
+                <div id="land-tab" class="tab-content">
+                    <div class="controls">
+                        <button id="add-land-btn" class="btn btn-success">
+                            <i class="fas fa-plus"></i> Add Land Plot
+                        </button>
+                        <button id="edit-land-btn" class="btn btn-primary" style="display: none;">
+                            <i class="fas fa-edit"></i> Edit Land
+                        </button>
+                        <button id="show-on-map-btn" class="btn btn-info" style="display: none;">
+                            <i class="fas fa-map"></i> Show on Map
+                        </button>
+                    </div>
+
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-filter="all">All</button>
+                        <button class="filter-btn" data-filter="small">Small (&lt; 1000 m²)</button>
+                        <button class="filter-btn" data-filter="medium">Medium (1000-5000 m²)</button>
+                        <button class="filter-btn" data-filter="large">Large (&gt; 5000 m²)</button>
+                        <button class="filter-btn" data-filter="residential">Residential</button>
+                        <button class="filter-btn" data-filter="agricultural">Agricultural</button>
+                        <button class="filter-btn" data-filter="commercial">Commercial</button>
+                    </div>
+
+                    <div class="land-table-container">
+                        <table class="land-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Plot Number</th>
+                                    <th>Area (m²)</th>
+                                    <th>Type</th>
+                                    <th>Owner</th>
+                                    <th>Address</th>
+                                    <th>Value (€)</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="land-table-body">
+                                <!-- Land data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="relations-tab" class="tab-content">
+                    <div class="controls">
+                        <button id="link-address-location-btn" class="btn btn-info">
+                            <i class="fas fa-link"></i> Link Entities
+                        </button>
+                        <button id="unlink-btn" class="btn btn-warning" style="display: none;">
+                            <i class="fas fa-unlink"></i> Unlink Selected
+                        </button>
+                    </div>
+
+                    <div class="list-container">
+                        <ul id="relations-list" class="address-list">
+                            <!-- Relations will be loaded here -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Map -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-map"></i> Interactive Map</h2>
+                    <div class="map-overlay">
+                        <i class="fas fa-crosshairs"></i>
+                        <span id="map-info">Select an item to view on map</span>
+                    </div>
+                </div>
+
+                <div class="map-search-container">
+                    <input type="text" id="map-search" class="map-search-input" placeholder="Search on map...">
+                </div>
+
+                <div class="map-tabs">
+                    <div class="map-tab active" data-map-layer="all">All Layers</div>
+                    <div class="map-tab" data-map-layer="addresses">Addresses</div>
+                    <div class="map-tab" data-map-layer="locations">Locations</div>
+                    <div class="map-tab" data-map-layer="land">Land Plots</div>
+                </div>
+
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #3b82f6;"></div>
+                        <span>Addresses</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #10b981;"></div>
+                        <span>Locations</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #f59e0b;"></div>
+                        <span>Land Plots</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #ef4444;"></div>
+                        <span>Selected</span>
+                    </div>
+                </div>
+
+                <div id="map"></div>
+            </div>
+        </div>
+
+        <!-- Address Modal -->
+        <div id="address-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="address-modal-title">Add New Address</h3>
+                    <span class="close">&times;</span>
+                </div>
+                <form id="address-form">
+                    <input type="hidden" id="address-id">
+                    
+                    <div class="form-group">
+                        <label for="address-street">Street Address *</label>
+                        <input type="text" id="address-street" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="address-city">City *</label>
+                            <input type="text" id="address-city" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="address-postalCode">Postal Code *</label>
+                            <input type="text" id="address-postalCode" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="address-country">Country *</label>
+                            <input type="text" id="address-country" value="Germany" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="address-type">Address Type</label>
+                            <select id="address-type">
+                                <option value="home">Home</option>
+                                <option value="work">Work</option>
+                                <option value="business">Business</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="address-latitude">Latitude *</label>
+                            <input type="number" id="address-latitude" step="any" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="address-longitude">Longitude *</label>
+                            <input type="number" id="address-longitude" step="any" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="address-description">Description</label>
+                        <textarea id="address-description"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%; padding: 15px;">
+                        <i class="fas fa-save"></i> Save Address
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Location Modal -->
+        <div id="location-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="location-modal-title">Add New Location</h3>
+                    <span class="close">&times;</span>
+                </div>
+                <form id="location-form">
+                    <input type="hidden" id="location-id">
+                    
+                    <div class="form-group">
+                        <label for="location-name">Location Name *</label>
+                        <input type="text" id="location-name" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="location-city">City *</label>
+                            <input type="text" id="location-city" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="location-postalCode">Postal Code *</label>
+                            <input type="text" id="location-postalCode" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="location-country">Country *</label>
+                            <input type="text" id="location-country" value="Germany" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="location-type">Location Type</label>
+                            <select id="location-type">
+                                <option value="home">Home</option>
+                                <option value="work">Work</option>
+                                <option value="business">Business</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="location-latitude">Latitude *</label>
+                            <input type="number" id="location-latitude" step="any" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="location-longitude">Longitude *</label>
+                            <input type="number" id="location-longitude" step="any" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="location-description">Description</label>
+                        <textarea id="location-description"></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="location-phone">Phone Number</label>
+                            <input type="text" id="location-phone">
+                        </div>
+                        <div class="form-group">
+                            <label for="location-email">Email</label>
+                            <input type="email" id="location-email">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%; padding: 15px;">
+                        <i class="fas fa-save"></i> Save Location
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Land Modal -->
+        <div id="land-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="land-modal-title">Add New Land Plot</h3>
+                    <span class="close">&times;</span>
+                </div>
+                <form id="land-form">
+                    <input type="hidden" id="land-id">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="land-plotNumber">Plot Number *</label>
+                            <input type="text" id="land-plotNumber" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="land-area">Area (m²) *</label>
+                            <input type="number" id="land-area" step="0.01" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="land-type">Land Type *</label>
+                            <select id="land-type" required>
+                                <option value="residential">Residential</option>
+                                <option value="agricultural">Agricultural</option>
+                                <option value="commercial">Commercial</option>
+                                <option value="industrial">Industrial</option>
+                                <option value="forest">Forest</option>
+                                <option value="water">Water</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="land-status">Status *</label>
+                            <select id="land-status" required>
+                                <option value="owned">Owned</option>
+                                <option value="leased">Leased</option>
+                                <option value="for_sale">For Sale</option>
+                                <option value="for_rent">For Rent</option>
+                                <option value="public">Public</option>
+                                <option value="protected">Protected</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="land-owner">Owner *</label>
+                        <input type="text" id="land-owner" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="land-address">Address *</label>
+                        <input type="text" id="land-address" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="land-city">City *</label>
+                            <input type="text" id="land-city" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="land-postalCode">Postal Code *</label>
+                            <input type="text" id="land-postalCode" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="land-latitude">Latitude *</label>
+                            <input type="number" id="land-latitude" step="any" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="land-longitude">Longitude *</label>
+                            <input type="number" id="land-longitude" step="any" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="land-value">Estimated Value (€)</label>
+                            <input type="number" id="land-value" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label for="land-zoning">Zoning Code</label>
+                            <input type="text" id="land-zoning">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="land-description">Description</label>
+                        <textarea id="land-description" rows="3"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%; padding: 15px;">
+                        <i class="fas fa-save"></i> Save Land Plot
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Link Modal -->
+        <div id="link-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Link Entities</h3>
+                    <span class="close">&times;</span>
+                </div>
+                <form id="link-form">
+                    <div class="form-group">
+                        <label for="link-type">Link Type</label>
+                        <select id="link-type" required>
+                            <option value="address-location">Address ↔ Location</option>
+                            <option value="address-land">Address ↔ Land</option>
+                            <option value="location-land">Location ↔ Land</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="link-address">Select Address</label>
+                        <select id="link-address">
+                            <option value="">Select an address...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="link-location">Select Location</label>
+                        <select id="link-location">
+                            <option value="">Select a location...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="link-land">Select Land Plot</label>
+                        <select id="link-land">
+                            <option value="">Select a land plot...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="link-relationType">Relation Type</label>
+                        <select id="link-relationType">
+                            <option value="same">Same Place</option>
+                            <option value="related">Related</option>
+                            <option value="nearby">Nearby</option>
+                            <option value="contains">Contains</option>
+                            <option value="adjacent">Adjacent</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="link-notes">Notes</label>
+                        <textarea id="link-notes" placeholder="Add notes about this relation..."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%; padding: 15px;">
+                        <i class="fas fa-link"></i> Create Link
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <footer>
+            <p>Triple Web Service Integration &copy; 2024 | 
+                Address Service: <code>http://localhost:5000/adresse</code> | 
+                Location Service: <code>http://localhost:5000/location</code> |
+                Land Service: <code>http://localhost:5000/land</code>
+            </p>
+            <p>Total API Calls: <span id="api-call-count">0</span> | 
+                Address Status: <span id="address-connection-status">Disconnected</span> | 
+                Location Status: <span id="location-connection-status">Disconnected</span> |
+                Land Status: <span id="land-connection-status">Disconnected</span>
+            </p>
+        </footer>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notification-container"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Configuration
+        const API_BASE_URL = 'http://localhost:5000';
+        const ADDRESS_ENDPOINT = `${API_BASE_URL}/adresse`;
+        const LOCATION_ENDPOINT = `${API_BASE_URL}/location`;
+        const LAND_ENDPOINT = `${API_BASE_URL}/land`;
+
+        // State management
+        let addresses = [];
+        let locations = [];
+        let landPlots = [];
+        let filteredAddresses = [];
+        let filteredLocations = [];
+        let filteredLandPlots = [];
+        let relations = [];
+        let map = null;
+        let markers = [];
+        let selectedAddress = null;
+        let selectedLocation = null;
+        selectedLand = null;
+        let selectedRelation = null;
+        let apiCallCount = 0;
+        let currentTab = 'addresses';
+        let currentMapLayer = 'all';
+        let landFilter = 'all';
+
+        // DOM Elements
+        const elements = {
+            // Lists
+            addressList: document.getElementById('address-list'),
+            locationList: document.getElementById('location-list'),
+            relationsList: document.getElementById('relations-list'),
+            landTableBody: document.getElementById('land-table-body'),
+            
+            // Search
+            searchInput: document.getElementById('search-input'),
+            searchBtn: document.getElementById('search-btn'),
+            refreshBtn: document.getElementById('refresh-btn'),
+            mapSearch: document.getElementById('map-search'),
+            
+            // Address buttons
+            addAddressBtn: document.getElementById('add-address-btn'),
+            editAddressBtn: document.getElementById('edit-address-btn'),
+            showRelatedLocationsBtn: document.getElementById('show-related-locations-btn'),
+            
+            // Location buttons
+            addLocationBtn: document.getElementById('add-location-btn'),
+            editLocationBtn: document.getElementById('edit-location-btn'),
+            showRelatedAddressesBtn: document.getElementById('show-related-addresses-btn'),
+            
+            // Land buttons
+            addLandBtn: document.getElementById('add-land-btn'),
+            editLandBtn: document.getElementById('edit-land-btn'),
+            showOnMapBtn: document.getElementById('show-on-map-btn'),
+            
+            // Relation buttons
+            linkAddressLocationBtn: document.getElementById('link-address-location-btn'),
+            unlinkBtn: document.getElementById('unlink-btn'),
+            
+            // Modals
+            addressModal: document.getElementById('address-modal'),
+            locationModal: document.getElementById('location-modal'),
+            landModal: document.getElementById('land-modal'),
+            linkModal: document.getElementById('link-modal'),
+            
+            // Forms
+            addressForm: document.getElementById('address-form'),
+            locationForm: document.getElementById('location-form'),
+            landForm: document.getElementById('land-form'),
+            linkForm: document.getElementById('link-form'),
+            
+            // Modal titles
+            addressModalTitle: document.getElementById('address-modal-title'),
+            locationModalTitle: document.getElementById('location-modal-title'),
+            landModalTitle: document.getElementById('land-modal-title'),
+            
+            // Stats
+            addressCount: document.getElementById('address-count'),
+            locationCount: document.getElementById('location-count'),
+            landCount: document.getElementById('land-count'),
+            lastUpdated: document.getElementById('last-updated'),
+            
+            // API status
+            addressApiStatus: document.getElementById('address-api-status'),
+            locationApiStatus: document.getElementById('location-api-status'),
+            landApiStatus: document.getElementById('land-api-status'),
+            addressConnectionStatus: document.getElementById('address-connection-status'),
+            locationConnectionStatus: document.getElementById('location-connection-status'),
+            landConnectionStatus: document.getElementById('land-connection-status'),
+            apiCallCount: document.getElementById('api-call-count'),
+            
+            // Map
+            mapInfo: document.getElementById('map-info'),
+            
+            // Link modal selects
+            linkAddressSelect: document.getElementById('link-address'),
+            linkLocationSelect: document.getElementById('link-location'),
+            linkLandSelect: document.getElementById('link-land'),
+            linkTypeSelect: document.getElementById('link-type')
+        };
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', async () => {
+            initializeMap();
+            setupEventListeners();
+            await checkApiConnections();
+            await loadAllData();
+            setupAutoRefresh();
+            loadDemoRelations();
+        });
+
+        // Initialize Leaflet map
+        function initializeMap() {
+            map = L.map('map').setView([51.1657, 10.4515], 6);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(map);
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Tab switching
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.dataset.tab;
+                    switchTab(tabId);
+                });
+            });
+            
+            // Map layer switching
+            document.querySelectorAll('.map-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const layer = tab.dataset.mapLayer;
+                    switchMapLayer(layer);
+                });
+            });
+            
+            // Search functionality
+            elements.searchInput.addEventListener('input', handleSearch);
+            elements.searchBtn.addEventListener('click', () => handleSearch());
+            elements.mapSearch.addEventListener('input', handleMapSearch);
+            
+            // Refresh button
+            elements.refreshBtn.addEventListener('click', () => {
+                loadAllData();
+                showNotification('Refreshing all data...', 'info');
+            });
+            
+            // Address buttons
+            elements.addAddressBtn.addEventListener('click', () => openAddAddressModal());
+            elements.editAddressBtn.addEventListener('click', () => {
+                if (selectedAddress) openAddAddressModal(selectedAddress);
+            });
+            elements.showRelatedLocationsBtn.addEventListener('click', showRelatedLocations);
+            
+            // Location buttons
+            elements.addLocationBtn.addEventListener('click', () => openAddLocationModal());
+            elements.editLocationBtn.addEventListener('click', () => {
+                if (selectedLocation) openAddLocationModal(selectedLocation);
+            });
+            elements.showRelatedAddressesBtn.addEventListener('click', showRelatedAddresses);
+            
+            // Land buttons
+            elements.addLandBtn.addEventListener('click', () => openAddLandModal());
+            elements.editLandBtn.addEventListener('click', () => {
+                if (selectedLand) openAddLandModal(selectedLand);
+            });
+            elements.showOnMapBtn.addEventListener('click', () => {
+                if (selectedLand) {
+                    switchTab('land');
+                    updateMap();
+                }
+            });
+            
+            // Land filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    landFilter = this.dataset.filter;
+                    updateLandTable();
+                });
+            });
+            
+            // Relation buttons
+            elements.linkAddressLocationBtn.addEventListener('click', openLinkModal);
+            elements.unlinkBtn.addEventListener('click', unlinkRelation);
+            
+            // Modal closes
+            document.querySelectorAll('.close').forEach(closeBtn => {
+                closeBtn.addEventListener('click', function() {
+                    const modal = this.closest('.modal');
+                    if (modal) modal.style.display = 'none';
+                });
+            });
+            
+            // Close modal on outside click
+            window.addEventListener('click', (e) => {
+                if (e.target.classList.contains('modal')) {
+                    e.target.style.display = 'none';
+                }
+            });
+            
+            // Form submissions
+            elements.addressForm.addEventListener('submit', handleAddressFormSubmit);
+            elements.locationForm.addEventListener('submit', handleLocationFormSubmit);
+            elements.landForm.addEventListener('submit', handleLandFormSubmit);
+            elements.linkForm.addEventListener('submit', handleLinkFormSubmit);
+            
+            // Link type change
+            elements.linkTypeSelect.addEventListener('change', updateLinkForm);
+            
+            // Auto-generate coordinates
+            document.getElementById('address-city')?.addEventListener('blur', function() {
+                autoGenerateCoordinates('address');
+            });
+            
+            document.getElementById('location-city')?.addEventListener('blur', function() {
+                autoGenerateCoordinates('location');
+            });
+            
+            document.getElementById('land-city')?.addEventListener('blur', function() {
+                autoGenerateCoordinates('land');
+            });
+        }
+
+        // Switch tabs
+        function switchTab(tabId) {
+            currentTab = tabId;
+            
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.tab === tabId);
+            });
+            
+            // Update tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.toggle('active', content.id === `${tabId}-tab`);
+            });
+            
+            // Clear selections when switching tabs
+            if (tabId !== 'relations') {
+                selectedRelation = null;
+                updateUnlinkButton();
+            }
+            
+            // Update map based on current tab
+            updateMap();
+            
+            // Update search placeholder
+            elements.searchInput.placeholder = `Search ${tabId}...`;
+            
+            // Clear search when switching tabs
+            elements.searchInput.value = '';
+            handleSearch();
+            
+            // Update buttons visibility
+            updateLandButtons();
+        }
+
+        // Switch map layers
+        function switchMapLayer(layer) {
+            currentMapLayer = layer;
+            
+            // Update map tab buttons
+            document.querySelectorAll('.map-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.mapLayer === layer);
+            });
+            
+            // Update map
+            updateMap();
+        }
+
+        // Check API connections
+        async function checkApiConnections() {
+            try {
+                // Check address service
+                const addressResponse = await fetch(ADDRESS_ENDPOINT, { method: 'HEAD' });
+                updateApiStatus('address', addressResponse.ok);
+                
+                // Check location service
+                const locationResponse = await fetch(LOCATION_ENDPOINT, { method: 'HEAD' });
+                updateApiStatus('location', locationResponse.ok);
+                
+                // Check land service
+                const landResponse = await fetch(LAND_ENDPOINT, { method: 'HEAD' });
+                updateApiStatus('land', landResponse.ok);
+                
+                if (addressResponse.ok && locationResponse.ok && landResponse.ok) {
+                    showNotification('Connected to all web services', 'success');
+                }
+            } catch (error) {
+                updateApiStatus('address', false);
+                updateApiStatus('location', false);
+                updateApiStatus('land', false);
+                showNotification('Unable to connect to web services. Using demo data.', 'error');
+            }
+        }
+
+        // Update API status display
+        function updateApiStatus(service, connected) {
+            const statusEl = document.getElementById(`${service}-api-status`);
+            const connectionStatusEl = document.getElementById(`${service}-connection-status`);
+            
+            if (connected) {
+                statusEl.className = 'api-status connected';
+                statusEl.innerHTML = `<i class="fas fa-plug"></i> ${service.charAt(0).toUpperCase() + service.slice(1)} Service: Connected`;
+                connectionStatusEl.textContent = 'Connected';
+                connectionStatusEl.style.color = '#28a745';
+            } else {
+                statusEl.className = 'api-status disconnected';
+                statusEl.innerHTML = `<i class="fas fa-plug"></i> ${service.charAt(0).toUpperCase() + service.slice(1)} Service: Disconnected`;
+                connectionStatusEl.textContent = 'Disconnected';
+                connectionStatusEl.style.color = '#dc3545';
+            }
+        }
+
+        // Load all data from services
+        async function loadAllData() {
+            try {
+                showLoading();
+                await Promise.all([loadAddresses(), loadLocations(), loadLandPlots()]);
+                updateStats();
+                updateLastUpdated();
+                updateListDisplay();
+                
+                // Update link modal dropdowns
+                updateLinkModalDropdowns();
+                
+                showNotification('Data loaded successfully', 'success');
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showNotification('Error loading data: ' + error.message, 'error');
+            }
+        }
+
+        // Load addresses
+        async function loadAddresses() {
+            try {
+                apiCallCount++;
+                elements.apiCallCount.textContent = apiCallCount;
+                
+                const response = await fetch(ADDRESS_ENDPOINT);
+                
+                if (!response.ok) throw new Error(`Address HTTP error! status: ${response.status}`);
+                
+                const data = await response.json();
+                
+                if (Array.isArray(data)) {
+                    addresses = data.map(item => transformAddressData(item));
+                } else if (data.addresses || data.data) {
+                    addresses = (data.addresses || data.data || []).map(item => transformAddressData(item));
+                } else {
+                    addresses = [];
+                }
+                
+                if (addresses.length === 0) {
+                    addresses = getDemoAddresses();
+                    showNotification('No address data from API, showing demo addresses', 'warning');
+                }
+                
+            } catch (error) {
+                console.error('Error loading addresses:', error);
+                addresses = getDemoAddresses();
+            }
+        }
+
+        // Load locations
+        async function loadLocations() {
+            try {
+                apiCallCount++;
+                elements.apiCallCount.textContent = apiCallCount;
+                
+                const response = await fetch(LOCATION_ENDPOINT);
+                
+                if (!response.ok) throw new Error(`Location HTTP error! status: ${response.status}`);
+                
+                const data = await response.json();
+                
+                if (Array.isArray(data)) {
+                    locations = data.map(item => transformLocationData(item));
+                } else if (data.locations || data.data) {
+                    locations = (data.locations || data.data || []).map(item => transformLocationData(item));
+                } else {
+                    locations = [];
+                }
+                
+                if (locations.length === 0) {
+                    locations = getDemoLocations();
+                    showNotification('No location data from API, showing demo locations', 'warning');
+                }
+                
+            } catch (error) {
+                console.error('Error loading locations:', error);
+                locations = getDemoLocations();
+            }
+        }
+
+        // Load land plots
+        async function loadLandPlots() {
+            try {
+                apiCallCount++;
+                elements.apiCallCount.textContent = apiCallCount;
+                
+                const response = await fetch(LAND_ENDPOINT);
+                
+                if (!response.ok) throw new Error(`Land HTTP error! status: ${response.status}`);
+                
+                const data = await response.json();
+                
+                if (Array.isArray(data)) {
+                    landPlots = data.map(item => transformLandData(item));
+                } else if (data.landPlots || data.data) {
+                    landPlots = (data.landPlots || data.data || []).map(item => transformLandData(item));
+                } else {
+                    landPlots = [];
+                }
+                
+                if (landPlots.length === 0) {
+                    landPlots = getDemoLandPlots();
+                    showNotification('No land data from API, showing demo land plots', 'warning');
+                }
+                
+            } catch (error) {
+                console.error('Error loading land plots:', error);
+                landPlots = getDemoLandPlots();
+            }
+        }
+
+        // Transform address data
+        function transformAddressData(item) {
+            return {
+                id: item.id || item.PK_ADR_ADRESSE || Date.now(),
+                street: item.street || item.STRASSE || `Street ${item.id || ''}`,
+                city: item.city || item.ORT || 'Unknown City',
+                postalCode: item.postalCode || item.PLZ || '00000',
+                country: item.country || item.LAND || 'Germany',
+                latitude: parseFloat(item.latitude || getGermanCityCoordinates(item.city || item.ORT || '').lat),
+                longitude: parseFloat(item.longitude || getGermanCityCoordinates(item.city || item.ORT || '').lng),
+                type: item.type || 'business',
+                description: item.description || item.BESCHREIBUNG || '',
+                relatedLocations: item.relatedLocations || [],
+                relatedLand: item.relatedLand || []
+            };
+        }
+
+        // Transform location data
+        function transformLocationData(item) {
+            return {
+                id: item.id || Date.now() + Math.random(),
+                name: item.name || item.LOCATION_NAME || `Location ${item.id || ''}`,
+                city: item.city || item.ORT || 'Unknown City',
+                postalCode: item.postalCode || item.PLZ || '00000',
+                country: item.country || item.LAND || 'Germany',
+                latitude: parseFloat(item.latitude || getGermanCityCoordinates(item.city || item.ORT || '').lat),
+                longitude: parseFloat(item.longitude || getGermanCityCoordinates(item.city || item.ORT || '').lng),
+                type: item.type || item.LOCATION_TYPE || 'business',
+                description: item.description || item.BESCHREIBUNG || '',
+                phone: item.phone || item.PHONE || '',
+                email: item.email || item.EMAIL || '',
+                relatedAddresses: item.relatedAddresses || [],
+                relatedLand: item.relatedLand || []
+            };
+        }
+
+        // Transform land data
+        function transformLandData(item) {
+            return {
+                id: item.id || `LAND${Date.now()}`,
+                plotNumber: item.plotNumber || item.PLOT_NUMBER || `PLOT-${Math.floor(Math.random() * 1000)}`,
+                area: parseFloat(item.area || item.AREA || (Math.random() * 10000).toFixed(2)),
+                type: item.type || item.LAND_TYPE || 'residential',
+                status: item.status || item.STATUS || 'owned',
+                owner: item.owner || item.OWNER || 'Unknown Owner',
+                address: item.address || item.ADDRESS || 'Unknown Address',
+                city: item.city || item.CITY || 'Unknown City',
+                postalCode: item.postalCode || item.POSTAL_CODE || '00000',
+                latitude: parseFloat(item.latitude || getGermanCityCoordinates(item.city || item.CITY || '').lat + (Math.random() * 0.1 - 0.05)),
+                longitude: parseFloat(item.longitude || getGermanCityCoordinates(item.city || item.CITY || '').lng + (Math.random() * 0.1 - 0.05)),
+                value: parseFloat(item.value || item.VALUE || (Math.random() * 1000000).toFixed(2)),
+                zoning: item.zoning || item.ZONING || 'R-1',
+                description: item.description || item.DESCRIPTION || '',
+                relatedAddresses: item.relatedAddresses || [],
+                relatedLocations: item.relatedLocations || []
+            };
+        }
+
+        // Get coordinates for German cities
+        function getGermanCityCoordinates(city) {
+            const cityMap = {
+                'BERLIN': { lat: 52.5200, lng: 13.4050 },
+                'MÜNCHEN': { lat: 48.1351, lng: 11.5820 },
+                'MUNICH': { lat: 48.1351, lng: 11.5820 },
+                'HAMBURG': { lat: 53.5511, lng: 9.9937 },
+                'FRANKFURT': { lat: 50.1109, lng: 8.6821 },
+                'STUTTGART': { lat: 48.7758, lng: 9.1829 },
+                'DÜSSELDORF': { lat: 51.2277, lng: 6.7735 }
+            };
+            
+            if (!city) return { lat: 51.1657, lng: 10.4515 };
+            
+            const upperCity = city.toUpperCase().trim();
+            return cityMap[upperCity] || { lat: 51.1657, lng: 10.4515 };
+        }
+
+        // Demo data
+        function getDemoAddresses() {
+            return [
+                { id: 1, street: "Musterstraße 123", city: "Berlin", postalCode: "10115", country: "Germany", latitude: 52.5200, longitude: 13.4050, type: "home", description: "Main office address" },
+                { id: 2, street: "Hauptstraße 456", city: "Hamburg", postalCode: "20095", country: "Germany", latitude: 53.5511, longitude: 9.9937, type: "business", description: "Warehouse address" },
+                { id: 3, street: "Königsallee 789", city: "Düsseldorf", postalCode: "40212", country: "Germany", latitude: 51.2277, longitude: 6.7735, type: "work", description: "Branch office" }
+            ];
+        }
+
+        function getDemoLocations() {
+            return [
+                { id: 101, name: "Berlin Office", city: "Berlin", postalCode: "10115", country: "Germany", latitude: 52.5200, longitude: 13.4050, type: "business", description: "Main office location", phone: "+49 30 123456", email: "berlin@example.com" },
+                { id: 102, name: "Hamburg Warehouse", city: "Hamburg", postalCode: "20095", country: "Germany", latitude: 53.5511, longitude: 9.9937, type: "business", description: "Storage facility", phone: "+49 40 654321", email: "hamburg@example.com" },
+                { id: 103, name: "Düsseldorf Branch", city: "Düsseldorf", postalCode: "40212", country: "Germany", latitude: 51.2277, longitude: 6.7735, type: "business", description: "Regional office", phone: "+49 211 987654", email: "dusseldorf@example.com" }
+            ];
+        }
+
+        function getDemoLandPlots() {
+            return [
+                { id: "LAND001", plotNumber: "PLOT-001", area: 1250.50, type: "residential", status: "owned", owner: "John Smith", address: "Musterstraße 123", city: "Berlin", postalCode: "10115", latitude: 52.5250, longitude: 13.4100, value: 350000, zoning: "R-1", description: "Residential plot with garden" },
+                { id: "LAND002", plotNumber: "PLOT-002", area: 2500.75, type: "commercial", status: "for_sale", owner: "ABC Corporation", address: "Hauptstraße 456", city: "Hamburg", postalCode: "20095", latitude: 53.5561, longitude: 9.9987, value: 850000, zoning: "C-2", description: "Commercial plot near city center" },
+                { id: "LAND003", plotNumber: "PLOT-003", area: 7500.25, type: "agricultural", status: "leased", owner: "Farm GmbH", address: "Ländliche Straße 1", city: "Brandenburg", postalCode: "14770", latitude: 52.4100, longitude: 12.5500, value: 150000, zoning: "A-1", description: "Agricultural land for farming" },
+                { id: "LAND004", plotNumber: "PLOT-004", area: 500.00, type: "residential", status: "owned", owner: "Maria Schmidt", address: "Kleinestraße 8", city: "Munich", postalCode: "80331", latitude: 48.1401, longitude: 11.5870, value: 450000, zoning: "R-2", description: "Small residential plot" },
+                { id: "LAND005", plotNumber: "PLOT-005", area: 12000.00, type: "industrial", status: "owned", owner: "Industry AG", address: "Industriestraße 99", city: "Frankfurt", postalCode: "60313", latitude: 50.1159, longitude: 8.6871, value: 1200000, zoning: "I-3", description: "Large industrial plot" }
+            ];
+        }
+
+        // Load demo relations
+        function loadDemoRelations() {
+            relations = [
+                { id: 1, type: 'address-location', addressId: 1, locationId: 101, relationType: 'same', notes: 'Main office address and location match' },
+                { id: 2, type: 'address-location', addressId: 2, locationId: 102, relationType: 'same', notes: 'Warehouse address matches location' },
+                { id: 3, type: 'address-land', addressId: 1, landId: "LAND001", relationType: 'contains', notes: 'Address contains this land plot' },
+                { id: 4, type: 'location-land', locationId: 101, landId: "LAND001", relationType: 'contains', notes: 'Location contains this land plot' }
+            ];
+            
+            // Update related arrays
+            relations.forEach(relation => {
+                if (relation.type === 'address-location') {
+                    const address = addresses.find(a => a.id === relation.addressId);
+                    const location = locations.find(l => l.id === relation.locationId);
+                    
+                    if (address) {
+                        if (!address.relatedLocations) address.relatedLocations = [];
+                        address.relatedLocations.push(relation.locationId);
+                    }
+                    
+                    if (location) {
+                        if (!location.relatedAddresses) location.relatedAddresses = [];
+                        location.relatedAddresses.push(relation.addressId);
+                    }
+                } else if (relation.type === 'address-land') {
+                    const address = addresses.find(a => a.id === relation.addressId);
+                    const land = landPlots.find(l => l.id === relation.landId);
+                    
+                    if (address) {
+                        if (!address.relatedLand) address.relatedLand = [];
+                        address.relatedLand.push(relation.landId);
+                    }
+                    
+                    if (land) {
+                        if (!land.relatedAddresses) land.relatedAddresses = [];
+                        land.relatedAddresses.push(relation.addressId);
+                    }
+                } else if (relation.type === 'location-land') {
+                    const location = locations.find(l => l.id === relation.locationId);
+                    const land = landPlots.find(l => l.id === relation.landId);
+                    
+                    if (location) {
+                        if (!location.relatedLand) location.relatedLand = [];
+                        location.relatedLand.push(relation.landId);
+                    }
+                    
+                    if (land) {
+                        if (!land.relatedLocations) land.relatedLocations = [];
+                        land.relatedLocations.push(relation.locationId);
+                    }
+                }
+            });
+            
+            updateRelationsList();
+        }
+
+        // Show loading state
+        function showLoading() {
+            const loadingHTML = `
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading data from web services...</p>
+                </div>
+            `;
+            
+            elements.addressList.innerHTML = loadingHTML;
+            elements.locationList.innerHTML = loadingHTML;
+            elements.relationsList.innerHTML = loadingHTML;
+            elements.landTableBody.innerHTML = `<tr><td colspan="8">${loadingHTML}</td></tr>`;
+        }
+
+        // Update list display based on current tab
+        function updateListDisplay() {
+            handleSearch();
+        }
+
+        // Handle search
+        function handleSearch() {
+            const searchTerm = elements.searchInput.value.toLowerCase().trim();
+            
+            if (currentTab === 'addresses') {
+                if (!searchTerm) {
+                    filteredAddresses = [...addresses];
+                } else {
+                    filteredAddresses = addresses.filter(address =>
+                        (address.street && address.street.toLowerCase().includes(searchTerm)) ||
+                        (address.city && address.city.toLowerCase().includes(searchTerm)) ||
+                        (address.postalCode && address.postalCode.toLowerCase().includes(searchTerm)) ||
+                        (address.country && address.country.toLowerCase().includes(searchTerm))
+                    );
+                }
+                updateAddressList();
+            } else if (currentTab === 'locations') {
+                if (!searchTerm) {
+                    filteredLocations = [...locations];
+                } else {
+                    filteredLocations = locations.filter(location =>
+                        (location.name && location.name.toLowerCase().includes(searchTerm)) ||
+                        (location.city && location.city.toLowerCase().includes(searchTerm)) ||
+                        (location.type && location.type.toLowerCase().includes(searchTerm))
+                    );
+                }
+                updateLocationList();
+            } else if (currentTab === 'land') {
+                updateLandTable();
+            } else if (currentTab === 'relations') {
+                updateRelationsList();
+            }
+            
+            updateStats();
+            updateMap();
+        }
+
+        // Handle map search
+        function handleMapSearch() {
+            const searchTerm = elements.mapSearch.value.toLowerCase().trim();
+            if (!searchTerm) return;
+            
+            // Search across all data types
+            const allResults = [];
+            
+            addresses.forEach(addr => {
+                if (addr.city.toLowerCase().includes(searchTerm) || 
+                    addr.street.toLowerCase().includes(searchTerm)) {
+                    allResults.push({ type: 'address', data: addr });
+                }
+            });
+            
+            locations.forEach(loc => {
+                if (loc.name.toLowerCase().includes(searchTerm) || 
+                    loc.city.toLowerCase().includes(searchTerm)) {
+                    allResults.push({ type: 'location', data: loc });
+                }
+            });
+            
+            landPlots.forEach(land => {
+                if (land.plotNumber.toLowerCase().includes(searchTerm) || 
+                    land.city.toLowerCase().includes(searchTerm) ||
+                    land.owner.toLowerCase().includes(searchTerm)) {
+                    allResults.push({ type: 'land', data: land });
+                }
+            });
+            
+            if (allResults.length > 0) {
+                // Center on first result
+                const firstResult = allResults[0];
+                map.setView([firstResult.data.latitude, firstResult.data.longitude], 13);
+                
+                // Show notification
+                showNotification(`Found ${allResults.length} results for "${searchTerm}"`, 'info');
+            }
+        }
+
+        // Update address list
+        function updateAddressList() {
+            const addressesToShow = filteredAddresses.length > 0 ? filteredAddresses : addresses;
+            
+            if (addressesToShow.length === 0) {
+                elements.addressList.innerHTML = `
+                    <div class="empty">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <p>No addresses found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            elements.addressList.innerHTML = addressesToShow.map(address => {
+                const relatedCount = (address.relatedLocations?.length || 0) + (address.relatedLand?.length || 0);
+                
+                return `
+                <li class="address-item ${selectedAddress?.id === address.id ? 'active' : ''}" 
+                    data-id="${address.id}"
+                    onclick="selectAddress(${address.id})">
+                    <div class="item-header">
+                        <div class="item-title">
+                            <i class="fas fa-map-marker-alt"></i>
+                            ${address.street}
+                        </div>
+                        <span class="item-badge">${address.type || 'other'}</span>
+                    </div>
+                    <div class="item-details">
+                        <i class="fas fa-city"></i>
+                        ${address.postalCode} ${address.city}, ${address.country}
+                    </div>
+                    <div class="item-coordinates">
+                        <span><i class="fas fa-latitude"></i> ${address.latitude.toFixed(6)}</span>
+                        <span><i class="fas fa-longitude"></i> ${address.longitude.toFixed(6)}</span>
+                    </div>
+                    ${relatedCount > 0 ? `
+                    <div class="relation-info">
+                        <i class="fas fa-link"></i> Linked to <strong>${relatedCount}</strong> entit${relatedCount > 1 ? 'ies' : 'y'}
+                    </div>
+                    ` : ''}
+                </li>
+                `;
+            }).join('');
+        }
+
+        // Update location list
+        function updateLocationList() {
+            const locationsToShow = filteredLocations.length > 0 ? filteredLocations : locations;
+            
+            if (locationsToShow.length === 0) {
+                elements.locationList.innerHTML = `
+                    <div class="empty">
+                        <i class="fas fa-location-dot"></i>
+                        <p>No locations found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            elements.locationList.innerHTML = locationsToShow.map(location => {
+                const relatedCount = (location.relatedAddresses?.length || 0) + (location.relatedLand?.length || 0);
+                
+                return `
+                <li class="location-item ${selectedLocation?.id === location.id ? 'active' : ''}" 
+                    data-id="${location.id}"
+                    onclick="selectLocation(${location.id})">
+                    <div class="item-header">
+                        <div class="item-title">
+                            <i class="fas fa-location-dot"></i>
+                            ${location.name}
+                        </div>
+                        <span class="item-badge">${location.type || 'other'}</span>
+                    </div>
+                    <div class="item-details">
+                        <i class="fas fa-city"></i>
+                        ${location.postalCode} ${location.city}, ${location.country}
+                    </div>
+                    ${location.phone ? `
+                    <div class="item-details">
+                        <i class="fas fa-phone"></i>
+                        ${location.phone}
+                    </div>
+                    ` : ''}
+                    <div class="item-coordinates">
+                        <span><i class="fas fa-latitude"></i> ${location.latitude.toFixed(6)}</span>
+                        <span><i class="fas fa-longitude"></i> ${location.longitude.toFixed(6)}</span>
+                    </div>
+                    ${relatedCount > 0 ? `
+                    <div class="relation-info">
+                        <i class="fas fa-link"></i> Linked to <strong>${relatedCount}</strong> entit${relatedCount > 1 ? 'ies' : 'y'}
+                    </div>
+                    ` : ''}
+                </li>
+                `;
+            }).join('');
+        }
+
+        // Update land table
+        function updateLandTable() {
+            let landsToShow = [...landPlots];
+            
+            // Apply filter
+            if (landFilter !== 'all') {
+                landsToShow = landsToShow.filter(land => {
+                    if (landFilter === 'small') return land.area < 1000;
+                    if (landFilter === 'medium') return land.area >= 1000 && land.area <= 5000;
+                    if (landFilter === 'large') return land.area > 5000;
+                    return land.type === landFilter;
+                });
+            }
+            
+            // Apply search
+            const searchTerm = elements.searchInput.value.toLowerCase().trim();
+            if (searchTerm) {
+                landsToShow = landsToShow.filter(land =>
+                    land.plotNumber.toLowerCase().includes(searchTerm) ||
+                    land.owner.toLowerCase().includes(searchTerm) ||
+                    land.address.toLowerCase().includes(searchTerm) ||
+                    land.city.toLowerCase().includes(searchTerm) ||
+                    land.type.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            if (landsToShow.length === 0) {
+                elements.landTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="empty">
+                            <i class="fas fa-globe-europe"></i>
+                            <p>No land plots found</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            elements.landTableBody.innerHTML = landsToShow.map(land => {
+                const areaClass = land.area < 1000 ? 'small-area' : land.area <= 5000 ? 'medium-area' : 'large-area';
+                const isSelected = selectedLand?.id === land.id;
+                
+                return `
+                <tr class="${isSelected ? 'selected' : ''}" onclick="selectLand('${land.id}')">
+                    <td>${land.id}</td>
+                    <td><strong>${land.plotNumber}</strong></td>
+                    <td><span class="area-badge ${areaClass}">${land.area.toLocaleString()} m²</span></td>
+                    <td>${land.type.charAt(0).toUpperCase() + land.type.slice(1)}</td>
+                    <td>${land.owner}</td>
+                    <td>${land.address}, ${land.city}</td>
+                    <td>${land.value ? '€' + land.value.toLocaleString() : 'N/A'}</td>
+                    <td><span class="item-badge">${land.status.replace('_', ' ')}</span></td>
+                </tr>
+                `;
+            }).join('');
+        }
+
+        // Update relations list
+        function updateRelationsList() {
+            if (relations.length === 0) {
+                elements.relationsList.innerHTML = `
+                    <div class="empty">
+                        <i class="fas fa-link"></i>
+                        <p>No relations found</p>
+                        <p>Click "Link Entities" to create one</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            elements.relationsList.innerHTML = relations.map(relation => {
+                let title = '';
+                let details = '';
+                
+                if (relation.type === 'address-location') {
+                    const address = addresses.find(a => a.id === relation.addressId);
+                    const location = locations.find(l => l.id === relation.locationId);
+                    if (!address || !location) return '';
+                    
+                    title = `${address.street} ↔ ${location.name}`;
+                    details = `<i class="fas fa-map-marker-alt"></i> ${address.city} → <i class="fas fa-location-dot"></i> ${location.city}`;
+                    
+                } else if (relation.type === 'address-land') {
+                    const address = addresses.find(a => a.id === relation.addressId);
+                    const land = landPlots.find(l => l.id === relation.landId);
+                    if (!address || !land) return '';
+                    
+                    title = `${address.street} ↔ ${land.plotNumber}`;
+                    details = `<i class="fas fa-map-marker-alt"></i> ${address.city} → <i class="fas fa-globe-europe"></i> ${land.city}`;
+                    
+                } else if (relation.type === 'location-land') {
+                    const location = locations.find(l => l.id === relation.locationId);
+                    const land = landPlots.find(l => l.id === relation.landId);
+                    if (!location || !land) return '';
+                    
+                    title = `${location.name} ↔ ${land.plotNumber}`;
+                    details = `<i class="fas fa-location-dot"></i> ${location.city} → <i class="fas fa-globe-europe"></i> ${land.city}`;
+                }
+                
+                return `
+                <li class="address-item ${selectedRelation?.id === relation.id ? 'active' : ''}" 
+                    data-id="${relation.id}"
+                    onclick="selectRelation(${relation.id})">
+                    <div class="item-header">
+                        <div class="item-title">
+                            <i class="fas fa-link"></i>
+                            ${title}
+                        </div>
+                        <span class="item-badge">${relation.relationType}</span>
+                    </div>
+                    <div class="item-details">
+                        ${details}
+                    </div>
+                    ${relation.notes ? `
+                    <div class="item-details">
+                        <i class="fas fa-sticky-note"></i>
+                        ${relation.notes}
+                    </div>
+                    ` : ''}
+                    <div class="item-coordinates">
+                        <span>Type: ${relation.type}</span>
+                        <span>ID: ${relation.id}</span>
+                    </div>
+                </li>
+                `;
+            }).join('');
+        }
+
+        // Select an address
+        function selectAddress(id) {
+            selectedAddress = addresses.find(addr => addr.id === id);
+            selectedLocation = null;
+            selectedLand = null;
+            selectedRelation = null;
+            
+            updateListSelections();
+            updateAddressButtons();
+            updateUnlinkButton();
+            updateMap();
+            
+            elements.mapInfo.innerHTML = `
+                <i class="fas fa-map-marker-alt"></i>
+                Selected Address: ${selectedAddress.street}, ${selectedAddress.city}
+            `;
+        }
+
+        // Select a location
+        function selectLocation(id) {
+            selectedLocation = locations.find(loc => loc.id === id);
+            selectedAddress = null;
+            selectedLand = null;
+            selectedRelation = null;
+            
+            updateListSelections();
+            updateLocationButtons();
+            updateUnlinkButton();
+            updateMap();
+            
+            elements.mapInfo.innerHTML = `
+                <i class="fas fa-location-dot"></i>
+                Selected Location: ${selectedLocation.name}, ${selectedLocation.city}
+            `;
+        }
+
+        // Select a land plot
+        function selectLand(id) {
+            selectedLand = landPlots.find(land => land.id === id);
+            selectedAddress = null;
+            selectedLocation = null;
+            selectedRelation = null;
+            
+            // Update table selection
+            document.querySelectorAll('.land-table tr').forEach(row => {
+                row.classList.remove('selected');
+            });
+            const selectedRow = document.querySelector(`tr[onclick="selectLand('${id}')"]`);
+            if (selectedRow) selectedRow.classList.add('selected');
+            
+            updateLandButtons();
+            updateUnlinkButton();
+            updateMap();
+            
+            elements.mapInfo.innerHTML = `
+                <i class="fas fa-globe-europe"></i>
+                Selected Land: ${selectedLand.plotNumber}, ${selectedLand.area} m²
+            `;
+        }
+
+        // Select a relation
+        function selectRelation(id) {
+            selectedRelation = relations.find(rel => rel.id === id);
+            selectedAddress = null;
+            selectedLocation = null;
+            selectedLand = null;
+            
+            updateListSelections();
+            updateUnlinkButton();
+            
+            // Update map to show related entities
+            updateMap();
+            
+            if (selectedRelation) {
+                elements.mapInfo.innerHTML = `
+                    <i class="fas fa-link"></i>
+                    Selected Relation: ${selectedRelation.type}
+                `;
+            }
+        }
+
+        // Update list selections
+        function updateListSelections() {
+            document.querySelectorAll('.address-item, .location-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            if (selectedAddress) {
+                document.querySelector(`.address-item[data-id="${selectedAddress.id}"]`)?.classList.add('active');
+            }
+            if (selectedLocation) {
+                document.querySelector(`.location-item[data-id="${selectedLocation.id}"]`)?.classList.add('active');
+            }
+            if (selectedRelation) {
+                document.querySelector(`.address-item[data-id="${selectedRelation.id}"]`)?.classList.add('active');
+            }
+        }
+
+        // Update address buttons
+        function updateAddressButtons() {
+            if (selectedAddress) {
+                elements.editAddressBtn.style.display = 'flex';
+                elements.showRelatedLocationsBtn.style.display = 'flex';
+            } else {
+                elements.editAddressBtn.style.display = 'none';
+                elements.showRelatedLocationsBtn.style.display = 'none';
+            }
+        }
+
+        // Update location buttons
+        function updateLocationButtons() {
+            if (selectedLocation) {
+                elements.editLocationBtn.style.display = 'flex';
+                elements.showRelatedAddressesBtn.style.display = 'flex';
+            } else {
+                elements.editLocationBtn.style.display = 'none';
+                elements.showRelatedAddressesBtn.style.display = 'none';
+            }
+        }
+
+        // Update land buttons
+        function updateLandButtons() {
+            if (selectedLand) {
+                elements.editLandBtn.style.display = 'flex';
+                elements.showOnMapBtn.style.display = 'flex';
+            } else {
+                elements.editLandBtn.style.display = 'none';
+                elements.showOnMapBtn.style.display = 'none';
+            }
+        }
+
+        // Update unlink button
+        function updateUnlinkButton() {
+            elements.unlinkBtn.style.display = selectedRelation ? 'flex' : 'none';
+        }
+
+        // Show related locations
+        function showRelatedLocations() {
+            if (!selectedAddress || !selectedAddress.relatedLocations) {
+                showNotification('No related locations found for this address', 'info');
+                return;
+            }
+            
+            const relatedLocations = locations.filter(loc => 
+                selectedAddress.relatedLocations.includes(loc.id)
+            );
+            
+            if (relatedLocations.length === 0) {
+                showNotification('No related locations found for this address', 'info');
+                return;
+            }
+            
+            switchTab('locations');
+            filteredLocations = relatedLocations;
+            updateLocationList();
+            updateStats();
+            
+            showNotification(`Showing ${relatedLocations.length} related locations`, 'info');
+        }
+
+        // Show related addresses
+        function showRelatedAddresses() {
+            if (!selectedLocation || !selectedLocation.relatedAddresses) {
+                showNotification('No related addresses found for this location', 'info');
+                return;
+            }
+            
+            const relatedAddresses = addresses.filter(addr => 
+                selectedLocation.relatedAddresses.includes(addr.id)
+            );
+            
+            if (relatedAddresses.length === 0) {
+                showNotification('No related addresses found for this location', 'info');
+                return;
+            }
+            
+            switchTab('addresses');
+            filteredAddresses = relatedAddresses;
+            updateAddressList();
+            updateStats();
+            
+            showNotification(`Showing ${relatedAddresses.length} related addresses`, 'info');
+        }
+
+        // Update map with markers
+        function updateMap() {
+            // Clear existing markers
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+            
+            // Add markers based on current map layer
+            if (currentMapLayer === 'all' || currentMapLayer === 'addresses') {
+                addresses.forEach(address => {
+                    const isSelected = selectedAddress && selectedAddress.id === address.id;
+                    const color = isSelected ? '#ef4444' : '#3b82f6';
+                    
+                    const marker = L.marker([address.latitude, address.longitude])
+                        .addTo(map)
+                        .bindPopup(`
+                            <b>Address</b><br>
+                            ${address.street}<br>
+                            ${address.postalCode} ${address.city}<br>
+                            <small>Type: ${address.type}</small>
+                        `);
+                    
+                    if (isSelected) {
+                        marker.setIcon(L.divIcon({
+                            html: `<div style="
+                                background-color: ${color};
+                                width: 30px;
+                                height: 30px;
+                                border-radius: 50%;
+                                border: 3px solid white;
+                                box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                color: white;
+                                font-size: 12px;
+                                font-weight: bold;
+                            ">A</div>`,
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 15]
+                        }));
+                    }
+                    
+                    markers.push(marker);
+                });
+            }
+            
+            if (currentMapLayer === 'all' || currentMapLayer === 'locations') {
+                locations.forEach(location => {
+                    const isSelected = selectedLocation && selectedLocation.id === location.id;
+                    const color = isSelected ? '#ef4444' : '#10b981';
+                    
+                    const marker = L.marker([location.latitude, location.longitude])
+                        .addTo(map)
+                        .bindPopup(`
+                            <b>${location.name}</b><br>
+                            ${location.postalCode} ${location.city}<br>
+                            <small>Type: ${location.type}</small>
+                            ${location.phone ? `<br>📞 ${location.phone}` : ''}
+                        `);
+                    
+                    if (isSelected) {
+                        marker.setIcon(L.divIcon({
+                            html: `<div style="
+                                background-color: ${color};
+                                width: 30px;
+                                height: 30px;
+                                border-radius: 50%;
+                                border: 3px solid white;
+                                box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                color: white;
+                                font-size: 12px;
+                                font-weight: bold;
+                            ">L</div>`,
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 15]
+                        }));
+                    }
+                    
+                    markers.push(marker);
+                });
+            }
+            
+            if (currentMapLayer === 'all' || currentMapLayer === 'land') {
+                landPlots.forEach(land => {
+                    const isSelected = selectedLand && selectedLand.id === land.id;
+                    const color = isSelected ? '#ef4444' : '#f59e0b';
+                    
+                    // Create a circle for land plots (size based on area)
+                    const radius = Math.sqrt(land.area) * 2; // Scale factor
+                    
+                    const circle = L.circle([land.latitude, land.longitude], {
+                        radius: radius,
+                        color: color,
+                        fillColor: color,
+                        fillOpacity: 0.2,
+                        weight: 2
+                    }).addTo(map).bindPopup(`
+                        <b>Land Plot: ${land.plotNumber}</b><br>
+                        Area: ${land.area.toLocaleString()} m²<br>
+                        Type: ${land.type}<br>
+                        Owner: ${land.owner}<br>
+                        Value: ${land.value ? '€' + land.value.toLocaleString() : 'N/A'}<br>
+                        <small>${land.address}, ${land.city}</small>
+                    `);
+                    
+                    markers.push(circle);
+                });
+            }
+            
+            // Draw lines for relations
+            if (currentMapLayer === 'all') {
+                relations.forEach(relation => {
+                    let latLngs = [];
+                    
+                    if (relation.type === 'address-location') {
+                        const address = addresses.find(a => a.id === relation.addressId);
+                        const location = locations.find(l => l.id === relation.locationId);
+                        if (address && location) {
+                            latLngs = [
+                                [address.latitude, address.longitude],
+                                [location.latitude, location.longitude]
+                            ];
+                        }
+                    } else if (relation.type === 'address-land') {
+                        const address = addresses.find(a => a.id === relation.addressId);
+                        const land = landPlots.find(l => l.id === relation.landId);
+                        if (address && land) {
+                            latLngs = [
+                                [address.latitude, address.longitude],
+                                [land.latitude, land.longitude]
+                            ];
+                        }
+                    } else if (relation.type === 'location-land') {
+                        const location = locations.find(l => l.id === relation.locationId);
+                        const land = landPlots.find(l => l.id === relation.landId);
+                        if (location && land) {
+                            latLngs = [
+                                [location.latitude, location.longitude],
+                                [land.latitude, land.longitude]
+                            ];
+                        }
+                    }
+                    
+                    if (latLngs.length > 0) {
+                        const line = L.polyline(latLngs, {
+                            color: '#6c757d',
+                            weight: 1,
+                            opacity: 0.5,
+                            dashArray: '3, 3'
+                        }).addTo(map);
+                        
+                        markers.push(line);
+                    }
+                });
+            }
+            
+            // Center map
+            centerMapOnSelection();
+        }
+
+        // Center map on selected item
+        function centerMapOnSelection() {
+            if (selectedAddress) {
+                map.setView([selectedAddress.latitude, selectedAddress.longitude], 13);
+                markers.find(m => m.getLatLng && m.getLatLng().lat === selectedAddress.latitude && 
+                                 m.getLatLng().lng === selectedAddress.longitude)?.openPopup();
+            } else if (selectedLocation) {
+                map.setView([selectedLocation.latitude, selectedLocation.longitude], 13);
+                markers.find(m => m.getLatLng && m.getLatLng().lat === selectedLocation.latitude && 
+                                 m.getLatLng().lng === selectedLocation.longitude)?.openPopup();
+            } else if (selectedLand) {
+                map.setView([selectedLand.latitude, selectedLand.longitude], 13);
+            } else if (currentTab === 'addresses' && addresses.length > 0) {
+                const bounds = L.latLngBounds(addresses.map(addr => [addr.latitude, addr.longitude]));
+                map.fitBounds(bounds, { padding: [50, 50] });
+            } else if (currentTab === 'locations' && locations.length > 0) {
+                const bounds = L.latLngBounds(locations.map(loc => [loc.latitude, loc.longitude]));
+                map.fitBounds(bounds, { padding: [50, 50] });
+            } else if (currentTab === 'land' && landPlots.length > 0) {
+                const bounds = L.latLngBounds(landPlots.map(land => [land.latitude, land.longitude]));
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+        }
+
+        // Update statistics
+        function updateStats() {
+            elements.addressCount.textContent = addresses.length;
+            elements.locationCount.textContent = locations.length;
+            elements.landCount.textContent = landPlots.length;
+        }
+
+        // Update last updated time
+        function updateLastUpdated() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('de-DE', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            elements.lastUpdated.textContent = timeString;
+        }
+
+        // Auto-generate coordinates
+        async function autoGenerateCoordinates(type) {
+            const cityField = document.getElementById(`${type}-city`);
+            const latField = document.getElementById(`${type}-latitude`);
+            const lngField = document.getElementById(`${type}-longitude`);
+            
+            const city = cityField.value;
+            
+            if (city && (!latField.value || !lngField.value)) {
+                try {
+                    const response = await fetch(
+                        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city + ' Germany')}&limit=1`
+                    );
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.length > 0) {
+                            latField.value = parseFloat(data[0].lat).toFixed(6);
+                            lngField.value = parseFloat(data[0].lon).toFixed(6);
+                        }
+                    }
+                } catch (error) {
+                    console.log('Could not generate coordinates automatically');
+                }
+            }
+        }
+
+        // Open add address modal
+        function openAddAddressModal(address = null) {
+            if (address) {
+                elements.addressModalTitle.textContent = 'Edit Address';
+                document.getElementById('address-id').value = address.id;
+                document.getElementById('address-street').value = address.street || '';
+                document.getElementById('address-city').value = address.city || '';
+                document.getElementById('address-postalCode').value = address.postalCode || '';
+                document.getElementById('address-country').value = address.country || 'Germany';
+                document.getElementById('address-type').value = address.type || 'business';
+                document.getElementById('address-latitude').value = address.latitude || '';
+                document.getElementById('address-longitude').value = address.longitude || '';
+                document.getElementById('address-description').value = address.description || '';
+            } else {
+                elements.addressModalTitle.textContent = 'Add New Address';
+                elements.addressForm.reset();
+                document.getElementById('address-country').value = 'Germany';
+                document.getElementById('address-type').value = 'business';
+                document.getElementById('address-latitude').value = '51.1657';
+                document.getElementById('address-longitude').value = '10.4515';
+            }
+            
+            elements.addressModal.style.display = 'flex';
+        }
+
+        // Open add location modal
+        function openAddLocationModal(location = null) {
+            if (location) {
+                elements.locationModalTitle.textContent = 'Edit Location';
+                document.getElementById('location-id').value = location.id;
+                document.getElementById('location-name').value = location.name || '';
+                document.getElementById('location-city').value = location.city || '';
+                document.getElementById('location-postalCode').value = location.postalCode || '';
+                document.getElementById('location-country').value = location.country || 'Germany';
+                document.getElementById('location-type').value = location.type || 'business';
+                document.getElementById('location-latitude').value = location.latitude || '';
+                document.getElementById('location-longitude').value = location.longitude || '';
+                document.getElementById('location-description').value = location.description || '';
+                document.getElementById('location-phone').value = location.phone || '';
+                document.getElementById('location-email').value = location.email || '';
+            } else {
+                elements.locationModalTitle.textContent = 'Add New Location';
+                elements.locationForm.reset();
+                document.getElementById('location-country').value = 'Germany';
+                document.getElementById('location-type').value = 'business';
+                document.getElementById('location-latitude').value = '51.1657';
+                document.getElementById('location-longitude').value = '10.4515';
+            }
+            
+            elements.locationModal.style.display = 'flex';
+        }
+
+        // Open add land modal
+        function openAddLandModal(land = null) {
+            if (land) {
+                elements.landModalTitle.textContent = 'Edit Land Plot';
+                document.getElementById('land-id').value = land.id;
+                document.getElementById('land-plotNumber').value = land.plotNumber || '';
+                document.getElementById('land-area').value = land.area || '';
+                document.getElementById('land-type').value = land.type || 'residential';
+                document.getElementById('land-status').value = land.status || 'owned';
+                document.getElementById('land-owner').value = land.owner || '';
+                document.getElementById('land-address').value = land.address || '';
+                document.getElementById('land-city').value = land.city || '';
+                document.getElementById('land-postalCode').value = land.postalCode || '';
+                document.getElementById('land-latitude').value = land.latitude || '';
+                document.getElementById('land-longitude').value = land.longitude || '';
+                document.getElementById('land-value').value = land.value || '';
+                document.getElementById('land-zoning').value = land.zoning || '';
+                document.getElementById('land-description').value = land.description || '';
+            } else {
+                elements.landModalTitle.textContent = 'Add New Land Plot';
+                elements.landForm.reset();
+                document.getElementById('land-type').value = 'residential';
+                document.getElementById('land-status').value = 'owned';
+                document.getElementById('land-latitude').value = '51.1657';
+                document.getElementById('land-longitude').value = '10.4515';
+            }
+            
+            elements.landModal.style.display = 'flex';
+        }
+
+        // Open link modal
+        function openLinkModal() {
+            updateLinkModalDropdowns();
+            updateLinkForm();
+            elements.linkModal.style.display = 'flex';
+        }
+
+        // Update link modal dropdowns
+        function updateLinkModalDropdowns() {
+            // Clear existing options
+            elements.linkAddressSelect.innerHTML = '<option value="">Select an address...</option>';
+            elements.linkLocationSelect.innerHTML = '<option value="">Select a location...</option>';
+            elements.linkLandSelect.innerHTML = '<option value="">Select a land plot...</option>';
+            
+            // Add address options
+            addresses.forEach(address => {
+                const option = document.createElement('option');
+                option.value = address.id;
+                option.textContent = `${address.street}, ${address.city} (ID: ${address.id})`;
+                elements.linkAddressSelect.appendChild(option);
+            });
+            
+            // Add location options
+            locations.forEach(location => {
+                const option = document.createElement('option');
+                option.value = location.id;
+                option.textContent = `${location.name}, ${location.city} (ID: ${location.id})`;
+                elements.linkLocationSelect.appendChild(option);
+            });
+            
+            // Add land options
+            landPlots.forEach(land => {
+                const option = document.createElement('option');
+                option.value = land.id;
+                option.textContent = `${land.plotNumber}, ${land.area} m² (ID: ${land.id})`;
+                elements.linkLandSelect.appendChild(option);
+            });
+        }
+
+        // Update link form based on selected link type
+        function updateLinkForm() {
+            const linkType = elements.linkTypeSelect.value;
+            
+            // Show/hide selects based on link type
+            elements.linkAddressSelect.style.display = linkType.includes('address') ? 'block' : 'none';
+            elements.linkLocationSelect.style.display = linkType.includes('location') ? 'block' : 'none';
+            elements.linkLandSelect.style.display = linkType.includes('land') ? 'block' : 'none';
+            
+            // Update labels
+            document.querySelector('label[for="link-address"]').style.display = linkType.includes('address') ? 'block' : 'none';
+            document.querySelector('label[for="link-location"]').style.display = linkType.includes('location') ? 'block' : 'none';
+            document.querySelector('label[for="link-land"]').style.display = linkType.includes('land') ? 'block' : 'none';
+        }
+
+        // Handle address form submission
+        async function handleAddressFormSubmit(e) {
+            e.preventDefault();
+            
+            const addressData = {
+                street: document.getElementById('address-street').value,
+                city: document.getElementById('address-city').value,
+                postalCode: document.getElementById('address-postalCode').value,
+                country: document.getElementById('address-country').value,
+                latitude: parseFloat(document.getElementById('address-latitude').value),
+                longitude: parseFloat(document.getElementById('address-longitude').value),
+                type: document.getElementById('address-type').value,
+                description: document.getElementById('address-description').value
+            };
+            
+            const addressId = document.getElementById('address-id').value;
+            const isEdit = !!addressId;
+            
+            try {
+                let response;
+                
+                if (isEdit) {
+                    addressData.id = addressId;
+                    response = await fetch(`${ADDRESS_ENDPOINT}/${addressId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(addressData)
+                    });
+                } else {
+                    response = await fetch(ADDRESS_ENDPOINT, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(addressData)
+                    });
+                }
+                
+                if (response.ok) {
+                    showNotification(
+                        isEdit ? 'Address updated successfully' : 'Address added successfully',
+                        'success'
+                    );
+                    
+                    elements.addressModal.style.display = 'none';
+                    await loadAddresses();
+                    updateListDisplay();
+                } else {
+                    throw new Error('Failed to save address');
+                }
+                
+            } catch (error) {
+                console.error('Error saving address:', error);
+                showNotification('Error saving address: ' + error.message, 'error');
+            }
+        }
+
+        // Handle location form submission
+        async function handleLocationFormSubmit(e) {
+            e.preventDefault();
+            
+            const locationData = {
+                name: document.getElementById('location-name').value,
+                city: document.getElementById('location-city').value,
+                postalCode: document.getElementById('location-postalCode').value,
+                country: document.getElementById('location-country').value,
+                latitude: parseFloat(document.getElementById('location-latitude').value),
+                longitude: parseFloat(document.getElementById('location-longitude').value),
+                type: document.getElementById('location-type').value,
+                description: document.getElementById('location-description').value,
+                phone: document.getElementById('location-phone').value,
+                email: document.getElementById('location-email').value
+            };
+            
+            const locationId = document.getElementById('location-id').value;
+            const isEdit = !!locationId;
+            
+            try {
+                let response;
+                
+                if (isEdit) {
+                    locationData.id = locationId;
+                    response = await fetch(`${LOCATION_ENDPOINT}/${locationId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(locationData)
+                    });
+                } else {
+                    response = await fetch(LOCATION_ENDPOINT, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(locationData)
+                    });
+                }
+                
+                if (response.ok) {
+                    showNotification(
+                        isEdit ? 'Location updated successfully' : 'Location added successfully',
+                        'success'
+                    );
+                    
+                    elements.locationModal.style.display = 'none';
+                    await loadLocations();
+                    updateListDisplay();
+                } else {
+                    throw new Error('Failed to save location');
+                }
+                
+            } catch (error) {
+                console.error('Error saving location:', error);
+                showNotification('Error saving location: ' + error.message, 'error');
+            }
+        }
+
+        // Handle land form submission
+        async function handleLandFormSubmit(e) {
+            e.preventDefault();
+            
+            const landData = {
+                plotNumber: document.getElementById('land-plotNumber').value,
+                area: parseFloat(document.getElementById('land-area').value),
+                type: document.getElementById('land-type').value,
+                status: document.getElementById('land-status').value,
+                owner: document.getElementById('land-owner').value,
+                address: document.getElementById('land-address').value,
+                city: document.getElementById('land-city').value,
+                postalCode: document.getElementById('land-postalCode').value,
+                latitude: parseFloat(document.getElementById('land-latitude').value),
+                longitude: parseFloat(document.getElementById('land-longitude').value),
+                value: document.getElementById('land-value').value ? parseFloat(document.getElementById('land-value').value) : null,
+                zoning: document.getElementById('land-zoning').value,
+                description: document.getElementById('land-description').value
+            };
+            
+            const landId = document.getElementById('land-id').value;
+            const isEdit = !!landId;
+            
+            try {
+                let response;
+                
+                if (isEdit) {
+                    landData.id = landId;
+                    response = await fetch(`${LAND_ENDPOINT}/${landId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(landData)
+                    });
+                } else {
+                    response = await fetch(LAND_ENDPOINT, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(landData)
+                    });
+                }
+                
+                if (response.ok) {
+                    showNotification(
+                        isEdit ? 'Land plot updated successfully' : 'Land plot added successfully',
+                        'success'
+                    );
+                    
+                    elements.landModal.style.display = 'none';
+                    await loadLandPlots();
+                    updateListDisplay();
+                } else {
+                    throw new Error('Failed to save land plot');
+                }
+                
+            } catch (error) {
+                console.error('Error saving land plot:', error);
+                showNotification('Error saving land plot: ' + error.message, 'error');
+            }
+        }
+
+        // Handle link form submission
+        async function handleLinkFormSubmit(e) {
+            e.preventDefault();
+            
+            const linkType = elements.linkTypeSelect.value;
+            const addressId = elements.linkAddressSelect.value ? parseInt(elements.linkAddressSelect.value) : null;
+            const locationId = elements.linkLocationSelect.value ? parseInt(elements.linkLocationSelect.value) : null;
+            const landId = elements.linkLandSelect.value || null;
+            const relationType = elements.linkRelationType.value;
+            const notes = elements.linkNotes.value;
+            
+            // Validate based on link type
+            if (linkType === 'address-location' && (!addressId || !locationId)) {
+                showNotification('Please select both an address and a location', 'error');
+                return;
+            } else if (linkType === 'address-land' && (!addressId || !landId)) {
+                showNotification('Please select both an address and a land plot', 'error');
+                return;
+            } else if (linkType === 'location-land' && (!locationId || !landId)) {
+                showNotification('Please select both a location and a land plot', 'error');
+                return;
+            }
+            
+            // Check if relation already exists
+            const existingRelation = relations.find(rel => {
+                if (linkType === 'address-location') {
+                    return rel.type === linkType && rel.addressId === addressId && rel.locationId === locationId;
+                } else if (linkType === 'address-land') {
+                    return rel.type === linkType && rel.addressId === addressId && rel.landId === landId;
+                } else if (linkType === 'location-land') {
+                    return rel.type === linkType && rel.locationId === locationId && rel.landId === landId;
+                }
+                return false;
+            });
+            
+            if (existingRelation) {
+                showNotification('This relation already exists', 'warning');
+                return;
+            }
+            
+            // Create new relation
+            const newRelation = {
+                id: Date.now(),
+                type: linkType,
+                relationType,
+                notes,
+                createdAt: new Date().toISOString()
+            };
+            
+            if (linkType === 'address-location') {
+                newRelation.addressId = addressId;
+                newRelation.locationId = locationId;
+            } else if (linkType === 'address-land') {
+                newRelation.addressId = addressId;
+                newRelation.landId = landId;
+            } else if (linkType === 'location-land') {
+                newRelation.locationId = locationId;
+                newRelation.landId = landId;
+            }
+            
+            // Add to relations array
+            relations.push(newRelation);
+            
+            // Update related arrays
+            if (linkType === 'address-location') {
+                const address = addresses.find(a => a.id === addressId);
+                const location = locations.find(l => l.id === locationId);
+                
+                if (address) {
+                    if (!address.relatedLocations) address.relatedLocations = [];
+                    if (!address.relatedLocations.includes(locationId)) address.relatedLocations.push(locationId);
+                }
+                if (location) {
+                    if (!location.relatedAddresses) location.relatedAddresses = [];
+                    if (!location.relatedAddresses.includes(addressId)) location.relatedAddresses.push(addressId);
+                }
+            } else if (linkType === 'address-land') {
+                const address = addresses.find(a => a.id === addressId);
+                const land = landPlots.find(l => l.id === landId);
+                
+                if (address) {
+                    if (!address.relatedLand) address.relatedLand = [];
+                    if (!address.relatedLand.includes(landId)) address.relatedLand.push(landId);
+                }
+                if (land) {
+                    if (!land.relatedAddresses) land.relatedAddresses = [];
+                    if (!land.relatedAddresses.includes(addressId)) land.relatedAddresses.push(addressId);
+                }
+            } else if (linkType === 'location-land') {
+                const location = locations.find(l => l.id === locationId);
+                const land = landPlots.find(l => l.id === landId);
+                
+                if (location) {
+                    if (!location.relatedLand) location.relatedLand = [];
+                    if (!location.relatedLand.includes(landId)) location.relatedLand.push(landId);
+                }
+                if (land) {
+                    if (!land.relatedLocations) land.relatedLocations = [];
+                    if (!land.relatedLocations.includes(locationId)) land.relatedLocations.push(locationId);
+                }
+            }
+            
+            // Update UI
+            updateRelationsList();
+            updateListDisplay();
+            
+            showNotification('Relation created successfully', 'success');
+            elements.linkModal.style.display = 'none';
+            elements.linkForm.reset();
+            
+            // Switch to relations tab
+            switchTab('relations');
+        }
+
+        // Unlink relation
+        function unlinkRelation() {
+            if (!selectedRelation) return;
+            
+            if (!confirm('Are you sure you want to unlink this relation?')) return;
+            
+            // Remove from relations array
+            const index = relations.findIndex(rel => rel.id === selectedRelation.id);
+            if (index !== -1) relations.splice(index, 1);
+            
+            // Update related arrays
+            if (selectedRelation.type === 'address-location') {
+                const address = addresses.find(a => a.id === selectedRelation.addressId);
+                const location = locations.find(l => l.id === selectedRelation.locationId);
+                
+                if (address && address.relatedLocations) {
+                    const locIndex = address.relatedLocations.indexOf(selectedRelation.locationId);
+                    if (locIndex !== -1) address.relatedLocations.splice(locIndex, 1);
+                }
+                if (location && location.relatedAddresses) {
+                    const addrIndex = location.relatedAddresses.indexOf(selectedRelation.addressId);
+                    if (addrIndex !== -1) location.relatedAddresses.splice(addrIndex, 1);
+                }
+            } else if (selectedRelation.type === 'address-land') {
+                const address = addresses.find(a => a.id === selectedRelation.addressId);
+                const land = landPlots.find(l => l.id === selectedRelation.landId);
+                
+                if (address && address.relatedLand) {
+                    const landIndex = address.relatedLand.indexOf(selectedRelation.landId);
+                    if (landIndex !== -1) address.relatedLand.splice(landIndex, 1);
+                }
+                if (land && land.relatedAddresses) {
+                    const addrIndex = land.relatedAddresses.indexOf(selectedRelation.addressId);
+                    if (addrIndex !== -1) land.relatedAddresses.splice(addrIndex, 1);
+                }
+            } else if (selectedRelation.type === 'location-land') {
+                const location = locations.find(l => l.id === selectedRelation.locationId);
+                const land = landPlots.find(l => l.id === selectedRelation.landId);
+                
+                if (location && location.relatedLand) {
+                    const landIndex = location.relatedLand.indexOf(selectedRelation.landId);
+                    if (landIndex !== -1) location.relatedLand.splice(landIndex, 1);
+                }
+                if (land && land.relatedLocations) {
+                    const locIndex = land.relatedLocations.indexOf(selectedRelation.locationId);
+                    if (locIndex !== -1) land.relatedLocations.splice(locIndex, 1);
+                }
+            }
+            
+            // Clear selection
+            selectedRelation = null;
+            
+            // Update UI
+            updateRelationsList();
+            updateListDisplay();
+            updateUnlinkButton();
+            
+            showNotification('Relation unlinked successfully', 'success');
+        }
+
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notification-container');
+            const notificationId = 'notification-' + Date.now();
+            
+            const icon = {
+                success: 'check-circle',
+                error: 'exclamation-circle',
+                info: 'info-circle',
+                warning: 'exclamation-triangle'
+            }[type];
+            
+            const notification = document.createElement('div');
+            notification.id = notificationId;
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <i class="fas fa-${icon}"></i>
+                <span>${message}</span>
+                <span class="close-notification" onclick="document.getElementById('${notificationId}').remove()">
+                    <i class="fas fa-times"></i>
+                </span>
+            `;
+            
+            container.appendChild(notification);
+            
+            setTimeout(() => {
+                const notif = document.getElementById(notificationId);
+                if (notif) notif.remove();
+            }, 5000);
+        }
+
+        // Setup auto-refresh
+        function setupAutoRefresh() {
+            setInterval(async () => {
+                await loadAllData();
+            }, 30000);
+        }
+
+        // Make functions available globally
+        window.selectAddress = selectAddress;
+        window.selectLocation = selectLocation;
+        window.selectLand = selectLand;
+        window.selectRelation = selectRelation;
+    </script>
+</body>
+</html>

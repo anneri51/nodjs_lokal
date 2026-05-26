@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Web Services Dashboard</title>
+    <style>
+        /* Mobile-first responsive design */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 100%;
+            padding: 10px;
+        }
+        
+        /* Tab navigation */
+        .tab-navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: 12px 5px;
+            text-align: center;
+            background: #f0f0f0;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        .tab-btn.active {
+            background: #4CAF50;
+            color: white;
+            font-weight: bold;
+        }
+        
+        /* Tab content */
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Service cards */
+        .service-card {
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .service-header {
+            padding: 15px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .service-card1 .service-header {
+            background-color: #4285f4;
+        }
+        
+        .service-card2 .service-header {
+            background-color: #d32f2f;
+        }
+        
+        .service-title {
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .endpoint-url {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
+        
+        .service-content {
+            padding: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .service-card.expanded .service-content {
+            padding: 15px;
+            max-height: 1000px;
+        }
+        
+        .toggle-icon {
+            transition: transform 0.3s;
+        }
+        
+        .service-card.expanded .toggle-icon {
+            transform: rotate(180deg);
+        }
+        
+        /* Form elements */
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        input[type="text"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px; /* Better for mobile touch */
+        }
+        
+        .submit-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .service-card1 .submit-btn {
+            background-color: #4285f4;
+        }
+        
+        .service-card2 .submit-btn {
+            background-color: #d32f2f;
+        }
+        
+        /* Lists */
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        .list-container {
+            background: white;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .item-list {
+            list-style-type: none;
+        }
+        
+        .item-list li {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        
+        .item-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .item-list li.selected {
+            background-color: #dff0d8;
+        }
+        
+        /* Utility classes */
+        .refresh-btn {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 10px;
+            width: 100%;
+            font-size: 16px;
+        }
+        
+        .message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        /* Address details */
+        .address-details {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        
+        .address-details table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        
+        .address-details th, .address-details td {
+            padding: 8px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        
+        .address-details th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Web Services Dashboard</h1>
+        
+        <!-- Tab Navigation -->
+        <div class="tab-navigation">
+            <button class="tab-btn active" data-tab="services">Services</button>
+            <button class="tab-btn" data-tab="addresses">Addresses</button>
+            <button class="tab-btn" data-tab="locations">Locations</button>
+            <button class="tab-btn" data-tab="images">Images</button>
+        </div>
+        
+        <!-- Services Tab -->
+        <div id="services-tab" class="tab-content active">
+            <!-- Add Strasse Service -->
+            <div class="service-card expanded" data-regions="street">
+                <div class="service-header">
+                    <div>
+                        <div class="service-title">Add Strasse</div>
+                        <div class="endpoint-url">POST /add_strasse</div>
+                    </div>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="service-content">
+                    <form id="addStrasseForm">
+                        <div class="form-group">
+                            <label for="FK_ADR_ORT">FK_ADR_ORT:</label>
+                            <input type="text" id="FK_ADR_ORT" name="FK_ADR_ORT" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="STRASSE">STRASSE:</label>
+                            <input type="text" id="STRASSE" name="STRASSE" required>
+                        </div>
+                        <button type="button" class="submit-btn" onclick="submitForm('addStrasseForm', 'http://localhost:5000/add_strasse')">Submit</button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Add Rel PLZ Ort Strasse Service -->
+            <div class="service-card" data-regions="street">
+                <div class="service-header">
+                    <div>
+                        <div class="service-title">Add Rel PLZ Ort Strasse</div>
+                        <div class="endpoint-url">POST /add_rel_plz_ort_strasse</div>
+                    </div>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="service-content">
+                    <form id="addRelPlzOrtStrasseForm">
+                        <div class="form-group">
+                            <label for="FK_ADR_PLZ_ORT">FK_ADR_PLZ_ORT:</label>
+                            <input type="text" id="FK_ADR_PLZ_ORT" name="FK_ADR_PLZ_ORT" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="FK_ADR_STRASSE">FK_ADR_STRASSE:</label>
+                            <input type="text" id="FK_ADR_STRASSE" name="FK_ADR_STRASSE" required>
+                        </div>
+                        <button type="button" class="submit-btn" onclick="submitForm('addRelPlzOrtStrasseForm', 'http://localhost:5000/add_rel_plz_ort_strasse')">Submit</button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Add Strasse HSNR Service -->
+            <div class="service-card" data-regions="street,address">
+                <div class="service-header">
+                    <div>
+                        <div class="service-title">Add Strasse HSNR</div>
+                        <div class="endpoint-url">POST /add_strasse_hsnr</div>
+                    </div>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="service-content">
+                    <form id="addStrasseHsnrForm">
+                        <div class="form-group">
+                            <label for="FK_REL_ADR_PLZ_ORT_STRASSE">FK_REL_ADR_PLZ_ORT_STRASSE:</label>
+                            <input type="text" id="FK_REL_ADR_PLZ_ORT_STRASSE" name="FK_REL_ADR_PLZ_ORT_STRASSE" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="HSNR">HSNR:</label>
+                            <input type="text" id="HSNR" name="HSNR" required>
+                        </div>
+                        <button type="button" class="submit-btn" onclick="submitForm('addStrasseHsnrForm', 'http://localhost:5000/add_strasse_hsnr')">Submit</button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Add Addresse Service -->
+            <div class="service-card" data-regions="address">
+                <div class="service-header">
+                    <div>
+                        <div class="service-title">Add Addresse</div>
+                        <div class="endpoint-url">POST /add_addresse</div>
+                    </div>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="service-content">
+                    <form id="addAddresseForm">
+                        <div class="form-group">
+                            <label for="STRASSE_add">STRASSE:</label>
+                            <input type="text" id="STRASSE_add" name="STRASSE" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="HSNR_add">HSNR:</label>
+                            <input type="text" id="HSNR_add" name="HSNR" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="BEZEICHNUNG">BEZEICHNUNG:</label>
+                            <input type="text" id="BEZEICHNUNG" name="BEZEICHNUNG" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="FK_ADR_PLZ_ORT_add">FK_ADR_PLZ_ORT:</label>
+                            <input type="text" id="FK_ADR_PLZ_ORT_add" name="FK_ADR_PLZ_ORT" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="FK_ADR_STRASSE_HSNR">FK_ADR_STRASSE_HSNR:</label>
+                            <input type="text" id="FK_ADR_STRASSE_HSNR" name="FK_ADR_STRASSE_HSNR" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="FK_ADR_REGION">FK_ADR_REGION:</label>
+                            <select id="FK_ADR_REGION" name="FK_ADR_REGION" required>
+                                <option value="">-- bitte wählen --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="KOORDINATEN_add">KOORDINATEN:</label>
+                            <input type="text" id="KOORDINATEN_add" name="KOORDINATEN" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="COMM_add">COMM:</label>
+                            <input type="text" id="COMM_add" name="COMM">
+                        </div>
+                        <button type="button" class="submit-btn" onclick="submitForm('addAddresseForm', 'http://localhost:5000/add_addresse')">Submit</button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Update Adresse Schnell Service -->
+            <div class="service-card service-card1" data-regions="address">
+                <div class="service-header">
+                    <div>
+                        <div class="service-title">Update Adresse Schnell</div>
+                        <div class="endpoint-url">POST /upd_adr_adresse_schnell</div>
+                    </div>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="service-content">
+                    <form id="updateAdresseSchnellForm">
+                        <div class="form-group">
+                            <label for="PK_ADR_ADRESSE_SCHNELL">PK_ADR_ADRESSE_SCHNELL:</label>
+                            <input type="text" id="PK_ADR_ADRESSE_SCHNELL" name="PK_ADR_ADRESSE_SCHNELL" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="FK_ADR_ADRESSE">FK_ADR_ADRESSE:</label>
+                            <input type="text" id="FK_ADR_ADRESSE" name="FK_ADR_ADRESSE">
+                        </div>
+                        <div class="form-group">
+                            <label for="FK_LOC_LOCATION">FK_LOC_LOCATION:</label>
+                            <input type="text" id="FK_LOC_LOCATION" name="FK_LOC_LOCATION">
+                        </div>
+                        <button type="button" class="submit-btn" onclick="updateRecord()">Update</button>
+                    </form>
+                    <div id="updateAdresseSchnellMessage" class="message" style="display: none;"></div>
+                </div>
+            </div>
+            
+            <!-- Add Location Service -->
+            <div class="service-card" data-regions="location">
+                <div class="service-header">
+                    <div>
+                        <div class="service-title">Add Location</div>
+                        <div class="endpoint-url">POST /add_location</div>
+                    </div>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="service-content">
+                    <form id="addLocationForm">
+                        <div class="form-group">
+                            <label for="LOCATION_NAME">LOCATION_NAME:</label>
+                            <input type="text" id="LOCATION_NAME" name="LOCATION_NAME" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="LOCATION_TYPE">LOCATION_TYPE:</label>
+                            <select id="LOCATION_TYPE" name="locationType" required>
+                                <option value="">-- bitte wählen --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="FK_ADR_ADRESSE">FK_ADR_ADRESSE:</label>
+                            <input type="text" id="FK_ADR_ADRESSE" name="FK_ADR_ADRESSE" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="KOORDINATEN_loc">KOORDINATEN:</label>
+                            <input type="text" id="KOORDINATEN_loc" name="KOORDINATEN" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="COMM_loc">COMM:</label>
+                            <input type="text" id="COMM_loc" name="COMM">
+                        </div>
+                        <button type="button" class="submit-btn" onclick="submitForm('addLocationForm', 'http://localhost:5000/add_location')">Submit</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Addresses Tab -->
+        <div id="addresses-tab" class="tab-content">
+            <button onclick="loadAddresses(), displayAddresses()" class="refresh-btn">
+                Refresh Addresses
+            </button>
+            
+            <input class="search-box" type="text" id="searchAddress" placeholder="🔍 Adresse suchen..." oninput="filterAddresses()">
+            
+            <div class="list-container">
+                <ul id="addressesList" class="item-list">
+                    <li>Lade Adressen...</li>
+                </ul>
+            </div>
+            
+            <div id="addressDetails" class="address-details hidden">
+                <h3>Adressdetails</h3>
+                <table id="addressDetailsTable">
+                    <thead>
+                        <tr>
+                            <th>PK_ADR_ADRESSE</th>
+                            <th>PK_REL_ADR_PLZ_STRASSE</th>
+                            <th>str_fk_adr_ort</th>
+                            <th>FK_ADR_STRASSE</th>
+                            <th>FK_ADR_PLZ_ORT</th>
+                            <th>PK_ADR_PLZ_ORT</th>
+                            <th>FK_ADR_ORT</th>
+                            <th>PK_ADR_STRASSE</th>
+                            <th>PLZ</th>
+                            <th>Straße</th>
+                            <th>HSNR</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Data will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Locations Tab -->
+        <div id="locations-tab" class="tab-content">
+            <button onclick="loadLocations(), displayLocations()" class="refresh-btn">
+                Refresh Locations
+            </button>
+            
+            <div class="form-group">
+                <label for="locationType">Standorttyp</label>
+                <select id="locationType" name="locationType" required>
+                    <option value="">-- bitte wählen --</option>
+                </select>
+            </div>
+            
+            <input class="search-box" type="text" id="searchLocation" placeholder="🔍 Standort suchen..." oninput="filterLocations()">
+            
+            <div class="list-container">
+                <ul id="locationsList" class="item-list">
+                    <li>Lade Standorte...</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Images Tab -->
+        <div id="images-tab" class="tab-content">
+            <div class="service-card service-card2">
+                <div class="service-header">
+                    <div>
+                        <div class="service-title">Show Image</div>
+                        <div class="endpoint-url">GET /accounts/bild/1/1/1/[id]</div>
+                    </div>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="service-content">
+                    <form id="showImageForm">
+                        <div class="form-group">
+                            <label for="imageid">Image ID:</label>
+                            <input type="text" id="imageid" name="imageid" required>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button type="button" class="submit-btn" style="flex: 1;" onclick="changeImageId(-1)">
+                                Previous
+                            </button>
+                            <button type="button" id="loadImageBtn" class="submit-btn" style="flex: 2;" onclick="loadImage()">
+                                Load Image
+                            </button>
+                            <button type="button" class="submit-btn" style="flex: 1;" onclick="changeImageId(1)">
+                                Next
+                            </button>
+                        </div>
+                        <div id="imageDisplay" style="margin-top: 20px; text-align: center;"></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let addresses = [];
+        let locations = [];
+        let addressesSchnell = [];
+        let regions = [];
+        let currentImageId = 0;
+        
+        // Initialize the app
+        document.addEventListener("DOMContentLoaded", function() {
+            init();
+            setupTabNavigation();
+            
+            // Add toggle functionality to service cards
+            document.querySelectorAll('.service-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const card = header.parentElement;
+                    card.classList.toggle('expanded');
+                });
+            });
+        });
+        
+        // Tab navigation setup
+        function setupTabNavigation() {
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const tabId = button.getAttribute('data-tab');
+                    
+                    // Update active button
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    
+                    // Show selected tab content
+                    tabContents.forEach(tab => tab.classList.remove('active'));
+                    document.getElementById(`${tabId}-tab`).classList.add('active');
+                });
+            });
+        }
+        
+        // Initialize data
+        async function init() {
+            try {
+                await Promise.all([
+                    loadLocationTypes(),
+                    loadRegions(),
+                    loadAddresses(),
+                    loadLocations(),
+                    loadAddressesSchnell()
+                ]);
+                
+                displayAddresses();
+                displayLocations();
+                updateCounts();
+            } catch (err) {
+                showMessage("❌ Fehler beim Laden: " + err.message, true);
+            }
+        }
+        
+        // Load regions from the web service
+        async function loadRegions() {
+            try {
+                const res = await fetch("http://localhost:5000/regions");
+                regions = await res.json();
+                
+                // Update the select box
+                const select = document.getElementById("FK_ADR_REGION");
+                select.innerHTML = '<option value="">-- bitte wählen --</option>';
+                
+                regions.forEach(region => {
+                    const opt = document.createElement("option");
+                    opt.value = region.PK_ADR_REGION;
+                    opt.textContent = `${region.PK_ADR_REGION} ${region.REGION} ${region.FK_ADR_ORT}`;
+                    select.appendChild(opt);
+                });
+                
+                updateCounts();
+                return regions;
+            } catch (error) {
+                console.error("Error loading regions:", error);
+                const select = document.getElementById("FK_ADR_REGION");
+                select.innerHTML = '<option value="">Error loading regions</option>';
+                return [];
+            }
+        }
+        
+        // Load location types
+        async function loadLocationTypes() {
+            const res = await fetch("http://localhost:5000/location_type");
+            locationTypes = await res.json();
+            const select = document.getElementById("locationType");
+            const select1 = document.getElementById("LOCATION_TYPE");
+            
+            locationTypes.forEach(type => {
+                const opt = document.createElement("option");
+                opt.value = type.PK_BAS_LOC_LOCATION_TYPE;
+                opt.textContent = `${type.LOCATION_TYPE} (PK: ${type.PK_BAS_LOC_LOCATION_TYPE})`;
+                select.appendChild(opt);
+                
+                const opt2 = opt.cloneNode(true);
+                select1.appendChild(opt2);
+            });
+        }
+        
+        // Load addresses
+        async function loadAddresses() {
+            const res = await fetch("http://localhost:5000/adresse");
+            addresses = await res.json();
+            updateCounts();
+        }
+        
+        // Load locations
+        async function loadLocations() {
+            const res = await fetch("http://localhost:5000/location");
+            locations = await res.json();
+            updateCounts();
+        }
+        
+        // Load addresses schnell
+        async function loadAddressesSchnell() {
+            const res = await fetch("http://localhost:5000/adr_adresse_schnell");
+            addressesSchnell = await res.json();
+            updateCounts();
+        }
+        
+        // Display addresses in the list
+        function displayAddresses() {
+            const ul = document.getElementById("addressesList");
+            ul.innerHTML = "";
+            
+            if (addresses.length === 0) {
+                ul.innerHTML = "<li>Keine Adressen gefunden</li>";
+                return;
+            }
+            
+            addresses.forEach(addr => {
+                const li = document.createElement("li");
+                li.textContent = `${addr.STRASSE} ${addr.HSNR}, ${addr.PLZ} ${addr.ORT} (${addr.LAND}) - ${addr.PK_ADR_ADRESSE}`;
+                li.dataset.search = li.textContent.toLowerCase();
+                li.dataset.id = addr.PK_ADR_ADRESSE;
+                li.addEventListener("click", () => {
+                    selectAddress(li, addr);
+                    showAddressDetails(addr.PK_ADR_ADRESSE);
+                });
+                ul.appendChild(li);
+            });
+        }
+        
+        // Display locations in the list
+        function displayLocations() {
+            const ul = document.getElementById("locationsList");
+            ul.innerHTML = "";
+            
+            if (locations.length === 0) {
+                ul.innerHTML = "<li>Keine Standorte gefunden</li>";
+                return;
+            }
+            
+            locations.forEach(loc => {
+                const li = document.createElement("li");
+                li.innerHTML = `#${loc.PK_LOC_LOCATION}: <strong>${loc.LOCATION}</strong> [Typ: ${loc.LOCATION_TYPE}/${loc.LOCATION_TYPE1}] <small>(${loc.STRASSE} ${loc.HSNR}, ${loc.PLZ} ${loc.ORT} (${loc.LAND}) - ${loc.PK_LOC_LOCATION})</small>`;
+                li.dataset.search = li.textContent.toLowerCase();
+                ul.appendChild(li);
+            });
+        }
+        
+        // Filter addresses based on search input
+        function filterAddresses() {
+            const query = document.getElementById("searchAddress").value.toLowerCase();
+            document.querySelectorAll("#addressesList li").forEach(li => {
+                li.style.display = li.dataset.search.includes(query) ? "" : "none";
+            });
+        }
+        
+        // Filter locations based on search input
+        function filterLocations() {
+            const query = document.getElementById("searchLocation").value.toLowerCase();
+            document.querySelectorAll("#locationsList li").forEach(li => {
+                li.style.display = li.dataset.search.includes(query) ? "" : "none";
+            });
+        }
+        
+        // Select address function
+        function selectAddress(li, addr) {
+            document.querySelectorAll('#addressesList li').forEach(el => el.classList.remove('selected'));
+            li.classList.add('selected');
+        }
+        
+        // Show address details
+        async function showAddressDetails(addressId) {
+            try {
+                const res = await fetch(`http://localhost:5000/strasse/hsnr/${addressId}`);
+                const data = await res.json();
+                
+                const detailsDiv = document.getElementById("addressDetails");
+                const tableBody = document.querySelector("#addressDetailsTable tbody");
+                
+                tableBody.innerHTML = "";
+                detailsDiv.classList.remove("hidden");
+                
+                if (Array.isArray(data)) {
+                    data.forEach(item => {
+                        const row = document.createElement("tr");
+                        
+                        const properties = [
+                            'PK_ADR_ADRESSE', 'PK_REL_ADR_PLZ_STRASSE', 'str_fk_adr_ort', 
+                            'FK_ADR_STRASSE', 'FK_ADR_PLZ_ORT', 'PK_ADR_PLZ_ORT',
+                            'FK_ADR_ORT', 'PK_ADR_STRASSE', 'PLZ','Straße', 'HSNR'
+                        ];
+                        
+                        properties.forEach(prop => {
+                            const cell = document.createElement("td");
+                            cell.textContent = item[prop] !== null ? item[prop] : 'NULL';
+                            row.appendChild(cell);
+                        });
+                        
+                        tableBody.appendChild(row);
+                    });
+                } else {
+                    const row = document.createElement("tr");
+                    
+                    const properties = [
+                        'PK_ADR_ADRESSE', 'PK_REL_ADR_PLZ_STRASSE', 
+                        'FK_ADR_STRASSE', 'FK_ADR_PLZ_ORT', 'PK_ADR_PLZ_ORT','str_fk_adr_ort',
+                        'FK_ADR_ORT', 'PK_ADR_STRASSE','PLZ',  'Straße',  'HSNR'
+                    ];
+                    
+                    properties.forEach(prop => {
+                        const cell = document.createElement("td");
+                        cell.textContent = data[prop] !== null ? data[prop] : 'NULL';
+                        row.appendChild(cell);
+                    });
+                    
+                    tableBody.appendChild(row);
+                }
+            } catch (err) {
+                console.error("Error loading address details:", err);
+                const detailsDiv = document.getElementById("addressDetails");
+                detailsDiv.classList.add("hidden");
+            }
+        }
+        
+        // Update counts function
+        function updateCounts() {
+            // This would update counts if we had counters in the mobile UI
+        }
+        
+        // Submit form function
+        function submitForm(formId, endpoint) {
+            const form = document.getElementById(formId);
+            const formData = new FormData(form);
+            const data = {};
+            
+            formData.forEach((value, key) => {
+                data[key] = value;
+            });
+            
+            fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('Success: ' + JSON.stringify(data));
+            })
+            .catch((error) => {
+                alert('Error: ' + error);
+            });
+        }
+        
+        // Update record function
+        async function updateRecord() {
+            const pk = document.getElementById('PK_ADR_ADRESSE_SCHNELL').value.trim();
+            const fkAdr = document.getElementById('FK_ADR_ADRESSE').value.trim();
+            const fkLoc = document.getElementById('FK_LOC_LOCATION').value.trim();
+            const messageDiv = document.getElementById('updateAdresseSchnellMessage');
+
+            if (!pk) {
+                showMessageElement('Record ID is required', 'error', messageDiv);
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:5000/upd_adr_adresse_schnell', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        pk_adr_adresse_schnell: pk,
+                        fk_adr_adresse: fkAdr || null,
+                        fk_loc_location: fkLoc || null
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Update failed');
+                }
+
+                showMessageElement('Record updated successfully!', 'success', messageDiv);
+
+            } catch (error) {
+                showMessageElement(error.message, 'error', messageDiv);
+                console.error('Error:', error);
+            }
+        }
+        
+        // Load image function
+        function loadImage() {
+            const imageId = document.getElementById('imageid').value.trim();
+            const imageDisplay = document.getElementById('imageDisplay');
+            const loadBtn = document.getElementById('loadImageBtn');
+            
+            if (!imageId || !/^\d+$/.test(imageId)) {
+                imageDisplay.innerHTML = '<p style="color: red;">Please enter a valid numeric image ID</p>';
+                return;
+            }
+            
+            currentImageId = parseInt(imageId);
+            loadBtn.disabled = true;
+            imageDisplay.innerHTML = '<p>Loading image...</p>';
+            
+            fetch(`http://localhost:5000/accounts/bild/1/1/1/${imageId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Image not found');
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    const url = URL.createObjectURL(blob);
+                    imageDisplay.innerHTML = `
+                        <img src="${url}" alt="Loaded Image" style="max-width: 100%; max-height: 300px;">
+                        <div style="margin-top: 10px;">
+                            <a href="${url}" target="_blank" download="image-${imageId}.jpg" 
+                               style="padding: 8px 16px; background: #4CAF50; color: white; text-decoration: none; border-radius: 4px;">
+                                Download Image
+                            </a>
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    imageDisplay.innerHTML = `<p style="color: red;">Error loading image: ${error.message}</p>`;
+                })
+                .finally(() => {
+                    loadBtn.disabled = false;
+                });
+        }
+        
+        // Change image ID function
+        function changeImageId(change) {
+            const newId = currentImageId + change;
+            if (newId > 0) {
+                document.getElementById('imageid').value = newId;
+                currentImageId = newId;
+                loadImage();
+            }
+        }
+        
+        // Show message function
+        function showMessage(msg, error = false) {
+            // Create a temporary message element
+            const el = document.createElement("div");
+            el.textContent = msg;
+            el.className = "message " + (error ? "error" : "success");
+            document.body.appendChild(el);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                document.body.removeChild(el);
+            }, 3000);
+        }
+        
+        // Show message in specific element
+        function showMessageElement(msg, type, element) {
+            element.textContent = msg;
+            element.className = "message " + (type === 'error' ? "error" : "success");
+            element.style.display = 'block';
+            
+            // Hide after 3 seconds
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

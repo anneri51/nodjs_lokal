@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Region Gallery</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2rem;
+            color: #666;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 40px;
+            background-color: #ffebee;
+            color: #c62828;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .main-content {
+            display: flex;
+            gap: 30px;
+        }
+        
+        .sidebar {
+            flex: 0 0 280px;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .sidebar-title {
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #6a11cb;
+        }
+        
+        .region-type-group {
+            margin-bottom: 10px;
+        }
+        
+        .region-type-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background-color: #f0f4ff;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .region-type-header:hover {
+            background-color: #e6eeff;
+        }
+        
+        .region-type-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #6a11cb;
+        }
+        
+        .region-type-count {
+            background-color: #6a11cb;
+            color: white;
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 0.8rem;
+        }
+        
+        .toggle-icon {
+            font-size: 0.9rem;
+            color: #6a11cb;
+            transition: transform 0.3s ease;
+        }
+        
+        .region-type-header.collapsed .toggle-icon {
+            transform: rotate(-90deg);
+        }
+        
+        .region-list {
+            list-style: none;
+            max-height: 300px;
+            overflow-y: auto;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+            margin-top: 8px;
+        }
+        
+        .region-type-header.collapsed + .region-list {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+        
+        .region-list-item {
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+        
+        .region-list-item:hover {
+            background-color: #f0f4ff;
+            border-left-color: #6a11cb;
+        }
+        
+        .region-list-item.active {
+            background-color: #e6eeff;
+            border-left-color: #2575fc;
+            font-weight: 600;
+        }
+        
+        .content-area {
+            flex: 1;
+        }
+        
+        .regions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+        }
+        
+        .region-card {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .region-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .region-image-container {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            overflow: hidden;
+        }
+        
+        .background-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: brightness(0.8);
+        }
+        
+        .badge-image {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 2;
+        }
+        
+        .corner-image {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 2px solid white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            z-index: 3;
+        }
+        
+        .image-count-badge {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(106, 17, 203, 0.9);
+            color: white;
+            border-radius: 12px;
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            z-index: 3;
+        }
+        
+        .region-info {
+            padding: 20px;
+        }
+        
+        .region-name {
+            font-size: 1.4rem;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        
+        .region-details {
+            color: #7f8c8d;
+            font-size: 0.95rem;
+        }
+        
+        .gallery {
+            margin-top: 40px;
+        }
+        
+        .gallery-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .gallery-title {
+            font-size: 1.8rem;
+            color: #2c3e50;
+        }
+        
+        .download-all-btn {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .download-all-btn:hover {
+            background-color: #218838;
+        }
+        
+        .download-all-btn:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .image-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+        }
+        
+        .image-item {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .image-item:hover {
+            transform: translateY(-5px);
+        }
+        
+        .image-preview {
+            width: 100%;
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .image-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        
+        .image-preview iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        .error-thumbnail {
+            width: 100%;
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #ffebee;
+            color: #c62828;
+            border-bottom: 1px solid #ffcdd2;
+        }
+        
+        .image-actions {
+            padding: 15px;
+            text-align: center;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .btn-primary {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: #6a11cb;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-primary:hover {
+            background-color: #5a0db3;
+        }
+        
+        .image-meta {
+            padding: 15px;
+            font-size: 0.9rem;
+        }
+        
+        .image-meta p {
+            margin-bottom: 8px;
+        }
+        
+        .lexoffice-link {
+            color: #2575fc;
+            text-decoration: none;
+        }
+        
+        .lexoffice-link:hover {
+            text-decoration: underline;
+        }
+        
+        .null-value {
+            color: #6c757d;
+            font-style: italic;
+        }
+        
+        .error-message {
+            color: #c62828;
+        }
+        
+        .back-button {
+            display: inline-block;
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background-color: #6a11cb;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+        }
+        
+        .back-button:hover {
+            background-color: #5a0db3;
+        }
+        
+        .no-images {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+            font-style: italic;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .no-regions {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        
+        .collapse-all {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            background-color: #f0f4ff;
+            border: 1px solid #6a11cb;
+            color: #6a11cb;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        
+        .collapse-all:hover {
+            background-color: #e6eeff;
+        }
+        
+        @media (max-width: 1024px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                flex: none;
+                max-height: none;
+                margin-bottom: 20px;
+            }
+            
+            .gallery-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .regions-grid {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            }
+            
+            .image-gallery {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            }
+            
+            .badge-image {
+                width: 100px;
+                height: 100px;
+            }
+            
+            .corner-image {
+                width: 50px;
+                height: 50px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Region Gallery</h1>
+            <p class="subtitle">Explore beautiful regions and their images</p>
+        </header>
+        
+        <main id="app">
+            <!-- Content will be dynamically loaded here -->
+        </main>
+    </div>
+
+    <script>
+        // API endpoints
+        const REGIONS_API = 'http://localhost:5000/regions';
+        const REGION_IMAGES_API = (id) => `http://localhost:5000/region_bilder/${id}`;
+        
+        // State management
+        let currentView = 'regions'; // 'regions' or 'gallery'
+        let currentRegionId = null;
+        let currentRegionTypeId = null;
+        let regionsData = [];
+        let regionTypesData = {};
+        let collapsedState = {}; // Track collapsed state of each type
+        let currentImages = []; // Store current gallery images
+        let blobUrls = []; // Track blob URLs for cleanup
+        let regionImagesCache = {}; // Cache for region images
+        
+        // DOM elements
+        const app = document.getElementById('app');
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            loadRegions();
+        });
+        
+        // Load regions from API
+        async function loadRegions() {
+            showLoading('Loading regions...');
+            
+            try {
+                const response = await fetch(REGIONS_API);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                regionsData = await response.json();
+                groupRegionsByType(regionsData);
+            } catch (error) {
+                showError(`Failed to load regions: ${error.message}`);
+                console.error('Error loading regions:', error);
+            }
+        }
+        
+        // Group regions by FK_STD_ADR_REGION_TYPE
+        function groupRegionsByType(regions) {
+            regionTypesData = {};
+            
+            regions.forEach(region => {
+                const typeId = region.FK_STD_ADR_REGION_TYPE;
+                
+                if (!regionTypesData[typeId]) {
+                    regionTypesData[typeId] = {
+                        typeName: region.REGION_TYPE_NAME || `Type ${typeId}`,
+                        regions: []
+                    };
+                    // Initialize all types as expanded by default
+                    collapsedState[typeId] = false;
+                }
+                
+                regionTypesData[typeId].regions.push(region);
+            });
+            
+            displayRegionTypes();
+        }
+        
+        // Display region types in the sidebar
+        function displayRegionTypes() {
+            const typeIds = Object.keys(regionTypesData);
+            
+            if (typeIds.length === 0) {
+                app.innerHTML = '<div class="error">No regions found.</div>';
+                return;
+            }
+            
+            // Set the first type as active by default
+            currentRegionTypeId = typeIds[0];
+            
+            const sidebarHTML = `
+                <div class="sidebar">
+                    <h2 class="sidebar-title">Region Types</h2>
+                    <button class="collapse-all" onclick="toggleAllTypes()">Collapse All</button>
+                    ${typeIds.map(typeId => `
+                        <div class="region-type-group">
+                            <div class="region-type-header ${collapsedState[typeId] ? 'collapsed' : ''}" 
+                                 onclick="toggleType(${typeId})">
+                                <div>
+                                    <span class="region-type-name">${regionTypesData[typeId].typeName}</span>
+                                    <span class="region-type-count">${regionTypesData[typeId].regions.length}</span>
+                                </div>
+                                <span class="toggle-icon">▼</span>
+                            </div>
+                            <ul class="region-list" style="max-height: ${collapsedState[typeId] ? '0' : '300px'}; opacity: ${collapsedState[typeId] ? '0' : '1'}">
+                                ${regionTypesData[typeId].regions.map(region => `
+                                    <li class="region-list-item ${region.PK_ADR_REGION == currentRegionTypeId ? 'active' : ''}" 
+                                        onclick="selectRegionType(${typeId}, ${region.PK_ADR_REGION})">
+                                        ${region.REGION || 'Unnamed Region'}
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            const contentHTML = `
+                <div class="content-area">
+                    <div class="regions-grid">
+                        ${regionTypesData[currentRegionTypeId].regions.map(region => `
+                            <div class="region-card" onclick="loadRegionImages(${region.PK_ADR_REGION})">
+                                ${getRegionCardImagesHTML(region.PK_ADR_REGION)}
+                                <div class="region-info">
+                                    <h3 class="region-name">${region.REGION || 'Unnamed Region'}</h3>
+                                    <div class="region-details">
+                                        ${region.REGION_DESCRIPTION ? `<p>${region.REGION_DESCRIPTION}</p>` : ''}
+                                        <p><strong>ID:</strong> ${region.PK_ADR_REGION}</p>
+                                        <p><strong>Type:</strong> ${regionTypesData[region.FK_STD_ADR_REGION_TYPE].typeName}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            app.innerHTML = `
+                <div class="main-content">
+                    ${sidebarHTML}
+                    ${contentHTML}
+                </div>
+            `;
+            
+            // Load images for all regions in the current view
+            loadAllRegionImages();
+        }
+        
+        // Get HTML for region card images (multi-image layout)
+        function getRegionCardImagesHTML(regionId) {
+            // Return placeholder HTML until images are loaded
+            return `
+                <div class="region-image-container" id="region-images-${regionId}">
+                    <div class="loading">Loading images...</div>
+                </div>
+            `;
+        }
+        
+        // Load images for all regions in current view
+        async function loadAllRegionImages() {
+            const regions = regionTypesData[currentRegionTypeId].regions;
+            
+            for (const region of regions) {
+                await loadRegionImagesForCard(region.PK_ADR_REGION);
+            }
+        }
+        
+        // Load images for a specific region card
+        async function loadRegionImagesForCard(regionId) {
+            try {
+                // Check cache first
+                if (regionImagesCache[regionId]) {
+                    updateRegionCardImages(regionId, regionImagesCache[regionId]);
+                    return;
+                }
+                
+                const response = await fetch(REGION_IMAGES_API(regionId));
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const images = await response.json();
+                
+                // Cache the images
+                regionImagesCache[regionId] = images;
+                
+                // Update the card with images
+                updateRegionCardImages(regionId, images);
+            } catch (error) {
+                console.error(`Error loading images for region ${regionId}:`, error);
+                // Show error state in card
+                document.getElementById(`region-images-${regionId}`).innerHTML = `
+                    <div class="error-thumbnail">Error loading images</div>
+                `;
+            }
+        }
+        
+        // Update region card with actual images
+        function updateRegionCardImages(regionId, images) {
+            const container = document.getElementById(`region-images-${regionId}`);
+            
+            if (!images || images.length === 0) {
+                container.innerHTML = `
+                    <div class="background-image" style="background: #f0f4ff; display: flex; align-items: center; justify-content: center;">
+                        <span style="color: #7f8c8d;">No images</span>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            
+            // Create blob URLs for the images
+            const imageUrls = [];
+            images.slice(0, 3).forEach(image => {
+                if (image.FILECONTENT) {
+                    const byteArray = new Uint8Array(image.FILECONTENT.data);
+                    const blob = new Blob([byteArray], { 
+                        type: image.MIMETYPE || 'image/jpeg' 
+                    });
+                    const blobUrl = URL.createObjectURL(blob);
+                    imageUrls.push(blobUrl);
+                    blobUrls.push(blobUrl);
+                }
+            });
+            
+            // Background image (2nd image or placeholder)
+            if (imageUrls.length > 1) {
+                html += `<img src="${imageUrls[1]}" alt="Background" class="background-image">`;
+            } else {
+                html += `<div class="background-image" style="background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);"></div>`;
+            }
+            
+            // Badge image (1st image)
+            if (imageUrls.length > 0) {
+                html += `<img src="${imageUrls[0]}" alt="Badge" class="badge-image">`;
+            }
+            
+            // Corner image (3rd image)
+            if (imageUrls.length > 2) {
+                html += `<img src="${imageUrls[2]}" alt="Corner" class="corner-image">`;
+            }
+            
+            // Image count badge
+            if (images.length > 3) {
+                html += `<div class="image-count-badge">+${images.length - 3}</div>`;
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        // Toggle a single region type (expand/collapse)
+        function toggleType(typeId) {
+            collapsedState[typeId] = !collapsedState[typeId];
+            displayRegionTypes();
+        }
+        
+        // Toggle all region types (expand/collapse all)
+        function toggleAllTypes() {
+            const typeIds = Object.keys(regionTypesData);
+            const allCollapsed = typeIds.every(id => collapsedState[id]);
+            
+            // If all are collapsed, expand all. Otherwise collapse all.
+            typeIds.forEach(id => {
+                collapsedState[id] = !allCollapsed;
+            });
+            
+            displayRegionTypes();
+        }
+        
+        // Select a region type from the sidebar
+        function selectRegionType(typeId, regionId) {
+            currentRegionTypeId = typeId;
+            
+            // Update active state in sidebar
+            document.querySelectorAll('.region-list-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Find and activate the clicked item
+            const clickedItem = document.querySelector(`.region-list-item[onclick*="${regionId}"]`);
+            if (clickedItem) {
+                clickedItem.classList.add('active');
+            }
+            
+            // Update the content area with regions of the selected type
+            const contentArea = document.querySelector('.content-area');
+            if (regionTypesData[typeId].regions.length > 0) {
+                contentArea.innerHTML = `
+                    <div class="regions-grid">
+                        ${regionTypesData[typeId].regions.map(region => `
+                            <div class="region-card" onclick="loadRegionImages(${region.PK_ADR_REGION})">
+                                ${getRegionCardImagesHTML(region.PK_ADR_REGION)}
+                                <div class="region-info">
+                                    <h3 class="region-name">${region.REGION || 'Unnamed Region'}</h3>
+                                    <div class="region-details">
+                                        ${region.REGION_DESCRIPTION ? `<p>${region.REGION_DESCRIPTION}</p>` : ''}
+                                        <p><strong>ID:</strong> ${region.PK_ADR_REGION}</p>
+                                        <p><strong>Type:</strong> ${regionTypesData[typeId].typeName}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                
+                // Load images for the new regions
+                loadAllRegionImages();
+            } else {
+                contentArea.innerHTML = '<div class="no-regions">No regions in this category.</div>';
+            }
+        }
+        
+        // Load images for a specific region (full gallery view)
+        async function loadRegionImages(regionId) {
+            showLoading('Loading images...');
+            currentRegionId = regionId;
+            currentView = 'gallery';
+            
+            // Clean up previous blob URLs
+            cleanupBlobUrls();
+            
+            try {
+                const response = await fetch(REGION_IMAGES_API(regionId));
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const images = await response.json();
+                currentImages = images; // Store images for download functionality
+                displayRegionImages(images, regionId);
+            } catch (error) {
+                showError(`Failed to load images: ${error.message}`);
+                console.error('Error loading images:', error);
+            }
+        }
+        
+        // Display images for a region using the enhanced function
+        function displayRegionImages(images, regionId) {
+            // Find the region in our data
+            let region = null;
+            for (const typeId in regionTypesData) {
+                region = regionTypesData[typeId].regions.find(r => r.PK_ADR_REGION === regionId);
+                if (region) break;
+            }
+            
+            const regionName = region ? region.REGION : `Region ${regionId}`;
+            
+            app.innerHTML = `
+                <button class="back-button" onclick="backToRegions()">← Back to Regions</button>
+                <div class="gallery">
+                    <div class="gallery-header">
+                        <h2 class="gallery-title">Images of ${regionName}</h2>
+                        ${images.length > 0 ? `
+                            <button class="download-all-btn" onclick="downloadAllImages('${regionName}')">
+                                <span>Download All Images</span>
+                            </button>
+                        ` : ''}
+                    </div>
+                    <div id="imageGallery"></div>
+                </div>
+            `;
+            
+            // Use the enhanced display function
+            displayDocumentImages(images);
+        }
+        
+        // Enhanced image display function based on your example
+        function displayDocumentImages(images) {
+            const imageGallery = document.getElementById('imageGallery');
+            
+            if (!images || images.length === 0) {
+                imageGallery.innerHTML = '<div class="no-images">No images found for this region</div>';
+                return;
+            }
+
+            let html = '<div class="image-gallery">';
+
+            images.forEach(image => {
+                try {
+                    const imageId = image.PK_BILD_BILDER || 'N/A';
+                    const isPDF = (image.FILENAME && image.FILENAME.toLowerCase().endsWith('.pdf')) || 
+                                 (image.MIMETYPE && image.MIMETYPE.includes('pdf'));
+                    
+                    // Handle the image data from FILECONTENT (bytea)
+                    if (image.FILECONTENT) {
+                        // Convert the bytea data to a Uint8Array
+                        let byteArray = new Uint8Array(image.FILECONTENT.data);
+                        
+                        // Create blob with proper MIME type
+                        const blob = new Blob([byteArray], { 
+                            type: image.MIMETYPE || (isPDF ? 'application/pdf' : 'image/jpeg') 
+                        });
+                        const blobUrl = URL.createObjectURL(blob);
+                        blobUrls.push(blobUrl); // Track for cleanup
+                        
+                        const pk = image.PK_REL_INP_INP_BELEGE_ALL_BILD_BILDER ? image.PK_REL_INP_INP_BELEGE_ALL_BILD_BILDER  : '';
+                        const mainBild = image.MAIN_BILD ? image.MAIN_BILD : '';
+                        
+                        const uploadDate = image.CREATED_AT ? formatDate(image.CREATED_AT) : 'Unknown';
+                        const imageOk = image.DATUM_ZUORD_OK ? formatDate(image.DATUM_ZUORD_OK) : 'Unknown';
+                        const imageFilename = image.FILENAME || 'Document';
+                        const lexOfficeLink = image.lex_office_buchung ? 
+                            `<a href="${image.lex_office_buchung}" target="_blank" class="lexoffice-link">View in LexOffice</a>` : 
+                            '<span class="null-value">No LexOffice link</span>';
+
+                        if (isPDF) {
+                            html += `
+                                <div class="image-item">
+                                    <div class="image-preview">
+                                        <iframe src="${blobUrl}" width="100%" height="200"></iframe>
+                                    </div>
+                                    <div class="image-actions">
+                                        <a href="${blobUrl}" target="_blank" class="btn-primary">
+                                            Open PDF in New Tab
+                                        </a>
+                                    </div>
+                                    <div class="image-meta">
+                                        <p><strong>ID:</strong> ${imageId} ${mainBild ? `<span style="color: #4CAF50"><b>(${mainBild})</b></span>` : ''}</p>
+                                        <p><strong>Filename:</strong> ${imageFilename}</p>
+                                        <p><strong>Uploaded:</strong> ${uploadDate}</p>
+                                        <p><strong>Final:</strong> <span style="color: #4CAF50"><b>${imageOk}</b></span></p>
+                                        ${lexOfficeLink}
+                                        ${pk ? `<p><strong>PK:</strong> ${pk}</p>` : ''}
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            html += `
+                                <div class="image-item">
+                                    <div class="image-preview">
+                                        <img src="${blobUrl}" alt="Region Image ${imageId}" loading="lazy">
+                                    </div>
+                                    <div class="image-actions">
+                                        <a href="${blobUrl}" target="_blank" class="btn-primary">
+                                            Open Image in New Tab
+                                        </a>
+                                    </div>
+                                    <div class="image-meta">
+                                        <p><strong>ID:</strong> ${imageId} ${mainBild ? `<span style="color: #4CAF50"><b>(${mainBild})</b></span>` : ''}</p>
+                                        <p><strong>Filename:</strong> ${imageFilename}</p>
+                                        <p><strong>Uploaded:</strong> ${uploadDate}</p>
+                                        <p><strong>Final:</strong> <span style="color: #4CAF50"><b>${imageOk}</b></span></p>
+                                        ${lexOfficeLink}
+                                        ${pk ? `<p><strong>PK:</strong> ${pk}</p>` : ''}
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    } else {
+                        throw new Error('No image data available');
+                    }
+                } catch (error) {
+                    console.error('Error processing image:', error);
+                    const imageId = image.PK_BILD_BILDER || 'N/A';
+                    html += `
+                        <div class="image-item">
+                            <div class="error-thumbnail">
+                                Error loading image (ID: ${imageId})
+                            </div>
+                            <div class="image-meta">
+                                <p class="error-message"><strong>Error:</strong> ${error.message}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            html += '</div>';
+            imageGallery.innerHTML = html;
+        }
+        
+        // Format date for display
+        function formatDate(dateString) {
+            if (!dateString) return 'Unknown';
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('de-DE', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                });
+            } catch (e) {
+                return dateString;
+            }
+        }
+        
+        // Clean up blob URLs to prevent memory leaks
+        function cleanupBlobUrls() {
+            blobUrls.forEach(url => URL.revokeObjectURL(url));
+            blobUrls = [];
+        }
+        
+        // Download a single image
+        async function downloadImage(imageUrl, fileName) {
+            try {
+                // Fetch the image
+                const response = await fetch(imageUrl);
+                const blob = await response.blob();
+                
+                // Create download link
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.setAttribute('href', url);
+                
+                // Determine file extension
+                const contentType = response.headers.get('content-type');
+                let extension = '.jpg';
+                if (contentType) {
+                    if (contentType.includes('png')) extension = '.png';
+                    else if (contentType.includes('gif')) extension = '.gif';
+                    else if (contentType.includes('webp')) extension = '.webp';
+                    else if (contentType.includes('pdf')) extension = '.pdf';
+                }
+                
+                link.setAttribute('download', `${fileName}${extension}`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Clean up the URL object
+                setTimeout(() => URL.revokeObjectURL(url), 100);
+            } catch (error) {
+                console.error('Error downloading image:', error);
+                alert('Failed to download image. Please try again.');
+            }
+        }
+        
+        // Download all images as a ZIP file
+        async function downloadAllImages(regionName) {
+            const downloadBtn = document.querySelector('.download-all-btn');
+            const originalText = downloadBtn.innerHTML;
+            
+            try {
+                downloadBtn.innerHTML = '<span>Downloading...</span>';
+                downloadBtn.disabled = true;
+                
+                // Download images one by one
+                for (let i = 0; i < currentImages.length; i++) {
+                    const image = currentImages[i];
+                    if (image.FILECONTENT) {
+                        const byteArray = new Uint8Array(image.FILECONTENT.data);
+                        const blob = new Blob([byteArray], { 
+                            type: image.MIMETYPE || 'image/jpeg' 
+                        });
+                        const blobUrl = URL.createObjectURL(blob);
+                        
+                        await downloadImage(blobUrl, `${regionName}_image_${i + 1}`);
+                        
+                        URL.revokeObjectURL(blobUrl);
+                        
+                        // Add a small delay to avoid overwhelming the browser
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Error downloading all images:', error);
+                alert('Failed to download some images. Please try again.');
+            } finally {
+                downloadBtn.innerHTML = originalText;
+                downloadBtn.disabled = false;
+            }
+        }
+        
+        // Go back to regions view
+        function backToRegions() {
+            currentView = 'regions';
+            cleanupBlobUrls();
+            displayRegionTypes();
+        }
+        
+        // Show loading state
+        function showLoading(message = 'Loading...') {
+            app.innerHTML = `<div class="loading">${message}</div>`;
+        }
+        
+        // Show error message
+        function showError(message) {
+            app.innerHTML = `
+                <div class="error">
+                    <p>${message}</p>
+                    <button class="back-button" onclick="backToRegions()">Back to Regions</button>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

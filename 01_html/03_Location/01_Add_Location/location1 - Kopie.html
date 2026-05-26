@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Location Listenansicht mit Baum</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        body {
+            display: flex;
+            font-family: sans-serif;
+        }
+        #sidebar {
+            width: 250px;
+            border-right: 1px solid #ccc;
+            padding: 10px;
+            overflow-y: auto;
+            height: 100vh;
+        }
+        .tree-node {
+            cursor: pointer;
+            margin-left: 10px;
+            font-weight: bold;
+        }
+        .tree-child {
+            margin-left: 20px;
+            display: none;
+        }
+        .tree-node.open + .tree-child {
+            display: block;
+        }
+        #main {
+            flex: 1;
+            padding: 10px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 5px;
+        }
+        th {
+            background-color: #eee;
+            cursor: pointer;
+        }
+        .group-header {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        #filterSection {
+            margin-bottom: 10px;
+        }
+        #map {
+            height: 300px;
+            margin-top: 15px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+
+<div id="sidebar">
+    <h3>Standorte</h3>
+    <div id="treeContainer"></div>
+</div>
+
+<div id="main">
+    <h1>Location Liste</h1>
+
+    <div id="filterSection">
+        <label for="typeFilter">Filter nach Location Type:</label>
+        <select id="typeFilter">
+            <option value="">-- Alle --</option>
+        </select>
+    </div>
+
+    <table id="locationTable">
+        <thead>
+        <tr>
+            <th data-key="PK_LOC_LOCATION">PK_LOC_LOCATION</th>
+            <th data-key="LOCATION">LOCATION</th>
+            <th data-key="LOCATION_TYPE">LOCATION_TYPE</th>
+            <th data-key="FK_ADR_ADRESSE">FK_ADR_ADRESSE</th>
+            <th data-key="STRASSE">STRASSE</th>
+            <th data-key="HSNR">HSNR</th>
+            <th data-key="PLZ">PLZ</th>
+            <th data-key="ORT">ORT</th>
+            <th data-key="LAND">LAND</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <div id="map"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+    let allData = [];
+    let map, marker;
+    let currentSort = { key: null, asc: true };
+
+    fetch('http://localhost:5000/location')
+        .then(res => res.json())
+        .then(data => {
+            allData = data;
+            populateTypeFilter(data);
+            renderTree(data);
+            renderGroupedTable(data);
+        })
+        .catch(err => console.error("Fehler beim Abrufen der Daten:", err));
+
+    function populateTypeFilter(data) {
+        const types = new Set(data.map(d => d.LOCATION_TYPE).filter(Boolean));
+        const select = document.getElementById("typeFilter");
+        types.forEach(type => {
+            const option = document.createElement("option");
+            option.value = type;
+            option.textContent = type;
+            select.appendChild(option);
+        });
+
+        select.addEventListener("change", () => {
+            const filtered = select.value ? allData.filter(d => d.LOCATION_TYPE === select.value) : allData;
+            renderGroupedTable(filtered);
+        });
+    }
+
+    function renderTree(data) {
+        const container = document.getElementById("treeContainer");
+        container.innerHTML = '';
+        const grouped = {};
+
+        data.forEach(item => {
+            const { LAND, ORT, PLZ } = item;
+            if (!grouped[LAND]) grouped[LAND] = {};
+            if (!grouped[LAND][ORT]) grouped[LAND][ORT] = {};
+            if (!grouped[LAND][ORT][PLZ]) grouped[LAND][ORT][PLZ] = [];
+            grouped[LAND][ORT][PLZ].push(item);
+        });
+
+        for (const land in grouped) {
+            const landNode = document.createElement("div");
+            landNode.classList.add("tree-node");
+            landNode.textContent = land;
+            landNode.addEventListener("click", function () {
+                this.classList.toggle("open");
+            });
+
+            const ortContainer = document.createElement("div");
+            ortContainer.classList.add("tree-child");
+
+            for (const ort in grouped[land]) {
+                const ortNode = document.createElement("div");
+                ortNode.classList.add("tree-node");
+                ortNode.textContent = ort;
+                ortNode.addEventListener("click", function (e) {
+                    e.stopPropagation();
+                    this.classList.toggle("open");
+                });
+
+                const plzContainer = document.createElement("div");
+                plzContainer.classList.add("tree-child");
+
+                for (const plz in grouped[land][ort]) {
+                    const plzNode = document.createElement("div");
+                    plzNode.classList.add("tree-node");
+                    plzNode.textContent = `${plz} (${grouped[land][ort][plz].length})`;
+                    plzNode.addEventListener("click", function (e) {
+                        e.stopPropagation();
+                        renderGroupedTable(grouped[land][ort][plz]);
+                    });
+
+                    plzContainer.appendChild(plzNode);
+                }
+
+                ortContainer.appendChild(ortNode);
+                ortContainer.appendChild(plzContainer);
+            }
+
+            container.appendChild(landNode);
+            container.appendChild(ortContainer);
+        }
+    }
+
+    function renderGroupedTable(data) {
+        const tbody = document.querySelector("#locationTable tbody");
+        tbody.innerHTML = '';
+
+        const grouped = {};
+        data.forEach(loc => {
+            const land = loc.LAND || 'Unbekannt';
+            const ort = loc.ORT || 'Unbekannt';
+            const plz = loc.PLZ || 'Unbekannt';
+
+            if (!grouped[land]) grouped[land] = {};
+            if (!grouped[land][ort]) grouped[land][ort] = {};
+            if (!grouped[land][ort][plz]) grouped[land][ort][plz] = [];
+
+            grouped[land][ort][plz].push(loc);
+        });
+
+        for (const land in grouped) {
+            tbody.appendChild(createGroupRow(land));
+
+            for (const ort in grouped[land]) {
+                tbody.appendChild(createGroupRow(`↳ ${ort}`));
+
+                for (const plz in grouped[land][ort]) {
+                    tbody.appendChild(createGroupRow(`↳↳ ${plz}`));
+
+                    grouped[land][ort][plz].forEach(location => {
+                        const row = document.createElement("tr");
+                        row.classList.add("data-row");
+                        row.innerHTML = `
+                            <td>${location.PK_LOC_LOCATION ?? ''}</td>
+                            <td>${location.LOCATION ?? ''}</td>
+                            <td>${location.LOCATION_TYPE ?? ''}</td>
+                            <td>${location.FK_ADR_ADRESSE ?? ''}</td>
+                            <td>${location.STRASSE ?? ''}</td>
+                            <td>${location.HSNR ?? ''}</td>
+                            <td>${location.PLZ ?? ''}</td>
+                            <td>${location.ORT ?? ''}</td>
+                            <td>${location.LAND ?? ''}</td>
+                        `;
+                        row.addEventListener("click", () => showOnMap(location));
+                        tbody.appendChild(row);
+                    });
+                }
+            }
+        }
+    }
+
+    function createGroupRow(label) {
+        const row = document.createElement("tr");
+        row.classList.add("group-header");
+        const td = document.createElement("td");
+        td.colSpan = 9;
+        td.textContent = label;
+        row.appendChild(td);
+        return row;
+    }
+
+    function showOnMap(location) {
+        const address = `${location.STRASSE ?? ''} ${location.HSNR ?? ''}, ${location.PLZ ?? ''} ${location.ORT ?? ''}, ${location.LAND ?? ''}`;
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (!data.length) return alert("Adresse nicht gefunden.");
+                const { lat, lon } = data[0];
+
+                if (!map) {
+                    map = L.map('map').setView([lat, lon], 13);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; OpenStreetMap',
+                    }).addTo(map);
+                } else {
+                    map.setView([lat, lon], 13);
+                    if (marker) marker.remove();
+                }
+
+                marker = L.marker([lat, lon]).addTo(map).bindPopup(`<b>${location.LOCATION}</b>`).openPopup();
+            });
+    }
+
+    document.querySelectorAll('#locationTable thead th').forEach(th => {
+        th.addEventListener('click', () => {
+            const key = th.getAttribute('data-key');
+            const asc = currentSort.key === key ? !currentSort.asc : true;
+            currentSort = { key, asc };
+
+            const rows = [...document.querySelectorAll("#locationTable tbody .data-row")].map(row => ({
+                row,
+                value: row.cells[th.cellIndex].textContent.trim().toLowerCase()
+            }));
+
+            rows.sort((a, b) => {
+                if (!a.value && !b.value) return 0;
+                if (!a.value) return asc ? -1 : 1;
+                if (!b.value) return asc ? 1 : -1;
+                return asc
+                    ? a.value.localeCompare(b.value, 'de', { numeric: true })
+                    : b.value.localeCompare(a.value, 'de', { numeric: true });
+            });
+
+            // Clear arrows
+            document.querySelectorAll('#locationTable thead th').forEach(header => {
+                header.textContent = header.textContent.replace(/[\u2191\u2193]/g, '');
+            });
+            th.textContent += asc ? " \u2191" : " \u2193";
+
+            const tbody = document.querySelector("#locationTable tbody");
+            const headers = [...tbody.querySelectorAll(".group-header")];
+            const sortedRows = rows.map(r => r.row);
+            tbody.innerHTML = '';
+            headers.forEach(h => tbody.appendChild(h));
+            sortedRows.forEach(row => tbody.appendChild(row));
+        });
+    });
+</script>
+
+</body>
+</html>

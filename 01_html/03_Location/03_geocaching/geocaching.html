@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geocoding Tool</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #6e8efb, #a777e3);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            width: 100%;
+            max-width: 500px;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .description {
+            color: #555;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus {
+            border-color: #6e8efb;
+            outline: none;
+        }
+        
+        button {
+            background: linear-gradient(to right, #6e8efb, #a777e3);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 14px 28px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: 600;
+            margin-bottom: 25px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .result-container {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: left;
+        }
+        
+        .result-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .result-field {
+            margin-bottom: 12px;
+        }
+        
+        .result-field label {
+            display: block;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 5px;
+        }
+        
+        .result-field span {
+            display: block;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            font-family: monospace;
+            border: 1px solid #eee;
+        }
+        
+        .loader {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin: 0 auto 20px auto;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .error {
+            color: #e74c3c;
+            margin-top: 15px;
+            display: none;
+            font-weight: 500;
+        }
+        
+        .success {
+            color: #27ae60;
+            margin-top: 15px;
+            display: none;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📍 Geocoding Tool</h1>
+        <p class="description">Enter a location to find its latitude and longitude using the Nominatim API (OpenStreetMap).</p>
+        
+        <div class="input-group">
+            <input type="text" id="locationInput" placeholder="Enter a location (e.g., Savoie, France or Chambéry)" value="Savoie, France">
+        </div>
+        
+        <button id="geocodeBtn">Find Coordinates</button>
+        <div class="loader" id="loader"></div>
+        
+        <div class="success" id="successMsg">Coordinates retrieved successfully!</div>
+        <div class="error" id="errorMsg">Unable to find coordinates for this location. Please try another.</div>
+        
+        <div class="result-container">
+            <div class="result-title">Location Details</div>
+            
+            <div class="result-field">
+                <label for="latOutput">Latitude</label>
+                <span id="latOutput">-</span>
+            </div>
+            
+            <div class="result-field">
+                <label for="lngOutput">Longitude</label>
+                <span id="lngOutput">-</span>
+            </div>
+            
+            <div class="result-field">
+                <label for="addressOutput">Full Address</label>
+                <span id="addressOutput">-</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const locationInput = document.getElementById('locationInput');
+            const geocodeBtn = document.getElementById('geocodeBtn');
+            const latOutput = document.getElementById('latOutput');
+            const lngOutput = document.getElementById('lngOutput');
+            const addressOutput = document.getElementById('addressOutput');
+            const loader = document.getElementById('loader');
+            const errorMsg = document.getElementById('errorMsg');
+            const successMsg = document.getElementById('successMsg');
+            
+            // Function to perform geocoding
+            function geocodeLocation() {
+                const location = locationInput.value.trim();
+                
+                if (!location) {
+                    errorMsg.textContent = 'Please enter a location';
+                    errorMsg.style.display = 'block';
+                    successMsg.style.display = 'none';
+                    return;
+                }
+                
+                // Show loader, hide previous messages
+                loader.style.display = 'block';
+                errorMsg.style.display = 'none';
+                successMsg.style.display = 'none';
+                
+                // Encode the user input for URL
+                const encodedLocation = encodeURIComponent(location);
+                
+                // Make request to Nominatim API
+                fetch(`https://nominatim.openstreetmap.org/search?q=${encodedLocation}&format=json`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        loader.style.display = 'none';
+                        
+                        if (data && data.length > 0) {
+                            // Get the first result
+                            const firstResult = data[0];
+                            
+                            // Update the output fields
+                            latOutput.textContent = firstResult.lat;
+                            lngOutput.textContent = firstResult.lon;
+                            addressOutput.textContent = firstResult.display_name;
+                            
+                            // Show success message
+                            successMsg.style.display = 'block';
+                        } else {
+                            // No results found
+                            latOutput.textContent = '-';
+                            lngOutput.textContent = '-';
+                            addressOutput.textContent = '-';
+                            
+                            errorMsg.textContent = 'No coordinates found for this location';
+                            errorMsg.style.display = 'block';
+                        }
+                    })
+                    .catch(error => {
+                        loader.style.display = 'none';
+                        errorMsg.textContent = 'Error fetching data: ' + error.message;
+                        errorMsg.style.display = 'block';
+                        successMsg.style.display = 'none';
+                        
+                        // Clear output fields
+                        latOutput.textContent = '-';
+                        lngOutput.textContent = '-';
+                        addressOutput.textContent = '-';
+                    });
+            }
+            
+            // Event listener for the button
+            geocodeBtn.addEventListener('click', geocodeLocation);
+            
+            // Allow pressing Enter to submit
+            locationInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    geocodeLocation();
+                }
+            });
+            
+            // Try to geocode the default value on page load
+            setTimeout(geocodeLocation, 500);
+        });
+    </script>
+</body>
+</html>
