@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Geburtstage & Gruppen · Bilder überall · Kalender mit Tagesgruppierung</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        body {
+            background: #f0f2f5;
+            color: #1e293b;
+        }
+        .app-header {
+            background: linear-gradient(135deg, #1e3c72, #2b4f8c);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .logo { font-size: 1.5rem; font-weight: bold; }
+        .logo span { color: #ffd966; }
+        .container {
+            display: flex;
+            max-width: 1600px;
+            margin: 1.5rem auto;
+            gap: 1.5rem;
+            padding: 0 1rem;
+        }
+        .sidebar {
+            width: 280px;
+            background: white;
+            border-radius: 1.5rem;
+            padding: 1.2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            height: fit-content;
+        }
+        .main-content {
+            flex: 1;
+        }
+        .section-title {
+            font-size: 1.3rem;
+            margin: 1rem 0 0.8rem 0;
+            padding-bottom: 0.3rem;
+            border-bottom: 3px solid #4caf50;
+            display: inline-block;
+        }
+        .group-list {
+            list-style: none;
+            margin-top: 1rem;
+        }
+        .group-item {
+            padding: 0.6rem 1rem;
+            background: #f8fafc;
+            margin-bottom: 0.5rem;
+            border-left: 4px solid #4caf50;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .group-item:hover { background: #e9f5e9; transform: translateX(4px); }
+        .group-item.active { background: #4caf50; color: white; }
+        .search-box {
+            position: relative;
+            margin: 0.8rem 0;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 0.6rem 1rem 0.6rem 2.2rem;
+            border-radius: 40px;
+            border: 1px solid #ccc;
+        }
+        .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #777; }
+        .all-button {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 40px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+        .person-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.2rem;
+            margin: 1rem 0;
+        }
+        .person-card {
+            background: white;
+            border-radius: 1.2rem;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            cursor: pointer;
+            transition: 0.2s;
+            border: 2px solid transparent;
+        }
+        .person-card.selected { border-color: #4caf50; background: #f1f9f0; }
+        .card-header {
+            background: #2c3e50;
+            color: white;
+            padding: 0.8rem;
+            position: relative;
+            min-height: 90px;
+        }
+        .person-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            position: absolute;
+            right: 12px;
+            top: 12px;
+            border: 2px solid white;
+        }
+        .person-name { font-size: 1rem; font-weight: bold; padding-right: 70px; }
+        .person-details { padding: 0.8rem; }
+        .detail-row { margin-bottom: 0.3rem; display: flex; font-size: 0.85rem; }
+        .detail-label { font-weight: bold; width: 80px; }
+        button {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 0.3rem 0.8rem;
+            border-radius: 40px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+        .selection-section {
+            background: white;
+            border-radius: 1.2rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .group-select {
+            width: 100%;
+            padding: 0.5rem;
+            border-radius: 40px;
+            margin: 0.5rem 0;
+        }
+        .tab-nav {
+            display: flex;
+            gap: 0.5rem;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 1.2rem;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 0.5rem 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            color: #5f6c7a;
+            border-bottom: 2px solid transparent;
+        }
+        .tab-btn.active {
+            color: #4caf50;
+            border-bottom-color: #4caf50;
+        }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+
+        /* Kalender-Karten */
+        .special-days, .week-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .calendar-card {
+            background: white;
+            border-radius: 1.2rem;
+            overflow: hidden;
+            flex: 1;
+            min-width: 250px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        .card-header {
+            background: #fef2e8;
+            padding: 0.6rem 1rem;
+            font-weight: bold;
+            border-bottom: 2px solid #ffd8b5;
+        }
+        .quarter-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.2rem;
+            margin-bottom: 1.8rem;
+        }
+        .month-card {
+            background: white;
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        .month-card.current-month {
+            border: 2px solid #f59e0b;
+        }
+        .month-header {
+            background: #fafcff;
+            padding: 0.5rem 1rem;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        .month-header:hover { background: #eef2ff; }
+        .day-group {
+            border-left: 3px solid #4caf50;
+            margin: 0.5rem 0 0.5rem 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .day-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f5f7fa;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            margin: 0.2rem 0;
+            cursor: pointer;
+        }
+        .day-header:hover { background: #e9ecef; }
+        .day-content {
+            margin-left: 1rem;
+            padding-left: 0.5rem;
+            border-left: 2px dashed #ccc;
+            display: none;
+        }
+        .day-content.show { display: block; }
+        .birthday-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.4rem;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .person-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .toggle-all-btn {
+            margin: 0.5rem 0 1rem 0;
+            background: #4caf50;
+        }
+        .modal-overlay {
+            position: fixed; top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 1.5rem;
+            padding: 1rem;
+        }
+        .group-badge {
+            display: inline-block;
+            background: #eef2ff;
+            padding: 0.2rem 0.7rem;
+            border-radius: 30px;
+            margin: 0.2rem;
+        }
+        .person-group-table, .relations-table, .birthday-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 1rem;
+            overflow: auto;
+        }
+        .person-group-table th, .relations-table th, .birthday-table th,
+        .person-group-table td, .relations-table td, .birthday-table td {
+            border: 1px solid #ddd;
+            padding: 0.5rem;
+            text-align: left;
+            vertical-align: middle;
+        }
+        .table-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        @media (max-width: 900px) {
+            .quarter-row { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 800px) {
+            .container { flex-direction: column; }
+            .sidebar { width: auto; }
+        }
+    </style>
+</head>
+<body>
+<div class="app-header">
+    <div class="logo">Geburtstage & <span>Gruppen</span></div>
+    <div>Bilder · Quartal · Wochen · Tagesgruppierung</div>
+</div>
+<div class="container">
+    <!-- Sidebar Gruppen -->
+    <div class="sidebar">
+        <h2 class="section-title">Personengruppen</h2>
+        <button class="all-button" id="allPersonsBtn">👥 Alle Personen</button>
+        <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="groupSearch" placeholder="Gruppen filtern..."></div>
+        <ul class="group-list" id="groupList"><li>Lade Gruppen...</li></ul>
+        <hr style="margin:1rem 0">
+        <div class="selection-section" style="margin-top:0">
+            <strong>📌 Zuordnung erstellen</strong>
+            <select id="targetGroupSelect" class="group-select"><option value="">Gruppe wählen...</option></select>
+            <div>Ausgewählt: <span id="selectedCount">0</span></div>
+            <div id="selectedPersonsList" style="font-size:0.8rem; max-height:100px; overflow:auto;"></div>
+            <button id="createRelationBtn" style="background:#2196f3; margin-top:0.5rem;" disabled>Zuordnung speichern</button>
+            <button id="clearSelectionBtn" style="background:#f44336; margin-top:0.5rem;" disabled>Auswahl löschen</button>
+            <div id="relationStatus" style="font-size:0.8rem;"></div>
+        </div>
+    </div>
+
+    <!-- Hauptbereich mit Tabs -->
+    <div class="main-content">
+        <div class="tab-nav">
+            <button class="tab-btn active" data-tab="persons">📋 Personen & Gruppen</button>
+            <button class="tab-btn" data-tab="calendar">🎂 Geburtstagskalender</button>
+            <button class="tab-btn" data-tab="birthTable">📊 Geburtstagstabelle</button>
+            <button class="tab-btn" data-tab="relations">🔗 Alle Zuordnungen</button>
+            <button class="tab-btn" data-tab="groupRelations">👥 Person-Gruppen</button>
+        </div>
+
+        <!-- Tab Personen (bereits mit Bildern) -->
+        <div id="tab-persons" class="tab-pane active">
+            <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="personSearch" placeholder="Person suchen..."></div>
+            <div id="personListContainer"><div class="loading">Wählen Sie eine Gruppe oder klicken Sie auf "Alle Personen"</div></div>
+            <div id="paginationControls" class="pagination"></div>
+        </div>
+
+        <!-- Tab Geburtstagskalender mit Bildern -->
+        <div id="tab-calendar" class="tab-pane">
+            <div style="background:white; border-radius:1rem; padding:0.8rem; margin-bottom:1rem;">
+                <label>👥 Gruppe filtern: </label>
+                <select id="calendarGroupFilter" class="group-select" style="width:auto; display:inline-block;"></select>
+                <button id="toggleAllDaysBtn" class="toggle-all-btn" style="margin-left:1rem;">🔽 Alle Tage aufklappen</button>
+            </div>
+            <div id="enhancedCalendarView"></div>
+        </div>
+
+        <!-- Tab Geburtstagstabelle mit Bildspalte -->
+        <div id="tab-birthTable" class="tab-pane">
+            <div style="background:white; border-radius:1rem; padding:0.8rem; margin-bottom:1rem;">
+                <label>👥 Gruppe filtern: </label>
+                <select id="birthTableGroupFilter" class="group-select" style="width:auto; display:inline-block;"></select>
+                <div class="search-box" style="margin-top:0.5rem;"><span class="search-icon">🔍</span><input type="text" id="birthTableSearch" placeholder="Tabelle durchsuchen..."></div>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="birthday-table" style="width:100%">
+                    <thead><tr><th>Bild</th><th data-sort="pk">ID</th><th data-sort="vorname">Vorname</th><th data-sort="nachname">Nachname</th><th data-sort="birthdate">Geburtsdatum</th><th>Gruppen</th></tr></thead>
+                    <tbody id="birthTableBody"></tbody>
+                </table>
+            </div>
+            <div id="birthTablePagination" class="pagination"></div>
+        </div>
+
+        <!-- Tab Geschäftspartner-Kontakt Relationen mit Bild -->
+        <div id="tab-relations" class="tab-pane">
+            <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="relationSearch" placeholder="Relation durchsuchen..."></div>
+            <div id="relationsTableContainer"></div>
+            <div id="relationsPagination" class="pagination"></div>
+        </div>
+
+        <!-- Tab Person-Gruppen Relationen Management mit Bild -->
+        <div id="tab-groupRelations" class="tab-pane">
+            <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="personGroupSearch" placeholder="Person-Gruppe durchsuchen..."></div>
+            <div id="personGroupTableContainer"></div>
+            <div id="personGroupPaginationControls" class="pagination"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal für Personengruppen -->
+<div id="groupModal" class="modal-overlay"><div class="modal-content"><h3>Personengruppen</h3><div id="modalPersonName"></div><div id="modalGroupList"></div><button id="closeModalBtn" style="margin-top:1rem;">Schließen</button></div></div>
+
+<script>
+    // ---------- API ENDPOINTS ----------
+    const API_PERSON = "http://localhost:5000/kon_person";
+    const API_GROUP = "http://localhost:5000/kon_person_group";
+    const API_PERSON_GROUP_REL = "http://localhost:5000/person_person_group";
+    const API_PERSON_GROUP_RELATIONS = "http://localhost:5000/person_group_relations";
+    const API_ADD_REL = "http://localhost:5000/add_person_group_rel";
+    const API_DELETE_REL = "http://localhost:5000/person_group_rel/delete";
+    const API_PERSON_BILD = "http://localhost:5000/person/bild";
+
+    // ---------- Globale Daten ----------
+    let allPersons = [];
+    let personGroups = [];
+    let groupToPersonIds = new Map();
+    let personToGroupsMap = new Map();
+    let allRelations = [];
+    let filteredRelations = [];
+    let relCurrentPage = 1, relPageSize = 10, relTotalPages = 1;
+    let allPersonGroupRelations = [];
+    let filteredPersonGroupRelations = [];
+    let personGroupCurrentPage = 1, personGroupPageSize = 10, personGroupTotalPages = 1;
+
+    let currentGroupId = null;
+    let filteredPersons = [];
+    let currentPage = 1, pageSize = 20, totalPages = 1;
+    let selectedPersonsSet = new Set();
+    let personImageCache = {};
+
+    let birthTablePersons = [];
+    let birthTableFiltered = [];
+    let birthTablePage = 1, birthTablePageSize = 20;
+    let birthTableSort = { col: "pk", dir: "asc" };
+
+    // ---------- Hilfsfunktionen ----------
+    function escapeHtml(s) { if(!s) return ''; return s.replace(/[&<>]/g, m => m==='&'?'&amp;': m==='<'?'&lt;':'&gt;'); }
+    function parseBirthdate(dateStr) {
+        if(!dateStr) return null;
+        let m = dateStr.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+        if(m) return { year: parseInt(m[1]), month: parseInt(m[2]), day: parseInt(m[3]) };
+        m = dateStr.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+        if(m) return { year: parseInt(m[3]), month: parseInt(m[2]), day: parseInt(m[1]) };
+        return null;
+    }
+    async function fetchPersonMainImage(personId) {
+        if(personImageCache[personId]) return personImageCache[personId];
+        try {
+            const res = await fetch(`${API_PERSON_BILD}/${personId}`);
+            if(!res.ok) return null;
+            const data = await res.json();
+            if(!data || data.length===0) return null;
+            let main = data.find(img=>img.MAIN_BILD===1) || data[0];
+            if(!main?.FILECONTENT) return null;
+            let bytes;
+            if(main.FILECONTENT.data instanceof Array) bytes = new Uint8Array(main.FILECONTENT.data);
+            else if(typeof main.FILECONTENT.data === 'string') bytes = new Uint8Array(atob(main.FILECONTENT.data).split('').map(c=>c.charCodeAt(0)));
+            else return null;
+            const blob = new Blob([bytes], {type:'image/jpeg'});
+            const url = URL.createObjectURL(blob);
+            personImageCache[personId] = url;
+            return url;
+        } catch(e) { return null; }
+    }
+
+    // ---------- Gruppen & Zuordnungen ----------
+    async function loadGroupsAndRelations() {
+        try {
+            const [groupRes, relRes] = await Promise.all([fetch(API_GROUP), fetch(API_PERSON_GROUP_RELATIONS)]);
+            if(groupRes.ok) {
+                let gData = await groupRes.json();
+                personGroups = Array.isArray(gData) ? gData : (gData._embedded?.kon_person_group || []);
+                renderGroupSidebar();
+                populateGroupSelects();
+            }
+            if(relRes.ok) {
+                let rData = await relRes.json();
+                if(rData.success && Array.isArray(rData.data)) {
+                    allPersonGroupRelations = rData.data;
+                    filteredPersonGroupRelations = [...allPersonGroupRelations];
+                    buildMapsFromRelations(allPersonGroupRelations);
+                    renderPersonGroupTable();
+                } else throw new Error("Invalid relation data");
+            }
+        } catch(e) { console.error(e); }
+    }
+    function buildMapsFromRelations(relations) {
+        groupToPersonIds.clear();
+        personToGroupsMap.clear();
+        relations.forEach(rel => {
+            const pid = rel.PK_KON_PERSON;
+            const gid = rel.PK_KON_PERSON_GROUP;
+            if(!pid || !gid) return;
+            if(!groupToPersonIds.has(gid)) groupToPersonIds.set(gid, new Set());
+            groupToPersonIds.get(gid).add(pid);
+            if(!personToGroupsMap.has(pid)) personToGroupsMap.set(pid, []);
+            personToGroupsMap.get(pid).push({
+                groupId: gid,
+                groupName: rel.PERSON_GROUP_NAME || `Gruppe ${gid}`,
+                relationId: rel.PK_REL_KON_PERSON_PERSON_GROUP
+            });
+        });
+    }
+    function renderGroupSidebar() {
+        const search = document.getElementById('groupSearch').value.toLowerCase();
+        let filtered = personGroups.filter(g => g.PERSON_GROUP_NAME?.toLowerCase().includes(search));
+        const container = document.getElementById('groupList');
+        if(!filtered.length) { container.innerHTML = '<li>Keine Gruppen</li>'; return; }
+        let html = '';
+        filtered.forEach(g => {
+            const active = (currentGroupId === g.PK_KON_PERSON_GROUP) ? 'active' : '';
+            html += `<li class="group-item ${active}" data-id="${g.PK_KON_PERSON_GROUP}">${escapeHtml(g.PERSON_GROUP_NAME)} (${g.PK_KON_PERSON_GROUP})</li>`;
+        });
+        container.innerHTML = html;
+        document.querySelectorAll('.group-item').forEach(el => {
+            el.addEventListener('click', () => {
+                currentGroupId = parseInt(el.dataset.id);
+                renderGroupSidebar();
+                loadPersonsForGroup(currentGroupId);
+            });
+        });
+    }
+    function populateGroupSelects() {
+        const selects = ['targetGroupSelect', 'calendarGroupFilter', 'birthTableGroupFilter'];
+        selects.forEach(id => {
+            const sel = document.getElementById(id);
+            if(sel) {
+                sel.innerHTML = '<option value="all">Alle Gruppen</option>' + personGroups.map(g => `<option value="${g.PK_KON_PERSON_GROUP}">${escapeHtml(g.PERSON_GROUP_NAME)}</option>`).join('');
+            }
+        });
+    }
+    async function loadPersonsForGroup(groupId) {
+        const personIds = groupToPersonIds.get(groupId) || new Set();
+        const persons = [];
+        for(let id of personIds) {
+            try {
+                const res = await fetch(`http://localhost:5000/person/${id}`);
+                if(res.ok) {
+                    let pData = await res.json();
+                    if(pData && pData.length) persons.push(pData[0]);
+                }
+            } catch(e) {}
+        }
+        allPersons = persons;
+        filteredPersons = [...persons];
+        currentPage = 1;
+        renderPersonList();
+    }
+    async function fetchAllPersons() {
+        try {
+            const res = await fetch(API_PERSON);
+            const data = await res.json();
+            allPersons = Array.isArray(data) ? data : (data._embedded?.kon_person || []);
+            filteredPersons = [...allPersons];
+            currentPage = 1;
+            renderPersonList();
+        } catch(e) { document.getElementById('personListContainer').innerHTML = '<div class="error">Fehler</div>'; }
+    }
+    async function renderPersonList() {
+        const searchTerm = document.getElementById('personSearch').value.toLowerCase();
+        let data = filteredPersons.filter(p => (p.VORNAME?.toLowerCase().includes(searchTerm) || p.NACHNAME?.toLowerCase().includes(searchTerm) || p.PK_KON_PERSON.toString().includes(searchTerm)));
+        totalPages = Math.ceil(data.length / pageSize);
+        const start = (currentPage-1)*pageSize;
+        const pageData = data.slice(start, start+pageSize);
+        const container = document.getElementById('personListContainer');
+        if(!pageData.length) { container.innerHTML = '<div class="info">Keine Personen</div>'; setupPagination(0); return; }
+        let html = '<div class="person-grid">';
+        for(let p of pageData) {
+            const imgUrl = await fetchPersonMainImage(p.PK_KON_PERSON);
+            const selected = selectedPersonsSet.has(p.PK_KON_PERSON) ? 'selected' : '';
+            html += `<div class="person-card ${selected}" data-id="${p.PK_KON_PERSON}">
+                <div class="card-header"><div class="person-name"><strong>${escapeHtml(p.VORNAME || '')} ${escapeHtml(p.NACHNAME || '')}</strong></div>
+                ${imgUrl ? `<img src="${imgUrl}" class="person-image" onerror="this.style.display='none'">` : '<div class="person-image" style="background:#aaa;">📷</div>'}</div>
+                <div class="person-details"><div class="detail-row"><span class="detail-label">ID:</span> ${p.PK_KON_PERSON}</div>
+                <div class="detail-row"><span class="detail-label">Geburt:</span> ${p.GEBURTSDATUM ? new Date(p.GEBURTSDATUM).toLocaleDateString() : 'N/A'}</div>
+                <button class="show-groups-btn" data-id="${p.PK_KON_PERSON}" data-name="${escapeHtml(p.VORNAME||'')} ${escapeHtml(p.NACHNAME||'')}">Gruppen anzeigen</button></div></div>`;
+        }
+        html += '</div>';
+        container.innerHTML = html;
+        document.querySelectorAll('.person-card').forEach(card => {
+            card.addEventListener('click', (e) => { if(e.target.tagName === 'BUTTON') return; const pid = parseInt(card.dataset.id); if(selectedPersonsSet.has(pid)) selectedPersonsSet.delete(pid); else selectedPersonsSet.add(pid); updateSelectionUI(); renderPersonList(); });
+        });
+        document.querySelectorAll('.show-groups-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => { e.stopPropagation(); const pid = parseInt(btn.dataset.id); const name = btn.dataset.name; showGroupModalForPerson(pid, name); });
+        });
+        setupPagination(data.length);
+    }
+    function setupPagination(total) {
+        const totalPg = Math.ceil(total / pageSize);
+        const controls = document.getElementById('paginationControls');
+        if(totalPg <= 1) { controls.style.display = 'none'; return; }
+        controls.style.display = 'flex';
+        controls.innerHTML = `<button ${currentPage===1?'disabled':''} onclick="changePage(1)">Erste</button>
+                              <button ${currentPage===1?'disabled':''} onclick="changePage(${currentPage-1})">←</button>
+                              <span>${currentPage} / ${totalPg}</span>
+                              <button ${currentPage===totalPg?'disabled':''} onclick="changePage(${currentPage+1})">→</button>
+                              <button ${currentPage===totalPg?'disabled':''} onclick="changePage(${totalPg})">Letzte</button>`;
+    }
+    window.changePage = (p) => { currentPage = p; renderPersonList(); };
+    function updateSelectionUI() {
+        document.getElementById('selectedCount').innerText = selectedPersonsSet.size;
+        document.getElementById('clearSelectionBtn').disabled = selectedPersonsSet.size === 0;
+        const target = document.getElementById('targetGroupSelect').value;
+        document.getElementById('createRelationBtn').disabled = selectedPersonsSet.size === 0 || !target || target === 'all';
+        const listDiv = document.getElementById('selectedPersonsList');
+        if(selectedPersonsSet.size === 0) { listDiv.innerHTML = ''; return; }
+        let items = '';
+        for(let pid of selectedPersonsSet) {
+            const p = allPersons.find(x => x.PK_KON_PERSON == pid);
+            const name = p ? `${p.VORNAME || ''} ${p.NACHNAME || ''}` : `ID ${pid}`;
+            items += `<div>${escapeHtml(name)} <button class="remove-selected" data-id="${pid}" style="background:transparent; color:red; border:none;">✖</button></div>`;
+        }
+        listDiv.innerHTML = items;
+        document.querySelectorAll('.remove-selected').forEach(btn => { btn.addEventListener('click', (e) => { const id = parseInt(btn.dataset.id); selectedPersonsSet.delete(id); updateSelectionUI(); renderPersonList(); }); });
+    }
+    async function createRelations() {
+        const groupId = document.getElementById('targetGroupSelect').value;
+        if(!groupId || groupId === 'all' || selectedPersonsSet.size === 0) return;
+        const statusDiv = document.getElementById('relationStatus');
+        statusDiv.innerText = 'Erstelle...';
+        const promises = Array.from(selectedPersonsSet).map(pid => fetch(API_ADD_REL, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ FK_KON_PERSON: pid, FK_KON_PERSON_GROUP: groupId }) }));
+        const results = await Promise.all(promises);
+        if(results.every(r => r.ok)) {
+            statusDiv.innerHTML = '<span style="color:green;">✔ Erfolgreich</span>';
+            selectedPersonsSet.clear();
+            updateSelectionUI();
+            renderPersonList();
+            await loadGroupsAndRelations();
+            renderPersonGroupTable();
+            renderBirthTable();
+            renderEnhancedCalendar();
+        } else { statusDiv.innerHTML = '<span style="color:red;">Fehler</span>'; }
+        setTimeout(() => statusDiv.innerHTML = '', 2000);
+    }
+    function showGroupModalForPerson(personId, personName) {
+        const modal = document.getElementById('groupModal');
+        document.getElementById('modalPersonName').innerHTML = `<strong>${escapeHtml(personName)}</strong> (ID ${personId})`;
+        const groups = personToGroupsMap.get(personId) || [];
+        let groupHtml = '';
+        if(groups.length === 0) groupHtml = '<span class="info">Keine Gruppen zugeordnet</span>';
+        else groups.forEach(g => { groupHtml += `<div class="group-badge">${escapeHtml(g.groupName)} <button class="delete-group-from-modal" data-relid="${g.relationId}" style="background:none; border:none; color:red; cursor:pointer;">✖</button></div>`; });
+        document.getElementById('modalGroupList').innerHTML = groupHtml;
+        modal.style.display = 'flex';
+        document.querySelectorAll('.delete-group-from-modal').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const relId = parseInt(btn.dataset.relid);
+                if(confirm('Gruppenzuordnung löschen?')) {
+                    const res = await fetch(`${API_DELETE_REL}/${relId}`, { method: 'DELETE' });
+                    if(res.ok) {
+                        await loadGroupsAndRelations();
+                        renderPersonGroupTable();
+                        renderBirthTable();
+                        renderEnhancedCalendar();
+                        renderPersonList();
+                        modal.style.display = 'none';
+                        showGroupModalForPerson(personId, personName);
+                    } else alert('Fehler beim Löschen');
+                }
+            });
+        });
+    }
+
+    // ---------- KALENDER: WOCHEN & MONATE MIT BILDERN (bereits enthalten) ----------
+    function renderWeekWithDays(birthdaysInWeek, weekLabel, startDate, endDate) {
+        const byDay = new Map();
+        birthdaysInWeek.forEach(p => {
+            const key = `${p.birth.month}-${p.birth.day}`;
+            if(!byDay.has(key)) byDay.set(key, { day: p.birth.day, month: p.birth.month, persons: [] });
+            byDay.get(key).persons.push(p);
+        });
+        const sortedDays = Array.from(byDay.values()).sort((a,b) => a.day - b.day);
+        let daysHtml = '<div class="birthday-list">';
+        for(let d of sortedDays) {
+            daysHtml += `<div class="day-group">
+                            <div class="day-header"><span class="day-title">📅 Tag ${d.day}.${d.month}</span><span class="day-count">${d.persons.length} Geburtstage</span></div>
+                            <div class="day-content">${d.persons.map(p => `<div class="birthday-item"><img class="person-avatar" src="${personImageCache[p.PK_KON_PERSON] || ''}" onerror="this.style.display='none'"><div><strong>${escapeHtml(p.VORNAME||'')} ${escapeHtml(p.NACHNAME||'')}</strong><br><small>${p.birth.day}.${p.birth.month}</small></div></div>`).join('')}</div>
+                         </div>`;
+        }
+        if(sortedDays.length === 0) daysHtml += '<div style="padding:0.5rem;">—</div>';
+        daysHtml += '</div>';
+        return `<div class="calendar-card"><div class="card-header">📅 ${weekLabel}</div>${daysHtml}</div>`;
+    }
+    function renderCollapsibleDayGroups(persons, monthDaysCount, monthNumber) {
+        const byDay = new Map();
+        persons.forEach(p => { const day = p.birth.day; if(!byDay.has(day)) byDay.set(day, []); byDay.get(day).push(p); });
+        let daysToShow = Array.from({length: monthDaysCount}, (_, i) => i+1);
+        let html = '<div class="birthday-list">';
+        for(let day of daysToShow) {
+            const dayPersons = byDay.get(day) || [];
+            const count = dayPersons.length;
+            html += `<div class="day-group">
+                        <div class="day-header" data-month="${monthNumber}" data-day="${day}"><span class="day-title">📅 Tag ${day}</span><span class="day-count">${count} Geburtstage</span></div>
+                        <div class="day-content" id="dayContent-${monthNumber}-${day}">${count === 0 ? '<div class="birthday-item">— Keine Geburtstage —</div>' : dayPersons.map(p => `<div class="birthday-item"><img class="person-avatar" src="${personImageCache[p.PK_KON_PERSON] || ''}" onerror="this.style.display='none'"><div><strong>${escapeHtml(p.VORNAME||'')} ${escapeHtml(p.NACHNAME||'')}</strong><br><small>${p.birth.day}.${p.birth.month}.${p.birth.year}</small></div></div>`).join('')}</div>
+                     </div>`;
+        }
+        html += '</div>';
+        return html;
+    }
+    function renderEnhancedCalendar() {
+        const groupId = document.getElementById('calendarGroupFilter').value;
+        let persons = [...allPersons];
+        if(groupId !== 'all') { const pids = groupToPersonIds.get(parseInt(groupId)) || new Set(); persons = persons.filter(p => pids.has(p.PK_KON_PERSON)); }
+        const withBirth = persons.map(p => ({ ...p, birth: parseBirthdate(p.GEBURTSDATUM) })).filter(p => p.birth);
+        const today = new Date(); today.setHours(0,0,0,0);
+        const currentYear = today.getFullYear();
+        const tomorrow = new Date(today); tomorrow.setDate(today.getDate()+1);
+        const yesterday = new Date(today); yesterday.setDate(today.getDate()-1);
+        const isSameMD = (birth, date) => birth.month === date.getMonth()+1 && birth.day === date.getDate();
+        const getByDate = (date) => withBirth.filter(p => isSameMD(p.birth, date));
+        const specialHtml = `<div class="special-days"><div class="calendar-card"><div class="card-header">🎉 HEUTE (${today.getDate()}.${today.getMonth()+1})</div><div class="birthday-list">${renderSimpleList(getByDate(today))}</div></div>
+                             <div class="calendar-card"><div class="card-header">🌅 MORGEN (${tomorrow.getDate()}.${tomorrow.getMonth()+1})</div><div class="birthday-list">${renderSimpleList(getByDate(tomorrow))}</div></div>
+                             <div class="calendar-card"><div class="card-header">⏪ GESTERN (${yesterday.getDate()}.${yesterday.getMonth()+1})</div><div class="birthday-list">${renderSimpleList(getByDate(yesterday))}</div></div></div>`;
+        const startOfWeek = new Date(today); startOfWeek.setDate(today.getDate() - today.getDay() + (today.getDay()===0? -6 : 1));
+        const endOfWeek = new Date(startOfWeek); endOfWeek.setDate(startOfWeek.getDate()+6);
+        const lastWeekStart = new Date(startOfWeek); lastWeekStart.setDate(startOfWeek.getDate()-7);
+        const lastWeekEnd = new Date(lastWeekStart); lastWeekEnd.setDate(lastWeekStart.getDate()+6);
+        function getBirthdaysInRange(start, end) { return withBirth.filter(p => { const testDate = new Date(currentYear, p.birth.month-1, p.birth.day); return testDate >= start && testDate <= end; }); }
+        const weekHtml = `<div class="week-grid">${renderWeekWithDays(getBirthdaysInRange(startOfWeek, endOfWeek), 'DIESE WOCHE', startOfWeek, endOfWeek)}${renderWeekWithDays(getBirthdaysInRange(lastWeekStart, lastWeekEnd), 'LETZTE WOCHE', lastWeekStart, lastWeekEnd)}</div>`;
+        const monthNames = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+        const daysInMonth = (month, year) => new Date(year, month, 0).getDate();
+        const quarters = [[0,1,2], [3,4,5], [6,7,8], [9,10,11]];
+        let quarterHtml = '<h3 style="margin:1.5rem 0 0.8rem 0;">📆 Quartalsübersicht (Tage einklappbar)</h3>';
+        for(let q of quarters) {
+            quarterHtml += `<div class="quarter-row">`;
+            for(let monthIdx of q) {
+                const monthPersons = withBirth.filter(p => p.birth.month === monthIdx+1);
+                const maxDay = daysInMonth(monthIdx+1, currentYear);
+                const isCurrent = (monthIdx+1 === today.getMonth()+1);
+                quarterHtml += `<div class="month-card ${isCurrent ? 'current-month' : ''}">
+                                    <div class="month-header"><span>${monthNames[monthIdx]}</span><span class="month-count">${monthPersons.length}</span></div>
+                                    ${renderCollapsibleDayGroups(monthPersons, maxDay, monthIdx+1)}
+                                </div>`;
+            }
+            quarterHtml += `</div>`;
+        }
+        document.getElementById('enhancedCalendarView').innerHTML = specialHtml + weekHtml + quarterHtml;
+        attachDayToggleEvents();
+        withBirth.slice(0,40).forEach(p => fetchPersonMainImage(p.PK_KON_PERSON));
+    }
+    function renderSimpleList(persons) {
+        if(!persons.length) return '<div style="padding:0.5rem;">—</div>';
+        return persons.map(p => `<div class="birthday-item"><img class="person-avatar" src="${personImageCache[p.PK_KON_PERSON] || ''}" onerror="this.style.display='none'"><div><strong>${escapeHtml(p.VORNAME||'')} ${escapeHtml(p.NACHNAME||'')}</strong><br><small>${p.birth.day}.${p.birth.month}.${p.birth.year}</small></div></div>`).join('');
+    }
+    function attachDayToggleEvents() {
+        document.querySelectorAll('.day-header').forEach(header => {
+            if(header.dataset.listener) return;
+            header.dataset.listener = 'true';
+            header.addEventListener('click', (e) => { e.stopPropagation(); const content = header.nextElementSibling; if(content && content.classList.contains('day-content')) content.classList.toggle('show'); });
+        });
+    }
+    let allDaysExpanded = false;
+    function toggleAllDays() { const contents = document.querySelectorAll('.day-content'); allDaysExpanded = !allDaysExpanded; contents.forEach(c => { if(allDaysExpanded) c.classList.add('show'); else c.classList.remove('show'); }); document.getElementById('toggleAllDaysBtn').innerText = allDaysExpanded ? '🔼 Alle Tage zuklappen' : '🔽 Alle Tage aufklappen'; }
+
+    // ---------- Geburtstagstabelle MIT BILDERN ----------
+    async function renderBirthTable() {
+        const groupFilter = document.getElementById('birthTableGroupFilter').value;
+        let persons = [...allPersons];
+        if(groupFilter !== 'all') { const pids = groupToPersonIds.get(parseInt(groupFilter)) || new Set(); persons = persons.filter(p => pids.has(p.PK_KON_PERSON)); }
+        birthTablePersons = persons.map(p => ({ ...p, birthDateObj: parseBirthdate(p.GEBURTSDATUM) })).filter(p => p.birthDateObj);
+        const col = birthTableSort.col, dir = birthTableSort.dir;
+        birthTablePersons.sort((a,b) => { let va, vb; if(col === 'pk') { va = a.PK_KON_PERSON; vb = b.PK_KON_PERSON; } else if(col === 'vorname') { va = (a.VORNAME||'').toLowerCase(); vb = (b.VORNAME||'').toLowerCase(); } else if(col === 'nachname') { va = (a.NACHNAME||'').toLowerCase(); vb = (b.NACHNAME||'').toLowerCase(); } else { va = a.GEBURTSDATUM || ''; vb = b.GEBURTSDATUM || ''; } if(va < vb) return dir === 'asc' ? -1 : 1; if(va > vb) return dir === 'asc' ? 1 : -1; return 0; });
+        const search = document.getElementById('birthTableSearch').value.toLowerCase();
+        let filtered = birthTablePersons.filter(p => (p.VORNAME||'').toLowerCase().includes(search) || (p.NACHNAME||'').toLowerCase().includes(search) || p.PK_KON_PERSON.toString().includes(search));
+        birthTableFiltered = filtered;
+        const total = filtered.length;
+        const start = (birthTablePage-1)*birthTablePageSize;
+        const pageData = filtered.slice(start, start+birthTablePageSize);
+        const tbody = document.getElementById('birthTableBody');
+        if(!pageData.length) { tbody.innerHTML = '<tr><td colspan="6">Keine Geburtstage</td></tr>'; return; }
+        let rows = '';
+        for(let p of pageData) {
+            const imgUrl = await fetchPersonMainImage(p.PK_KON_PERSON);
+            const birthDisplay = p.GEBURTSDATUM ? new Date(p.GEBURTSDATUM).toLocaleDateString('de-DE') : `${p.birthDateObj.day}.${p.birthDateObj.month}.${p.birthDateObj.year}`;
+            rows += `<tr data-pid="${p.PK_KON_PERSON}" data-name="${escapeHtml(p.VORNAME||'')} ${escapeHtml(p.NACHNAME||'')}" style="cursor:pointer">
+                        <td><img class="table-avatar" src="${imgUrl || ''}" onerror="this.style.display='none'"></td>
+                        <td>${p.PK_KON_PERSON}</td>
+                        <td>${escapeHtml(p.VORNAME||'')}</td>
+                        <td>${escapeHtml(p.NACHNAME||'')}</td>
+                        <td>${birthDisplay}</td>
+                        <td><button class="view-groups-btn" data-pid="${p.PK_KON_PERSON}" data-name="${escapeHtml(p.VORNAME||'')} ${escapeHtml(p.NACHNAME||'')}">Gruppen</button></td>
+                    </tr>`;
+        }
+        tbody.innerHTML = rows;
+        tbody.querySelectorAll('tr').forEach(tr => { tr.addEventListener('click', (e) => { if(e.target.classList.contains('view-groups-btn')) return; const pid = parseInt(tr.dataset.pid); const name = tr.dataset.name; showGroupModalForPerson(pid, name); }); });
+        tbody.querySelectorAll('.view-groups-btn').forEach(btn => { btn.addEventListener('click', (e) => { e.stopPropagation(); const pid = parseInt(btn.dataset.pid); const name = btn.dataset.name; showGroupModalForPerson(pid, name); }); });
+        const totalPages = Math.ceil(total / birthTablePageSize);
+        const pagDiv = document.getElementById('birthTablePagination');
+        pagDiv.innerHTML = `<button ${birthTablePage===1?'disabled':''} onclick="changeBirthPage(1)">Erste</button><button ${birthTablePage===1?'disabled':''} onclick="changeBirthPage(${birthTablePage-1})">←</button><span>${birthTablePage} / ${totalPages}</span><button ${birthTablePage===totalPages?'disabled':''} onclick="changeBirthPage(${birthTablePage+1})">→</button><button ${birthTablePage===totalPages?'disabled':''} onclick="changeBirthPage(${totalPages})">Letzte</button>`;
+    }
+    window.changeBirthPage = (p) => { birthTablePage = p; renderBirthTable(); };
+    function sortBirthTable(col) { if(birthTableSort.col === col) birthTableSort.dir = birthTableSort.dir === 'asc' ? 'desc' : 'asc'; else { birthTableSort.col = col; birthTableSort.dir = 'asc'; } birthTablePage = 1; renderBirthTable(); }
+
+    // ---------- Person-Gruppen Relationen Tabelle (MIT BILDERN) ----------
+    async function renderPersonGroupTable() {
+        const searchTerm = document.getElementById('personGroupSearch')?.value.toLowerCase() || '';
+        let data = allPersonGroupRelations.filter(r => 
+            (r.PK_REL_KON_PERSON_PERSON_GROUP?.toString().includes(searchTerm)) ||
+            (r.VORNAME?.toLowerCase().includes(searchTerm)) ||
+            (r.NACHNAME?.toLowerCase().includes(searchTerm)) ||
+            (r.PERSON_GROUP_NAME?.toLowerCase().includes(searchTerm))
+        );
+        filteredPersonGroupRelations = data;
+        personGroupTotalPages = Math.ceil(data.length / personGroupPageSize);
+        const start = (personGroupCurrentPage-1)*personGroupPageSize;
+        const pageData = data.slice(start, start+personGroupPageSize);
+        const container = document.getElementById('personGroupTableContainer');
+        if(!pageData.length) { container.innerHTML = '<div class="info">Keine Person-Gruppen Relationen gefunden</div>'; document.getElementById('personGroupPaginationControls').innerHTML = ''; return; }
+        let tableHTML = `<table class="person-group-table"><thead><tr><th>Bild</th><th>Person</th><th>Gruppe</th><th>Aktion</th></tr></thead><tbody>`;
+        for(let r of pageData) {
+            const imgUrl = await fetchPersonMainImage(r.PK_KON_PERSON);
+            tableHTML += `<tr>
+                <td><img class="table-avatar" src="${imgUrl || ''}" onerror="this.style.display='none'"></td>
+                <td>${escapeHtml(r.VORNAME||'')} ${escapeHtml(r.NACHNAME||'')} (${r.PK_KON_PERSON})</td>
+                <td>${escapeHtml(r.PERSON_GROUP_NAME)} (${r.PK_KON_PERSON_GROUP})</td>
+                <td><button class="delete-group-relation-btn" data-relid="${r.PK_REL_KON_PERSON_PERSON_GROUP}">Löschen</button></td>
+            </tr>`;
+        }
+        tableHTML += `</tbody></table>`;
+        container.innerHTML = tableHTML;
+        const pagDiv = document.getElementById('personGroupPaginationControls');
+        pagDiv.innerHTML = `<button ${personGroupCurrentPage===1?'disabled':''} onclick="changePersonGroupPage(1)">Erste</button>
+                            <button ${personGroupCurrentPage===1?'disabled':''} onclick="changePersonGroupPage(${personGroupCurrentPage-1})">←</button>
+                            <span>${personGroupCurrentPage} / ${personGroupTotalPages}</span>
+                            <button ${personGroupCurrentPage===personGroupTotalPages?'disabled':''} onclick="changePersonGroupPage(${personGroupCurrentPage+1})">→</button>
+                            <button ${personGroupCurrentPage===personGroupTotalPages?'disabled':''} onclick="changePersonGroupPage(${personGroupTotalPages})">Letzte</button>
+                            <select id="personGroupPageSizeSelect"><option value="10">10</option><option value="25" selected>25</option><option value="50">50</option></select>`;
+        document.getElementById('personGroupPageSizeSelect')?.addEventListener('change', (e) => { personGroupPageSize = parseInt(e.target.value); personGroupCurrentPage = 1; renderPersonGroupTable(); });
+        document.querySelectorAll('.delete-group-relation-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const relId = parseInt(this.dataset.relid);
+                if(confirm('Zuordnung löschen?')) {
+                    const res = await fetch(`${API_DELETE_REL}/${relId}`, { method: 'DELETE' });
+                    if(res.ok) {
+                        await loadGroupsAndRelations();
+                        renderPersonGroupTable();
+                        renderBirthTable();
+                        renderEnhancedCalendar();
+                        renderPersonList();
+                    } else alert('Fehler beim Löschen');
+                }
+            });
+        });
+    }
+    window.changePersonGroupPage = (p) => { personGroupCurrentPage = p; renderPersonGroupTable(); };
+    document.getElementById('personGroupSearch')?.addEventListener('input', () => { personGroupCurrentPage=1; renderPersonGroupTable(); });
+
+    // ---------- Geschäftspartner-Kontakt Relationen MIT BILD ----------
+    async function fetchRelationData() {
+        try {
+            const res = await fetch('http://localhost:5000/geschaeftspartner_kontakt_rel');
+            if(!res.ok) throw new Error();
+            const data = await res.json();
+            if(data.success && Array.isArray(data.data)) {
+                allRelations = data.data;
+                filteredRelations = [...allRelations];
+                relCurrentPage = 1;
+                renderRelationsTable();
+            } else throw new Error();
+        } catch(e) { document.getElementById('relationsTableContainer').innerHTML = '<div class="error">Fehler beim Laden</div>'; }
+    }
+    async function renderRelationsTable() {
+        const search = document.getElementById('relationSearch').value.toLowerCase();
+        let data = allRelations.filter(r => (r.VORNAME?.toLowerCase().includes(search)) || (r.NACHNAME?.toLowerCase().includes(search)) || (r.LOCATION?.toLowerCase().includes(search)));
+        filteredRelations = data;
+        relTotalPages = Math.ceil(data.length / relPageSize);
+        const start = (relCurrentPage-1)*relPageSize;
+        const pageData = data.slice(start, start+relPageSize);
+        const container = document.getElementById('relationsTableContainer');
+        if(!pageData.length) { container.innerHTML = '<div class="info">Keine Relationen</div>'; return; }
+        let html = `<table class="relations-table"><thead><tr><th>Bild</th><th>Person</th><th>Location</th><th>Organisation</th><th>Kontakt ID</th></tr></thead><tbody>`;
+        for(let r of pageData) {
+            const imgUrl = await fetchPersonMainImage(r.PK_KON_PERSON);
+            html += `<tr>
+                <td><img class="table-avatar" src="${imgUrl || ''}" onerror="this.style.display='none'"></td>
+                <td>${escapeHtml(r.VORNAME||'')} ${escapeHtml(r.NACHNAME||'')}</td>
+                <td>${escapeHtml(r.LOCATION||'')}</td>
+                <td>${escapeHtml(r.ORG_UNIT_NAME||'')}</td>
+                <td>${r.PK_KON_KONTAKT||''}</td>
+            </tr>`;
+        }
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+        const pagDiv = document.getElementById('relationsPagination');
+        pagDiv.innerHTML = `<button ${relCurrentPage===1?'disabled':''} onclick="changeRelPage(1)">Erste</button>
+                            <button ${relCurrentPage===1?'disabled':''} onclick="changeRelPage(${relCurrentPage-1})">←</button>
+                            <span>${relCurrentPage} / ${relTotalPages}</span>
+                            <button ${relCurrentPage===relTotalPages?'disabled':''} onclick="changeRelPage(${relCurrentPage+1})">→</button>
+                            <button ${relCurrentPage===relTotalPages?'disabled':''} onclick="changeRelPage(${relTotalPages})">Letzte</button>`;
+    }
+    window.changeRelPage = (p) => { relCurrentPage = p; renderRelationsTable(); };
+    document.getElementById('relationSearch').addEventListener('input', () => { relCurrentPage=1; renderRelationsTable(); });
+
+    // ---------- Event Listener & Initialisierung ----------
+    document.getElementById('allPersonsBtn').onclick = () => { currentGroupId = null; fetchAllPersons(); renderGroupSidebar(); };
+    document.getElementById('personSearch').addEventListener('input', () => { currentPage=1; renderPersonList(); });
+    document.getElementById('groupSearch').addEventListener('input', () => renderGroupSidebar());
+    document.getElementById('clearSelectionBtn').onclick = () => { selectedPersonsSet.clear(); updateSelectionUI(); renderPersonList(); };
+    document.getElementById('createRelationBtn').onclick = createRelations;
+    document.getElementById('targetGroupSelect').onchange = () => updateSelectionUI();
+    document.getElementById('calendarGroupFilter').onchange = () => { renderEnhancedCalendar(); allDaysExpanded = false; document.getElementById('toggleAllDaysBtn').innerText = '🔽 Alle Tage aufklappen'; };
+    document.getElementById('birthTableGroupFilter').onchange = () => { birthTablePage=1; renderBirthTable(); };
+    document.getElementById('birthTableSearch').addEventListener('input', () => { birthTablePage=1; renderBirthTable(); });
+    document.getElementById('toggleAllDaysBtn').onclick = toggleAllDays;
+    document.getElementById('closeModalBtn').onclick = () => document.getElementById('groupModal').style.display = 'none';
+    window.onclick = (e) => { if(e.target === document.getElementById('groupModal')) document.getElementById('groupModal').style.display = 'none'; };
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const tab = btn.dataset.tab;
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            if(tab === 'calendar') { renderEnhancedCalendar(); allDaysExpanded = false; document.getElementById('toggleAllDaysBtn').innerText = '🔽 Alle Tage aufklappen'; }
+            if(tab === 'birthTable') renderBirthTable();
+            if(tab === 'relations') renderRelationsTable();
+            if(tab === 'groupRelations') renderPersonGroupTable();
+            if(tab === 'persons') renderPersonList();
+        });
+    });
+    document.querySelector('#birthTableBody')?.parentElement?.querySelectorAll('th').forEach((th, idx) => { if(idx >=1 && idx <=4) th.style.cursor = 'pointer'; th.onclick = () => { if(idx ===1) sortBirthTable('pk'); if(idx===2) sortBirthTable('vorname'); if(idx===3) sortBirthTable('nachname'); if(idx===4) sortBirthTable('birthdate'); }; });
+
+    async function init() {
+        await loadGroupsAndRelations();
+        await fetchAllPersons();
+        await fetchRelationData();
+        renderEnhancedCalendar();
+        renderBirthTable();
+        renderPersonGroupTable();
+    }
+    init();
+</script>
+</body>
+</html>

@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Bahn Europa Dashboard | Live Train Connections</title>
+    <!-- Chart.js CDN for beautiful diagrams -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- Font Awesome Icons (free) for better dashboard visuals -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, sans-serif;
+        }
+
+        body {
+            background: #f4f7fc;
+            padding: 2rem 1.5rem;
+            color: #1e2a3a;
+        }
+
+        .dashboard-container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* header */
+        .header {
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #0b2b3b, #1e5a6b);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header h1 i {
+            background: none;
+            color: #1e5a6b;
+            font-size: 2rem;
+        }
+
+        .sub {
+            color: #2c5a6e;
+            margin-top: 6px;
+            border-left: 4px solid #2c9b77;
+            padding-left: 12px;
+            font-weight: 500;
+        }
+
+        /* stats cards row */
+        .stats-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            flex: 1 1 200px;
+            background: white;
+            border-radius: 28px;
+            padding: 1.2rem 1rem;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.03), 0 2px 6px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s ease;
+            border: 1px solid #e2edf2;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .stat-icon {
+            font-size: 1.8rem;
+            color: #2c9b77;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            color: #5f7f8c;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #0b2b3b;
+            line-height: 1.2;
+        }
+
+        .stat-unit {
+            font-size: 0.9rem;
+            font-weight: normal;
+            color: #5f7f8c;
+        }
+
+        /* dashboard double panel: chart + controls */
+        .insight-panel {
+            background: white;
+            border-radius: 28px;
+            padding: 1.5rem 1.8rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
+            border: 1px solid #e0edf2;
+        }
+
+        .chart-header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.2rem;
+            gap: 1rem;
+        }
+
+        .chart-header h3 {
+            font-weight: 700;
+            font-size: 1.3rem;
+            color: #1a4b5e;
+        }
+
+        .chart-selector {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #f0f5f8;
+            padding: 6px 16px;
+            border-radius: 60px;
+        }
+
+        .chart-selector label {
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        select {
+            background: white;
+            border: 1px solid #cbdde4;
+            border-radius: 40px;
+            padding: 6px 14px;
+            font-weight: 500;
+            cursor: pointer;
+            outline: none;
+        }
+
+        canvas {
+            max-height: 320px;
+            width: 100%;
+        }
+
+        /* search bar */
+        .search-section {
+            background: white;
+            border-radius: 40px;
+            padding: 0.6rem 1.2rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+            border: 1px solid #e2edf2;
+        }
+
+        .search-section i {
+            font-size: 1.2rem;
+            color: #5f8d9e;
+        }
+
+        #searchInput {
+            flex: 1;
+            border: none;
+            padding: 12px 0;
+            font-size: 1rem;
+            background: transparent;
+            outline: none;
+        }
+
+        .table-wrapper {
+            background: white;
+            border-radius: 24px;
+            overflow-x: auto;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e6f0f4;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        th {
+            background: #eef3f7;
+            padding: 1rem 1rem;
+            text-align: left;
+            font-weight: 700;
+            color: #1f5063;
+            border-bottom: 1px solid #d4e2e9;
+            position: sticky;
+            top: 0;
+        }
+
+        td {
+            padding: 0.9rem 1rem;
+            border-bottom: 1px solid #ecf3f7;
+            color: #1f3846;
+        }
+
+        tr:hover td {
+            background-color: #f9fdfe;
+        }
+
+        .empty-row td {
+            text-align: center;
+            padding: 2rem;
+            color: #7699aa;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            background: white;
+            border-radius: 28px;
+            font-size: 1.2rem;
+            color: #2c9b77;
+        }
+
+        .error-message {
+            background: #fff0f0;
+            border-left: 6px solid #e07c7c;
+            padding: 1.2rem;
+            border-radius: 20px;
+            margin: 1rem 0;
+            color: #ab3e3e;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 0.75rem;
+            color: #6f97a8;
+        }
+
+        @media (max-width: 760px) {
+            body {
+                padding: 1rem;
+            }
+            th, td {
+                padding: 0.7rem 0.8rem;
+            }
+            .stat-value {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard-container">
+    <div class="header">
+        <h1><i class="fas fa-train"></i> Bahn Europa · Live Explorer</h1>
+        <div class="sub">Real-time European rail connections · interactive dashboard & charts</div>
+    </div>
+
+    <!-- Dashboard Cards (dynamic stats) -->
+    <div class="stats-grid" id="statsGrid">
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-chart-line"></i></div><div class="stat-label">Total Connections</div><div class="stat-value" id="totalCount">—</div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-map-marker-alt"></i></div><div class="stat-label">Unique Destinations</div><div class="stat-value" id="uniqueDest">—</div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-clock"></i></div><div class="stat-label">Avg. Duration (min)</div><div class="stat-value" id="avgDuration">—<span class="stat-unit"> min</span></div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-building"></i></div><div class="stat-label">Operators / Lines</div><div class="stat-value" id="uniqueOperators">—</div></div>
+    </div>
+
+    <!-- Diagrams & Dashboard View: bar chart + categorical selector -->
+    <div class="insight-panel">
+        <div class="chart-header">
+            <h3><i class="fas fa-chart-bar"></i>  Top connections frequency</h3>
+            <div class="chart-selector">
+                <label><i class="fas fa-layer-group"></i> Chart by:</label>
+                <select id="categorySelect"></select>
+            </div>
+        </div>
+        <canvas id="connectionsChart" width="400" height="200" style="max-height: 280px; width:100%"></canvas>
+        <p class="sub" style="margin-top: 12px; font-size:0.75rem;"><i class="fas fa-chart-simple"></i> Bar chart: top 7 values by occurrence (global data)</p>
+    </div>
+
+    <!-- Searchable table section -->
+    <div class="search-section">
+        <i class="fas fa-search"></i>
+        <input type="text" id="searchInput" placeholder="Search in table — train, station, time, operator, any field..." autocomplete="off">
+    </div>
+    <div class="table-wrapper">
+        <table id="dataTable">
+            <thead id="tableHeader">
+            <tr><th>Loading data from localhost:5000/bahn_europa ...</th></tr>
+            </thead>
+            <tbody id="tableBody">
+            <tr><td colspan="10" class="loading"><i class="fas fa-spinner fa-pulse"></i> Fetching European rail data</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <footer>
+        <i class="fas fa-database"></i> Source: http://localhost:5000/bahn_europa · Dashboard updates from live webservice
+    </footer>
+</div>
+
+<script>
+    // ---------- GLOBALS ----------
+    let fullDataset = [];             // original unfiltered data from API
+    let currentFilteredData = [];    // after search
+    let chartInstance = null;         // Chart.js instance
+    let tableColumns = [];            // dynamic column names from first record
+
+    // Helper: safe string conversion for table cell (handles objects / null)
+    function formatCellValue(value) {
+        if (value === null || value === undefined) return '—';
+        if (typeof value === 'object') {
+            try {
+                return JSON.stringify(value);
+            } catch(e) {
+                return '[complex]';
+            }
+        }
+        return String(value);
+    }
+
+    // Extract numeric field (duration) from possible field names in dataset
+    // Looks for 'duration', 'duration_minutes', 'travel_time', 'durationMin'
+    function extractNumericDuration(row) {
+        const possibleKeys = ['duration_minutes', 'duration', 'travel_time_min', 'durationMin', 'time_minutes'];
+        for (let key of possibleKeys) {
+            if (row.hasOwnProperty(key) && !isNaN(parseFloat(row[key])) && isFinite(row[key])) {
+                return parseFloat(row[key]);
+            }
+        }
+        // fallback: check if any field containing 'duration' or 'min' string? not needed
+        return null;
+    }
+
+    // dynamic dashboard metrics from fullDataset
+    function updateDashboardMetrics(data) {
+        if (!data || data.length === 0) {
+            document.getElementById('totalCount').innerText = '0';
+            document.getElementById('uniqueDest').innerText = '—';
+            document.getElementById('avgDuration').innerHTML = '—<span class="stat-unit"> min</span>';
+            document.getElementById('uniqueOperators').innerText = '—';
+            return;
+        }
+
+        const total = data.length;
+        document.getElementById('totalCount').innerText = total;
+
+        // 1) unique destinations: try common keys: 'to', 'destination', 'arrival_station', 'arrival'
+        let destSet = new Set();
+        data.forEach(row => {
+            let destVal = row.to ?? row.destination ?? row.arrival_station ?? row.arrivalCity ?? row.toStation ?? null;
+            if (!destVal && typeof row === 'object') {
+                // fallback: any key with 'to' or 'dest' (case-insensitive)
+                const keys = Object.keys(row);
+                const destKey = keys.find(k => k.toLowerCase().includes('to') || k.toLowerCase().includes('dest'));
+                if (destKey) destVal = row[destKey];
+            }
+            if (destVal) destSet.add(String(destVal).trim());
+        });
+        const uniqueDestinations = destSet.size > 0 ? destSet.size : '—';
+        document.getElementById('uniqueDest').innerText = uniqueDestinations === '—' ? '—' : uniqueDestinations;
+
+        // 2) average duration (numeric)
+        let durations = [];
+        data.forEach(row => {
+            let dur = extractNumericDuration(row);
+            if (dur !== null && !isNaN(dur)) durations.push(dur);
+        });
+        if (durations.length > 0) {
+            let avg = durations.reduce((a,b) => a + b, 0) / durations.length;
+            document.getElementById('avgDuration').innerHTML = Math.round(avg) + '<span class="stat-unit"> min</span>';
+        } else {
+            document.getElementById('avgDuration').innerHTML = '—<span class="stat-unit"> min</span>';
+        }
+
+        // 3) unique operators / lines: keys like 'operator', 'company', 'train_operator', 'carrier'
+        let operatorSet = new Set();
+        data.forEach(row => {
+            let op = row.operator ?? row.company ?? row.trainOperator ?? row.carrier ?? null;
+            if (!op) {
+                const keys = Object.keys(row);
+                const opKey = keys.find(k => k.toLowerCase().includes('operator') || k.toLowerCase().includes('company') || k.toLowerCase().includes('carrier'));
+                if (opKey) op = row[opKey];
+            }
+            if (op) operatorSet.add(String(op).trim());
+        });
+        const uniqueOps = operatorSet.size > 0 ? operatorSet.size : '—';
+        document.getElementById('uniqueOperators').innerText = uniqueOps;
+    }
+
+    // Build table header and body based on filtered data (currentFilteredData)
+    function renderTable(data, columns) {
+        const thead = document.getElementById('tableHeader');
+        const tbody = document.getElementById('tableBody');
+        if (!data.length) {
+            thead.innerHTML = '<tr><th>No records</th></tr>';
+            tbody.innerHTML = '<tr><td colspan="20" class="empty-row"><i class="fas fa-info-circle"></i> No train connections found for this search</td></tr>';
+            return;
+        }
+
+        // columns (already computed from full dataset)
+        thead.innerHTML = `<tr>${columns.map(col => `<th>${escapeHtml(col)}</th>`).join('')}</tr>`;
+
+        const rowsHtml = data.map(row => {
+            return `<tr>${columns.map(col => {
+                let val = row[col];
+                let display = formatCellValue(val);
+                return `<td>${escapeHtml(display)}</td>`;
+            }).join('')}</tr>`;
+        }).join('');
+        tbody.innerHTML = rowsHtml;
+    }
+
+    // simple escape to prevent injection
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+            return c;
+        });
+    }
+
+    // filter data based on search term (global text match across all columns)
+    function filterDataBySearch(searchTerm, originalData, columns) {
+        if (!searchTerm.trim()) return [...originalData];
+        const term = searchTerm.trim().toLowerCase();
+        return originalData.filter(row => {
+            // combine all column values into one string and test
+            for (let col of columns) {
+                let val = row[col];
+                let strVal = formatCellValue(val).toLowerCase();
+                if (strVal.includes(term)) return true;
+            }
+            return false;
+        });
+    }
+
+    // Update UI: table + search integration
+    function updateTableAndSearch() {
+        const searchInput = document.getElementById('searchInput');
+        const searchTerm = searchInput.value;
+        currentFilteredData = filterDataBySearch(searchTerm, fullDataset, tableColumns);
+        renderTable(currentFilteredData, tableColumns);
+    }
+
+    // ---- Chart logic (based on FULL dataset) ----
+    function populateCategoryDropdown(data, columns) {
+        const selectEl = document.getElementById('categorySelect');
+        selectEl.innerHTML = '';
+        if (!data.length || !columns.length) {
+            selectEl.innerHTML = '<option>— No data —</option>';
+            return;
+        }
+        // determine best categorical candidates: prefer 'to', 'from', 'destination', 'operator', 'train' fields
+        const preferred = ['to', 'destination', 'from', 'origin', 'operator', 'company', 'train_type', 'train_number', 'category'];
+        let orderedColumns = [];
+        for (let pref of preferred) {
+            if (columns.includes(pref) && !orderedColumns.includes(pref)) orderedColumns.push(pref);
+        }
+        // then add all other columns not in preferred but keep as string-based
+        columns.forEach(col => {
+            if (!orderedColumns.includes(col)) orderedColumns.push(col);
+        });
+        for (let col of orderedColumns) {
+            const option = document.createElement('option');
+            option.value = col;
+            option.textContent = col.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+            selectEl.appendChild(option);
+        }
+        // set default sensible selection: first preferred or first column
+        if (orderedColumns.includes('to')) selectEl.value = 'to';
+        else if (orderedColumns.includes('destination')) selectEl.value = 'destination';
+        else if (orderedColumns.includes('from')) selectEl.value = 'from';
+        else if (orderedColumns.includes('operator')) selectEl.value = 'operator';
+        else selectEl.value = orderedColumns[0];
+    }
+
+    // Build frequency map for given category (column name) across full dataset
+    function getCategoryFrequencies(data, categoryColumn) {
+        const freqMap = new Map();
+        for (let row of data) {
+            let val = row[categoryColumn];
+            if (val === undefined || val === null) val = 'Not specified';
+            let key = String(val).trim();
+            if (key === '') key = 'Empty';
+            freqMap.set(key, (freqMap.get(key) || 0) + 1);
+        }
+        // sort descending and take top 7
+        const sorted = Array.from(freqMap.entries()).sort((a,b) => b[1] - a[1]);
+        const top = sorted.slice(0, 7);
+        const labels = top.map(item => item[0].length > 22 ? item[0].slice(0,20)+'…' : item[0]);
+        const counts = top.map(item => item[1]);
+        return { labels, counts };
+    }
+
+    function renderChart(data, categoryColumn) {
+        const ctx = document.getElementById('connectionsChart').getContext('2d');
+        if (chartInstance) {
+            chartInstance.destroy();
+        }
+        if (!data || data.length === 0) {
+            // empty chart
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: ['No data'], datasets: [{ label: 'Connections', data: [0], backgroundColor: '#bdd4df' }] },
+                options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top' } } }
+            });
+            return;
+        }
+        const { labels, counts } = getCategoryFrequencies(data, categoryColumn);
+        if (labels.length === 0) {
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: ['No valid categories'], datasets: [{ label: 'Frequency', data: [0] }] }
+            });
+            return;
+        }
+        chartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: `Number of connections (by ${categoryColumn.replace(/_/g, ' ')})`,
+                    data: counts,
+                    backgroundColor: '#389e7e',
+                    borderRadius: 8,
+                    barPercentage: 0.7,
+                    categoryPercentage: 0.85,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { position: 'top', labels: { font: { size: 12 } } },
+                    tooltip: { callbacks: { label: (ctx) => `${ctx.raw} connection(s)` } }
+                },
+                scales: {
+                    y: { beginAtZero: true, title: { display: true, text: 'Frequency', font: { weight: 'bold' } }, grid: { color: '#e9ecef' } },
+                    x: { ticks: { autoSkip: true, maxRotation: 25 }, title: { display: true, text: 'Category values', font: { weight: 'bold' } } }
+                }
+            }
+        });
+    }
+
+    // auto-refresh chart when dropdown changes
+    function attachChartEvents() {
+        const selectEl = document.getElementById('categorySelect');
+        if (selectEl) {
+            selectEl.addEventListener('change', (e) => {
+                if (fullDataset.length) {
+                    renderChart(fullDataset, e.target.value);
+                }
+            });
+        }
+    }
+
+    // ----- Extract all column names from array of objects (union of keys) - robust for dynamic schemas
+    function getAllColumnsFromData(data) {
+        if (!data.length) return [];
+        const keySet = new Set();
+        data.forEach(item => {
+            Object.keys(item).forEach(k => keySet.add(k));
+        });
+        // optionally filter out very nested heavy keys? keep all
+        return Array.from(keySet);
+    }
+
+    // ----- MAIN FETCH & INITIALIZATION -----
+    async function fetchBahnData() {
+        const tableBody = document.getElementById('tableBody');
+        const theadRow = document.getElementById('tableHeader');
+        try {
+            // Show loading state in table
+            theadRow.innerHTML = '<tr><th>⏳ Connecting to backend...</th></tr>';
+            tableBody.innerHTML = '<tr><td colspan="10" class="loading"><i class="fas fa-spinner fa-pulse"></i> Requesting http://localhost:5000/bahn_europa</td></tr>';
+
+            const response = await fetch('http://localhost:5000/bahn_europa', {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' },
+                // credentials: 'omit' // CORS handled by backend if needed
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+            }
+            const result = await response.json();
+            // expected: either an array of connections or object with data field
+            let dataArray = null;
+            if (Array.isArray(result)) {
+                dataArray = result;
+            } else if (result.data && Array.isArray(result.data)) {
+                dataArray = result.data;
+            } else if (result.connections && Array.isArray(result.connections)) {
+                dataArray = result.connections;
+            } else if (result.results && Array.isArray(result.results)) {
+                dataArray = result.results;
+            } else {
+                // fallback: try to detect any array property
+                const possibleArray = Object.values(result).find(v => Array.isArray(v) && v.length > 0);
+                if (possibleArray) dataArray = possibleArray;
+                else throw new Error('Response is not an array and no array field found');
+            }
+            if (!dataArray || dataArray.length === 0) {
+                throw new Error('Webservice returned empty dataset');
+            }
+            fullDataset = dataArray;
+            // compute table columns from full dataset union of keys
+            tableColumns = getAllColumnsFromData(fullDataset);
+            if (tableColumns.length === 0) throw new Error('No columns extracted');
+            // initial search & table rendering
+            currentFilteredData = [...fullDataset];
+            renderTable(currentFilteredData, tableColumns);
+            // update dashboard metrics (based on original fullDataset)
+            updateDashboardMetrics(fullDataset);
+            // populate category dropdown for chart (based on columns)
+            populateCategoryDropdown(fullDataset, tableColumns);
+            // render chart with first valid category
+            let defaultCategory = document.getElementById('categorySelect').value;
+            if (!defaultCategory && tableColumns.length) defaultCategory = tableColumns[0];
+            if (defaultCategory) renderChart(fullDataset, defaultCategory);
+            else renderChart(fullDataset, tableColumns[0]);
+            attachChartEvents();
+            // listen search input
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', () => {
+                updateTableAndSearch();
+            });
+        } catch (err) {
+            console.error('Fetch error:', err);
+            const thead = document.getElementById('tableHeader');
+            const tbody = document.getElementById('tableBody');
+            thead.innerHTML = '<tr><th>⚠️ Connection Error</th></tr>';
+            tbody.innerHTML = `<tr><td colspan="10" class="error-message">
+                <i class="fas fa-exclamation-triangle"></i> Failed to fetch from http://localhost:5000/bahn_europa <br>
+                <strong>Error:</strong> ${escapeHtml(err.message)}<br>
+                Make sure the backend service is running and CORS allows requests from this origin.
+                </td></tr>`;
+            // fallback: show empty state on dashboard stats
+            fullDataset = [];
+            updateDashboardMetrics([]);
+            const selectEl = document.getElementById('categorySelect');
+            if (selectEl) selectEl.innerHTML = '<option>No data</option>';
+            if (chartInstance) chartInstance.destroy();
+        }
+    }
+
+    // start application
+    fetchBahnData();
+</script>
+</body>
+</html>

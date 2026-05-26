@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Sozialökonomischer Atlas | Erweiterte Webservice-Daten</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, system-ui, sans-serif; }
+        body { background: #eef2f5; padding: 2rem 1.5rem; color: #1a2c3e; }
+        .dashboard { max-width: 1600px; margin: 0 auto; }
+        .header { margin-bottom: 2rem; }
+        .header h1 { font-size: 1.9rem; font-weight: 700; background: linear-gradient(135deg, #1f5e6e, #2b8c6e); background-clip: text; -webkit-background-clip: text; color: transparent; display: inline-flex; align-items: center; gap: 12px; }
+        .subhead { color: #2c6a5c; margin-top: 6px; border-left: 4px solid #2c9b77; padding-left: 14px; font-weight: 500; }
+        .global-stats { display: flex; flex-wrap: wrap; gap: 1.2rem; margin-bottom: 2rem; }
+        .global-card { background: white; border-radius: 28px; padding: 1rem 1.4rem; flex: 1 1 160px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); border: 1px solid #dee9ef; transition: 0.2s; }
+        .global-card .label { font-size: 0.7rem; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; color: #5f8b9c; }
+        .global-card .value { font-size: 1.7rem; font-weight: 800; color: #1f5e6e; line-height: 1.2; }
+        .chart-panel { background: white; border-radius: 28px; padding: 1.4rem 1.8rem; margin-bottom: 2rem; box-shadow: 0 6px 14px rgba(0,0,0,0.03); border: 1px solid #e0ecf2; }
+        .chart-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; gap: 1rem; }
+        .chart-header h3 { font-weight: 700; font-size: 1.25rem; color: #1a4b5e; margin: 0; }
+        .metric-buttons { display: flex; flex-wrap: wrap; gap: 8px; background: #f4fafd; border-radius: 48px; padding: 5px 10px; align-items: center; }
+        .metric-btn { background: white; border: 1px solid #cbdde4; border-radius: 40px; padding: 6px 18px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; color: #2c6a5c; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+        .metric-btn i { margin-right: 6px; font-size: 0.8rem; }
+        .metric-btn:hover { background: #e8f3f0; border-color: #2c9b77; transform: translateY(-1px); }
+        .metric-btn.active { background: #2c9b77; border-color: #2c9b77; color: white; box-shadow: 0 4px 8px rgba(44,155,119,0.2); }
+        canvas { max-height: 320px; width: 100%; }
+        .table-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; margin: 1rem 0 1rem 0; }
+        .search-box { background: white; border-radius: 60px; padding: 0.4rem 1rem; display: flex; align-items: center; gap: 10px; border: 1px solid #cfdfe8; }
+        .search-box input { border: none; padding: 8px 0; font-size: 0.9rem; width: 220px; background: transparent; outline: none; }
+        .table-wrapper { background: white; border-radius: 24px; overflow-x: auto; box-shadow: 0 4px 16px rgba(0,0,0,0.05); border: 1px solid #e2edf2; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.75rem; min-width: 1350px; }
+        th { background: #eef3f7; padding: 1rem 0.8rem; text-align: left; font-weight: 700; color: #1a5b6e; border-bottom: 1px solid #d4e2e9; position: sticky; top: 0; }
+        td { padding: 0.85rem 0.8rem; border-bottom: 1px solid #ecf3f7; color: #1f3b48; cursor: pointer; white-space: nowrap; }
+        tr:hover td { background-color: #f4fbfe; }
+        .empty-row td { text-align: center; padding: 2rem; color: #7fa2b2; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: white; max-width: 680px; width: 90%; border-radius: 36px; padding: 1.6rem 2rem; box-shadow: 0 20px 35px rgba(0,0,0,0.2); position: relative; animation: fadeIn 0.2s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+        .modal-content h3 { font-size: 1.6rem; margin-bottom: 1rem; border-left: 5px solid #2c9b77; padding-left: 16px; }
+        .modal-details { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; margin: 1rem 0; max-height: 60vh; overflow-y: auto; }
+        .detail-item { border-bottom: 1px dashed #e2eef4; padding: 5px 0; }
+        .detail-label { font-weight: 700; color: #1f5e6e; font-size: 0.7rem; text-transform: uppercase; }
+        .detail-value { font-weight: 600; font-size: 0.9rem; word-break: break-word; }
+        .close-modal { background: #2c9b77; border: none; color: white; padding: 10px 20px; border-radius: 40px; font-weight: bold; cursor: pointer; margin-top: 12px; width: 100%; }
+        .error-banner { background: #ffe6e5; border-left: 5px solid #d9534f; padding: 12px 18px; border-radius: 20px; margin-bottom: 1.5rem; color: #a94442; }
+        footer { margin-top: 2rem; text-align: center; font-size: 0.7rem; color: #6a90a0; }
+        .loading { text-align: center; padding: 3rem; color: #2c9b77; }
+        @media (max-width: 760px) { body { padding: 1rem; } .global-card .value { font-size: 1.2rem; } th, td { padding: 0.6rem 0.4rem; font-size: 0.7rem; } .metric-buttons { justify-content: center; } .chart-header { flex-direction: column; align-items: stretch; } }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <div class="header">
+        <h1><i class="fas fa-chart-line"></i> Sozialökonomischer Atlas</h1>
+        <div class="subhead"><i class="fas fa-globe-europe"></i> Live-Daten aus Webservice | Kaufkraft, Kosten, Sozialfaktoren & erweiterte Metriken</div>
+    </div>
+
+    <!-- Globale Sozialfaktor-Karten -->
+    <div class="global-stats" id="globalStatsContainer">
+        <div class="global-card"><div class="label"><i class="fas fa-spinner fa-pulse"></i> Laden</div><div class="value">---</div></div>
+    </div>
+
+    <!-- Diagrammbereich mit BUTTON-LEISTE statt Dropdown -->
+    <div class="chart-panel">
+        <div class="chart-header">
+            <h3><i class="fas fa-chart-bar"></i> Indikatoren pro Land</h3>
+            <div class="metric-buttons" id="metricButtonsContainer">
+                <!-- Dynamisch generierte Buttons (Inline) -->
+            </div>
+        </div>
+        <canvas id="countryChart" width="400" height="200" style="max-height: 290px;"></canvas>
+    </div>
+
+    <!-- Such- und Tabellenbereich (NEUE SPALTE: BEISPIELBASISPREIS_49) -->
+    <div class="table-header">
+        <h3><i class="fas fa-table-list"></i> Länderübersicht (klickbar) – erweiterte Daten</h3>
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="tableSearch" placeholder="Land filtern ..." autocomplete="off">
+        </div>
+    </div>
+    <div class="table-wrapper">
+        <table id="countryTable">
+            <thead id="tableHead">
+                <tr>
+                    <th>Land</th><th>Kaufkraftindex</th><th>Kostenindex</th><th>Beispielpreis_63</th><th>Preis_Basis</th>
+                    <th>Pendler (€)</th><th>Schüler (€)</th><th>Rentner (€)</th><th>Arbeitslose (€)</th><th>Touristen (€)</th>
+                    <th>SozFaktor_Pendler</th><th>SozFaktor_Schüler</th><th>SozFaktor_Arbeitslose</th><th>SozFaktor_Touristen</th><th>SozFaktor_Rentner</th>
+                    <th>BEISPIELBASISPREIS_49</th>
+                    <th>BEMERKUNG1</th><th>BEMERKUNG2</th><th>SOZIALFAKTOR</th><th>BEISPIELPREISE_SOZIALFAKTOREN</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr><td colspan="20" class="loading"><i class="fas fa-cloud-download-alt"></i> Lade Webservice-Daten ...</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <footer><i class="fas fa-database"></i> Datenquelle: Webservice (API_URL) • Klick auf Zeile → Detail-Popup • Neue Spalte: BEISPIELBASISPREIS_49 • Metriken als Buttons</footer>
+</div>
+
+<!-- Modal Popup (zeigt nun auch BEISPIELBASISPREIS_49 an) -->
+<div id="detailModal" class="modal">
+    <div class="modal-content">
+        <h3 id="modalCountry">🌍 Länderdetails</h3>
+        <div id="modalDetails" class="modal-details"></div>
+        <button class="close-modal" id="closeModalBtn"><i class="fas fa-xmark"></i> Schließen</button>
+    </div>
+</div>
+
+<script>
+    // ======================== WEBSERVICE KONFIGURATION ========================
+    const API_URL = "http://localhost:5000/bahn_europa";   // Bitte an echten Endpunkt anpassen
+    const USE_FALLBACK_ON_ERROR = true;   // Fallback-Demo-Daten bei Fehler
+    
+    let rawData = [];           
+    let filteredData = [];      
+    let currentChart = null;
+    let currentMetricKey = "kaufkraftIndex";  // Globale aktive Metrik
+    
+    // ======================== METRIK-DEFINITION (für Buttons + Chart) ========================
+    const metricsCatalog = [
+        { key: 'kaufkraftIndex', label: '📊 Kaufkraftindex', unit: 'Index' },
+        { key: 'kostenIndex', label: '💰 Kostenindex', unit: 'Index' },
+        { key: 'beispielPreis63', label: '🍽️ Beispielpreis_63', unit: '€' },
+        { key: 'preisBasis', label: '🏷️ Preis Basis', unit: '€' },
+        { key: 'preisPendler', label: '🚆 Pendler (€)', unit: '€' },
+        { key: 'preisSchueler', label: '🎓 Schüler (€)', unit: '€' },
+        { key: 'preisRentner', label: '🧓 Rentner (€)', unit: '€' },
+        { key: 'preisArbeitslose', label: '⚖️ Arbeitslose (€)', unit: '€' },
+        { key: 'preisTouristen', label: '🌍 Touristen (€)', unit: '€' },
+        { key: 'beispielBasispreis49', label: '⭐ BEISPIELBASISPREIS_49', unit: '€' }
+    ];
+    
+    // ======================== HILFSFUNKTION: Flexibles Feld-Extraktor ========================
+    function getField(obj, defaultValue = null, ...keys) {
+        for (let key of keys) {
+            if (obj[key] !== undefined && obj[key] !== null) return obj[key];
+            const lowerKey = key.toLowerCase();
+            for (let prop in obj) {
+                if (prop.toLowerCase() === lowerKey) return obj[prop];
+            }
+        }
+        return defaultValue;
+    }
+    
+    function toFloat(val, def = 0) {
+        let num = parseFloat(val);
+        return isNaN(num) ? def : num;
+    }
+    
+    // Normalisiert API-Daten in einheitliches Format inkl. neuer Felder
+    function normalizeCountryRecord(record) {
+        const land = getField(record, "Unbekannt", "land", "country", "name", "Land") || "Unbekannt";
+        
+        const kaufkraftIndex = toFloat(getField(record, 100, "kaufkraftIndex", "kaufkraft_index", "purchasingPower"));
+        const kostenIndex = toFloat(getField(record, 100, "kostenIndex", "kosten_index", "costIndex"));
+        const beispielPreis63 = toFloat(getField(record, 0, "beispielPreis63", "beispielpreis_63", "examplePrice63"));
+        const preisBasis = toFloat(getField(record, 0, "preisBasis", "preis_basis", "basisPrice", "BEISPIELPREISE_SOZIALFAKTOREN_BASIS"));
+        const preisPendler = toFloat(getField(record, 0, "preisPendler", "preis_pendler", "BEISPIELPREISE_SOZIALFAKTOREN_PENDLER"));
+        const preisSchueler = toFloat(getField(record, 0, "preisSchueler", "preis_schueler", "BEISPIELPREISE_SOZIALFAKTOREN_SCHUELER"));
+        const preisArbeitslose = toFloat(getField(record, 0, "preisArbeitslose", "preis_arbeitslose", "BEISPIELPREISE_SOZIALFAKTOREN_ARBEITSLOSE"));
+        const preisTouristen = toFloat(getField(record, 0, "preisTouristen", "preis_touristen", "BEISPIELPREISE_SOZIALFAKTOREN_TOURISTEN"));
+        const preisRentner = toFloat(getField(record, 0, "preisRentner", "preis_rentner", "BEISPIELPREISE_SOZIALFAKTOR_RENTNER"));
+        
+        const sozialfaktorPendler = toFloat(getField(record, 1.0, "sozialfaktorPendler", "sozialfaktor_pendler", "socialFactorPendler"));
+        const sozialfaktorSchueler = toFloat(getField(record, 1.0, "sozialfaktorSchueler", "sozialfaktor_schueler", "socialFactorSchueler"));
+        const sozialfaktorArbeitslose = toFloat(getField(record, 1.0, "sozialfaktorArbeitslose", "sozialfaktor_arbeitslose", "socialFactorArbeitslose"));
+        const sozialfaktorTouristen = toFloat(getField(record, 1.0, "sozialfaktorTouristen", "sozialfaktor_touristen", "socialFactorTouristen"));
+        const sozialfaktorRentner = toFloat(getField(record, 1.0, "sozialfaktorRentner", "sozialfaktor_rentner", "socialFactorRentner"));
+        
+        let beispielBasispreis49 = getField(record, null, "BEISPIELBASISPREIS_49", "beispielBasispreis49", "exampleBasePrice49", "basispreis49", "BEISPIELBASISPREIS49");
+        if (beispielBasispreis49 !== null) {
+            beispielBasispreis49 = toFloat(beispielBasispreis49, 0);
+        } else {
+            beispielBasispreis49 = 0;
+        }
+        
+        let bemerkung1 = getField(record, "", "BEMERKUNG1", "bemerkung1", "remark1", "annotation1", "notiz1");
+        if (bemerkung1 === "" && record["BEMERKUNG1"] === undefined) bemerkung1 = getField(record, "", "bemerkung_1", "Bemerkung1");
+        
+        let bemerkung2 = getField(record, "", "BEMERKUNG2", "bemerkung2", "remark2", "annotation2", "notiz2");
+        if (bemerkung2 === "" && record["BEMERKUNG2"] === undefined) bemerkung2 = getField(record, "", "bemerkung_2");
+        
+        let sozialfaktor = getField(record, "", "SOZIALFAKTOR", "sozialfaktor", "socialFactor", "generalSocialFactor");
+        if (sozialfaktor === "") sozialfaktor = getField(record, "", "sozial_faktor", "sozFaktor");
+        
+        let beispielpreise_sozialfaktor = getField(record, "", "BEISPIELPREISE_SOZIALFAKTOREN", "beispielpreise_sozialfaktor", "examplePricesSocialFactor", "sozialfaktorPreisBeispiel");
+        if (beispielpreise_sozialfaktor === "") beispielpreise_sozialfaktor = getField(record, "", "beispielpreise_sozialfaktoren", "exampleSocialPrices");
+        if (!isNaN(parseFloat(beispielpreise_sozialfaktor)) && isFinite(beispielpreise_sozialfaktor)) {
+            beispielpreise_sozialfaktor = `${parseFloat(beispielpreise_sozialfaktor).toFixed(2)} €`;
+        }
+        
+        return {
+            land, kaufkraftIndex, kostenIndex,  beispielBasispreis49, beispielPreis63, preisBasis,
+            preisPendler, preisSchueler, preisArbeitslose, preisTouristen, preisRentner,
+            sozialfaktorPendler, sozialfaktorSchueler, sozialfaktorArbeitslose, sozialfaktorTouristen, sozialfaktorRentner,
+            bemerkung1: bemerkung1 || "—",
+            bemerkung2: bemerkung2 || "—",
+            sozialfaktor: sozialfaktor || "—",
+            beispielpreise_sozialfaktor: beispielpreise_sozialfaktor || "—"
+        };
+    }
+    
+    // Globale Durchschnitte der Sozialfaktoren
+    function computeGlobalSocialAverages(data) {
+        if (!data.length) return { pendler:0, schueler:0, arbeitslose:0, touristen:0, rentner:0 };
+        let sum = { pendler:0, schueler:0, arbeitslose:0, touristen:0, rentner:0 };
+        data.forEach(c => {
+            sum.pendler += c.sozialfaktorPendler;
+            sum.schueler += c.sozialfaktorSchueler;
+            sum.arbeitslose += c.sozialfaktorArbeitslose;
+            sum.touristen += c.sozialfaktorTouristen;
+            sum.rentner += c.sozialfaktorRentner;
+        });
+        const n = data.length;
+        return {
+            pendler: (sum.pendler / n).toFixed(2),
+            schueler: (sum.schueler / n).toFixed(2),
+            arbeitslose: (sum.arbeitslose / n).toFixed(2),
+            touristen: (sum.touristen / n).toFixed(2),
+            rentner: (sum.rentner / n).toFixed(2)
+        };
+    }
+    
+    function renderGlobalCards(data) {
+        const avg = computeGlobalSocialAverages(data);
+        const container = document.getElementById('globalStatsContainer');
+        container.innerHTML = `
+            <div class="global-card"><div class="label"><i class="fas fa-users"></i> SOZIALFAKTOR PENDLER</div><div class="value">${avg.pendler}</div><div class="unit">Ø (global)</div></div>
+            <div class="global-card"><div class="label"><i class="fas fa-graduation-cap"></i> SOZIALFAKTOR SCHÜLER</div><div class="value">${avg.schueler}</div><div class="unit">Ø Index</div></div>
+            <div class="global-card"><div class="label"><i class="fas fa-home"></i> SOZIALFAKTOR RENTNER</div><div class="value">${avg.rentner}</div><div class="unit">Ø Index</div></div>
+            <div class="global-card"><div class="label"><i class="fas fa-briefcase"></i> SOZIALFAKTOR ARBEITSLOSE</div><div class="value">${avg.arbeitslose}</div><div class="unit">Ø Index</div></div>
+            <div class="global-card"><div class="label"><i class="fas fa-umbrella-beach"></i> SOZIALFAKTOR TOURISTEN</div><div class="value">${avg.touristen}</div><div class="unit">Ø Index</div></div>
+        `;
+    }
+    
+    // Tabelle rendern inkl. NEUER SPALTE BEISPIELBASISPREIS_49
+    function renderTable() {
+        const tbody = document.getElementById('tableBody');
+        if (!filteredData.length) {
+            tbody.innerHTML = `<tr><td colspan="20" class="empty-row"><i class="fas fa-search-minus"></i> Keine Länder gefunden</td></tr>`;
+            return;
+        }
+        let html = '';
+        filteredData
+             .sort((a, b) => a.land.localeCompare(b.land))
+            .forEach(c => {
+            html += `<tr data-country="${c.land.replace(/"/g, '&quot;')}">
+                        <td><i class="fas fa-flag"></i> ${c.land}</td>
+                        <td>${c.kaufkraftIndex}</td>
+                        <td>${c.kostenIndex}</td>
+                        <td>${c.beispielBasispreis49.toFixed(2)} €</td>
+                        <td>${c.beispielPreis63.toFixed(2)} €</td>
+                        <td>${c.preisBasis.toFixed(2)} €</td>
+                        <td>${c.preisPendler.toFixed(2)} €</td>
+                        <td>${c.preisSchueler.toFixed(2)} €</td>
+                        <td>${c.preisArbeitslose.toFixed(2)} €</td>
+                        <td>${c.preisTouristen.toFixed(2)} €</td>
+                        <td>${c.preisRentner.toFixed(2)} €</td>
+                        <td>${c.sozialfaktorPendler.toFixed(2)}</td>
+                        <td>${c.sozialfaktorSchueler.toFixed(2)}</td>
+                        <td>${c.sozialfaktorArbeitslose.toFixed(2)}</td>
+                        <td>${c.sozialfaktorTouristen.toFixed(2)}</td>
+                        <td>${c.sozialfaktorRentner.toFixed(2)}</td>
+                        <td title="${escapeHtml(c.bemerkung1)}">${truncate(c.bemerkung1, 28)}</td>
+                        <td title="${escapeHtml(c.bemerkung2)}">${truncate(c.bemerkung2, 28)}</td>
+                        <td>${c.sozialfaktor}</td>
+                        <td title="${escapeHtml(c.beispielpreise_sozialfaktor)}">${truncate(c.beispielpreise_sozialfaktor, 30)}</td>
+                      </tr>`;
+        });
+        tbody.innerHTML = html;
+        document.querySelectorAll('#tableBody tr').forEach(row => {
+            row.addEventListener('click', () => {
+                const countryName = row.getAttribute('data-country');
+                const country = filteredData.find(c => c.land === countryName);
+                if (country) openModal(country);
+            });
+        });
+    }
+    
+    function escapeHtml(str) { if(!str) return ''; return String(str).replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+    function truncate(str, len) { if(!str) return '—'; if(str.length <= len) return str; return str.substring(0, len-2)+'…'; }
+    
+    function openModal(country) {
+        const modal = document.getElementById('detailModal');
+        const modalCountry = document.getElementById('modalCountry');
+        const modalDetails = document.getElementById('modalDetails');
+        modalCountry.innerHTML = `<i class="fas fa-chart-line"></i> ${country.land} – vollständige Kennzahlen & erweiterte Felder`;
+        modalDetails.innerHTML = `
+            <div class="detail-item"><div class="detail-label">Kaufkraftindex</div><div class="detail-value">${country.kaufkraftIndex}</div></div>
+            <div class="detail-item"><div class="detail-label">Kostenindex</div><div class="detail-value">${country.kostenIndex}</div></div>
+            <div class="detail-item"><div class="detail-label">💰 BEISPIELBASISPREIS_49</div><div class="detail-value">${country.beispielBasispreis49.toFixed(2)} €</div></div>
+            <div class="detail-item"><div class="detail-label">Beispielpreis_63</div><div class="detail-value">${country.beispielPreis63.toFixed(2)} €</div></div>
+            <div class="detail-item"><div class="detail-label" style="color:red">Preis Sozialfaktor BASIS</div><div class="detail-value">${country.preisBasis.toFixed(2)} €</div></div>
+            <div class="detail-item"><div class="detail-label" style="color:red">Preis PENDLER</div><div class="detail-value">${country.preisPendler.toFixed(2)} €</div></div>
+            <div class="detail-item"><div class="detail-label" style="color:red">Preis SCHÜLER</div><div class="detail-value">${country.preisSchueler.toFixed(2)} €</div></div>
+            <div class="detail-item"><div class="detail-label" style="color:red">Preis RENTNER</div><div class="detail-value">${country.preisRentner.toFixed(2)} €</div></div>
+            <div class="detail-item"><div class="detail-label" style="color:red">Preis ARBEITSLOSE</div><div class="detail-value">${country.preisArbeitslose.toFixed(2)} €</div></div>
+            <div class="detail-item"><div class="detail-label" style="color:red">Preis TOURISTEN</div><div class="detail-value">${country.preisTouristen.toFixed(2)} €</div></div>
+
+            <div class="detail-item"><div class="detail-label">SOZIALFAKTOR PENDLER</div><div class="detail-value">${country.sozialfaktorPendler.toFixed(3)}</div></div>
+            <div class="detail-item"><div class="detail-label">SOZIALFAKTOR SCHÜLER</div><div class="detail-value">${country.sozialfaktorSchueler.toFixed(3)}</div></div>
+            <div class="detail-item"><div class="detail-label">SOZIALFAKTOR RENTNER</div><div class="detail-value">${country.sozialfaktorRentner.toFixed(3)}</div></div>
+            <div class="detail-item"><div class="detail-label">SOZIALFAKTOR ARBEITSLOSE</div><div class="detail-value">${country.sozialfaktorArbeitslose.toFixed(3)}</div></div>
+            <div class="detail-item"><div class="detail-label">SOZIALFAKTOR TOURISTEN</div><div class="detail-value">${country.sozialfaktorTouristen.toFixed(3)}</div></div>
+            <div class="detail-item"><div class="detail-label">📝 BEMERKUNG 1</div><div class="detail-value">${escapeHtml(country.bemerkung1)}</div></div>
+            <div class="detail-item"><div class="detail-label">📝 BEMERKUNG 2</div><div class="detail-value">${escapeHtml(country.bemerkung2)}</div></div>
+            <div class="detail-item"><div class="detail-label">⚙️ SOZIALFAKTOR (generell)</div><div class="detail-value">${escapeHtml(country.sozialfaktor)}</div></div>
+            <div class="detail-item"><div class="detail-label">🏷️ BEISPIELPREISE SOZIALFAKTOREN</div><div class="detail-value">${escapeHtml(country.beispielpreise_sozialfaktor)}</div></div>
+        `;
+        modal.style.display = 'flex';
+    }
+    
+    // Diagramm update basierend auf currentMetricKey (oder übergebenem key)
+    function updateChart(metricKey) {
+        const ctx = document.getElementById('countryChart').getContext('2d');
+        if (currentChart) currentChart.destroy();
+        if (!filteredData.length) return;
+        
+        const labels = filteredData.map(c => c.land);
+        let values = [], yLabel = '';
+        const metricDef = metricsCatalog.find(m => m.key === metricKey);
+        let displayLabel = metricDef ? metricDef.label : metricKey;
+        
+        switch(metricKey) {
+            case 'kaufkraftIndex': values = filteredData.map(c => c.kaufkraftIndex); yLabel = 'Kaufkraftindex (Index)'; break;
+            case 'kostenIndex': values = filteredData.map(c => c.kostenIndex); yLabel = 'Kostenindex (Index)'; break;
+            case 'beispielPreis63': values = filteredData.map(c => c.beispielPreis63); yLabel = 'Beispielpreis_63 (€)'; break;
+            case 'preisBasis': values = filteredData.map(c => c.preisBasis); yLabel = 'Preis Basis (€)'; break;
+            case 'preisPendler': values = filteredData.map(c => c.preisPendler); yLabel = 'Preis Pendler (€)'; break;
+            case 'preisSchueler': values = filteredData.map(c => c.preisSchueler); yLabel = 'Preis Schüler (€)'; break;
+            case 'preisArbeitslose': values = filteredData.map(c => c.preisArbeitslose); yLabel = 'Preis Arbeitslose (€)'; break;
+            case 'preisTouristen': values = filteredData.map(c => c.preisTouristen); yLabel = 'Preis Touristen (€)'; break;
+            case 'preisRentner': values = filteredData.map(c => c.preisRentner); yLabel = 'Preis Rentner (€)'; break;
+            case 'beispielBasispreis49': values = filteredData.map(c => c.beispielBasispreis49); yLabel = 'Beispielbasispreis_49 (€)'; break;
+            default: values = filteredData.map(c => c.kaufkraftIndex); yLabel = 'Kaufkraftindex';
+        }
+        
+        currentChart = new Chart(ctx, {
+            type: 'bar',
+            data: { labels, datasets: [{ label: yLabel, data: values, backgroundColor: '#389e7e', borderRadius: 8, barPercentage: 0.65 }] },
+            options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => `${ctx.raw} ${yLabel.includes('€') ? '€' : ''}` } } }, scales: { y: { beginAtZero: true, title: { display: true, text: yLabel } }, x: { ticks: { autoSkip: true, maxRotation: 35 } } } }
+        });
+    }
+    
+    // BUTTONS inline generieren (ersetzen das Dropdown)
+    function buildMetricButtons() {
+        const container = document.getElementById('metricButtonsContainer');
+        if (!container) return;
+        container.innerHTML = '';
+        metricsCatalog.forEach(metric => {
+            const btn = document.createElement('button');
+            btn.className = `metric-btn ${currentMetricKey === metric.key ? 'active' : ''}`;
+            btn.innerHTML = `<i class="fas fa-chart-simple"></i> ${metric.label}`;
+            btn.setAttribute('data-metric', metric.key);
+            btn.addEventListener('click', () => {
+                // Aktualisiere aktive Metrik
+                currentMetricKey = metric.key;
+                // Aktualisiere aktive Button-Klasse
+                document.querySelectorAll('.metric-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                // Diagramm neu zeichnen
+                updateChart(currentMetricKey);
+            });
+            container.appendChild(btn);
+        });
+    }
+    
+    function filterTable(searchTerm) {
+        const term = searchTerm.trim().toLowerCase();
+        filteredData = term ? rawData.filter(c => c.land.toLowerCase().includes(term)) : [...rawData];
+        renderTable();
+        // Diagramm mit aktueller Metrik aktualisieren
+        updateChart(currentMetricKey);
+        renderGlobalCards(rawData);
+    }
+    
+    // Mock-Daten mit BEISPIELBASISPREIS_49 und allen sozialen Feldern
+    function getMockData() {
+        return [
+            { land: "Deutschland", kaufkraftIndex:112, kostenIndex:101, beispielPreis63:4.25, preisBasis:3.90, preisPendler:3.45, preisSchueler:2.95, preisArbeitslose:2.50, preisTouristen:4.80, preisRentner:3.20, sozialfaktorPendler:0.92, sozialfaktorSchueler:0.78, sozialfaktorArbeitslose:0.65, sozialfaktorTouristen:1.22, sozialfaktorRentner:0.85, BEISPIELBASISPREIS_49:3.75, BEMERKUNG1:"Starke Wirtschaft", BEMERKUNG2:"Hohe Kaufkraft", SOZIALFAKTOR:"0.89", BEISPIELPREISE_SOZIALFAKTOREN:"Durchschnitt 3,20 €" },
+            { land: "Frankreich", kaufkraftIndex:104, kostenIndex:107, beispielPreis63:4.60, preisBasis:4.20, preisPendler:3.85, preisSchueler:3.20, preisArbeitslose:2.70, preisTouristen:5.10, preisRentner:3.55, sozialfaktorPendler:0.88, sozialfaktorSchueler:0.75, sozialfaktorArbeitslose:0.62, sozialfaktorTouristen:1.18, sozialfaktorRentner:0.82, BEISPIELBASISPREIS_49:4.10, BEMERKUNG1:"Ausgebaute Sozialhilfen", BEMERKUNG2:"Regionale Unterschiede", SOZIALFAKTOR:"0.85", BEISPIELPREISE_SOZIALFAKTOREN:"Paris höher" },
+            { land: "Italien", kaufkraftIndex:96, kostenIndex:98, beispielPreis63:3.95, preisBasis:3.60, preisPendler:3.20, preisSchueler:2.70, preisArbeitslose:2.20, preisTouristen:4.50, preisRentner:2.90, sozialfaktorPendler:0.85, sozialfaktorSchueler:0.72, sozialfaktorArbeitslose:0.58, sozialfaktorTouristen:1.15, sozialfaktorRentner:0.78, BEISPIELBASISPREIS_49:3.45, BEMERKUNG1:"Süd-Nord-Gefälle", BEMERKUNG2:"Tourismus geprägt", SOZIALFAKTOR:"0.78", BEISPIELPREISE_SOZIALFAKTOREN:"günstige Regionen" },
+            { land: "Spanien", kaufkraftIndex:90, kostenIndex:92, beispielPreis63:3.50, preisBasis:3.20, preisPendler:2.85, preisSchueler:2.30, preisArbeitslose:1.95, preisTouristen:4.20, preisRentner:2.60, sozialfaktorPendler:0.82, sozialfaktorSchueler:0.69, sozialfaktorArbeitslose:0.55, sozialfaktorTouristen:1.12, sozialfaktorRentner:0.74, BEISPIELBASISPREIS_49:3.10, BEMERKUNG1:"Hohe Arbeitslosenquote", BEMERKUNG2:"Tourismus stark", SOZIALFAKTOR:"0.72", BEISPIELPREISE_SOZIALFAKTOREN:"Küstenzuschläge" },
+            { land: "Polen", kaufkraftIndex:75, kostenIndex:68, beispielPreis63:2.45, preisBasis:2.20, preisPendler:1.95, preisSchueler:1.60, preisArbeitslose:1.30, preisTouristen:3.10, preisRentner:1.80, sozialfaktorPendler:0.76, sozialfaktorSchueler:0.62, sozialfaktorArbeitslose:0.48, sozialfaktorTouristen:1.05, sozialfaktorRentner:0.68, BEISPIELBASISPREIS_49:2.25, BEMERKUNG1:"Aufholende Wirtschaft", BEMERKUNG2:"günstige Lebenshaltung", SOZIALFAKTOR:"0.63", BEISPIELPREISE_SOZIALFAKTOREN:"Niedrigpreisniveau" }
+        ];
+    }
+    
+    // Hauptladefunktion
+    async function loadData() {
+        const tbody = document.getElementById('tableBody');
+        try {
+            const response = await fetch(API_URL, { headers: { 'Accept': 'application/json' } });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            let json = await response.json();
+            let records = Array.isArray(json) ? json : (json.data || json.records || []);
+            if (!records.length) throw new Error("Leere Antwort");
+            rawData = records.map(r => normalizeCountryRecord(r));
+        } catch (err) {
+            console.warn("Webservice-Fehler:", err);
+            if (USE_FALLBACK_ON_ERROR) {
+                tbody.innerHTML = '<tr><td colspan="20" class="empty-row"><i class="fas fa-exclamation-triangle"></i> Webservice nicht erreichbar – Zeige Fallback-Daten mit neuer Spalte</td></tr>';
+                const mockRecords = getMockData();
+                rawData = mockRecords.map(r => normalizeCountryRecord(r));
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-banner';
+                errorDiv.innerHTML = `<i class="fas fa-plug"></i> Webservice (${API_URL}) nicht erreichbar. Verwende Demo-Daten inkl. BEISPIELBASISPREIS_49, BEMERKUNGEN, SOZIALFAKTOR & BEISPIELPREISE. Bitte API-URL anpassen.`;
+                document.querySelector('.dashboard').prepend(errorDiv);
+            } else {
+                throw err;
+            }
+        }
+        filteredData = [...rawData];
+        renderTable();
+        renderGlobalCards(rawData);
+        // Buttons bauen (statt Dropdown)
+        buildMetricButtons();
+        // Standardmäßig Chart mit Kaufkraftindex zeichnen
+        updateChart(currentMetricKey);
+        const searchInput = document.getElementById('tableSearch');
+        searchInput.addEventListener('input', (e) => filterTable(e.target.value));
+        const modal = document.getElementById('detailModal');
+        document.getElementById('closeModalBtn').addEventListener('click', () => modal.style.display = 'none');
+        window.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
+    }
+    
+    loadData();
+</script>
+</body>
+</html>
