@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fragen Karten System</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            color: #2c3e50;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+        
+        .header-subtitle {
+            font-size: 14px;
+            opacity: 0.8;
+            text-align: center;
+        }
+        
+        .content-area {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+        }
+        
+        .selection-panel {
+            flex: 0 0 300px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            height: fit-content;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .questions-list-panel {
+            flex: 0 0 350px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .cards-container {
+            flex: 1;
+            position: relative;
+            min-height: 600px;
+            border-radius: 20px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .cards-stack {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            min-height: 500px;
+            perspective: 1000px;
+            flex: 1;
+        }
+        
+        .question-card {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1),
+                        opacity 0.4s ease;
+            cursor: grab;
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .question-card:active {
+            cursor: grabbing;
+        }
+        
+        .question-card.active {
+            transform: translateX(0) scale(1) rotate(0deg);
+            z-index: 10;
+            opacity: 1;
+        }
+        
+        .question-card.previous {
+            transform: translateX(-80%) scale(0.9) rotate(-5deg);
+            z-index: 5;
+            opacity: 0.7;
+        }
+        
+        .question-card.next {
+            transform: translateX(80%) scale(0.9) rotate(5deg);
+            z-index: 5;
+            opacity: 0.7;
+        }
+        
+        .question-card.far-left {
+            transform: translateX(-120%) scale(0.8) rotate(-10deg);
+            z-index: 1;
+            opacity: 0.3;
+        }
+        
+        .question-card.far-right {
+            transform: translateX(120%) scale(0.8) rotate(10deg);
+            z-index: 1;
+            opacity: 0.3;
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(52, 152, 219, 0.3);
+        }
+        
+        .question-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: #3498db;
+            background: rgba(52, 152, 219, 0.1);
+            padding: 8px 16px;
+            border-radius: 10px;
+        }
+        
+        .question-counter {
+            font-size: 14px;
+            color: #7f8c8d;
+            font-weight: 600;
+        }
+        
+        .question-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 20px 0;
+        }
+        
+        .question-text {
+            font-size: 18px;
+            line-height: 1.6;
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 1px solid rgba(236, 240, 241, 0.8);
+        }
+        
+        .question-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .status-completed { background-color: #2ecc71; }
+        .status-pending { background-color: #f39c12; }
+        .status-not-started { background-color: #e74c3c; }
+        
+        .question-id {
+            font-size: 12px;
+            color: #bdc3c7;
+            font-family: monospace;
+        }
+        
+        .navigation-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .nav-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 50px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .nav-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+        }
+        
+        .nav-btn:disabled {
+            background: #bdc3c7;
+            transform: none;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .action-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .mark-correct {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+        }
+        
+        .mark-incorrect {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+        
+        .mark-neutral {
+            background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+            color: white;
+        }
+        
+        .show-solution {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            color: white;
+        }
+        
+        .action-btn.active {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .panel-title {
+            font-size: 18px;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #34495e;
+            font-size: 14px;
+        }
+        
+        select {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            background-color: #f9f9f9;
+            transition: all 0.3s;
+        }
+        
+        select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+        }
+        
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .refresh-btn {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+            transition: all 0.3s;
+            width: 100%;
+        }
+        
+        .refresh-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(155, 89, 182, 0.3);
+        }
+        
+        .random-btn {
+            background: linear-gradient(135deg, #e67e22, #d35400);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+            transition: all 0.3s;
+            width: 100%;
+        }
+        
+        .random-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(230, 126, 34, 0.3);
+        }
+        
+        .random-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        .no-questions {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 18px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .swipe-hint {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            margin-top: 10px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+        
+        .marking-status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            display: none;
+            text-align: center;
+        }
+        
+        .marking-status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .marking-status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        /* Neue Styles für Navigationspunkte */
+        .navigation-dots {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        
+        .navigation-dot {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            font-size: 14px;
+        }
+        
+        .navigation-dot:hover {
+            transform: scale(1.1);
+            background: rgba(255, 255, 255, 0.9);
+        }
+        
+        .navigation-dot.active {
+            background: #3498db;
+            color: white;
+            transform: scale(1.1);
+            box-shadow: 0 4px 10px rgba(52, 152, 219, 0.4);
+        }
+        
+        .navigation-dot.completed {
+            background: #2ecc71;
+            color: white;
+        }
+        
+        .navigation-dot.pending {
+            background: #f39c12;
+            color: white;
+        }
+        
+        .navigation-dot.random-selected {
+            box-shadow: 0 0 0 3px #e67e22;
+            animation: pulse-dot 1.5s infinite;
+        }
+        
+        @keyframes pulse-dot {
+            0% { box-shadow: 0 0 0 0 rgba(230, 126, 34, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(230, 126, 34, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(230, 126, 34, 0); }
+        }
+        
+        /* Neue Styles für Lösungsanzeige */
+        .solution-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            display: none;
+        }
+        
+        .solution-header {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(52, 152, 219, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .solution-content {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #2c3e50;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            transition: background-color 0.3s;
+        }
+        
+        .solution-content.correct {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+        
+        .solution-placeholder {
+            color: #7f8c8d;
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .solution-loading {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+        }
+        
+        .navigation-extended {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        
+        .extended-nav-btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 12px;
+        }
+        
+        .extended-nav-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(149, 165, 166, 0.3);
+        }
+        
+        .extended-nav-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        /* Neue Styles für Fragenliste */
+        .search-container {
+            margin-bottom: 15px;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            background-color: #f9f9f9;
+            transition: all 0.3s;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+        
+        .questions-container {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+        
+        .questions-group {
+            margin-bottom: 15px;
+        }
+        
+        .group-header {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .group-count {
+            background-color: rgba(255, 255, 255, 0.3);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+        
+        .question-item {
+            padding: 10px 12px;
+            margin-bottom: 5px;
+            background-color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid #3498db;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .question-item:hover {
+            background-color: #e3f2fd;
+            transform: translateX(3px);
+        }
+        
+        .question-item.active {
+            background-color: #bbdefb;
+            border-left: 3px solid #1565c0;
+            font-weight: 600;
+        }
+        
+        .question-item-text {
+            flex: 1;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        .question-item-nr {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-right: 8px;
+        }
+        
+        .question-item-status {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-left: 8px;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        
+        .questions-info {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 10px;
+            text-align: center;
+        }
+        
+        @media (max-width: 1200px) {
+            .content-area {
+                flex-direction: column;
+            }
+            
+            .selection-panel, .questions-list-panel {
+                flex: 1;
+            }
+            
+            .cards-container {
+                min-height: 400px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .question-card {
+                padding: 20px;
+            }
+            
+            .question-text {
+                font-size: 16px;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .action-btn {
+                justify-content: center;
+            }
+            
+            .navigation-controls {
+                flex-wrap: wrap;
+            }
+            
+            .navigation-dots {
+                max-height: 80px;
+            }
+            
+            .navigation-dot {
+                width: 35px;
+                height: 35px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Fragen Karten System</h1>
+            <div class="header-subtitle">Durchsuchbare Fragenliste mit Karten-Navigation</div>
+        </header>
+        
+        <div class="content-area">
+            <div class="selection-panel">
+                <h2 class="panel-title">Auswahl</h2>
+                
+                <div class="form-group">
+                    <label for="lehrgangSelect">Lehrgang auswählen:</label>
+                    <select id="lehrgangSelect">
+                        <option value="">Bitte Lehrgang wählen...</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="einsendeaufgabeSelect">Einsendeaufgabe auswählen:</label>
+                    <select id="einsendeaufgabeSelect" disabled>
+                        <option value="">Bitte zuerst einen Lehrgang wählen</option>
+                    </select>
+                </div>
+                
+                <div class="loading" id="loadingMain">Lade Daten...</div>
+                <div class="error" id="errorMain"></div>
+                <div class="success" id="successMain"></div>
+                
+                <button class="refresh-btn" id="refreshButton">Daten neu laden</button>
+                <button class="random-btn" id="randomQuestionButton" disabled>Zufällige Frage</button>
+                <div class="marking-status" id="markingStatus"></div>
+            </div>
+            
+            <div class="questions-list-panel">
+                <h2 class="panel-title">Fragenliste</h2>
+                
+                <div class="search-container">
+                    <input type="text" id="searchInput" class="search-input" placeholder="Fragen durchsuchen..." disabled>
+                </div>
+                
+                <div class="questions-container" id="questionsContainer">
+                    <div class="no-results">Bitte wählen Sie eine Einsendeaufgabe aus</div>
+                </div>
+                
+                <div class="questions-info" id="questionsInfo"></div>
+            </div>
+            
+            <div class="cards-container">
+                <div class="navigation-dots" id="navigationDots"></div>
+                
+                <div class="navigation-extended">
+                    <button id="firstQuestionBtn" class="extended-nav-btn" disabled>⏮️ Erste Frage</button>
+                    <button id="lastQuestionBtn" class="extended-nav-btn" disabled>⏭️ Letzte Frage</button>
+                </div>
+                
+                <div class="cards-stack" id="cardsStack">
+                    <div class="no-questions" id="noQuestions">
+                        Bitte wählen Sie eine Einsendeaufgabe, um Fragen anzuzeigen
+                    </div>
+                    <!-- Question cards will be inserted here dynamically -->
+                </div>
+                
+                <div class="navigation-controls">
+                    <button id="prevQuestionBtn" class="nav-btn" disabled>
+                        ← Vorherige
+                    </button>
+                    <button id="nextQuestionBtn" class="nav-btn" disabled>
+                        Nächste →
+                    </button>
+                </div>
+                
+                <div class="action-buttons">
+                    <button id="markCorrectBtn" class="action-btn mark-correct" disabled>
+                        ✓ Korrekt
+                    </button>
+                    <button id="markIncorrectBtn" class="action-btn mark-incorrect" disabled>
+                        ✗ Inkorrekt
+                    </button>
+                    <button id="markNeutralBtn" class="action-btn mark-neutral" disabled>
+                        ◯ Neutral
+                    </button>
+                    <button id="showSolutionBtn" class="action-btn show-solution" disabled>
+                        📖 Lösung anzeigen
+                    </button>
+                </div>
+                
+                <div class="solution-container" id="solutionContainer">
+                    <div class="solution-header">
+                        <span>Lösung für Frage <span id="solutionQuestionNumber"></span></span>
+                        <button id="closeSolutionBtn" style="background: none; border: none; font-size: 20px; cursor: pointer;">×</button>
+                    </div>
+                    <div class="solution-content" id="solutionContent">
+                        <div class="solution-placeholder">Klicken Sie auf "Lösung anzeigen" um die Lösung für diese Frage zu laden</div>
+                    </div>
+                </div>
+                
+                <div class="swipe-hint">← Swipe zum Navigieren →</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM Elements
+            const lehrgangSelect = document.getElementById('lehrgangSelect');
+            const einsendeaufgabeSelect = document.getElementById('einsendeaufgabeSelect');
+            const searchInput = document.getElementById('searchInput');
+            const questionsContainer = document.getElementById('questionsContainer');
+            const questionsInfo = document.getElementById('questionsInfo');
+            const cardsStack = document.getElementById('cardsStack');
+            const noQuestions = document.getElementById('noQuestions');
+            const prevQuestionBtn = document.getElementById('prevQuestionBtn');
+            const nextQuestionBtn = document.getElementById('nextQuestionBtn');
+            const firstQuestionBtn = document.getElementById('firstQuestionBtn');
+            const lastQuestionBtn = document.getElementById('lastQuestionBtn');
+            const markCorrectBtn = document.getElementById('markCorrectBtn');
+            const markIncorrectBtn = document.getElementById('markIncorrectBtn');
+            const markNeutralBtn = document.getElementById('markNeutralBtn');
+            const showSolutionBtn = document.getElementById('showSolutionBtn');
+            const loadingMain = document.getElementById('loadingMain');
+            const errorMain = document.getElementById('errorMain');
+            const successMain = document.getElementById('successMain');
+            const refreshButton = document.getElementById('refreshButton');
+            const randomQuestionButton = document.getElementById('randomQuestionButton');
+            const markingStatus = document.getElementById('markingStatus');
+            const navigationDots = document.getElementById('navigationDots');
+            const solutionContainer = document.getElementById('solutionContainer');
+            const solutionContent = document.getElementById('solutionContent');
+            const solutionQuestionNumber = document.getElementById('solutionQuestionNumber');
+            const closeSolutionBtn = document.getElementById('closeSolutionBtn');
+            
+            // Current data
+            let currentQuestions = [];
+            let currentQuestionIndex = 0;
+            let startX = 0;
+            let currentX = 0;
+            let isDragging = false;
+            let isRandomQuestionActive = false;
+            let questionsByStdName = {};
+            let filteredQuestions = [];
+            
+            // Function to show message in select
+            function showMessageInSelect(selectElement, message) {
+                selectElement.innerHTML = '';
+                const option = document.createElement('option');
+                option.textContent = message;
+                option.value = '';
+                selectElement.appendChild(option);
+            }
+            
+            // Function to hide errors
+            function hideErrors() {
+                errorMain.style.display = 'none';
+                markingStatus.style.display = 'none';
+            }
+            
+            // Function to show error
+            function showError(element, message) {
+                element.textContent = message;
+                element.style.display = 'block';
+            }
+            
+            // Function to show success
+            function showSuccess(message) {
+                successMain.textContent = message;
+                successMain.style.display = 'block';
+                setTimeout(() => {
+                    successMain.style.display = 'none';
+                }, 2000);
+            }
+            
+            // Function to show marking status
+            function showMarkingStatus(message, isSuccess = true) {
+                markingStatus.textContent = message;
+                markingStatus.className = isSuccess ? 'marking-status success' : 'marking-status error';
+                markingStatus.style.display = 'block';
+                setTimeout(() => {
+                    markingStatus.style.display = 'none';
+                }, 3000);
+            }
+            
+            // Function to create question card
+            function createQuestionCard(question, index) {
+                const card = document.createElement('div');
+                card.className = 'question-card';
+                card.dataset.index = index;
+                
+                const status = question.status || 'not-started';
+                const statusClass = status === 'completed' ? 'status-completed' : 
+                                  status === 'pending' ? 'status-pending' : 'status-not-started';
+                const statusText = status === 'completed' ? 'Abgeschlossen' : 
+                                 status === 'pending' ? 'In Bearbeitung' : 'Nicht begonnen';
+                
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="question-number">Frage ${question.FRAGENNR || index + 1}</div>
+                        <div class="question-counter">${index + 1} / ${currentQuestions.length}</div>
+                    </div>
+                    <div class="question-content">
+                        <strong><div class="question-text">${question.FRAGE || 'Kein Fragetext verfügbar'}</div></strong>
+                    </div>
+                    <div class="card-footer">
+                        <div class="question-status">
+                            <span class="status-indicator ${statusClass}"></span>
+                            ${statusText}
+                        </div>
+                        <div class="question-id">ID: ${question.PK_LEHR_FRAGE || question.id || 'N/A'}</div>
+                    </div>
+                `;
+                
+                return card;
+            }
+            
+            // Function to group questions by STD_NAME
+            function groupQuestionsByStdName(questions) {
+                const groups = {};
+                
+                questions.forEach(question => {
+                    const stdName = question.STD_NAME || 'Ohne Kategorie';
+                    
+                    if (!groups[stdName]) {
+                        groups[stdName] = [];
+                    }
+                    
+                    groups[stdName].push(question);
+                });
+                
+                return groups;
+            }
+            
+            // Function to filter questions based on search term
+            function filterQuestions(searchTerm) {
+                if (!searchTerm) {
+                    return currentQuestions;
+                }
+                
+                const lowerSearchTerm = searchTerm.toLowerCase();
+                return currentQuestions.filter(question => {
+                    const frageText = (question.FRAGE || '').toLowerCase();
+                    const stdName = (question.STD_NAME || '').toLowerCase();
+                    const fragenNr = (question.FRAGENNR || '').toString();
+                    
+                    return frageText.includes(lowerSearchTerm) || 
+                           stdName.includes(lowerSearchTerm) || 
+                           fragenNr.includes(searchTerm);
+                });
+            }
+            
+            // Function to update questions list display
+            function updateQuestionsListDisplay() {
+                questionsContainer.innerHTML = '';
+                
+                if (filteredQuestions.length === 0) {
+                    if (currentQuestions.length === 0) {
+                        questionsContainer.innerHTML = '<div class="no-results">Bitte wählen Sie eine Einsendeaufgabe aus</div>';
+                    } else {
+                        questionsContainer.innerHTML = '<div class="no-results">Keine Fragen gefunden, die Ihrer Suche entsprechen</div>';
+                    }
+                    questionsInfo.textContent = '';
+                    return;
+                }
+                
+                // Group filtered questions by STD_NAME
+                const filteredGroups = groupQuestionsByStdName(filteredQuestions);
+                
+                // Create group elements
+                Object.keys(filteredGroups).sort().forEach(stdName => {
+                    const groupQuestions = filteredGroups[stdName];
+                    const groupElement = document.createElement('div');
+                    groupElement.className = 'questions-group';
+                    
+                    const groupHeader = document.createElement('div');
+                    groupHeader.className = 'group-header';
+                    groupHeader.innerHTML = `
+                        ${stdName}
+                        <span class="group-count">${groupQuestions.length}</span>
+                    `;
+                    
+                    const questionsList = document.createElement('div');
+                    
+                    groupQuestions.forEach((question, index) => {
+                        const questionItem = document.createElement('div');
+                        questionItem.className = 'question-item';
+                        if (currentQuestions.indexOf(question) === currentQuestionIndex) {
+                            questionItem.classList.add('active');
+                        }
+                        
+                        const status = question.status || 'not-started';
+                        const statusClass = status === 'completed' ? 'status-completed' : 
+                                          status === 'pending' ? 'status-pending' : 'status-not-started';
+                        
+                        questionItem.innerHTML = `
+                            <div class="question-item-text">
+                                <span class="question-item-nr">${question.FRAGENNR || index + 1}</span>
+                                ${question.FRAGE || 'Kein Fragetext verfügbar'}
+                            </div>
+                            <span class="question-item-status ${statusClass}"></span>
+                        `;
+                        
+                        questionItem.addEventListener('click', () => {
+                            isRandomQuestionActive = false;
+                            const questionIndex = currentQuestions.indexOf(question);
+                            if (questionIndex !== -1) {
+                                goToQuestion(questionIndex);
+                            }
+                        });
+                        
+                        questionsList.appendChild(questionItem);
+                    });
+                    
+                    groupElement.appendChild(groupHeader);
+                    groupElement.appendChild(questionsList);
+                    questionsContainer.appendChild(groupElement);
+                });
+                
+                // Update info text
+                questionsInfo.textContent = `Angezeigt: ${filteredQuestions.length} von ${currentQuestions.length} Fragen`;
+            }
+            
+            // Function to create navigation dots
+            function createNavigationDots() {
+                navigationDots.innerHTML = '';
+                
+                if (currentQuestions.length === 0) {
+                    return;
+                }
+                
+                // Sort questions by FRAGENNR
+                const sortedQuestions = [...currentQuestions].sort((a, b) => {
+                    return (a.FRAGENNR || 0) - (b.FRAGENNR || 0);
+                });
+                
+                sortedQuestions.forEach((question, index) => {
+                    const dot = document.createElement('div');
+                    dot.className = 'navigation-dot';
+                    dot.textContent = question.FRAGENNR || index + 1;
+                    dot.dataset.index = currentQuestions.indexOf(question);
+                    
+                    // Set status class
+                    if (question.KORR === 1) {
+                        dot.classList.add('completed');
+                    } else if (question.KORR === 0) {
+                        dot.classList.add('pending');
+                    }
+                    
+                    // Set active class
+                    if (currentQuestions.indexOf(question) === currentQuestionIndex) {
+                        dot.classList.add('active');
+                        
+                        // Add random selection effect if applicable
+                        if (isRandomQuestionActive) {
+                            dot.classList.add('random-selected');
+                        }
+                    }
+                    
+                    dot.addEventListener('click', () => {
+                        isRandomQuestionActive = false;
+                        goToQuestion(currentQuestions.indexOf(question));
+                    });
+                    
+                    navigationDots.appendChild(dot);
+                });
+            }
+            
+            // Function to update navigation dots
+            function updateNavigationDots() {
+                const dots = navigationDots.querySelectorAll('.navigation-dot');
+                dots.forEach((dot) => {
+                    const index = parseInt(dot.dataset.index);
+                    dot.classList.toggle('active', index === currentQuestionIndex);
+                    
+                    // Update random selection effect
+                    if (index === currentQuestionIndex && isRandomQuestionActive) {
+                        dot.classList.add('random-selected');
+                    } else {
+                        dot.classList.remove('random-selected');
+                    }
+                });
+            }
+            
+            // Function to show solution
+            function showSolution() {
+                if (currentQuestions.length === 0) {
+                    solutionContainer.style.display = 'none';
+                    return;
+                }
+                
+                const question = currentQuestions[currentQuestionIndex];
+                solutionContainer.style.display = 'block';
+                solutionQuestionNumber.textContent = question.FRAGENNR || currentQuestionIndex + 1;
+                
+                // Show loading state
+                solutionContent.innerHTML = '<div class="solution-loading">Lade Lösung...</div>';
+                
+                // Fetch solution from API
+                fetch(`http://localhost:5000/lehr_loesung/${question.PK_LEHR_FRAGE || question.id}`)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Lösung nicht gefunden');
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Check if we have a solution
+                        let solutionText = 'Keine Lösung verfügbar';
+                        
+                        if (data && (data.LOESUNG || data.ANTWORT || data.loesung)) {
+                            solutionText = data.LOESUNG || data.ANTWORT || data.loesung;
+                        }
+                        
+                        // Apply correct styling if question is marked as correct
+                        if (question.KORR === 1) {
+                            solutionContent.innerHTML = `<div class="solution-content correct">${solutionText}</div>`;
+                        } else {
+                            solutionContent.innerHTML = `<div class="solution-content">${solutionText}</div>`;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Fehler beim Laden der Lösung:', error);
+                        solutionContent.innerHTML = '<div class="solution-content">Fehler beim Laden der Lösung</div>';
+                    });
+            }
+            
+            // Function to update cards display
+            function updateCardsDisplay() {
+                cardsStack.innerHTML = '';
+                
+                if (currentQuestions.length === 0) {
+                    noQuestions.style.display = 'block';
+                    prevQuestionBtn.disabled = true;
+                    nextQuestionBtn.disabled = true;
+                    firstQuestionBtn.disabled = true;
+                    lastQuestionBtn.disabled = true;
+                    showSolutionBtn.disabled = true;
+                    navigationDots.style.display = 'none';
+                    solutionContainer.style.display = 'none';
+                    updateActionButtons();
+                    return;
+                }
+                
+                noQuestions.style.display = 'none';
+                navigationDots.style.display = 'flex';
+                showSolutionBtn.disabled = false;
+                firstQuestionBtn.disabled = false;
+                lastQuestionBtn.disabled = false;
+                
+                // Create cards for current and nearby questions
+                for (let i = Math.max(0, currentQuestionIndex - 2); 
+                     i <= Math.min(currentQuestions.length - 1, currentQuestionIndex + 2); 
+                     i++) {
+                    const card = createQuestionCard(currentQuestions[i], i);
+                    
+                    // Set card position classes
+                    if (i === currentQuestionIndex) {
+                        card.classList.add('active');
+                    } else if (i === currentQuestionIndex - 1) {
+                        card.classList.add('previous');
+                    } else if (i === currentQuestionIndex + 1) {
+                        card.classList.add('next');
+                    } else if (i < currentQuestionIndex - 1) {
+                        card.classList.add('far-left');
+                    } else if (i > currentQuestionIndex + 1) {
+                        card.classList.add('far-right');
+                    }
+                    
+                    cardsStack.appendChild(card);
+                }
+                
+                // Update navigation buttons
+                prevQuestionBtn.disabled = currentQuestionIndex === 0;
+                nextQuestionBtn.disabled = currentQuestionIndex === currentQuestions.length - 1;
+                firstQuestionBtn.disabled = currentQuestionIndex === 0;
+                lastQuestionBtn.disabled = currentQuestionIndex === currentQuestions.length - 1;
+                
+                // Update navigation dots
+                createNavigationDots();
+                
+                // Update action buttons
+                updateActionButtons();
+                
+                // Update questions list
+                updateQuestionsListDisplay();
+                
+                // Hide solution when changing question
+                solutionContainer.style.display = 'none';
+            }
+            
+            // Function to update action buttons
+            function updateActionButtons() {
+                if (currentQuestions.length === 0) {
+                    markCorrectBtn.disabled = true;
+                    markIncorrectBtn.disabled = true;
+                    markNeutralBtn.disabled = true;
+                    showSolutionBtn.disabled = true;
+                    return;
+                }
+                
+                const question = currentQuestions[currentQuestionIndex];
+                const hasKorr = question.KORR !== undefined;
+                
+                markCorrectBtn.disabled = false;
+                markIncorrectBtn.disabled = false;
+                markNeutralBtn.disabled = false;
+                showSolutionBtn.disabled = false;
+                
+                // Update active states
+                markCorrectBtn.classList.toggle('active', question.KORR === 1);
+                markIncorrectBtn.classList.toggle('active', question.KORR === 0);
+                markNeutralBtn.classList.toggle('active', question.KORR === 2 || !hasKorr);
+            }
+            
+            // Function to go to specific question
+            function goToQuestion(index) {
+                if (index >= 0 && index < currentQuestions.length) {
+                    currentQuestionIndex = index;
+                    updateCardsDisplay();
+                    
+                    // Scroll to active question in questions list
+                    const questionItems = questionsContainer.querySelectorAll('.question-item');
+                    if (questionItems.length > index) {
+                        questionItems[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            }
+            
+            // Function to go to previous question
+            function goToPreviousQuestion() {
+                if (currentQuestionIndex > 0) {
+                    isRandomQuestionActive = false;
+                    currentQuestionIndex--;
+                    updateCardsDisplay();
+                }
+            }
+            
+            // Function to go to next question
+            function goToNextQuestion() {
+                if (currentQuestionIndex < currentQuestions.length - 1) {
+                    isRandomQuestionActive = false;
+                    currentQuestionIndex++;
+                    updateCardsDisplay();
+                }
+            }
+            
+            // Function to go to first question
+            function goToFirstQuestion() {
+                if (currentQuestions.length > 0) {
+                    isRandomQuestionActive = false;
+                    currentQuestionIndex = 0;
+                    updateCardsDisplay();
+                }
+            }
+            
+            // Function to go to last question
+            function goToLastQuestion() {
+                if (currentQuestions.length > 0) {
+                    isRandomQuestionActive = false;
+                    currentQuestionIndex = currentQuestions.length - 1;
+                    updateCardsDisplay();
+                }
+            }
+            
+            // Function to select random question
+            function selectRandomQuestion() {
+                if (currentQuestions.length === 0) {
+                    showMarkingStatus("Keine Fragen verfügbar", false);
+                    return;
+                }
+                
+                const randomIndex = Math.floor(Math.random() * currentQuestions.length);
+                isRandomQuestionActive = true;
+                currentQuestionIndex = randomIndex;
+                updateCardsDisplay();
+                showMarkingStatus(`Zufällige Frage ${randomIndex + 1} ausgewählt`);
+            }
+            
+            // Function to mark current question
+            function markCurrentQuestion(korrValue) {
+                if (currentQuestions.length === 0) {
+                    showMarkingStatus('Keine Frage ausgewählt', false);
+                    return;
+                }
+                
+                const question = currentQuestions[currentQuestionIndex];
+                question.KORR = korrValue;
+                
+                let statusText = '';
+                if (korrValue === 1) statusText = 'als korrekt markiert';
+                else if (korrValue === 0) statusText = 'als inkorrekt markiert';
+                else if (korrValue === 2) statusText = 'neutral gesetzt';
+                
+                showMarkingStatus(`Frage ${currentQuestionIndex + 1} ${statusText}`);
+                updateActionButtons();
+                updateCardsDisplay();
+            }
+            
+            // Swipe functionality
+            function setupSwipe() {
+                cardsStack.addEventListener('mousedown', startDrag);
+                cardsStack.addEventListener('touchstart', startDrag);
+                
+                document.addEventListener('mousemove', drag);
+                document.addEventListener('touchmove', drag);
+                
+                document.addEventListener('mouseup', endDrag);
+                document.addEventListener('touchend', endDrag);
+            }
+            
+            function startDrag(e) {
+                if (currentQuestions.length === 0) return;
+                
+                isDragging = true;
+                startX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+                currentX = startX;
+                
+                const activeCard = cardsStack.querySelector('.question-card.active');
+                if (activeCard) {
+                    activeCard.style.transition = 'none';
+                }
+            }
+            
+            function drag(e) {
+                if (!isDragging) return;
+                
+                e.preventDefault();
+                currentX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+                
+                const activeCard = cardsStack.querySelector('.question-card.active');
+                if (activeCard) {
+                    const deltaX = currentX - startX;
+                    activeCard.style.transform = `translateX(${deltaX}px) rotate(${deltaX * 0.1}deg)`;
+                }
+            }
+            
+            function endDrag() {
+                if (!isDragging) return;
+                
+                isDragging = false;
+                const deltaX = currentX - startX;
+                const activeCard = cardsStack.querySelector('.question-card.active');
+                
+                if (activeCard) {
+                    activeCard.style.transition = 'transform 0.6s cubic-bezier(0.23, 1, 0.32, 1)';
+                    activeCard.style.transform = '';
+                }
+                
+                // Swipe threshold (100px)
+                if (Math.abs(deltaX) > 100) {
+                    isRandomQuestionActive = false;
+                    if (deltaX > 0 && currentQuestionIndex > 0) {
+                        goToPreviousQuestion();
+                    } else if (deltaX < 0 && currentQuestionIndex < currentQuestions.length - 1) {
+                        goToNextQuestion();
+                    }
+                }
+            }
+            
+            // Fetch Lehrgang data
+            function fetchLehrgangData() {
+                hideErrors();
+                loadingMain.style.display = 'block';
+                randomQuestionButton.disabled = true;
+                searchInput.disabled = true;
+                
+                while (lehrgangSelect.options.length > 1) {
+                    lehrgangSelect.remove(1);
+                }
+                
+                showMessageInSelect(einsendeaufgabeSelect, 'Bitte zuerst einen Lehrgang wählen');
+                einsendeaufgabeSelect.disabled = true;
+                
+                currentQuestions = [];
+                filteredQuestions = [];
+                currentQuestionIndex = 0;
+                isRandomQuestionActive = false;
+                updateCardsDisplay();
+                
+                fetch('http://localhost:5000/lehrgang')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Netzwerkfehler');
+                        return response.json();
+                    })
+                    .then(data => {
+                        loadingMain.style.display = 'none';
+                        
+                        if (Array.isArray(data) && data.length > 0) {
+                            data.forEach(lehrgang => {
+                                const option = document.createElement('option');
+                                option.value = lehrgang.PK_LEHR_LEHRGANG;
+                                option.textContent = lehrgang.LEHRGANG || `Lehrgang ${lehrgang.PK_LEHR_LEHRGANG}`;
+                                lehrgangSelect.appendChild(option);
+                            });
+                            showSuccess('Daten geladen!');
+                        } else {
+                            throw new Error('Keine Daten verfügbar');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Fehler:', error);
+                        loadingMain.style.display = 'none';
+                        showError(errorMain, error.message);
+                    });
+            }
+            
+            // Fetch Einsendeaufgabe data
+            function fetchEinsendeaufgabeData(lehrgangId) {
+                hideErrors();
+                loadingMain.style.display = 'block';
+                einsendeaufgabeSelect.disabled = true;
+                randomQuestionButton.disabled = true;
+                searchInput.disabled = true;
+                showMessageInSelect(einsendeaufgabeSelect, 'Lade Aufgaben...');
+                
+                currentQuestions = [];
+                filteredQuestions = [];
+                currentQuestionIndex = 0;
+                isRandomQuestionActive = false;
+                updateCardsDisplay();
+                
+                fetch(`http://localhost:5000/lehr_einsendeaufgabe/${lehrgangId}`)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Aufgaben nicht gefunden');
+                        return response.json();
+                    })
+                    .then(data => {
+                        loadingMain.style.display = 'none';
+                        einsendeaufgabeSelect.disabled = false;
+                        einsendeaufgabeSelect.innerHTML = '';
+                        
+                        if (!data || (Array.isArray(data) && data.length === 0)) {
+                            showMessageInSelect(einsendeaufgabeSelect, 'Keine Aufgaben gefunden');
+                            return;
+                        }
+                        
+                        if (Array.isArray(data)) {
+                            const defaultOption = document.createElement('option');
+                            defaultOption.value = '';
+                            defaultOption.textContent = 'Bitte Aufgabe wählen...';
+                            einsendeaufgabeSelect.appendChild(defaultOption);
+                            
+                            data.forEach(aufgabe => {
+                                const option = document.createElement('option');
+                                option.value = aufgabe.PK_LEHR_EINSENDEAUFGABE || aufgabe.id;
+                                option.textContent = aufgabe.EINSENDEAUFGABE || aufgabe.name || `Aufgabe ${aufgabe.id}`;
+                                einsendeaufgabeSelect.appendChild(option);
+                            });
+                            showSuccess('Aufgaben geladen!');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Fehler:', error);
+                        loadingMain.style.display = 'none';
+                        showMessageInSelect(einsendeaufgabeSelect, 'Fehler beim Laden');
+                        showError(errorMain, error.message);
+                    });
+            }
+            
+            // Fetch Fragen data
+            function fetchFragenData(einsendeaufgabeId) {
+                hideErrors();
+                randomQuestionButton.disabled = true;
+                searchInput.disabled = false;
+                
+                fetch(`http://localhost:5000/lehr_fragen/${einsendeaufgabeId}`)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Fragen nicht gefunden');
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (!data || (Array.isArray(data) && data.length === 0)) {
+                            currentQuestions = [];
+                            filteredQuestions = [];
+                            currentQuestionIndex = 0;
+                            updateCardsDisplay();
+                            return;
+                        }
+                        
+                        if (Array.isArray(data)) {
+                            currentQuestions = data.map((frage, index) => ({
+                                ...frage,
+                                id: frage.PK_LEHR_FRAGE || frage.id || index,
+                                FRAGENNR: frage.FRAGENNR || index + 1,
+                                FRAGE: frage.FRAGE || 'Kein Fragetext',
+                                STD_NAME: frage.STD_NAME || 'Ohne Kategorie',
+                                status: frage.status || 'not-started',
+                                KORR: frage.KORR !== undefined ? frage.KORR : 2
+                            }));
+                            
+                            filteredQuestions = [...currentQuestions];
+                            currentQuestionIndex = 0;
+                            updateCardsDisplay();
+                            randomQuestionButton.disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Fehler:', error);
+                        currentQuestions = [];
+                        filteredQuestions = [];
+                        currentQuestionIndex = 0;
+                        updateCardsDisplay();
+                        showError(errorMain, error.message);
+                    });
+            }
+            
+            // Event listeners
+            lehrgangSelect.addEventListener('change', function() {
+                const selectedId = this.value;
+                if (selectedId) {
+                    fetchEinsendeaufgabeData(selectedId);
+                } else {
+                    showMessageInSelect(einsendeaufgabeSelect, 'Bitte Lehrgang wählen');
+                    einsendeaufgabeSelect.disabled = true;
+                    randomQuestionButton.disabled = true;
+                    searchInput.disabled = true;
+                    currentQuestions = [];
+                    filteredQuestions = [];
+                    currentQuestionIndex = 0;
+                    isRandomQuestionActive = false;
+                    updateCardsDisplay();
+                }
+            });
+            
+            einsendeaufgabeSelect.addEventListener('change', function() {
+                const selectedId = this.value;
+                if (selectedId) {
+                    fetchFragenData(selectedId);
+                } else {
+                    randomQuestionButton.disabled = true;
+                    searchInput.disabled = true;
+                    currentQuestions = [];
+                    filteredQuestions = [];
+                    currentQuestionIndex = 0;
+                    isRandomQuestionActive = false;
+                    updateCardsDisplay();
+                }
+            });
+            
+            // Search functionality
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.trim();
+                filteredQuestions = filterQuestions(searchTerm);
+                updateQuestionsListDisplay();
+            });
+            
+            prevQuestionBtn.addEventListener('click', goToPreviousQuestion);
+            nextQuestionBtn.addEventListener('click', goToNextQuestion);
+            firstQuestionBtn.addEventListener('click', goToFirstQuestion);
+            lastQuestionBtn.addEventListener('click', goToLastQuestion);
+            
+            markCorrectBtn.addEventListener('click', () => markCurrentQuestion(1));
+            markIncorrectBtn.addEventListener('click', () => markCurrentQuestion(0));
+            markNeutralBtn.addEventListener('click', () => markCurrentQuestion(2));
+            
+            showSolutionBtn.addEventListener('click', showSolution);
+            closeSolutionBtn.addEventListener('click', () => {
+                solutionContainer.style.display = 'none';
+            });
+            
+            randomQuestionButton.addEventListener('click', selectRandomQuestion);
+            refreshButton.addEventListener('click', fetchLehrgangData);
+            
+            // Keyboard navigation
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'ArrowLeft') goToPreviousQuestion();
+                else if (event.key === 'ArrowRight') goToNextQuestion();
+                else if (event.key === 'Home') goToFirstQuestion();
+                else if (event.key === 'End') goToLastQuestion();
+                else if (event.key === 'Escape') solutionContainer.style.display = 'none';
+            });
+            
+            // Initialize
+            fetchLehrgangData();
+            setupSwipe();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Wahlbaum Pro · Hierarchischer Wahlbaum mit Gruppen & Relationen</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0b2b3b, #1a4a6f, #0f2c3b);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .app-container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 24px;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(12px);
+            padding: 12px 16px;
+            border-radius: 60px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .tab {
+            padding: 10px 22px;
+            border: none;
+            border-radius: 40px;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.85rem;
+        }
+
+        .tab:hover {
+            background: #f39c12;
+            color: #1e2a3a;
+            transform: translateY(-2px);
+        }
+
+        .tab.active {
+            background: #f39c12;
+            color: #1e2a3a;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        /* KPI Dashboard */
+        .kpi-dashboard {
+            display: flex;
+            gap: 18px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 32px;
+            padding: 20px;
+            backdrop-filter: blur(4px);
+        }
+
+        .kpi-card {
+            background: white;
+            border-radius: 28px;
+            padding: 18px 24px;
+            flex: 1;
+            min-width: 130px;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.1);
+            border-left: 6px solid;
+            transition: transform 0.2s;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .kpi-card.person {
+            border-left-color: #3498db;
+        }
+
+        .kpi-card.candidate {
+            border-left-color: #e67e22;
+        }
+
+        .kpi-card.profession {
+            border-left-color: #2ecc71;
+        }
+
+        .kpi-card.relation {
+            border-left-color: #9b59b6;
+        }
+
+        .kpi-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #5d6e85;
+            font-weight: 700;
+        }
+
+        .kpi-value {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #1e2a3a;
+            line-height: 1.1;
+        }
+
+        /* Selection Info */
+        .selection-info {
+            background: white;
+            border-radius: 60px;
+            padding: 12px 28px;
+            margin-bottom: 24px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 28px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .selection-item {
+            display: flex;
+            gap: 12px;
+            align-items: baseline;
+            font-size: 0.9rem;
+        }
+
+        .selection-label {
+            font-weight: 700;
+            background: #eef2f8;
+            padding: 4px 14px;
+            border-radius: 30px;
+        }
+
+        /* Layout Columns */
+        .two-columns {
+            display: flex;
+            gap: 24px;
+            background: white;
+            border-radius: 32px;
+            padding: 24px;
+            box-shadow: 0 20px 35px rgba(0, 0, 0, 0.2);
+            flex-wrap: wrap;
+        }
+
+        .column {
+            flex: 1;
+            background: #fbfdff;
+            border-radius: 24px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            min-width: 280px;
+        }
+
+        .column-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid;
+        }
+
+        /* Filters & Forms */
+        .filter-field {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-field label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #2c3e50;
+        }
+
+        .filter-field input,
+        .filter-field select {
+            padding: 8px 12px;
+            border-radius: 30px;
+            border: 1px solid #ddd;
+        }
+
+        .btn-small {
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-small.primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-small.success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-small.info {
+            background: #9b59b6;
+            color: white;
+        }
+
+        .btn-small.warning {
+            background: #f39c12;
+            color: white;
+        }
+
+        .btn-small.danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        /* Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        .data-table th {
+            background: #1e293b;
+            color: white;
+            padding: 10px;
+            position: sticky;
+            top: 0;
+        }
+
+        .data-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #e9edf2;
+        }
+
+        .data-table tbody tr {
+            cursor: pointer;
+            transition: 0.1s;
+        }
+
+        .data-table tbody tr:hover {
+            background: #f0f7ff;
+        }
+
+        .data-table tbody tr.selected {
+            background: #dbeafe;
+        }
+
+        .table-container {
+            max-height: 500px;
+            overflow-y: auto;
+            border-radius: 18px;
+            border: 1px solid #eef2f8;
+        }
+
+        /* Tree Styles */
+        .tree-container {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 16px;
+            max-height: 650px;
+            overflow-y: auto;
+        }
+
+        .tree-node {
+            margin-left: 0;
+            position: relative;
+        }
+
+        .tree-node.level-1 {
+            margin-left: 0;
+        }
+
+        .tree-node.level-2 {
+            margin-left: 20px;
+        }
+
+        .tree-node.level-3 {
+            margin-left: 40px;
+        }
+
+        .tree-node.level-4 {
+            margin-left: 60px;
+        }
+
+        .tree-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background 0.2s;
+            background: white;
+            margin: 4px 0;
+            border: 1px solid #e2e8f0;
+        }
+
+        .tree-node-header:hover {
+            background: #e2e8f0;
+            transform: translateX(2px);
+        }
+
+        .tree-toggle {
+            font-size: 12px;
+            width: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .tree-candidate-item {
+            padding: 8px 12px;
+            margin: 4px 0 4px 100px;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #e2e8f0;
+        }
+
+        .tree-candidate-item:hover {
+            background: #dbeafe;
+            transform: translateX(4px);
+            border-color: #3498db;
+        }
+
+        .candidate-name {
+            font-weight: 600;
+            font-size: 13px;
+            color: #1e293b;
+        }
+
+        .candidate-details {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        /* Profession Multiselect */
+        .profession-multiselect {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 10px;
+            background: white;
+            margin-bottom: 12px;
+        }
+
+        .profession-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .profession-item:hover {
+            background-color: #f0f7ff;
+        }
+
+        .profession-item.selected {
+            background-color: #e3f2fd;
+        }
+
+        .profession-item input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .profession-name {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .selected-professions {
+            background: #e8f5e9;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            min-height: 100px;
+        }
+
+        .selected-profession-tag {
+            display: inline-block;
+            background: #27ae60;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            margin: 0 5px 5px 0;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .selected-profession-tag:hover {
+            background: #c0392b;
+        }
+
+        /* Edit Grid */
+        .edit-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 12px;
+            padding: 12px;
+            background: white;
+            border-radius: 16px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .edit-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .edit-field label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        .edit-field input,
+        .edit-field textarea {
+            padding: 8px;
+            border-radius: 12px;
+            border: 1px solid #ccc;
+        }
+
+        .info-card {
+            background: #f0f4fa;
+            border-radius: 20px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .info-row {
+            display: flex;
+            padding: 6px 0;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.85rem;
+        }
+
+        .info-label {
+            font-weight: 700;
+            width: 130px;
+            color: #4a5568;
+        }
+
+        .info-value {
+            flex: 1;
+            color: #2d3748;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .status-online {
+            background: #27ae60;
+            color: white;
+        }
+
+        .status-offline {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .debug-panel {
+            background: #0f172ad9;
+            color: #b9e2ff;
+            font-family: monospace;
+            font-size: 11px;
+            padding: 8px 16px;
+            border-radius: 40px;
+            margin-top: 16px;
+            margin-bottom: 16px;
+        }
+
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            flex: 1;
+            min-width: 150px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-weight: 700;
+            font-size: 0.75rem;
+            color: #2c3e50;
+        }
+
+        .form-group input {
+            padding: 8px 12px;
+            border-radius: 24px;
+            border: 1px solid #ddd;
+        }
+
+        .filter-bar {
+            background: #eef2fa;
+            border-radius: 16px;
+            padding: 12px;
+            margin-bottom: 16px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        @media (max-width: 900px) {
+            .two-columns {
+                flex-direction: column;
+            }
+
+            .tree-candidate-item {
+                margin-left: 20px;
+            }
+
+            .tree-node.level-2,
+            .tree-node.level-3 {
+                margin-left: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="tabs">
+            <button class="tab active" data-tab="dashboard">📊 Dashboard / Wahlbaum</button>
+            <button class="tab" data-tab="personenManager">👥 Personen Manager</button>
+            <button class="tab" data-tab="update">✏️ Kandidat updaten</button>
+            <button class="tab" data-tab="multiselect">🔀 Berufe Multiselect</button>
+            <button class="tab" data-tab="relations">🔗 Relationen</button>
+        </div>
+
+        <div class="debug-panel">
+ Version 14.2
+            🔌 API: http://localhost:5000 | <span id="connectionStatus" class="status-badge status-offline">Wird geladen...</span>
+            <button class="btn-small primary" onclick="loadAllData()" style="padding:2px 12px; margin-left:10px;">🔄 Alle Daten laden</button>
+        </div>
+
+        <div class="kpi-dashboard">
+            <div class="kpi-card person">
+                <div class="kpi-label">👥 Personen</div>
+                <div class="kpi-value" id="kpiPersons">0</div>
+            </div>
+            <div class="kpi-card candidate">
+                <div class="kpi-label">🗳️ Kandidaten</div>
+                <div class="kpi-value" id="kpiCandidates">0</div>
+            </div>
+            <div class="kpi-card profession">
+                <div class="kpi-label">💼 Berufe (gesamt)</div>
+                <div class="kpi-value" id="kpiProfessions">0</div>
+            </div>
+            <div class="kpi-card relation">
+                <div class="kpi-label">🔗 Person-Beruf</div>
+                <div class="kpi-value" id="kpiRelations">0</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">📋 Listenkand.</div>
+                <div class="kpi-value" id="totalListeCandidates">0</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">📍 Direktkand.</div>
+                <div class="kpi-value" id="totalDirektCandidates">0</div>
+            </div>
+        </div>
+
+        <div class="selection-info">
+            <div class="selection-item"><span class="selection-label">👤 Person</span><span id="compactPersonDisplay">-</span></div>
+            <div class="selection-item"><span class="selection-label">🗳️ Kandidat</span><span id="compactCandidateDisplay">-</span></div>
+            <div class="selection-item"><span class="selection-label">💼 Ausgewählte Berufe</span><span id="compactProfessionsDisplay">-</span></div>
+        </div>
+
+        <!-- DASHBOARD TAB -->
+        <div id="dashboardTab" class="tab-content" style="display: block;">
+            <div class="two-columns">
+                <div class="column">
+                    <div class="column-header" style="border-bottom-color:#2ecc71;">
+                        <h3>🌳 Hierarchischer Wahlbaum (5 Ebenen)</h3>
+                        <div>
+                            <button class="btn-small info" onclick="expandAllTreeNodes()">Alle aufklappen</button>
+                            <button class="btn-small warning" onclick="collapseAllTreeNodes()">Alle zuklappen</button>
+                        </div>
+                    </div>
+                    <div id="electionTreeContainer" class="tree-container">
+                        <div class="info-card">🌳 Baum wird geladen...</div>
+                    </div>
+                </div>
+                <div class="column">
+                    <div class="column-header" style="border-bottom-color: #3498db;">
+                        <h3>📋 Kandidaten (klickbare Tabelle)</h3>
+                    </div>
+                    <div class="filter-bar">
+                        <div class="filter-field">
+                            <label>🔍 Suche (Name/Partei)</label>
+                            <input type="text" id="dashCandNameFilter" placeholder="Name oder Partei...">
+                        </div>
+                        <button class="btn-small primary" onclick="filterDashboardTable()">Filtern</button>
+                        <button class="btn-small warning" onclick="resetDashboardTableFilter()">Reset</button>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table" id="candidateDashboardTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Vorname</th>
+                                    <th>Nachname</th>
+                                    <th>Partei</th>
+                                    <th>Wahlkreis</th>
+                                    <th>BERUF_ALLG</th>
+                                </tr>
+                            </thead>
+                            <tbody id="candidateDashboardBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PERSONEN MANAGER TAB -->
+        <div id="personenManagerTab" class="tab-content" style="display: none;">
+            <div class="two-columns">
+                <div class="column">
+                    <button class="btn-small primary" onclick="loadPersons()" style="margin-bottom:10px;">🔁 Personen laden</button>
+                    <div class="table-container">
+                        <table class="data-table" id="personManagerTable">
+                            <thead>
+                                <tr><th>ID</th><th>Vorname</th><th>Nachname</th><th>Beruf</th><th>Aktion</th></tr>
+                            </thead>
+                            <tbody id="personManagerTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="column-header" style="margin-top:20px;"><h3>➕ Neue Person anlegen</h3></div>
+                    <div class="info-card">
+                        <div class="form-row">
+                            <div class="form-group"><label>Vorname *</label><input id="newPersonVorname" placeholder="Vorname"></div>
+                            <div class="form-group"><label>Nachname *</label><input id="newPersonNachname" placeholder="Nachname"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Geburtsjahr</label><input id="newPersonGeburtsjahr" type="number" placeholder="Jahr"></div>
+                            <div class="form-group"><label>Beruf</label><input id="newPersonBeruf" placeholder="Beruf"></div>
+                        </div>
+                        <button class="btn-small success" onclick="createPerson()">💾 Speichern</button>
+                        <div id="createPersonMsg"></div>
+                    </div>
+                </div>
+                <div class="column">
+                    <div class="column-header"><h3>📋 Personendetails & Bearbeitung</h3></div>
+                    <div id="personFullDetails" class="info-card"><em>Keine Person ausgewählt</em></div>
+                    <div class="column-header"><h3>✏️ Person bearbeiten</h3></div>
+                    <div class="info-card">
+                        <div class="form-row">
+                            <div class="form-group"><label>ID</label><input id="editPersonId" readonly></div>
+                            <div class="form-group"><label>Vorname</label><input id="editVorname"></div>
+                            <div class="form-group"><label>Nachname</label><input id="editNachname"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Geburtsjahr</label><input id="editGeburtsjahr" type="number"></div>
+                            <div class="form-group"><label>Beruf</label><input id="editBeruf"></div>
+                        </div>
+                        <button class="btn-small primary" onclick="updatePerson()">💾 Update</button>
+                        <button class="btn-small danger" onclick="deletePerson()">🗑️ Löschen</button>
+                        <div id="editPersonMsg"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- UPDATE TAB -->
+        <div id="updateTab" class="tab-content" style="display: none;">
+            <div class="two-columns">
+                <div class="column">
+                    <div class="column-header"><h3>👤 Ausgewählter Kandidat</h3></div>
+                    <div id="candidateInfoCard" class="info-card">Kein Kandidat ausgewählt</div>
+                    <div class="column-header"><h3>🔧 Editierbare Felder</h3></div>
+                    <div id="candidateEditFields" class="edit-grid"></div>
+                    <button class="btn-small success" onclick="saveFullCandidateUpdate()" style="margin-top:12px;">💾 SPEICHERN</button>
+                    <div id="updateResult" style="margin-top:12px;"></div>
+                </div>
+                <div class="column">
+                    <div class="column-header"><h3>🔍 Kandidaten Suche</h3></div>
+                    <div class="filter-bar">
+                        <input type="text" id="candSearchInput" placeholder="Name oder ID ..." style="flex:1; padding:8px; border-radius:20px; border:1px solid #ccc;">
+                        <button class="btn-small primary" onclick="searchCandidatesForEdit()">Suchen</button>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table" id="candidateEditTable">
+                            <thead><tr><th>ID</th><th>Name</th><th>Partei</th><th>BERUF_ALLG</th></tr></thead>
+                            <tbody id="candidateEditBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MULTISELECT TAB -->
+        <div id="multiselectTab" class="tab-content" style="display: none;">
+            <div class="two-columns">
+                <div class="column">
+                    <div class="column-header"><h3>🔀 Berufe Multiselect</h3></div>
+                    <input type="text" id="multiselectSearch" placeholder="Berufe filtern..." oninput="renderProfessionMultiselect()" style="width:100%; padding:8px; margin-bottom:10px; border-radius:20px; border:1px solid #ddd;">
+                    <div class="profession-multiselect" id="professionMultiselect"></div>
+                    <div class="button-group" style="display:flex; gap:8px; margin-top:10px;">
+                        <button class="btn-small success" onclick="selectAllProfessions()">Alle auswählen</button>
+                        <button class="btn-small warning" onclick="deselectAllProfessions()">Alle abwählen</button>
+                    </div>
+                </div>
+                <div class="column">
+                    <div class="column-header"><h3>📋 Ausgewählte Berufe</h3></div>
+                    <div class="selected-professions" id="selectedProfessionsList">
+                        <p>Keine Berufe ausgewählt</p>
+                    </div>
+                    <button class="btn-small primary" onclick="assignSelectedProfessionsToCandidate()" style="margin-top:15px;">🗳️ Kandidat zuweisen (BERUF_ALLG)</button>
+                    <div id="multiselectResult" style="margin-top:12px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RELATIONS TAB -->
+        <div id="relationsTab" class="tab-content" style="display: none;">
+            <div class="info-card">
+                <h3>🔗 Person-Beruf Relationen</h3>
+                <p>Gesamtzahl Relationen: <strong id="relationCount">0</strong></p>
+                <button class="btn-small primary" onclick="loadRelationsInfo()">Aktualisieren</button>
+                <div id="relationsList" style="margin-top:15px; max-height:400px; overflow-y:auto;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = 'http://localhost:5000';
+        let allPersons = [], allCandidates = [], allBerufe = [], allRelations = [];
+        let selectedPerson = null, selectedCandidate = null, selectedProfessions = [];
+        let partyMap = new Map();
+
+        // Helper: Fetch JSON with error handling
+        async function fetchJson(url) {
+            try {
+                let r = await fetch(url);
+                if (!r.ok) return [];
+                return await r.json();
+            } catch (e) {
+                console.warn(e);
+                return [];
+            }
+        }
+
+        // Load all master data
+        async function loadAllData() {
+            let [persons, candidates, berufe, relations] = await Promise.all([
+                fetchJson(`${API}/persons`),
+                fetchJson(`${API}/wahl_kandidaten`),
+                fetchJson(`${API}/berufe`),
+                fetchJson(`${API}/rel_person_beruf`)
+            ]);
+            allPersons = Array.isArray(persons) ? persons : (persons?.data || []);
+            allCandidates = Array.isArray(candidates) ? candidates : (candidates?.data || []);
+            allBerufe = Array.isArray(berufe) ? berufe : (berufe?.data || []);
+            allRelations = Array.isArray(relations) ? relations : (relations?.data || []);
+
+            // Build party map
+            partyMap.clear();
+            for (let c of allCandidates) {
+                if (c.FK_WAHL_PARTEI && !partyMap.has(c.FK_WAHL_PARTEI)) {
+                    partyMap.set(c.FK_WAHL_PARTEI, c.PARTEI_KURZ || c.FK_WAHL_PARTEI);
+                }
+            }
+
+            updateKPI();
+            renderDashboardTable();
+            buildElectionTree();
+            filterPersonsManager();
+            renderProfessionMultiselect();
+            loadRelationsInfo();
+
+            let statusSpan = document.getElementById('connectionStatus');
+            if (statusSpan) {
+                statusSpan.className = allCandidates.length ? "status-badge status-online" : "status-badge status-offline";
+                statusSpan.innerText = allCandidates.length ? "Verbunden" : "Offline (Demo)";
+            }
+        }
+
+        // Update KPI cards - FIXED Berufe count
+        function updateKPI() {
+            document.getElementById('kpiPersons').innerText = allPersons.length;
+            document.getElementById('kpiCandidates').innerText = allCandidates.length;
+            // FIX: Show total distinct Berufe from allBerufe array
+            document.getElementById('kpiProfessions').innerText = allBerufe.length;
+            document.getElementById('kpiRelations').innerText = allRelations.length;
+            
+            const listeCount = allCandidates.filter(c => c['Kandidatur-Art'] === 'LISTENBEWERBER' || c.FK_STD_WAHL_ART === '1').length;
+            const direktCount = allCandidates.filter(c => c['Kandidatur-Art'] === 'DIREKTBEWERBER' || c.FK_STD_WAHL_ART === '2').length;
+            document.getElementById('totalListeCandidates').innerText = listeCount || 0;
+            document.getElementById('totalDirektCandidates').innerText = direktCount || 0;
+        }
+
+        // Dashboard Table with working row click
+        function renderDashboardTable() {
+            let filter = document.getElementById('dashCandNameFilter')?.value.toLowerCase() || '';
+            let filtered = allCandidates.filter(c => {
+                if (!filter) return true;
+                let name = `${c.VORNAME || ''} ${c.NACHNAME || ''}`.toLowerCase();
+                let party = (partyMap.get(c.FK_WAHL_PARTEI) || '').toLowerCase();
+                return name.includes(filter) || party.includes(filter);
+            });
+            let tbody = document.getElementById('candidateDashboardBody');
+            if (!tbody) return;
+            tbody.innerHTML = filtered.slice(0, 200).map(c => `
+                <tr onclick="selectCandidateFromDashboardTable(${c.PK_WAHL_KANDIDATEN})" style="cursor:pointer;">
+                    <td>${c.PK_WAHL_KANDIDATEN}</td>
+                    <td>${escapeHtml(c.VORNAME || '')}</td>
+                    <td>${escapeHtml(c.NACHNAME || '')}</td>
+                    <td>${escapeHtml(partyMap.get(c.FK_WAHL_PARTEI) || c.FK_WAHL_PARTEI || '-')}</td>
+                    <td>${escapeHtml(c.FK_WAHL_STIMM_KREIS || '-')}</td>
+                    <td>${escapeHtml((c.BERUF_ALLG || '').substring(0, 40))}</td>
+                </tr>
+            `).join('');
+        }
+
+        window.filterDashboardTable = () => renderDashboardTable();
+        window.resetDashboardTableFilter = () => {
+            let inp = document.getElementById('dashCandNameFilter');
+            if (inp) inp.value = '';
+            renderDashboardTable();
+        };
+
+        // Select candidate from table row
+        window.selectCandidateFromDashboardTable = (candidateId) => {
+            const cand = allCandidates.find(c => c.PK_WAHL_KANDIDATEN == candidateId);
+            if (!cand) return;
+            selectedCandidate = cand;
+            selectedPerson = allPersons.find(p => p.PK_KON_PERSON == cand.FK_KON_PERSON);
+            updateCompactDisplay();
+            renderCandidateEditFields();
+            // Switch to update tab
+            switchTab('update');
+            // Highlight selected row
+            document.querySelectorAll('#candidateDashboardBody tr').forEach(row => row.classList.remove('selected'));
+            if (event && event.currentTarget) event.currentTarget.classList.add('selected');
+        };
+
+        // Build Election Tree with working candidate selection
+        function buildElectionTree() {
+            let treeHtml = '';
+            let byWahlart = new Map();
+            for (let c of allCandidates) {
+                let wahlart = c.FK_STD_WAHL_ART || 'Unbekannt';
+                if (!byWahlart.has(wahlart)) byWahlart.set(wahlart, []);
+                byWahlart.get(wahlart).push(c);
+            }
+            for (let [wahlart, cands] of byWahlart.entries()) {
+                treeHtml += `<div class="tree-node level-1"><div class="tree-node-header" onclick="toggleTreeNode(this)"><span class="tree-toggle">▼</span><span>🗳️ Wahlart: ${wahlart} (${cands.length})</span></div><div class="tree-children">`;
+                let byWahl = new Map();
+                for (let c of cands) { let w = c.FK_WAHL_WAHL || 'Unbekannt'; if (!byWahl.has(w)) byWahl.set(w, []); byWahl.get(w).push(c); }
+                for (let [wahl, cands2] of byWahl.entries()) {
+                    treeHtml += `<div class="tree-node level-2"><div class="tree-node-header" onclick="toggleTreeNode(this)"><span class="tree-toggle">▼</span><span>📅 Wahl: ${wahl} (${cands2.length})</span></div><div class="tree-children">`;
+                    let byParty = new Map();
+                    for (let c of cands2) { let p = partyMap.get(c.FK_WAHL_PARTEI) || c.FK_WAHL_PARTEI || 'Partei'; if (!byParty.has(p)) byParty.set(p, []); byParty.get(p).push(c); }
+                    for (let [party, cands3] of byParty.entries()) {
+                        treeHtml += `<div class="tree-node level-3"><div class="tree-node-header" onclick="toggleTreeNode(this)"><span class="tree-toggle">▼</span><span>🎭 ${party} (${cands3.length})</span></div><div class="tree-children">`;
+                        for (let c of cands3) {
+                            treeHtml += `<div class="tree-candidate-item" onclick="selectCandidateFromTree(${c.PK_WAHL_KANDIDATEN})">
+                                <div><strong class="candidate-name">${escapeHtml(c.VORNAME || '')} ${escapeHtml(c.NACHNAME || '')}</strong><br><span class="candidate-details">Platz:${c.PLATZ || '-'} | ${escapeHtml((c.BERUF_ALLG || '').substring(0, 30))}</span></div>
+                                <span class="candidate-party">ID:${c.PK_WAHL_KANDIDATEN}</span>
+                            </div>`;
+                        }
+                        treeHtml += `</div></div>`;
+                    }
+                    treeHtml += `</div></div>`;
+                }
+                treeHtml += `</div></div>`;
+            }
+            let container = document.getElementById('electionTreeContainer');
+            if (container) container.innerHTML = treeHtml || '<div class="info-card">Keine Kandidaten gefunden</div>';
+        }
+
+        window.selectCandidateFromTree = (candidateId) => {
+            const cand = allCandidates.find(c => c.PK_WAHL_KANDIDATEN == candidateId);
+            if (cand) {
+                selectedCandidate = cand;
+                selectedPerson = allPersons.find(p => p.PK_KON_PERSON == cand.FK_KON_PERSON);
+                updateCompactDisplay();
+                renderCandidateEditFields();
+                switchTab('update');
+            }
+        };
+
+        window.toggleTreeNode = (header) => {
+            let ch = header.parentElement.querySelector('.tree-children');
+            if (ch) {
+                let vis = ch.style.display !== 'none';
+                ch.style.display = vis ? 'none' : 'block';
+                let tog = header.querySelector('.tree-toggle');
+                if (tog) tog.textContent = vis ? '▶' : '▼';
+            }
+        };
+        window.expandAllTreeNodes = () => { document.querySelectorAll('#electionTreeContainer .tree-children').forEach(c => c.style.display = 'block'); document.querySelectorAll('#electionTreeContainer .tree-toggle').forEach(t => t.textContent = '▼'); };
+        window.collapseAllTreeNodes = () => { document.querySelectorAll('#electionTreeContainer .tree-children').forEach(c => c.style.display = 'none'); document.querySelectorAll('#electionTreeContainer .tree-toggle').forEach(t => t.textContent = '▶'); };
+
+        // Update Tab Functions
+        function renderCandidateEditFields() {
+            let container = document.getElementById('candidateEditFields');
+            let infoCard = document.getElementById('candidateInfoCard');
+            if (!container || !selectedCandidate) {
+                if (infoCard) infoCard.innerHTML = '<div class="info-card">Kein Kandidat ausgewählt</div>';
+                if (container) container.innerHTML = '';
+                return;
+            }
+            if (infoCard) {
+                infoCard.innerHTML = `
+                    <div class="info-row"><span class="info-label">ID:</span><span class="info-value">${selectedCandidate.PK_WAHL_KANDIDATEN}</span></div>
+                    <div class="info-row"><span class="info-label">Name:</span><span class="info-value">${escapeHtml(selectedCandidate.VORNAME || '')} ${escapeHtml(selectedCandidate.NACHNAME || '')}</span></div>
+                    <div class="info-row"><span class="info-label">BERUF_ALLG:</span><span class="info-value"><strong>${escapeHtml(selectedCandidate.BERUF_ALLG || '-')}</strong></span></div>
+                    <div class="info-row"><span class="info-label">Platz:</span><span class="info-value">${selectedCandidate.PLATZ || '-'}</span></div>
+                `;
+            }
+            container.innerHTML = `
+                <div class="edit-field"><label>BERUF_ALLG</label><input id="edit_BERUF_ALLG" value="${escapeHtml(selectedCandidate.BERUF_ALLG || '')}"></div>
+                <div class="edit-field"><label>PLATZ</label><input id="edit_PLATZ" value="${escapeHtml(selectedCandidate.PLATZ || '')}"></div>
+                <div class="edit-field"><label>VORNAME</label><input id="edit_VORNAME" value="${escapeHtml(selectedCandidate.VORNAME || '')}"></div>
+                <div class="edit-field"><label>NACHNAME</label><input id="edit_NACHNAME" value="${escapeHtml(selectedCandidate.NACHNAME || '')}"></div>
+            `;
+        }
+
+        window.saveFullCandidateUpdate = async () => {
+            if (!selectedCandidate) { showMsg('Kein Kandidat ausgewählt', 'error', 'updateResult'); return; }
+            let updated = {
+                BERUF_ALLG: document.getElementById('edit_BERUF_ALLG')?.value || '',
+                PLATZ: document.getElementById('edit_PLATZ')?.value || '',
+                VORNAME: document.getElementById('edit_VORNAME')?.value || '',
+                NACHNAME: document.getElementById('edit_NACHNAME')?.value || ''
+            };
+            try {
+                let res = await fetch(`${API}/wahl_kandidaten/update/${selectedCandidate.PK_WAHL_KANDIDATEN}`, {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updated)
+                });
+                if (res.ok) {
+                    showMsg('✅ Kandidat gespeichert', 'success', 'updateResult');
+                    await loadAllData();
+                } else showMsg('Fehler beim Speichern', 'error', 'updateResult');
+            } catch (e) { showMsg(e.message, 'error', 'updateResult'); }
+        };
+
+        window.searchCandidatesForEdit = () => {
+            let term = document.getElementById('candSearchInput')?.value.toLowerCase() || '';
+            let filtered = allCandidates.filter(c => `${c.VORNAME || ''} ${c.NACHNAME || ''}`.toLowerCase().includes(term) || c.PK_WAHL_KANDIDATEN.toString().includes(term));
+            let tbody = document.getElementById('candidateEditBody');
+            if (tbody) {
+                tbody.innerHTML = filtered.slice(0, 50).map(c => `
+                    <tr onclick="selectCandidateFromEditTable(${c.PK_WAHL_KANDIDATEN})" style="cursor:pointer;">
+                        <td>${c.PK_WAHL_KANDIDATEN}</td><td>${escapeHtml(c.VORNAME || '')} ${escapeHtml(c.NACHNAME || '')}</td>
+                        <td>${escapeHtml(partyMap.get(c.FK_WAHL_PARTEI) || c.FK_WAHL_PARTEI || '-')}</td>
+                        <td>${escapeHtml((c.BERUF_ALLG || '').substring(0, 30))}</td>
+                    </tr>
+                `).join('');
+            }
+        };
+        window.selectCandidateFromEditTable = (id) => {
+            selectedCandidate = allCandidates.find(c => c.PK_WAHL_KANDIDATEN == id);
+            selectedPerson = allPersons.find(p => p.PK_KON_PERSON == selectedCandidate?.FK_KON_PERSON);
+            renderCandidateEditFields();
+            updateCompactDisplay();
+        };
+
+        // Person Manager
+        async function loadPersons() { let r = await fetchJson(`${API}/persons`); allPersons = r; filterPersonsManager(); updateKPI(); }
+        function filterPersonsManager() {
+            let tbody = document.getElementById('personManagerTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = allPersons.map(p => `
+                <tr onclick="selectPersonForDetails(${p.PK_KON_PERSON})">
+                    <td>${p.PK_KON_PERSON}</td><td>${escapeHtml(p.VORNAME || '')}</td>
+                    <td>${escapeHtml(p.NACHNAME || '')}</td><td>${escapeHtml(p.BERUF || '-')}</td>
+                    <td><button class="btn-small info" onclick="event.stopPropagation();selectPersonForDetails(${p.PK_KON_PERSON})">Details</button></td>
+                </tr>
+            `).join('');
+        }
+
+       function updatePersonsTable() {
+            const persons = filterPersonsForTable();
+            const sortedPersons = sortPersons(persons);
+            
+            // Update count displays
+            personsCount.textContent = persons.length;
+            personsTableCount.textContent = `(${persons.length})`;
+            personsTableInfo.textContent = `Zeige ${persons.length} von ${persons.length} Einträgen`;
+            
+            personsTableBody.innerHTML = sortedPersons.map(p => `
+                <tr onclick="selectPerson(${p.personId})" ${p.personId == selectedPersonId ? 'class="selected"' : ''}>
+                    <td>${p.personId}</td>
+                    <td>${p.details?.VORNAME || ''}</td>
+                    <td>${p.details?.NACHNAME || ''}</td>
+                    <td>${p.details?.TITEL || ''}</td>
+                    <td>${p.details?.GEBURTSJAHR || ''}</td>
+                    <td>${p.details?.GEBURTSORT || ''}</td>
+                    <td>${p.details?.STERBEJAHR || ''}</td>
+                    <td>${p.details?.GESCHLECHT || ''}</td>
+                    <td>${p.details?.STAATSANGEHOERIGKEIT || ''}</td>
+                    <td>${p.details?.BERUF || ''}</td>
+                    <td>${p.candidates.length}</td>
+                </tr>
+            `).join('');
+        }
+        window.selectPersonForDetails = (id) => {
+            selectedPerson = allPersons.find(p => p.PK_KON_PERSON == id);
+            if (selectedPerson) {
+                document.getElementById('personFullDetails').innerHTML = `
+                    <div class="info-row"><span class="info-label">ID:</span><span>${selectedPerson.PK_KON_PERSON}</span></div>
+                    <div class="info-row"><span class="info-label">Name:</span><span>${escapeHtml(selectedPerson.VORNAME || '')} ${escapeHtml(selectedPerson.NACHNAME || '')}</span></div>
+                    <div class="info-row"><span class="info-label">Beruf:</span><span>${escapeHtml(selectedPerson.BERUF || '-')}</span></div>
+                `;
+                document.getElementById('editPersonId').value = selectedPerson.PK_KON_PERSON;
+                document.getElementById('editVorname').value = selectedPerson.VORNAME || '';
+                document.getElementById('editNachname').value = selectedPerson.NACHNAME || '';
+                document.getElementById('editGeburtsjahr').value = selectedPerson.GEBURTSJAHR || '';
+                document.getElementById('editBeruf').value = selectedPerson.BERUF || '';
+                updateCompactDisplay();
+            }
+        };
+        window.updatePerson = async () => {
+            let id = document.getElementById('editPersonId').value;
+            if (!id) return;
+            let data = { id: parseInt(id), VORNAME: document.getElementById('editVorname').value, NACHNAME: document.getElementById('editNachname').value, GEBURTSJAHR: document.getElementById('editGeburtsjahr').value, BERUF: document.getElementById('editBeruf').value };
+            let res = await fetch(`${API}/update-person`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+            if (res.ok) { await loadAllData(); filterPersonsManager(); showMsg('Aktualisiert', 'success', 'editPersonMsg'); }
+            else showMsg('Fehler', 'error', 'editPersonMsg');
+        };
+        window.deletePerson = async () => {
+            let id = document.getElementById('editPersonId').value;
+            if (!id || !confirm('Person löschen?')) return;
+            await fetch(`${API}/person/delete/${id}`, { method: 'DELETE' });
+            await loadAllData(); filterPersonsManager(); selectedPerson = null;
+            document.getElementById('personFullDetails').innerHTML = '<em>Gelöscht</em>';
+        };
+        window.createPerson = async () => {
+            let vorname = document.getElementById('newPersonVorname').value, nachname = document.getElementById('newPersonNachname').value;
+            if (!vorname || !nachname) { alert('Vorname/Nachname Pflicht'); return; }
+            let body = { vorname, nachname, GEBURTSJAHR: document.getElementById('newPersonGeburtsjahr').value, BERUF: document.getElementById('newPersonBeruf').value };
+            let res = await fetch(`${API}/person/insert`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            if (res.ok) { await loadAllData(); filterPersonsManager(); showMsg('Person angelegt', 'success', 'createPersonMsg'); }
+            else showMsg('Fehler', 'error', 'createPersonMsg');
+        };
+
+        // Multiselect Berufe
+        function renderProfessionMultiselect() {
+            let container = document.getElementById('professionMultiselect');
+            if (!container) return;
+            let search = document.getElementById('multiselectSearch')?.value.toLowerCase() || '';
+            let filtered = allBerufe.filter(p => (p.BERUF || p.name || '').toLowerCase().includes(search));
+            container.innerHTML = filtered.map(p => {
+                let name = p.BERUF || p.name || '';
+                let sel = selectedProfessions.some(sp => (sp.BERUF || sp.name) === name);
+                return `<div class="profession-item ${sel ? 'selected' : ''}" onclick="toggleProfession('${name.replace(/'/g, "\\'")}')">
+                            <input type="checkbox" ${sel ? 'checked' : ''} onclick="event.stopPropagation(); toggleProfession('${name.replace(/'/g, "\\'")}')">
+                            <span class="profession-name">${escapeHtml(name)}</span>
+                        </div>`;
+            }).join('');
+            updateSelectedProfessionsDisplay();
+        }
+        window.toggleProfession = (name) => {
+            let prof = allBerufe.find(p => (p.BERUF || p.name) === name);
+            if (prof) {
+                let idx = selectedProfessions.findIndex(p => (p.BERUF || p.name) === name);
+                if (idx === -1) selectedProfessions.push(prof);
+                else selectedProfessions.splice(idx, 1);
+                renderProfessionMultiselect();
+                updateCompactDisplay();
+            }
+        };
+        function updateSelectedProfessionsDisplay() {
+            let c = document.getElementById('selectedProfessionsList');
+            if (c) c.innerHTML = selectedProfessions.map(p => `<span class="selected-profession-tag" onclick="toggleProfession('${(p.BERUF || p.name || '').replace(/'/g, "\\'")}')">${escapeHtml(p.BERUF || p.name || '')} ✕</span>`).join('') || '<p>Keine Berufe ausgewählt</p>';
+        }
+        window.selectAllProfessions = () => { selectedProfessions = [...allBerufe]; renderProfessionMultiselect(); updateCompactDisplay(); };
+        window.deselectAllProfessions = () => { selectedProfessions = []; renderProfessionMultiselect(); updateCompactDisplay(); };
+        window.assignSelectedProfessionsToCandidate = () => {
+            if (!selectedCandidate) { showMsg('Kein Kandidat ausgewählt', 'error', 'multiselectResult'); return; }
+            let berufe = selectedProfessions.map(p => p.BERUF || p.name).join(', ');
+            selectedCandidate.BERUF_ALLG = berufe;
+            renderCandidateEditFields();
+            showMsg(`BERUF_ALLG gesetzt: ${berufe}`, 'success', 'multiselectResult');
+        };
+
+        // Relations Info
+        window.loadRelationsInfo = async () => {
+            let rels = await fetchJson(`${API}/rel_person_beruf`);
+            allRelations = rels;
+            document.getElementById('relationCount').innerText = allRelations.length;
+            let listDiv = document.getElementById('relationsList');
+            if (listDiv) listDiv.innerHTML = `<div class="info-card">📊 ${allRelations.length} Person-Beruf Verknüpfungen gefunden.</div>`;
+            updateKPI();
+        };
+
+        // Utilities
+        function updateCompactDisplay() {
+            document.getElementById('compactPersonDisplay').innerHTML = selectedPerson ? `${escapeHtml(selectedPerson.VORNAME || '')} ${escapeHtml(selectedPerson.NACHNAME || '')} (${selectedPerson.PK_KON_PERSON})` : '-';
+            document.getElementById('compactCandidateDisplay').innerHTML = selectedCandidate ? `${escapeHtml(selectedCandidate.VORNAME || '')} ${escapeHtml(selectedCandidate.NACHNAME || '')} (${selectedCandidate.PK_WAHL_KANDIDATEN})` : '-';
+            document.getElementById('compactProfessionsDisplay').innerText = selectedProfessions.map(p => p.BERUF || p.name).join(', ').substring(0, 60);
+        }
+        function showMsg(msg, type, elId) {
+            let el = document.getElementById(elId);
+            if (el) { el.innerHTML = `<div style="background:#eef2f8;padding:8px;border-radius:12px;">${msg}</div>`; setTimeout(() => el.innerHTML = '', 3000); }
+        }
+        function escapeHtml(s) { if (!s) return ''; return String(s).replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])); }
+        function switchTab(name) {
+            document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+            document.getElementById(name + 'Tab').style.display = 'block';
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.tab[data-tab="${name}"]`).classList.add('active');
+            if (name === 'personenManager') filterPersonsManager();
+            if (name === 'dashboard') { renderDashboardTable(); buildElectionTree(); }
+            if (name === 'update' && selectedCandidate) renderCandidateEditFields();
+        }
+        document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab'))));
+
+        // Initial load
+        loadAllData();
+    </script>
+</body>
+</html>

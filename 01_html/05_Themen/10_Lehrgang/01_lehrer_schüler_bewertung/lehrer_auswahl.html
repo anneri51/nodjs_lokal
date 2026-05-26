@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lehr Einsendeaufgabe Lehrer Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .container {
+            max-width: 1400px;
+            margin-top: 20px;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .table-container {
+            margin-top: 30px;
+            overflow-x: auto;
+        }
+        .select-group {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .error-message {
+            color: #dc3545;
+            display: none;
+            margin-top: 10px;
+        }
+        .selected-row {
+            background-color: #e3f2fd !important;
+            border-left: 4px solid #2196f3 !important;
+        }
+        .selection-info {
+            background-color: #e8f5e9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .action-button {
+            min-width: 80px;
+            margin: 2px;
+        }
+        .form-control:disabled {
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">Lehr Einsendeaufgabe Lehrer Management</h1>
+        
+        <!-- Selected Values Display -->
+        <div id="selectionInfo" class="selection-info">
+            <h4>Currently Selected:</h4>
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>PK:</strong> <span id="selectedPk">-</span>
+                </div>
+                <div class="col-md-3">
+                    <strong>Einsendeaufgabe:</strong> <span id="selectedEinsendeaufgabe">-</span>
+                </div>
+                <div class="col-md-3">
+                    <strong>Lehrer:</strong> <span id="selectedLehrer">-</span>
+                </div>
+                <div class="col-md-3">
+                    <strong>Org Unit:</strong> <span id="selectedOrgUnit">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Org Unit Selection -->
+        <div class="select-group">
+            <h3>Step 1: Select Organization Unit</h3>
+            <div class="row">
+                <div class="col-md-8">
+                    <label for="orgUnitSelect" class="form-label">Organization Unit ID:</label>
+                    <select id="orgUnitSelect" class="form-select">
+                        <option value="">-- Please select an organization unit --</option>
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button id="submitOrgUnit" class="btn btn-primary w-100" disabled>Load Data</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="loading">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading data...</p>
+        </div>
+
+        <!-- Error Message -->
+        <div id="errorMessage" class="alert alert-danger error-message" role="alert"></div>
+
+        <!-- Data Selection (hidden initially) -->
+        <div id="dataSelection" style="display: none;">
+            <div class="select-group">
+                <h3>Step 2: Select Einsendeaufgabe</h3>
+                <div class="row">
+                    <div class="col-md-12">
+                        <label for="einsendeaufgabeSelect" class="form-label">FK_LEHR_EINSENDEAUFGABE:</label>
+                        <select id="einsendeaufgabeSelect" class="form-select">
+                            <option value="">-- Please select an Einsendeaufgabe --</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="select-group">
+                <h3>Step 3: Select Lehrer</h3>
+                <div class="row">
+                    <div class="col-md-12">
+                        <label for="lehrerSelect" class="form-label">FK_KON_PERSON_LEHRER:</label>
+                        <select id="lehrerSelect" class="form-select" disabled>
+                            <option value="">-- Please select an Einsendeaufgabe first --</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="select-group">
+                <h3>Step 4: Select PK (Primary Key)</h3>
+                <div class="row">
+                    <div class="col-md-12">
+                        <label for="pkSelect" class="form-label">PK_LEHR_EINSENDEAUFGABE_LEHRER:</label>
+                        <select id="pkSelect" class="form-select" disabled>
+                            <option value="">-- Please select Lehrer first --</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form to display selected values -->
+            <div class="select-group">
+                <h3>Selected Entry Details</h3>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label for="pkDisplay" class="form-label">PK_LEHR_EINSENDEAUFGABE_LEHRER</label>
+                        <input type="text" class="form-control" id="pkDisplay" readonly>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="einsendeaufgabeDisplay" class="form-label">FK_LEHR_EINSENDEAUFGABE</label>
+                        <input type="text" class="form-control" id="einsendeaufgabeDisplay" readonly>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="lehrerDisplay" class="form-label">FK_KON_PERSON_LEHRER</label>
+                        <input type="text" class="form-control" id="lehrerDisplay" readonly>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="orgUnitDisplay" class="form-label">Org Unit ID</label>
+                        <input type="text" class="form-control" id="orgUnitDisplay" readonly>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="lehrerNameDisplay" class="form-label">Lehrer Name</label>
+                        <input type="text" class="form-control" id="lehrerNameDisplay" readonly>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="einsendeaufgabeNameDisplay" class="form-label">Einsendeaufgabe Name</label>
+                        <input type="text" class="form-control" id="einsendeaufgabeNameDisplay" readonly>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <button id="clearSelection" class="btn btn-warning">Clear Selection</button>
+                        <button id="saveChanges" class="btn btn-success">Save Changes</button>
+                        <button id="deleteEntry" class="btn btn-danger">Delete Entry</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Table -->
+            <div class="table-container">
+                <h3>Available Data</h3>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table id="dataTable" class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Select</th>
+                                        <th>PK</th>
+                                        <th>Org Unit ID</th>
+                                        <th>FK_LEHR_EINSENDEAUFGABE</th>
+                                        <th>FK_KON_PERSON_LEHRER</th>
+                                        <th>Lehrer Name</th>
+                                        <th>Einsendeaufgabe Name</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Data will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Base URL for the web service
+        const BASE_URL = 'http://localhost:5000/lehr_einsendeaufgabe_lehrer';
+
+        // DOM Elements
+        const orgUnitSelect = document.getElementById('orgUnitSelect');
+        const submitOrgUnit = document.getElementById('submitOrgUnit');
+        const loading = document.getElementById('loading');
+        const errorMessage = document.getElementById('errorMessage');
+        const dataSelection = document.getElementById('dataSelection');
+        const einsendeaufgabeSelect = document.getElementById('einsendeaufgabeSelect');
+        const lehrerSelect = document.getElementById('lehrerSelect');
+        const pkSelect = document.getElementById('pkSelect');
+        const dataTableBody = document.querySelector('#dataTable tbody');
+        const selectionInfo = document.getElementById('selectionInfo');
+        
+        // Form display elements
+        const pkDisplay = document.getElementById('pkDisplay');
+        const einsendeaufgabeDisplay = document.getElementById('einsendeaufgabeDisplay');
+        const lehrerDisplay = document.getElementById('lehrerDisplay');
+        const orgUnitDisplay = document.getElementById('orgUnitDisplay');
+        const lehrerNameDisplay = document.getElementById('lehrerNameDisplay');
+        const einsendeaufgabeNameDisplay = document.getElementById('einsendeaufgabeNameDisplay');
+        
+        // Action buttons
+        const clearSelectionBtn = document.getElementById('clearSelection');
+        const saveChangesBtn = document.getElementById('saveChanges');
+        const deleteEntryBtn = document.getElementById('deleteEntry');
+
+        // Data storage
+        let allData = [];
+        let filteredData = [];
+        let currentOrgUnitId = '';
+        let selectedRowData = null;
+        let selectedRowElement = null;
+
+        // Initialize with some sample org units
+        const orgUnits = [
+            { id: '433', name: 'Organization Unit 1' },
+            { id: '283', name: 'Organization Unit 2' },
+            { id: '280', name: 'Organization Unit 3' }
+        ];
+
+        // Populate org unit select
+        function populateOrgUnitSelect() {
+            orgUnits.forEach(unit => {
+                const option = document.createElement('option');
+                option.value = unit.id;
+                option.textContent = `${unit.name} (ID: ${unit.id})`;
+                orgUnitSelect.appendChild(option);
+            });
+        }
+
+        // Enable/disable submit button based on selection
+        orgUnitSelect.addEventListener('change', function() {
+            submitOrgUnit.disabled = !this.value;
+            currentOrgUnitId = this.value;
+        });
+
+        // Handle org unit submission
+        submitOrgUnit.addEventListener('click', async function() {
+            if (!currentOrgUnitId) return;
+            
+            showLoading();
+            hideError();
+            
+            try {
+                // Fetch data from web service
+                const response = await fetch(`${BASE_URL}/${currentOrgUnitId}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data && Array.isArray(data)) {
+                    allData = data;
+                    populateDataSelection();
+                    showDataSelection();
+                    clearForm();
+                } else {
+                    throw new Error('Invalid data format received');
+                }
+            } catch (error) {
+                showError(`Failed to load data: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        });
+
+        // Handle Einsendeaufgabe selection change
+        einsendeaufgabeSelect.addEventListener('change', function() {
+            const selectedEinsendeaufgabe = this.value;
+            
+            if (selectedEinsendeaufgabe) {
+                populateLehrerSelect(selectedEinsendeaufgabe);
+                lehrerSelect.disabled = false;
+                pkSelect.disabled = true;
+                pkSelect.innerHTML = '<option value="">-- Please select Lehrer first --</option>';
+                filterTableData(selectedEinsendeaufgabe, '', '');
+            } else {
+                lehrerSelect.disabled = true;
+                pkSelect.disabled = true;
+                lehrerSelect.innerHTML = '<option value="">-- Please select an Einsendeaufgabe first --</option>';
+                pkSelect.innerHTML = '<option value="">-- Please select Lehrer first --</option>';
+                filterTableData('', '', '');
+            }
+        });
+
+        // Handle Lehrer selection change
+        lehrerSelect.addEventListener('change', function() {
+            const selectedEinsendeaufgabe = einsendeaufgabeSelect.value;
+            const selectedLehrer = this.value;
+            
+            if (selectedLehrer) {
+                populatePkSelect(selectedEinsendeaufgabe, selectedLehrer);
+                pkSelect.disabled = false;
+                filterTableData(selectedEinsendeaufgabe, selectedLehrer, '');
+            } else {
+                pkSelect.disabled = true;
+                pkSelect.innerHTML = '<option value="">-- Please select Lehrer first --</option>';
+                filterTableData(selectedEinsendeaufgabe, '', '');
+            }
+        });
+
+        // Handle PK selection change
+        pkSelect.addEventListener('change', function() {
+            const selectedPk = this.value;
+            const selectedEinsendeaufgabe = einsendeaufgabeSelect.value;
+            const selectedLehrer = lehrerSelect.value;
+            
+            if (selectedPk) {
+                // Find and select the corresponding row in the table
+                selectRowByPk(selectedPk);
+                filterTableData(selectedEinsendeaufgabe, selectedLehrer, selectedPk);
+            } else {
+                clearRowSelection();
+                filterTableData(selectedEinsendeaufgabe, selectedLehrer, '');
+            }
+        });
+
+        // Populate Einsendeaufgabe select
+        function populateDataSelection() {
+            // Clear previous options
+            einsendeaufgabeSelect.innerHTML = '<option value="">-- Please select an Einsendeaufgabe --</option>';
+            lehrerSelect.innerHTML = '<option value="">-- Please select an Einsendeaufgabe first --</option>';
+            pkSelect.innerHTML = '<option value="">-- Please select Lehrer first --</option>';
+            lehrerSelect.disabled = true;
+            pkSelect.disabled = true;
+            
+            // Get unique Einsendeaufgabe values
+            const einsendeaufgaben = [...new Set(allData
+                .filter(item => item.FK_LEHR_EINSENDEAUFGABE)
+                .map(item => item.FK_LEHR_EINSENDEAUFGABE))];
+            
+            // Populate Einsendeaufgabe select
+            einsendeaufgaben.forEach(id => {
+                const option = document.createElement('option');
+                option.value = id;
+                
+                const einsendeaufgabeItem = allData.find(item => item.FK_LEHR_EINSENDEAUFGABE === id);
+                const displayName = einsendeaufgabeItem && einsendeaufgabeItem.EINSENDEAUFGABE_NAME 
+                    ? `${id} - ${einsendeaufgabeItem.EINSENDEAUFGABE_NAME}`
+                    : id;
+                
+                option.textContent = displayName;
+                einsendeaufgabeSelect.appendChild(option);
+            });
+            
+            // Populate initial table with all data
+            populateTable(allData);
+        }
+
+        // Populate Lehrer select based on selected Einsendeaufgabe
+        function populateLehrerSelect(einsendeaufgabeId) {
+            lehrerSelect.innerHTML = '<option value="">-- All Lehrer --</option>';
+            
+            const lehrer = [...new Set(allData
+                .filter(item => item.FK_LEHR_EINSENDEAUFGABE === einsendeaufgabeId && item.FK_KON_PERSON_LEHRER)
+                .map(item => item.FK_KON_PERSON_LEHRER))];
+            
+            lehrer.forEach(id => {
+                const option = document.createElement('option');
+                option.value = id;
+                
+                const lehrerItem = allData.find(item => 
+                    item.FK_KON_PERSON_LEHRER === id && 
+                    item.FK_LEHR_EINSENDEAUFGABE === einsendeaufgabeId
+                );
+                const displayName = lehrerItem && lehrerItem.LEHRER_NAME 
+                    ? `${id} - ${lehrerItem.LEHRER_NAME}`
+                    : id;
+                
+                option.textContent = displayName;
+                lehrerSelect.appendChild(option);
+            });
+        }
+
+        // Populate PK select based on selected Einsendeaufgabe and Lehrer
+        function populatePkSelect(einsendeaufgabeId, lehrerId) {
+            pkSelect.innerHTML = '<option value="">-- All PKs --</option>';
+            
+            const pks = allData
+                .filter(item => 
+                    item.FK_LEHR_EINSENDEAUFGABE === einsendeaufgabeId && 
+                    item.FK_KON_PERSON_LEHRER === lehrerId &&
+                    item.PK_LEHR_EINSENDEAUFGABE_LEHRER
+                )
+                .map(item => item.PK_LEHR_EINSENDEAUFGABE_LEHRER);
+            
+            pks.forEach(pk => {
+                const option = document.createElement('option');
+                option.value = pk;
+                
+                // Try to find additional info for display
+                const pkItem = allData.find(item => 
+                    item.PK_LEHR_EINSENDEAUFGABE_LEHRER === pk
+                );
+                const displayName = pk;
+                
+                option.textContent = displayName;
+                pkSelect.appendChild(option);
+            });
+        }
+
+        // Populate table with data
+        function populateTable(data) {
+            dataTableBody.innerHTML = '';
+            
+            if (data.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="8" class="text-center">No data available</td>';
+                dataTableBody.appendChild(row);
+                return;
+            }
+            
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                row.dataset.pk = item.PK_LEHR_EINSENDEAUFGABE_LEHRER || '';
+                row.dataset.data = JSON.stringify(item);
+                
+                row.innerHTML = `
+                    <td>
+                        <input type="checkbox" class="row-selector">
+                    </td>
+                    <td>${item.PK_LEHR_EINSENDEAUFGABE_LEHRER || ''}</td>
+                    <td>${currentOrgUnitId}</td>
+                    <td>${item.FK_LEHR_EINSENDEAUFGABE || ''}</td>
+                    <td>${item.FK_KON_PERSON_LEHRER || ''}</td>
+                    <td>${item.LEHRER_NAME || 'N/A'}</td>
+                    <td>${item.EINSENDEAUFGABE_NAME || 'N/A'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary action-button select-row-btn">Select</button>
+                        <button class="btn btn-sm btn-info action-button view-row-btn">View</button>
+                    </td>
+                `;
+                
+                // Add event listeners to buttons
+                const selectBtn = row.querySelector('.select-row-btn');
+                const viewBtn = row.querySelector('.view-row-btn');
+                const checkbox = row.querySelector('.row-selector');
+                
+                selectBtn.addEventListener('click', () => selectRow(row, item));
+                viewBtn.addEventListener('click', () => viewRowDetails(item));
+                checkbox.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        selectRow(row, item);
+                    }
+                });
+                
+                // Add click event to entire row (except buttons)
+                row.addEventListener('click', (e) => {
+                    if (!e.target.closest('button') && !e.target.closest('input')) {
+                        selectRow(row, item);
+                    }
+                });
+                
+                dataTableBody.appendChild(row);
+            });
+        }
+
+        // Select a row and update form fields
+        function selectRow(rowElement, rowData) {
+            // Clear previous selection
+            if (selectedRowElement) {
+                selectedRowElement.classList.remove('selected-row');
+                selectedRowElement.querySelector('.row-selector').checked = false;
+            }
+            
+            // Set new selection
+            selectedRowElement = rowElement;
+            selectedRowData = rowData;
+            selectedRowElement.classList.add('selected-row');
+            selectedRowElement.querySelector('.row-selector').checked = true;
+            
+            // Update select boxes to match selected row
+            if (rowData.FK_LEHR_EINSENDEAUFGABE) {
+                einsendeaufgabeSelect.value = rowData.FK_LEHR_EINSENDEAUFGABE;
+                populateLehrerSelect(rowData.FK_LEHR_EINSENDEAUFGABE);
+                lehrerSelect.disabled = false;
+                
+                if (rowData.FK_KON_PERSON_LEHRER) {
+                    lehrerSelect.value = rowData.FK_KON_PERSON_LEHRER;
+                    populatePkSelect(rowData.FK_LEHR_EINSENDEAUFGABE, rowData.FK_KON_PERSON_LEHRER);
+                    pkSelect.disabled = false;
+                    
+                    if (rowData.PK_LEHR_EINSENDEAUFGABE_LEHRER) {
+                        pkSelect.value = rowData.PK_LEHR_EINSENDEAUFGABE_LEHRER;
+                    }
+                }
+            }
+            
+            // Update form fields
+            updateFormFields(rowData);
+            showSelectionInfo();
+        }
+
+        // Select row by PK value
+        function selectRowByPk(pk) {
+            const row = Array.from(dataTableBody.querySelectorAll('tr')).find(tr => {
+                return tr.dataset.pk === pk;
+            });
+            
+            if (row) {
+                const rowData = JSON.parse(row.dataset.data);
+                selectRow(row, rowData);
+            }
+        }
+
+        // View row details (alert for now, could be modal)
+        function viewRowDetails(rowData) {
+            const details = `
+                PK: ${rowData.PK_LEHR_EINSENDEAUFGABE_LEHRER || 'N/A'}
+                Einsendeaufgabe: ${rowData.FK_LEHR_EINSENDEAUFGABE || 'N/A'} - ${rowData.EINSENDEAUFGABE_NAME || 'N/A'}
+                Lehrer: ${rowData.FK_KON_PERSON_LEHRER || 'N/A'} - ${rowData.LEHRER_NAME || 'N/A'}
+                Org Unit: ${currentOrgUnitId}
+            `;
+            alert(details);
+        }
+
+        // Update form fields with row data
+        function updateFormFields(rowData) {
+            pkDisplay.value = rowData.PK_LEHR_EINSENDEAUFGABE_LEHRER || '';
+            einsendeaufgabeDisplay.value = rowData.FK_LEHR_EINSENDEAUFGABE || '';
+            lehrerDisplay.value = rowData.FK_KON_PERSON_LEHRER || '';
+            orgUnitDisplay.value = currentOrgUnitId;
+            lehrerNameDisplay.value = rowData.LEHRER_NAME || '';
+            einsendeaufgabeNameDisplay.value = rowData.EINSENDEAUFGABE_NAME || '';
+            
+            // Update selection info display
+            document.getElementById('selectedPk').textContent = rowData.PK_LEHR_EINSENDEAUFGABE_LEHRER || '-';
+            document.getElementById('selectedEinsendeaufgabe').textContent = 
+                `${rowData.FK_LEHR_EINSENDEAUFGABE || ''} ${rowData.EINSENDEAUFGABE_NAME ? ' - ' + rowData.EINSENDEAUFGABE_NAME : ''}`;
+            document.getElementById('selectedLehrer').textContent = 
+                `${rowData.FK_KON_PERSON_LEHRER || ''} ${rowData.LEHRER_NAME ? ' - ' + rowData.LEHRER_NAME : ''}`;
+            document.getElementById('selectedOrgUnit').textContent = currentOrgUnitId;
+        }
+
+        // Clear row selection
+        function clearRowSelection() {
+            if (selectedRowElement) {
+                selectedRowElement.classList.remove('selected-row');
+                selectedRowElement.querySelector('.row-selector').checked = false;
+                selectedRowElement = null;
+                selectedRowData = null;
+            }
+        }
+
+        // Clear form fields
+        function clearForm() {
+            pkDisplay.value = '';
+            einsendeaufgabeDisplay.value = '';
+            lehrerDisplay.value = '';
+            orgUnitDisplay.value = currentOrgUnitId;
+            lehrerNameDisplay.value = '';
+            einsendeaufgabeNameDisplay.value = '';
+            
+            // Clear select boxes
+            einsendeaufgabeSelect.value = '';
+            lehrerSelect.innerHTML = '<option value="">-- Please select an Einsendeaufgabe first --</option>';
+            lehrerSelect.disabled = true;
+            pkSelect.innerHTML = '<option value="">-- Please select Lehrer first --</option>';
+            pkSelect.disabled = true;
+            
+            // Clear selection info
+            hideSelectionInfo();
+            clearRowSelection();
+        }
+
+        // Filter table data based on selections
+        function filterTableData(einsendeaufgabeId, lehrerId, pk) {
+            filteredData = allData.filter(item => {
+                const matchesEinsendeaufgabe = !einsendeaufgabeId || item.FK_LEHR_EINSENDEAUFGABE === einsendeaufgabeId;
+                const matchesLehrer = !lehrerId || item.FK_KON_PERSON_LEHRER === lehrerId;
+                const matchesPk = !pk || item.PK_LEHR_EINSENDEAUFGABE_LEHRER === pk;
+                return matchesEinsendeaufgabe && matchesLehrer && matchesPk;
+            });
+            
+            populateTable(filteredData);
+        }
+
+        // Action button handlers
+        clearSelectionBtn.addEventListener('click', clearForm);
+        
+        saveChangesBtn.addEventListener('click', async function() {
+            if (!selectedRowData) {
+                alert('Please select a row first');
+                return;
+            }
+            
+            // Here you would typically send the data back to the server
+            // For now, just show a confirmation
+            if (confirm('Save changes to this entry?')) {
+                // Simulate saving
+                console.log('Saving:', selectedRowData);
+                alert('Changes saved (simulated)');
+            }
+        });
+        
+        deleteEntryBtn.addEventListener('click', async function() {
+            if (!selectedRowData) {
+                alert('Please select a row first');
+                return;
+            }
+            
+            if (confirm(`Are you sure you want to delete entry with PK: ${selectedRowData.PK_LEHR_EINSENDEAUFGABE_LEHRER}?`)) {
+                // Here you would typically send a DELETE request to the server
+                // For now, just show a confirmation
+                console.log('Deleting:', selectedRowData);
+                alert('Entry deleted (simulated)');
+                clearForm();
+            }
+        });
+
+        // UI Helper functions
+        function showLoading() {
+            loading.style.display = 'block';
+            submitOrgUnit.disabled = true;
+        }
+
+        function hideLoading() {
+            loading.style.display = 'none';
+            submitOrgUnit.disabled = false;
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            dataSelection.style.display = 'none';
+        }
+
+        function hideError() {
+            errorMessage.style.display = 'none';
+        }
+
+        function showDataSelection() {
+            dataSelection.style.display = 'block';
+        }
+
+        function showSelectionInfo() {
+            selectionInfo.style.display = 'block';
+        }
+
+        function hideSelectionInfo() {
+            selectionInfo.style.display = 'none';
+        }
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            populateOrgUnitSelect();
+            
+            // For testing purposes, you can simulate loading data
+            // Uncomment the following lines to auto-select org unit 1 on load:
+            /*
+            setTimeout(() => {
+                orgUnitSelect.value = '1';
+                submitOrgUnit.disabled = false;
+                submitOrgUnit.click();
+            }, 500);
+            */
+        });
+    </script>
+</body>
+</html>

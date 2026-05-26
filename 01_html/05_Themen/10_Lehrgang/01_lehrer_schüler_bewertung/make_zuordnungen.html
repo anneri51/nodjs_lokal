@@ -1,0 +1,1844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mandant & Org Unit Management System</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #2c3e50, #4a6491);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        h1 i {
+            font-size: 2.2rem;
+        }
+        
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .panel {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            height: fit-content;
+        }
+        
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        h2 {
+            color: #2c3e50;
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        h2 i {
+            color: #3498db;
+        }
+        
+        .btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+        }
+        
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.9rem;
+        }
+        
+        .btn-secondary {
+            background-color: #7f8c8d;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #636e72;
+        }
+        
+        .btn-success {
+            background-color: #27ae60;
+        }
+        
+        .btn-success:hover {
+            background-color: #219653;
+        }
+        
+        .btn-warning {
+            background-color: #f39c12;
+        }
+        
+        .btn-warning:hover {
+            background-color: #e67e22;
+        }
+        
+        .btn-danger {
+            background-color: #e74c3c;
+        }
+        
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+        
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .filter-label {
+            margin-right: 15px;
+            font-weight: 600;
+            color: #2c3e50;
+            white-space: nowrap;
+        }
+        
+        .filter-select {
+            flex: 1;
+            max-width: 300px;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            background-color: white;
+        }
+        
+        .filter-select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .tab {
+            padding: 12px 25px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #7f8c8d;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .tab.active {
+            color: #3498db;
+            border-bottom: 3px solid #3498db;
+        }
+        
+        .tab:hover:not(.active) {
+            color: #3498db;
+            background-color: #f8f9fa;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .list-container {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 15px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+        }
+        
+        .list-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+        
+        .list-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .list-item:last-child {
+            border-bottom: none;
+        }
+        
+        .item-title {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .item-details {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+        
+        .item-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .map-container {
+            height: 600px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin-top: 10px;
+        }
+        
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        
+        .assignment-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        select, input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        
+        select:focus, input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+        
+        .assignment-list {
+            margin-top: 20px;
+        }
+        
+        .assignment-item {
+            background-color: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 0 5px 5px 0;
+        }
+        
+        .assignment-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .stats {
+            display: flex;
+            gap: 30px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .stat-box {
+            flex: 1;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #3498db;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #7f8c8d;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+        }
+        
+        .loading i {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #3498db;
+        }
+        
+        .error {
+            background-color: #ffeaea;
+            color: #e74c3c;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #e74c3c;
+        }
+        
+        .success {
+            background-color: #eaffea;
+            color: #27ae60;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #27ae60;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 30px;
+            color: #7f8c8d;
+        }
+        
+        .no-data i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: #bdc3c7;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 1200px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+            
+            .assignment-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .panel {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            h2 {
+                font-size: 1.5rem;
+            }
+            
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .tab {
+                border-bottom: 1px solid #eee;
+            }
+            
+            .filter-bar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .filter-label {
+                margin-bottom: 10px;
+            }
+            
+            .filter-select {
+                max-width: 100%;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-university"></i> Mandant & Org Unit Management System</h1>
+            <p class="subtitle">Manage organizational units, teaching assignments, and view geographic distribution on the map</p>
+            <div class="api-status" id="apiStatus">
+                <span class="item-details">API: http://localhost:5000/</span>
+            </div>
+        </header>
+        
+        <!-- Central Filter Bar -->
+        <div class="filter-bar">
+            <span class="filter-label">Filter by Mandant:</span>
+            <select class="filter-select" id="mandantFilter">
+                <option value="all">All Mandants</option>
+                <!-- Options will be populated by JavaScript -->
+            </select>
+        </div>
+        
+        <div class="main-layout">
+            <div class="panel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-list"></i> Data Management</h2>
+                </div>
+                
+                <div class="tabs">
+                    <div class="tab active" data-tab="orgUnits">Org Units</div>
+                    <div class="tab" data-tab="assignments">Einsendeaufgaben</div>
+                    <div class="tab" data-tab="personGroups">Person Groups</div>
+                </div>
+                
+                <div class="tab-content active" id="orgUnits-tab">
+                    <h3>Organizational Units</h3>
+                    <div class="list-container" id="orgUnitList">
+                        <div class="loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Loading organizational units...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="assignments-tab">
+                    <h3>Teaching Assignments</h3>
+                    <div class="list-container" id="assignmentList">
+                        <div class="loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Loading assignments...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="personGroups-tab">
+                    <h3>Person Group: Teachers</h3>
+                    <div class="list-container" id="personGroupList">
+                        <div class="loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Loading teachers...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-map-marked-alt"></i> Org Units Map</h2>
+                    <button class="btn btn-secondary" id="resetMapBtn">
+                        <i class="fas fa-sync-alt"></i> Reset View
+                    </button>
+                </div>
+                <div class="map-container">
+                    <div id="map"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="assignment-container">
+            <div class="panel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-link"></i> 1. Org Unit - Assignment Assignment</h2>
+                </div>
+                <p class="item-details">Assign teaching assignments to organizational units</p>
+                
+                <div id="assignmentMessage" class="message" style="display: none;"></div>
+                
+                <div class="form-group">
+                    <label for="orgUnitSelect">Select Organizational Unit</label>
+                    <select id="orgUnitSelect">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="assignmentSelect">Select Teaching Assignment</label>
+                    <select id="assignmentSelect">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                
+                <button class="btn btn-success" id="assignOrgToAssignment">
+                    <i class="fas fa-link"></i> Create Assignment
+                </button>
+                
+                <div class="assignment-list" id="orgAssignmentList">
+                    <div class="loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading assignments...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-user-tie"></i> 2. Assignment - Teacher Assignment</h2>
+                </div>
+                <p class="item-details">Assign teachers to organizational units and teaching assignments</p>
+                
+                <div id="teacherMessage" class="message" style="display: none;"></div>
+                
+                <div class="form-group">
+                    <label for="assignmentTeacherSelect">Select Org Unit & Assignment</label>
+                    <select id="assignmentTeacherSelect">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="teacherSelect">Select Teacher</label>
+                    <select id="teacherSelect">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                
+                <button class="btn btn-success" id="assignTeacherToAssignment">
+                    <i class="fas fa-user-plus"></i> Assign Teacher
+                </button>
+                
+                <div class="assignment-list" id="teacherAssignmentList">
+                    <div class="loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading teacher assignments...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-value" id="mandantCount">0</div>
+                <div class="stat-label">Mandants</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="orgUnitCount">0</div>
+                <div class="stat-label">Organizational Units</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="assignmentCount">0</div>
+                <div class="stat-label">Teaching Assignments</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="teacherCount">0</div>
+                <div class="stat-label">Teachers</div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Mandant Management System &copy; 2023 | Connected to REST API at http://localhost:5000/</p>
+        </footer>
+    </div>
+    
+    <!-- Add Mandant Modal -->
+    <div class="modal" id="addMandantModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-university"></i> Add New Mandant</h2>
+                <button class="close-modal" id="closeMandantModal">&times;</button>
+            </div>
+            <div id="mandantFormMessage" class="message" style="display: none;"></div>
+            <div class="form-group">
+                <label for="mandantName">Mandant Name</label>
+                <input type="text" id="mandantName" placeholder="Enter mandant name">
+            </div>
+            <div class="form-group">
+                <label for="mandantCode">Mandant Code</label>
+                <input type="text" id="mandantCode" placeholder="Enter mandant code">
+            </div>
+            <div class="form-group">
+                <label for="mandantDescription">Description</label>
+                <input type="text" id="mandantDescription" placeholder="Enter description">
+            </div>
+            <button class="btn btn-success" id="saveMandantBtn">
+                <i class="fas fa-save"></i> Save Mandant
+            </button>
+        </div>
+    </div>
+    
+    <!-- Edit Modal -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="editModalTitle"><i class="fas fa-edit"></i> Edit</h2>
+                <button class="close-modal" id="closeEditModal">&times;</button>
+            </div>
+            <div id="editFormMessage" class="message" style="display: none;"></div>
+            <div id="editFormContent">
+                <!-- Dynamic form content will be inserted here -->
+            </div>
+            <button class="btn btn-success" id="saveEditBtn">
+                <i class="fas fa-save"></i> Save Changes
+            </button>
+        </div>
+    </div>
+    
+    <script>
+        // API Base URL
+        const API_BASE_URL = 'http://localhost:5000';
+        
+        // API Endpoints (assuming RESTful structure)
+        const API_ENDPOINTS = {
+            mandants: `${API_BASE_URL}/mandant`,
+            orgUnits: `${API_BASE_URL}/org_unit`,
+            assignments: `${API_BASE_URL}/lehr_einsendeaufgabe/12`,
+            assignmentOrgUnits: `${API_BASE_URL}/lehr_einsendeaufgabe_org_unit`,
+            assignmentTeachers: `${API_BASE_URL}/lehr_einsendeaufgabe_lehrer`,
+            personGroup: `${API_BASE_URL}/person_person_group/20`,
+            teachers: `${API_BASE_URL}/teacher`
+        };
+        
+        // Initialize the map
+        let map = L.map('map').setView([51.1657, 10.4515], 6);
+        
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // Store markers for later reference
+        let markers = [];
+        
+        // Application state
+        let appState = {
+            mandants: [],
+            orgUnits: [],
+            assignments: [],
+            teachers: [],
+            orgUnitAssignments: [],
+            teacherAssignments: [],
+            currentEditItem: null,
+            currentEditType: null,
+            currentFilter: 'all'  // Store current filter value
+        };
+        
+        // DOM elements
+        const mandantFilter = document.getElementById('mandantFilter');
+        const orgUnitList = document.getElementById('orgUnitList');
+        const assignmentList = document.getElementById('assignmentList');
+        const personGroupList = document.getElementById('personGroupList');
+        const orgUnitSelect = document.getElementById('orgUnitSelect');
+        const assignmentSelect = document.getElementById('assignmentSelect');
+        const assignmentTeacherSelect = document.getElementById('assignmentTeacherSelect');
+        const teacherSelect = document.getElementById('teacherSelect');
+        const orgAssignmentList = document.getElementById('orgAssignmentList');
+        const teacherAssignmentList = document.getElementById('teacherAssignmentList');
+        
+        // Helper function for API calls
+        async function fetchData(endpoint, options = {}) {
+            try {
+                const response = await fetch(endpoint, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error(`Error fetching from ${endpoint}:`, error);
+                showError(`Failed to load data from ${endpoint}. Make sure the server is running at ${API_BASE_URL}`);
+                return null;
+            }
+        }
+        
+        // Show error message
+        function showError(message, elementId = null) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
+            
+            if (elementId) {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.innerHTML = '';
+                    element.appendChild(errorDiv);
+                }
+            } else {
+                // Show as temporary notification
+                errorDiv.style.position = 'fixed';
+                errorDiv.style.top = '20px';
+                errorDiv.style.right = '20px';
+                errorDiv.style.zIndex = '10000';
+                errorDiv.style.maxWidth = '400px';
+                document.body.appendChild(errorDiv);
+                
+                setTimeout(() => {
+                    errorDiv.remove();
+                }, 5000);
+            }
+        }
+        
+        // Show success message
+        function showSuccess(message, elementId = null) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success';
+            successDiv.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+            
+            if (elementId) {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.innerHTML = '';
+                    element.appendChild(successDiv);
+                }
+            } else {
+                // Show as temporary notification
+                successDiv.style.position = 'fixed';
+                successDiv.style.top = '20px';
+                successDiv.style.right = '20px';
+                successDiv.style.zIndex = '10000';
+                successDiv.style.maxWidth = '400px';
+                document.body.appendChild(successDiv);
+                
+                setTimeout(() => {
+                    successDiv.remove();
+                }, 3000);
+            }
+        }
+        
+        // Initialize the application
+        async function init() {
+            await loadAllData();
+            updateStats();
+            updateMap();
+            setupEventListeners();
+        }
+        
+        // Load all data from APIs
+        async function loadAllData() {
+            try {
+                // Load mandants
+                appState.mandants = await fetchData(API_ENDPOINTS.mandants) || [];
+                populateMandantFilter();
+                
+                // Load org units
+                appState.orgUnits = await fetchData(API_ENDPOINTS.orgUnits) || [];
+                renderOrgUnits();
+                populateOrgUnitSelect();
+                
+                // Load assignments
+                appState.assignments = await fetchData(API_ENDPOINTS.assignments) || [];
+                renderAssignments();
+                populateAssignmentSelect();
+                
+                // Load teachers (from person group 20)
+                appState.teachers = await fetchData(API_ENDPOINTS.personGroup) || [];
+                renderTeachers();
+                populateTeacherSelect();
+                
+                // Load org unit assignments
+                appState.orgUnitAssignments = await fetchData(API_ENDPOINTS.assignmentOrgUnits) || [];
+                renderOrgUnitAssignments();
+                
+                // Load teacher assignments
+                appState.teacherAssignments = await fetchData(API_ENDPOINTS.assignmentTeachers) || [];
+                renderTeacherAssignments();
+                
+                // Update combined select for teacher assignments
+                updateAssignmentTeacherSelect();
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showError('Failed to load initial data. Please check if the server is running.');
+            }
+        }
+        
+        // Populate mandant filter dropdown
+        function populateMandantFilter() {
+            mandantFilter.innerHTML = '<option value="all">All Mandants</option>';
+            appState.mandants.forEach(mandant => {
+                const option = document.createElement('option');
+                option.value = mandant.id;
+                option.textContent = `${mandant.name || mandant.MANDANT || 'Unnamed Mandant'} (${mandant.code || mandant.PK_MDT_MANDANT || ''})`;
+                mandantFilter.appendChild(option);
+            });
+        }
+        
+        // Filter data based on selected mandant
+        function filterDataByMandant(mandantId) {
+            appState.currentFilter = mandantId;
+            
+            // Re-render all lists with filtered data
+            renderOrgUnits();
+            renderAssignments();
+            renderTeachers();
+            renderOrgUnitAssignments();
+            renderTeacherAssignments();
+            updateMap();
+            updateStats();
+        }
+        
+        // Get filtered org units
+        function getFilteredOrgUnits() {
+            if (appState.currentFilter === 'all') {
+                return appState.orgUnits;
+            }
+            
+            const mandantId = parseInt(appState.currentFilter);
+            return appState.orgUnits.filter(unit => 
+                unit.mandant_id === mandantId || 
+                unit.FK_MDT_MANDANT === mandantId
+            );
+        }
+        
+        // Get filtered assignments
+        function getFilteredAssignments() {
+            if (appState.currentFilter === 'all') {
+                return appState.assignments;
+            }
+            
+            const mandantId = parseInt(appState.currentFilter);
+            return appState.assignments.filter(assignment => 
+                assignment.mandant_id === mandantId || 
+                assignment.FK_MDT_MANDANT === mandantId
+            );
+        }
+        
+        // Get filtered teachers
+        function getFilteredTeachers() {
+            // Note: Teachers might not have mandant_id, so we return all if filter is not "all"
+            if (appState.currentFilter === 'all') {
+                return appState.teachers;
+            }
+            
+            // If teachers have mandant_id, filter them
+            return appState.teachers.filter(teacher => 
+                teacher.mandant_id === parseInt(appState.currentFilter)
+            );
+        }
+        
+        // Render org units list with filtering
+        function renderOrgUnits() {
+            orgUnitList.innerHTML = '';
+            
+            const filteredUnits = getFilteredOrgUnits();
+            
+            if (filteredUnits.length === 0) {
+                const noDataDiv = document.createElement('div');
+                noDataDiv.className = 'no-data';
+                noDataDiv.innerHTML = `
+                    <i class="fas fa-building"></i>
+                    <p>No organizational units found${appState.currentFilter !== 'all' ? ' for selected mandant' : ''}</p>
+                `;
+                orgUnitList.appendChild(noDataDiv);
+                return;
+            }
+            
+            filteredUnits.forEach(unit => {
+                const mandant = appState.mandants.find(m => 
+                    m.id === unit.mandant_id || 
+                    m.PK_MDT_MANDANT === unit.FK_MDT_MANDANT
+                );
+                const unitItem = document.createElement('div');
+                unitItem.className = 'list-item';
+                unitItem.innerHTML = `
+                    <div>
+                        <div class="item-title">${unit.ORG_UNIT_NAME || unit.name || 'Unnamed Unit'} (${unit.PK_ORG_UNIT || unit.id || ''})</div>
+                        <div class="item-details">
+                            ${mandant ? mandant.name || mandant.MANDANT : 'Unknown Mandant'} | 
+                            ${unit.type || 'No type'} | 
+                            ${unit.address || 'No address'}
+                            ${unit.lat && unit.lng ? ` (${unit.lat}, ${unit.lng})` : ''}
+                        </div>
+                    </div>
+                    <div class="item-actions">
+                        <button class="btn btn-small btn-warning" onclick="viewOnMap(${unit.lat || 0}, ${unit.lng || 0})">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </button>
+                        <button class="btn btn-small btn-warning" onclick="editItem('orgUnit', ${unit.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                `;
+                orgUnitList.appendChild(unitItem);
+            });
+        }
+        
+        // Render assignments list with filtering
+        function renderAssignments() {
+            assignmentList.innerHTML = '';
+            
+            const filteredAssignments = getFilteredAssignments();
+            
+            if (filteredAssignments.length === 0) {
+                const noDataDiv = document.createElement('div');
+                noDataDiv.className = 'no-data';
+                noDataDiv.innerHTML = `
+                    <i class="fas fa-tasks"></i>
+                    <p>No teaching assignments found${appState.currentFilter !== 'all' ? ' for selected mandant' : ''}</p>
+                `;
+                assignmentList.appendChild(noDataDiv);
+                return;
+            }
+            
+            filteredAssignments.forEach(assignment => {
+                const mandant = appState.mandants.find(m => 
+                    m.id === assignment.mandant_id || 
+                    m.PK_MDT_MANDANT === assignment.FK_MDT_MANDANT
+                );
+                const assignmentItem = document.createElement('div');
+                assignmentItem.className = 'list-item';
+                assignmentItem.innerHTML = `
+                    <div>
+                        <div class="item-title">${assignment.EINSENDEAUFGABE || assignment.name || 'Unnamed Assignment'} (${assignment.PK_LEHR_EINSENDEAUFGABE || assignment.id || ''})</div>
+                        <div class="item-details">${assignment.description || 'No description'} | ${mandant ? mandant.name || mandant.MANDANT : 'Unknown Mandant'}</div>
+                    </div>
+                    <div class="item-actions">
+                        <button class="btn btn-small btn-warning" onclick="editItem('assignment', ${assignment.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                `;
+                assignmentList.appendChild(assignmentItem);
+            });
+        }
+        
+        // Render teachers (person group 20) with filtering
+        function renderTeachers() {
+            personGroupList.innerHTML = '';
+            
+            const filteredTeachers = getFilteredTeachers();
+            
+            if (filteredTeachers.length === 0) {
+                const noDataDiv = document.createElement('div');
+                noDataDiv.className = 'no-data';
+                noDataDiv.innerHTML = `
+                    <i class="fas fa-user-tie"></i>
+                    <p>No teachers found${appState.currentFilter !== 'all' ? ' for selected mandant' : ''}</p>
+                `;
+                personGroupList.appendChild(noDataDiv);
+                return;
+            }
+            
+            filteredTeachers.forEach(teacher => {
+                const teacherItem = document.createElement('div');
+                teacherItem.className = 'list-item';
+                teacherItem.innerHTML = `
+                    <div>
+                        <div class="item-title">${teacher.NACHNAME || 'Unnamed Teacher'} ${teacher.VORNAME || 'Unnamed Teacher'} (${teacher.PK_KON_PERSON || 'Unnamed Teacher'})</div>
+                        <div class="item-details">${teacher.specialization || 'No specialization'} | ${teacher.email || 'No email'}</div>
+                    </div>
+                    <div class="item-actions">
+                        <button class="btn btn-small btn-warning" onclick="editItem('teacher', ${teacher.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                `;
+                personGroupList.appendChild(teacherItem);
+            });
+        }
+        
+        // Render org unit to assignment assignments with filtering
+        function renderOrgUnitAssignments() {
+            orgAssignmentList.innerHTML = '';
+            
+            // Filter assignments based on current mandant filter
+            let filteredAssignments = appState.orgUnitAssignments;
+            
+            if (appState.currentFilter !== 'all') {
+                const mandantId = parseInt(appState.currentFilter);
+                
+                // Get org units for this mandant
+                const mandantOrgUnits = appState.orgUnits.filter(unit => 
+                    unit.mandant_id === mandantId || 
+                    unit.FK_MDT_MANDANT === mandantId
+                ).map(unit => unit.id || unit.PK_ORG_UNIT);
+                
+                // Get assignments for this mandant
+                const mandantAssignments = appState.assignments.filter(assignment => 
+                    assignment.mandant_id === mandantId || 
+                    assignment.FK_MDT_MANDANT === mandantId
+                ).map(assignment => assignment.id || assignment.PK_LEHR_EINSENDEAUFGABE);
+                
+                // Filter assignments that involve either a mandant org unit or mandant assignment
+                filteredAssignments = appState.orgUnitAssignments.filter(assignment => {
+                    const orgUnitId = assignment.org_unit_id || assignment.FK_ORG_UNIT;
+                    const assignmentId = assignment.lehr_einsendeaufgabe_id || assignment.FK_LEHR_EINSENDAUFGABE;
+                    
+                    return mandantOrgUnits.includes(orgUnitId) || mandantAssignments.includes(assignmentId);
+                });
+            }
+            
+            if (filteredAssignments.length === 0) {
+                orgAssignmentList.innerHTML = '<div class="item-details" style="padding: 20px; text-align: center;">No assignments found. Create one using the form above.</div>';
+                return;
+            }
+            
+            filteredAssignments.forEach(assignment => {
+                const orgUnit = appState.orgUnits.find(o => 
+                    o.id === assignment.org_unit_id || 
+                    o.PK_ORG_UNIT === assignment.FK_ORG_UNIT
+                );
+                const assignmentObj = appState.assignments.find(a => 
+                    a.id === assignment.lehr_einsendeaufgabe_id || 
+                    a.PK_LEHR_EINSENDEAUFGABE === assignment.FK_LEHR_EINSENDAUFGABE
+                );
+                
+                if (orgUnit && assignmentObj) {
+                    const assignmentItem = document.createElement('div');
+                    assignmentItem.className = 'assignment-item';
+                    assignmentItem.innerHTML = `
+                        <div class="assignment-header">
+                            <div class="item-title">${orgUnit.ORG_UNIT_NAME || orgUnit.name || 'Unknown Unit'} (${orgUnit.PK_ORG_UNIT || orgUnit.name || 'Unknown Unit'})</div>
+                            <button class="btn btn-small btn-danger" onclick="removeOrgUnitAssignment(${assignment.id})">
+                                <i class="fas fa-unlink"></i> Remove
+                            </button>
+                        </div>
+                        <div class="item-details">Assigned to: ${assignmentObj.EINSENDEAUFGABE || assignmentObj.name || 'Unknown'} (${assignmentObj.PK_LEHR_EINSENDEAUFGABE || assignmentObj.id || ''})</div>
+                    `;
+                    orgAssignmentList.appendChild(assignmentItem);
+                }
+            });
+        }
+        
+        // Render teacher to org unit/assignment assignments with filtering
+        function renderTeacherAssignments() {
+            teacherAssignmentList.innerHTML = '';
+            
+            // Filter assignments based on current mandant filter
+            let filteredAssignments = appState.teacherAssignments;
+            
+            if (appState.currentFilter !== 'all') {
+                const mandantId = parseInt(appState.currentFilter);
+                
+                // Get org unit assignments for this mandant
+                const mandantOrgUnitAssignments = appState.orgUnitAssignments.filter(assignment => {
+                    const orgUnit = appState.orgUnits.find(o => 
+                        o.PK_ORG_UNIT === assignment.FK_ORG_UNIT || 
+                        o.PK_ORG_UNIT === assignment.FK_ORG_UNIT
+                    );
+                    
+                    if (orgUnit) {
+                        return orgUnit.mandant_id === mandantId || 
+                               orgUnit.FK_MDT_MANDANT === mandantId;
+                    }
+                    return false;
+                });
+                
+                // Get IDs of filtered org unit assignments
+                const filteredAssignmentIds = mandantOrgUnitAssignments.map(a => a.id);
+                
+                // Filter teacher assignments that belong to filtered org unit assignments
+                filteredAssignments = appState.teacherAssignments.filter(assignment => 
+                    filteredAssignmentIds.includes(assignment.PK_REL_ORG_ORG_UNIT_LEHR_EINSENDEAUFGABE)
+                );
+            }
+            
+            if (filteredAssignments.length === 0) {
+                teacherAssignmentList.innerHTML = '<div class="item-details" style="padding: 20px; text-align: center;">No teacher assignments found. Create one using the form above.</div>';
+                return;
+            }
+            
+            filteredAssignments.forEach(assignment => {
+                const orgUnit = appState.orgUnits.find(o => o.id === assignment.org_unit_id);
+                const assignmentObj = appState.assignments.find(a => a.id === assignment.lehr_einsendeaufgabe_id);
+                const teacher = appState.teachers.find(t => t.id === assignment.teacher_id);
+                
+                if (orgUnit && assignmentObj && teacher) {
+                    const assignmentItem = document.createElement('div');
+                    assignmentItem.className = 'assignment-item';
+                    assignmentItem.innerHTML = `
+                        <div class="assignment-header">
+                            <div class="item-title">${teacher.NACHNAME || 'Unknown Teacher'} ${teacher.VORNAME || 'Unknown Teacher'} (${teacher.PK_KON_PERSON || 'Unknown Teacher'})</div>
+                            <button class="btn btn-small btn-danger" onclick="removeTeacherAssignment(${assignment.id})">
+                                <i class="fas fa-user-times"></i> Remove
+                            </button>
+                        </div>
+                        <div class="item-details">
+                            Assigned to: ${orgUnit.ORG_UNIT_NAME || 'Unknown Unit'} | ${assignmentObj.name || 'Unknown Assignment'}
+                        </div>
+                    `;
+                    teacherAssignmentList.appendChild(assignmentItem);
+                }
+            });
+        }
+        
+        // Populate org unit select dropdown (filtered by current mandant)
+        function populateOrgUnitSelect() {
+            orgUnitSelect.innerHTML = '<option value="">Select an organizational unit</option>';
+            
+            let filteredUnits = appState.orgUnits;
+            if (appState.currentFilter !== 'all') {
+                const mandantId = parseInt(appState.currentFilter);
+                filteredUnits = appState.orgUnits.filter(unit => 
+                    unit.mandant_id === mandantId || 
+                    unit.FK_MDT_MANDANT === mandantId
+                );
+            }
+            
+            filteredUnits.forEach(unit => {
+                const option = document.createElement('option');
+                option.value = unit.id || unit.PK_ORG_UNIT;
+                option.textContent = `${unit.ORG_UNIT_NAME || unit.name || 'Unnamed Unit'} (${unit.PK_ORG_UNIT || unit.name || 'Unnamed Unit'}) (${unit.address || 'No address'})`;
+                orgUnitSelect.appendChild(option);
+            });
+        }
+        
+        // Populate assignment select dropdown (filtered by current mandant)
+        function populateAssignmentSelect() {
+            assignmentSelect.innerHTML = '<option value="">Select a teaching assignment</option>';
+            
+            let filteredAssignments = appState.assignments;
+            if (appState.currentFilter !== 'all') {
+                const mandantId = parseInt(appState.currentFilter);
+                filteredAssignments = appState.assignments.filter(assignment => 
+                    assignment.mandant_id === mandantId || 
+                    assignment.FK_MDT_MANDANT === mandantId
+                );
+            }
+            
+            filteredAssignments.forEach(assignment => {
+                const option = document.createElement('option');
+                option.value = assignment.id || assignment.PK_LEHR_EINSENDEAUFGABE;
+                option.textContent = `${assignment.EINSENDEAUFGABE || assignment.name || 'Unnamed'} (${assignment.PK_LEHR_EINSENDEAUFGABE || ''})`;
+                assignmentSelect.appendChild(option);
+            });
+        }
+        
+        // Update combined select for teacher assignments (filtered by current mandant)
+        function updateAssignmentTeacherSelect() {
+            assignmentTeacherSelect.innerHTML = '<option value="">Select an org unit + assignment</option>';
+            
+            let filteredAssignments = appState.orgUnitAssignments;
+            if (appState.currentFilter !== 'all') {
+                const mandantId = parseInt(appState.currentFilter);
+                
+                filteredAssignments = appState.orgUnitAssignments.filter(assignment => {
+                    const orgUnit = appState.orgUnits.find(o => 
+                        o.PK_ORG_UNIT === assignment.FK_ORG_UNIT || 
+                        o.PK_ORG_UNIT === assignment.FK_ORG_UNIT
+                    );
+                    
+                    if (orgUnit) {
+                        return orgUnit.FK_MDT_MANDANT=== mandantId || 
+                               orgUnit.FK_MDT_MANDANT === mandantId;
+                    }
+                    return false;
+                });
+            }
+            
+            filteredAssignments.forEach(orgAssignment => {
+                const orgUnit = appState.orgUnits.find(o => 
+                    o.PK_ORG_UNIT === orgAssignment.FK_ORG_UNIT || 
+                    o.PK_ORG_UNIT === orgAssignment.FK_ORG_UNIT
+                );
+                const assignmentObj = appState.assignments.find(a => 
+                    a.PK_LEHR_EINSENDEAUFGABE === orgAssignment.FK_LEHR_EINSENDAUFGABE || 
+                    a.PK_LEHR_EINSENDEAUFGABE === orgAssignment.FK_LEHR_EINSENDAUFGABE
+                );
+                
+                if (orgUnit && assignmentObj) {
+                    const option = document.createElement('option');
+                    option.value = `${orgAssignment.FK_ORG_UNIT || orgAssignment.FK_ORG_UNIT}-${orgAssignment.PK_LEHR_EINSENDEAUFGABE || orgAssignment.FK_LEHR_EINSENDAUFGABE}`;
+                    option.textContent = `${orgUnit.ORG_UNIT_NAME || orgUnit.name || 'Unknown Unit'} - ${assignmentObj.EINSENDEAUFGABE || assignmentObj.name || 'Unknown Assignment'}`;
+                    option.dataset.orgUnitId = orgAssignment.FK_ORG_UNIT || orgAssignment.FK_ORG_UNIT;
+                    option.dataset.assignmentId = orgAssignment.FK_LEHR_EINSENDEAUFGABE || orgAssignment.FK_LEHR_EINSENDAUFGABE;
+                    assignmentTeacherSelect.appendChild(option);
+                }
+            });
+        }
+        
+        // Populate teacher select dropdown
+        function populateTeacherSelect() {
+            teacherSelect.innerHTML = '<option value="">Select a teacher</option>';
+            
+            let filteredTeachers = appState.teachers;
+            if (appState.currentFilter !== 'all') {
+                const mandantId = parseInt(appState.currentFilter);
+                filteredTeachers = appState.teachers.filter(teacher => 
+                    teacher.FK_MDT_MANDANT === mandantId
+                );
+            }
+            
+            filteredTeachers.forEach(teacher => {
+                const option = document.createElement('option');
+                option.value = teacher.id;
+                option.textContent = `${teacher.NACHNAME || 'Unnamed Teacher'} ${teacher.VORNAME || 'Unnamed Teacher'} (${teacher.PK_KON_PERSON || 'Unnamed Teacher'}) (${teacher.specialization || ''})`;
+                teacherSelect.appendChild(option);
+            });
+        }
+        
+        // Update statistics
+        function updateStats() {
+            const filteredOrgUnits = getFilteredOrgUnits();
+            const filteredAssignments = getFilteredAssignments();
+            const filteredTeachers = getFilteredTeachers();
+            
+            document.getElementById('mandantCount').textContent = appState.mandants.length;
+            document.getElementById('orgUnitCount').textContent = filteredOrgUnits.length;
+            document.getElementById('assignmentCount').textContent = filteredAssignments.length;
+            document.getElementById('teacherCount').textContent = filteredTeachers.length;
+        }
+        
+        // Update map with org units (filtered by current mandant)
+        function updateMap() {
+            // Clear existing markers
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+            
+            const filteredUnits = getFilteredOrgUnits();
+            
+            // Add new markers for each org unit
+            filteredUnits.forEach(unit => {
+                if (unit.lat && unit.lng) {
+                    const mandant = appState.mandants.find(m => 
+                        m.id === unit.mandant_id || 
+                        m.PK_MDT_MANDANT === unit.FK_MDT_MANDANT
+                    );
+                    const marker = L.marker([unit.lat, unit.lng])
+                        .addTo(map)
+                        .bindPopup(`
+                            <strong>${unit.ORG_UNIT_NAME || unit.name || 'Unnamed Unit'}</strong><br>
+                            <em>${mandant ? mandant.name || mandant.MANDANT : 'Unknown Mandant'}</em><br>
+                            ${unit.type || 'No type'}<br>
+                            ${unit.address || 'No address'}
+                        `);
+                    
+                    markers.push(marker);
+                }
+            });
+            
+            // Fit bounds to show all markers
+            if (markers.length > 0) {
+                const group = new L.featureGroup(markers);
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
+        }
+        
+        // View org unit on map
+        function viewOnMap(lat, lng) {
+            if (lat && lng) {
+                map.setView([lat, lng], 12);
+            }
+        }
+        
+        // Setup event listeners
+        function setupEventListeners() {
+            // Tab functionality
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.getAttribute('data-tab');
+                    
+                    // Update active tab
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    // Show corresponding content
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    document.getElementById(`${tabId}-tab`).classList.add('active');
+                });
+            });
+            
+            // Mandant filter change
+            mandantFilter.addEventListener('change', (e) => {
+                filterDataByMandant(e.target.value);
+            });
+            
+            // Reset map view
+            document.getElementById('resetMapBtn').addEventListener('click', () => {
+                updateMap();
+            });
+            
+            // Assign org unit to assignment
+            document.getElementById('assignOrgToAssignment').addEventListener('click', async () => {
+                const orgUnitId = parseInt(orgUnitSelect.value);
+                const assignmentId = parseInt(assignmentSelect.value);
+                
+                if (!orgUnitId || !assignmentId) {
+                    showError('Please select both an organizational unit and a teaching assignment', 'assignmentMessage');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(API_ENDPOINTS.assignmentOrgUnits, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            org_unit_id: orgUnitId,
+                            lehr_einsendeaufgabe_id: assignmentId
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const newAssignment = await response.json();
+                        appState.orgUnitAssignments.push(newAssignment);
+                        
+                        renderOrgUnitAssignments();
+                        updateAssignmentTeacherSelect();
+                        showSuccess('Assignment created successfully!', 'assignmentMessage');
+                        
+                        // Reset form
+                        orgUnitSelect.value = '';
+                        assignmentSelect.value = '';
+                    } else {
+                        throw new Error('Failed to create assignment');
+                    }
+                } catch (error) {
+                    console.error('Error creating assignment:', error);
+                    showError('Failed to create assignment. Please try again.', 'assignmentMessage');
+                }
+            });
+            
+            // Assign teacher to org unit/assignment
+            document.getElementById('assignTeacherToAssignment').addEventListener('click', async () => {
+                const selectedOption = assignmentTeacherSelect.options[assignmentTeacherSelect.selectedIndex];
+                
+                if (!selectedOption.value) {
+                    showError('Please select an org unit + assignment combination', 'teacherMessage');
+                    return;
+                }
+                
+                const [orgUnitId, assignmentId] = selectedOption.value.split('-').map(Number);
+                const teacherId = parseInt(teacherSelect.value);
+                
+                if (!teacherId) {
+                    showError('Please select a teacher', 'teacherMessage');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(API_ENDPOINTS.assignmentTeachers, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            org_unit_id: orgUnitId,
+                            lehr_einsendeaufgabe_id: assignmentId,
+                            teacher_id: teacherId
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const newAssignment = await response.json();
+                        appState.teacherAssignments.push(newAssignment);
+                        
+                        renderTeacherAssignments();
+                        showSuccess('Teacher assigned successfully!', 'teacherMessage');
+                        
+                        // Reset form
+                        assignmentTeacherSelect.value = '';
+                        teacherSelect.value = '';
+                    } else {
+                        throw new Error('Failed to assign teacher');
+                    }
+                } catch (error) {
+                    console.error('Error assigning teacher:', error);
+                    showError('Failed to assign teacher. Please try again.', 'teacherMessage');
+                }
+            });
+            
+            // Add new mandant modal
+            const addMandantModal = document.getElementById('addMandantModal');
+            const closeMandantModal = document.getElementById('closeMandantModal');
+            const saveMandantBtn = document.getElementById('saveMandantBtn');
+            
+            closeMandantModal.addEventListener('click', () => {
+                addMandantModal.classList.remove('active');
+            });
+            
+            saveMandantBtn.addEventListener('click', async () => {
+                const name = document.getElementById('mandantName').value;
+                const code = document.getElementById('mandantCode').value;
+                const description = document.getElementById('mandantDescription').value;
+                
+                if (!name || !code) {
+                    showError('Please enter at least a name and code for the mandant', 'mandantFormMessage');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(API_ENDPOINTS.mandants, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            name,
+                            code,
+                            description
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const newMandant = await response.json();
+                        appState.mandants.push(newMandant);
+                        
+                        // Update filter dropdown
+                        populateMandantFilter();
+                        updateStats();
+                        showSuccess('Mandant added successfully!', 'mandantFormMessage');
+                        
+                        // Reset form and close modal
+                        document.getElementById('mandantName').value = '';
+                        document.getElementById('mandantCode').value = '';
+                        document.getElementById('mandantDescription').value = '';
+                        
+                        setTimeout(() => {
+                            addMandantModal.classList.remove('active');
+                        }, 1500);
+                    } else {
+                        throw new Error('Failed to add mandant');
+                    }
+                } catch (error) {
+                    console.error('Error adding mandant:', error);
+                    showError('Failed to add mandant. Please try again.', 'mandantFormMessage');
+                }
+            });
+            
+            // Edit modal
+            const editModal = document.getElementById('editModal');
+            const closeEditModal = document.getElementById('closeEditModal');
+            const saveEditBtn = document.getElementById('saveEditBtn');
+            
+            closeEditModal.addEventListener('click', () => {
+                editModal.classList.remove('active');
+            });
+            
+            saveEditBtn.addEventListener('click', async () => {
+                await saveEditedItem();
+            });
+        }
+        
+        // Edit item (opens modal)
+        async function editItem(type, id) {
+            appState.currentEditType = type;
+            appState.currentEditItem = id;
+            
+            let item;
+            let endpoint;
+            let fields = [];
+            
+            // Get item data based on type
+            switch(type) {
+                case 'mandant':
+                    item = appState.mandants.find(m => m.id === id);
+                    endpoint = `${API_ENDPOINTS.mandants}/${id}`;
+                    fields = [
+                        { name: 'name', label: 'Mandant Name', type: 'text', value: item.name || item.MANDANT },
+                        { name: 'code', label: 'Mandant Code', type: 'text', value: item.code || item.PK_MDT_MANDANT },
+                        { name: 'description', label: 'Description', type: 'text', value: item.description }
+                    ];
+                    document.getElementById('editModalTitle').innerHTML = '<i class="fas fa-university"></i> Edit Mandant';
+                    break;
+                    
+                case 'orgUnit':
+                    item = appState.orgUnits.find(o => o.id === id);
+                    endpoint = `${API_ENDPOINTS.orgUnits}/${id}`;
+                    fields = [
+                        { name: 'name', label: 'Unit Name', type: 'text', value: item.name || item.ORG_UNIT_NAME },
+                        { name: 'type', label: 'Type', type: 'text', value: item.type },
+                        { name: 'address', label: 'Address', type: 'text', value: item.address },
+                        { name: 'lat', label: 'Latitude', type: 'number', step: '0.000001', value: item.lat },
+                        { name: 'lng', label: 'Longitude', type: 'number', step: '0.000001', value: item.lng },
+                        { 
+                            name: 'mandant_id', 
+                            label: 'Mandant', 
+                            type: 'select',
+                            value: item.mandant_id || item.FK_MDT_MANDANT,
+                            options: appState.mandants.map(m => ({ 
+                                value: m.id || m.PK_MDT_MANDANT, 
+                                text: m.name || m.MANDANT 
+                            }))
+                        }
+                    ];
+                    document.getElementById('editModalTitle').innerHTML = '<i class="fas fa-building"></i> Edit Organizational Unit';
+                    break;
+                    
+                case 'assignment':
+                    item = appState.assignments.find(a => a.id === id);
+                    endpoint = `${API_ENDPOINTS.assignments}/${id}`;
+                    fields = [
+                        { name: 'name', label: 'Assignment Name', type: 'text', value: item.name || item.EINSENDEAUFGABE },
+                        { name: 'code', label: 'Code', type: 'text', value: item.code || item.PK_LEHR_EINSENDEAUFGABE },
+                        { name: 'description', label: 'Description', type: 'text', value: item.description },
+                        { 
+                            name: 'mandant_id', 
+                            label: 'Mandant', 
+                            type: 'select',
+                            value: item.mandant_id || item.FK_MDT_MANDANT,
+                            options: appState.mandants.map(m => ({ 
+                                value: m.id || m.PK_MDT_MANDANT, 
+                                text: m.name || m.MANDANT 
+                            }))
+                        }
+                    ];
+                    document.getElementById('editModalTitle').innerHTML = '<i class="fas fa-tasks"></i> Edit Teaching Assignment';
+                    break;
+                    
+                case 'teacher':
+                    item = appState.teachers.find(t => t.id === id);
+                    endpoint = `${API_ENDPOINTS.personGroup}/${id}`;
+                    fields = [
+                        { name: 'name', label: 'Teacher Name', type: 'text', value: item.name },
+                        { name: 'email', label: 'Email', type: 'email', value: item.email },
+                        { name: 'specialization', label: 'Specialization', type: 'text', value: item.specialization }
+                    ];
+                    document.getElementById('editModalTitle').innerHTML = '<i class="fas fa-user-tie"></i> Edit Teacher';
+                    break;
+            }
+            
+            if (!item) {
+                showError('Item not found');
+                return;
+            }
+            
+            // Build form
+            const formContent = document.getElementById('editFormContent');
+            formContent.innerHTML = '';
+            document.getElementById('editFormMessage').style.display = 'none';
+            
+            fields.forEach(field => {
+                const formGroup = document.createElement('div');
+                formGroup.className = 'form-group';
+                
+                const label = document.createElement('label');
+                label.textContent = field.label;
+                label.setAttribute('for', `edit_${field.name}`);
+                
+                let input;
+                
+                if (field.type === 'select') {
+                    input = document.createElement('select');
+                    input.id = `edit_${field.name}`;
+                    input.name = field.name;
+                    
+                    // Add options
+                    field.options.forEach(option => {
+                        const optionElement = document.createElement('option');
+                        optionElement.value = option.value;
+                        optionElement.textContent = option.text;
+                        if (option.value == field.value) {
+                            optionElement.selected = true;
+                        }
+                        input.appendChild(optionElement);
+                    });
+                } else {
+                    input = document.createElement('input');
+                    input.type = field.type;
+                    input.id = `edit_${field.name}`;
+                    input.name = field.name;
+                    input.value = field.value || '';
+                    
+                    if (field.step) {
+                        input.step = field.step;
+                    }
+                }
+                
+                formGroup.appendChild(label);
+                formGroup.appendChild(input);
+                formContent.appendChild(formGroup);
+            });
+            
+            // Show modal
+            editModal.classList.add('active');
+        }
+        
+        // Save edited item
+        async function saveEditedItem() {
+            const type = appState.currentEditType;
+            const id = appState.currentEditItem;
+            
+            if (!type || !id) return;
+            
+            let endpoint;
+            const formData = {};
+            
+            // Collect form data
+            document.querySelectorAll('#editFormContent input, #editFormContent select').forEach(input => {
+                const fieldName = input.name;
+                let value = input.value;
+                
+                // Convert numeric fields
+                if (input.type === 'number') {
+                    value = parseFloat(value);
+                } else if (input.name.includes('_id')) {
+                    value = parseInt(value);
+                }
+                
+                formData[fieldName] = value;
+            });
+            
+            // Determine endpoint
+            switch(type) {
+                case 'mandant':
+                    endpoint = `${API_ENDPOINTS.mandants}/${id}`;
+                    break;
+                case 'orgUnit':
+                    endpoint = `${API_ENDPOINTS.orgUnits}/${id}`;
+                    break;
+                case 'assignment':
+                    endpoint = `${API_ENDPOINTS.assignments}/${id}`;
+                    break;
+                case 'teacher':
+                    endpoint = `${API_ENDPOINTS.personGroup}/${id}`;
+                    break;
+            }
+            
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (response.ok) {
+                    const updatedItem = await response.json();
+                    
+                    // Update local state
+                    switch(type) {
+                        case 'mandant':
+                            const mandantIndex = appState.mandants.findIndex(m => m.id === id);
+                            if (mandantIndex !== -1) {
+                                appState.mandants[mandantIndex] = updatedItem;
+                            }
+                            populateMandantFilter();
+                            break;
+                        case 'orgUnit':
+                            const orgUnitIndex = appState.orgUnits.findIndex(o => o.id === id);
+                            if (orgUnitIndex !== -1) {
+                                appState.orgUnits[orgUnitIndex] = updatedItem;
+                            }
+                            renderOrgUnits();
+                            updateMap();
+                            populateOrgUnitSelect();
+                            break;
+                        case 'assignment':
+                            const assignmentIndex = appState.assignments.findIndex(a => a.id === id);
+                            if (assignmentIndex !== -1) {
+                                appState.assignments[assignmentIndex] = updatedItem;
+                            }
+                            renderAssignments();
+                            populateAssignmentSelect();
+                            updateAssignmentTeacherSelect();
+                            break;
+                        case 'teacher':
+                            const teacherIndex = appState.teachers.findIndex(t => t.id === id);
+                            if (teacherIndex !== -1) {
+                                appState.teachers[teacherIndex] = updatedItem;
+                            }
+                            renderTeachers();
+                            populateTeacherSelect();
+                            break;
+                    }
+                    
+                    showSuccess('Item updated successfully!', 'editFormMessage');
+                    
+                    setTimeout(() => {
+                        editModal.classList.remove('active');
+                    }, 1500);
+                } else {
+                    throw new Error('Failed to update item');
+                }
+            } catch (error) {
+                console.error('Error updating item:', error);
+                showError('Failed to update item. Please try again.', 'editFormMessage');
+            }
+        }
+        
+        // Remove org unit assignment
+        async function removeOrgUnitAssignment(id) {
+            if (!confirm('Are you sure you want to remove this assignment?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_ENDPOINTS.assignmentOrgUnits}/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    // Remove from local state
+                    appState.orgUnitAssignments = appState.orgUnitAssignments.filter(a => a.id !== id);
+                    
+                    // Also remove any teacher assignments that depend on this org unit assignment
+                    const assignment = appState.orgUnitAssignments.find(a => a.id === id);
+                    if (assignment) {
+                        appState.teacherAssignments = appState.teacherAssignments.filter(
+                            t => !(t.org_unit_id === assignment.org_unit_id && 
+                                  t.lehr_einsendeaufgabe_id === assignment.lehr_einsendeaufgabe_id)
+                        );
+                    }
+                    
+                    renderOrgUnitAssignments();
+                    renderTeacherAssignments();
+                    updateAssignmentTeacherSelect();
+                    showSuccess('Assignment removed successfully!');
+                } else {
+                    throw new Error('Failed to remove assignment');
+                }
+            } catch (error) {
+                console.error('Error removing assignment:', error);
+                showError('Failed to remove assignment. Please try again.');
+            }
+        }
+        
+        // Remove teacher assignment
+        async function removeTeacherAssignment(id) {
+            if (!confirm('Are you sure you want to remove this teacher assignment?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_ENDPOINTS.assignmentTeachers}/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    // Remove from local state
+                    appState.teacherAssignments = appState.teacherAssignments.filter(a => a.id !== id);
+                    renderTeacherAssignments();
+                    showSuccess('Teacher assignment removed successfully!');
+                } else {
+                    throw new Error('Failed to remove teacher assignment');
+                }
+            } catch (error) {
+                console.error('Error removing teacher assignment:', error);
+                showError('Failed to remove teacher assignment. Please try again.');
+            }
+        }
+        
+        // Initialize the app
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wahlkandidaten Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        /* Left Sidebar Styles */
+        .sidebar {
+            width: 300px;
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar h2 {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #34495e;
+            font-weight: 500;
+        }
+        
+        .tree {
+            list-style: none;
+        }
+        
+        .tree-item {
+            margin-bottom: 5px;
+        }
+        
+        .tree-header {
+            padding: 10px 15px;
+            background-color: #34495e;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+        
+        .tree-header:hover {
+            background-color: #3d566e;
+        }
+        
+        .tree-header.active {
+            background-color: #3498db;
+        }
+        
+        .tree-content {
+            list-style: none;
+            padding-left: 20px;
+            margin-top: 5px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .tree-content.expanded {
+            max-height: 500px;
+        }
+        
+        .tree-leaf {
+            padding: 8px 15px;
+            margin-bottom: 5px;
+            background-color: #3c5a78;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .tree-leaf:hover {
+            background-color: #4a6b8c;
+        }
+        
+        .tree-leaf.active {
+            background-color: #2980b9;
+        }
+        
+        /* Main Content Styles */
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            font-weight: 500;
+        }
+        
+        .refresh-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        
+        .refresh-btn:hover {
+            background-color: #2980b9;
+        }
+        
+        /* Statistics Section Styles */
+        .statistics-section {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .statistics-section h2 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+            font-weight: 500;
+            font-size: 18px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+            border-left: 4px solid #3498db;
+        }
+        
+        .stat-card h3 {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .stat-card.candidates {
+            border-left-color: #3498db;
+        }
+        
+        .stat-card.persons {
+            border-left-color: #2ecc71;
+        }
+        
+        .stat-card.parties {
+            border-left-color: #e74c3c;
+        }
+        
+        .stat-card.elections {
+            border-left-color: #f39c12;
+        }
+        
+        .stat-card.mandates {
+            border-left-color: #9b59b6;
+        }
+        
+        .stat-card.regions {
+            border-left-color: #1abc9c;
+        }
+        
+        .stats-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .stats-column {
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+        }
+        
+        .stats-column h3 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+            font-size: 16px;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 5px;
+        }
+        
+        .stats-list {
+            list-style: none;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .stats-list-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .stats-list-item:last-child {
+            border-bottom: none;
+        }
+        
+        /* Extended Statistics Section */
+        .extended-statistics {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .extended-statistics h2 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+            font-weight: 500;
+            font-size: 18px;
+        }
+        
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        .stats-table th, .stats-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .stats-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .stats-table tr:hover {
+            background-color: #f5f7fa;
+        }
+        
+        /* Filter Section Styles */
+        .filter-section {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .filter-section h2 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+            font-weight: 500;
+            font-size: 18px;
+        }
+        
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        
+        .filter-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .filter-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .filter-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        
+        .filter-btn.primary {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .filter-btn.primary:hover {
+            background-color: #2980b9;
+        }
+        
+        .filter-btn.secondary {
+            background-color: #e0e0e0;
+            color: #333;
+        }
+        
+        .filter-btn.secondary:hover {
+            background-color: #d0d0d0;
+        }
+        
+        .candidates-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .candidate-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .candidate-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        }
+        
+        .candidate-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .candidate-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #3498db;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 24px;
+            margin-right: 15px;
+        }
+        
+        .candidate-name {
+            font-size: 18px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        
+        .candidate-party {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+        
+        .candidate-details {
+            margin-top: 10px;
+        }
+        
+        .detail-row {
+            display: flex;
+            margin-bottom: 8px;
+        }
+        
+        .detail-label {
+            font-weight: 500;
+            width: 120px;
+            color: #7f8c8d;
+        }
+        
+        .detail-value {
+            flex: 1;
+            color: #2c3e50;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+        
+        .error {
+            background-color: #e74c3c;
+            color: white;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                max-height: 300px;
+            }
+            
+            .candidates-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .filter-row {
+                flex-direction: column;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .stats-details {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Left Sidebar with Tree Navigation -->
+        <div class="sidebar">
+            <h2>Wahlnavigation</h2>
+            <ul class="tree" id="electionTree">
+                <!-- Tree will be populated by JavaScript -->
+            </ul>
+        </div>
+        
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <div class="header">
+                <h1 id="pageTitle">Wahlkandidaten Dashboard</h1>
+                <button class="refresh-btn" id="refreshBtn">Daten aktualisieren</button>
+            </div>
+            
+            <!-- Statistics Section -->
+            <div class="statistics-section" id="statisticsSection" style="display: none;">
+                <h2>Statistikübersicht</h2>
+                <div class="stats-grid">
+                    <div class="stat-card candidates">
+                        <h3>Kandidaten</h3>
+                        <div class="stat-value" id="totalCandidates">0</div>
+                    </div>
+                    <div class="stat-card persons">
+                        <h3>Eindeutige Personen</h3>
+                        <div class="stat-value" id="uniquePersons">0</div>
+                    </div>
+                    <div class="stat-card parties">
+                        <h3>Parteien</h3>
+                        <div class="stat-value" id="totalParties">0</div>
+                    </div>
+                    <div class="stat-card elections">
+                        <h3>Wahlen</h3>
+                        <div class="stat-value" id="totalElections">0</div>
+                    </div>
+                    <div class="stat-card mandates">
+                        <h3>Mandate</h3>
+                        <div class="stat-value" id="totalMandates">0</div>
+                    </div>
+                    <div class="stat-card regions">
+                        <h3>Regionen</h3>
+                        <div class="stat-value" id="totalRegions">0</div>
+                    </div>
+                </div>
+                <div class="stats-details">
+                    <div class="stats-column">
+                        <h3>Top Parteien</h3>
+                        <ul class="stats-list" id="topPartiesList">
+                            <!-- Will be populated by JavaScript -->
+                        </ul>
+                    </div>
+                    <div class="stats-column">
+                        <h3>Top Regionen</h3>
+                        <ul class="stats-list" id="topRegionsList">
+                            <!-- Will be populated by JavaScript -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Extended Statistics Section -->
+            <div class="extended-statistics" id="extendedStatisticsSection" style="display: none;">
+                <h2>Detaillierte Statistiken</h2>
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Kategorie</th>
+                            <th>Kandidaten</th>
+                            <th>Eindeutige Personen</th>
+                            <th>Personen/Kandidaten Ratio</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detailedStatsBody">
+                        <!-- Will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Filter Section -->
+            <div class="filter-section" id="filterSection" style="display: none;">
+                <h2>Filteroptionen</h2>
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="personIdFilter">Person ID (FK_KON_PERSON)</label>
+                        <input type="text" id="personIdFilter" class="filter-input" placeholder="Person ID eingeben">
+                    </div>
+                    <div class="filter-group">
+                        <label for="firstNameFilter">Vorname</label>
+                        <input type="text" id="firstNameFilter" class="filter-input" placeholder="Vorname eingeben">
+                    </div>
+                    <div class="filter-group">
+                        <label for="lastNameFilter">Nachname</label>
+                        <input type="text" id="lastNameFilter" class="filter-input" placeholder="Nachname eingeben">
+                    </div>
+                </div>
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="partyFilter">Partei (Kurzname)</label>
+                        <input type="text" id="partyFilter" class="filter-input" placeholder="Partei-Kürzel eingeben">
+                    </div>
+                    <div class="filter-group">
+                        <label for="regionFilter">Region</label>
+                        <input type="text" id="regionFilter" class="filter-input" placeholder="Region eingeben">
+                    </div>
+                </div>
+                <div class="filter-actions">
+                    <button class="filter-btn secondary" id="clearFiltersBtn">Filter zurücksetzen</button>
+                    <button class="filter-btn primary" id="applyFiltersBtn">Filter anwenden</button>
+                </div>
+            </div>
+            
+            <div id="contentArea">
+                <!-- Content will be populated by JavaScript -->
+                <div class="empty-state">
+                    Bitte wählen Sie eine Wahl aus der Navigation aus.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const electionTree = document.getElementById('electionTree');
+        const contentArea = document.getElementById('contentArea');
+        const pageTitle = document.getElementById('pageTitle');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const statisticsSection = document.getElementById('statisticsSection');
+        const extendedStatisticsSection = document.getElementById('extendedStatisticsSection');
+        const detailedStatsBody = document.getElementById('detailedStatsBody');
+        const filterSection = document.getElementById('filterSection');
+        const personIdFilter = document.getElementById('personIdFilter');
+        const firstNameFilter = document.getElementById('firstNameFilter');
+        const lastNameFilter = document.getElementById('lastNameFilter');
+        const partyFilter = document.getElementById('partyFilter');
+        const regionFilter = document.getElementById('regionFilter');
+        const applyFiltersBtn = document.getElementById('applyFiltersBtn');
+        const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+        
+        // Statistics elements
+        const totalCandidates = document.getElementById('totalCandidates');
+        const uniquePersons = document.getElementById('uniquePersons');
+        const totalParties = document.getElementById('totalParties');
+        const totalElections = document.getElementById('totalElections');
+        const totalMandates = document.getElementById('totalMandates');
+        const totalRegions = document.getElementById('totalRegions');
+        const topPartiesList = document.getElementById('topPartiesList');
+        const topRegionsList = document.getElementById('topRegionsList');
+
+        // Global variables
+        let allCandidates = [];
+        let currentElectionId = null;
+        let currentElectionName = null;
+        let currentFilters = {
+            personId: '',
+            firstName: '',
+            lastName: '',
+            party: '',
+            region: ''
+        };
+
+        // Initialize the application
+        function init() {
+            loadElectionData();
+            setupEventListeners();
+        }
+
+        // Load election data from the web service
+        async function loadElectionData() {
+            try {
+                // Show loading state
+                electionTree.innerHTML = '<div class="loading">Lade Wahldaten...</div>';
+                
+                // Fetch data from the web service
+                const response = await fetch('http://localhost:5000/wahl_kandidaten');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                allCandidates = await response.json();
+                
+                // Process data to build tree structure
+                const electionData = processElectionData(allCandidates);
+                
+                // Render the election tree
+                renderElectionTree(electionData);
+                
+                // Update overall statistics
+                updateOverallStatistics();
+            } catch (error) {
+                console.error('Error fetching election data:', error);
+                electionTree.innerHTML = `
+                    <div class="error">
+                        Fehler beim Laden der Wahldaten: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Process candidate data to build tree structure
+        function processElectionData(candidates) {
+            const electionTypes = {};
+            
+            candidates.forEach(candidate => {
+                const electionType = candidate.WAHLART || candidate.FK_STD_WAHL_ART || 'Unbekannte Wahlart';
+                
+                if (!electionTypes[electionType]) {
+                    electionTypes[electionType] = {
+                        name: electionType,
+                        elections: {}
+                    };
+                }
+                
+                const electionId = candidate.FK_WAHL_WAHL;
+                const electionName = candidate.WAHL_BEZEICHNUNG || candidate.BEZEICHNUNG || `Wahl ${electionId}`;
+                
+                if (!electionTypes[electionType].elections[electionId]) {
+                    electionTypes[electionType].elections[electionId] = {
+                        id: electionId,
+                        name: electionName,
+                        candidates: []
+                    };
+                }
+                
+                electionTypes[electionType].elections[electionId].candidates.push(candidate);
+            });
+            
+            // Convert to array format for rendering
+            const result = [];
+            for (const [typeName, typeData] of Object.entries(electionTypes)) {
+                result.push({
+                    name: typeName,
+                    elections: Object.values(typeData.elections)
+                });
+            }
+            
+            return result;
+        }
+
+        // Render the election tree navigation
+        function renderElectionTree(electionData) {
+            electionTree.innerHTML = '';
+            
+            if (electionData.length === 0) {
+                electionTree.innerHTML = '<div class="empty-state">Keine Wahldaten verfügbar.</div>';
+                return;
+            }
+            
+            electionData.forEach(electionType => {
+                const treeItem = document.createElement('li');
+                treeItem.className = 'tree-item';
+                
+                const treeHeader = document.createElement('div');
+                treeHeader.className = 'tree-header';
+                treeHeader.innerHTML = `
+                    <span>${electionType.name}</span>
+                    <span>▶</span>
+                `;
+                
+                const treeContent = document.createElement('ul');
+                treeContent.className = 'tree-content';
+                
+                electionType.elections.forEach(election => {
+                    const treeLeaf = document.createElement('li');
+                    treeLeaf.className = 'tree-leaf';
+                    treeLeaf.textContent = election.name;
+                    treeLeaf.dataset.electionId = election.id;
+                    treeLeaf.dataset.electionName = election.name;
+                    treeContent.appendChild(treeLeaf);
+                });
+                
+                treeItem.appendChild(treeHeader);
+                treeItem.appendChild(treeContent);
+                electionTree.appendChild(treeItem);
+            });
+        }
+
+        // Set up event listeners
+        function setupEventListeners() {
+            // Tree header click to expand/collapse
+            electionTree.addEventListener('click', function(e) {
+                if (e.target.classList.contains('tree-header')) {
+                    const content = e.target.nextElementSibling;
+                    const isExpanded = content.classList.contains('expanded');
+                    
+                    // Close all other tree contents
+                    document.querySelectorAll('.tree-content.expanded').forEach(item => {
+                        if (item !== content) {
+                            item.classList.remove('expanded');
+                            item.previousElementSibling.querySelector('span:last-child').textContent = '▶';
+                        }
+                    });
+                    
+                    // Toggle current
+                    if (isExpanded) {
+                        content.classList.remove('expanded');
+                        e.target.querySelector('span:last-child').textContent = '▶';
+                    } else {
+                        content.classList.add('expanded');
+                        e.target.querySelector('span:last-child').textContent = '▼';
+                    }
+                }
+                
+                // Tree leaf click to select election
+                if (e.target.classList.contains('tree-leaf')) {
+                    // Remove active class from all leaves
+                    document.querySelectorAll('.tree-leaf.active').forEach(item => {
+                        item.classList.remove('active');
+                    });
+                    
+                    // Add active class to clicked leaf
+                    e.target.classList.add('active');
+                    
+                    // Load candidates for this election
+                    const electionId = e.target.dataset.electionId;
+                    const electionName = e.target.dataset.electionName;
+                    loadCandidates(electionId, electionName);
+                }
+            });
+            
+            // Refresh button click
+            refreshBtn.addEventListener('click', function() {
+                const activeElection = document.querySelector('.tree-leaf.active');
+                if (activeElection) {
+                    const electionId = activeElection.dataset.electionId;
+                    const electionName = activeElection.dataset.electionName;
+                    loadCandidates(electionId, electionName);
+                } else {
+                    // Reload all election data
+                    loadElectionData();
+                    contentArea.innerHTML = '<div class="empty-state">Bitte wählen Sie eine Wahl aus der Navigation aus.</div>';
+                    pageTitle.textContent = 'Wahlkandidaten Dashboard';
+                    statisticsSection.style.display = 'none';
+                    extendedStatisticsSection.style.display = 'none';
+                    filterSection.style.display = 'none';
+                }
+            });
+            
+            // Apply filters button
+            applyFiltersBtn.addEventListener('click', function() {
+                currentFilters = {
+                    personId: personIdFilter.value.trim(),
+                    firstName: firstNameFilter.value.trim(),
+                    lastName: lastNameFilter.value.trim(),
+                    party: partyFilter.value.trim(),
+                    region: regionFilter.value.trim()
+                };
+                
+                if (currentElectionId) {
+                    loadCandidates(currentElectionId, currentElectionName);
+                }
+            });
+            
+            // Clear filters button
+            clearFiltersBtn.addEventListener('click', function() {
+                personIdFilter.value = '';
+                firstNameFilter.value = '';
+                lastNameFilter.value = '';
+                partyFilter.value = '';
+                regionFilter.value = '';
+                currentFilters = {
+                    personId: '',
+                    firstName: '',
+                    lastName: '',
+                    party: '',
+                    region: ''
+                };
+                
+                if (currentElectionId) {
+                    loadCandidates(currentElectionId, currentElectionName);
+                }
+            });
+            
+            // Allow pressing Enter in filter fields to apply filters
+            const filterInputs = [personIdFilter, firstNameFilter, lastNameFilter, partyFilter, regionFilter];
+            filterInputs.forEach(input => {
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        applyFiltersBtn.click();
+                    }
+                });
+            });
+        }
+
+        // Load candidates for a specific election
+        async function loadCandidates(electionId, electionName) {
+            // Show loading state
+            contentArea.innerHTML = '<div class="loading">Lade Kandidaten...</div>';
+            pageTitle.textContent = `Kandidaten - ${electionName} (${electionId})`;
+            
+            // Show statistics and filter sections
+            statisticsSection.style.display = 'block';
+            extendedStatisticsSection.style.display = 'block';
+            filterSection.style.display = 'block';
+            
+            // Store current election info
+            currentElectionId = electionId;
+            currentElectionName = electionName;
+            
+            try {
+                // Filter candidates for the selected election
+                let candidates = allCandidates.filter(candidate => 
+                    candidate.FK_WAHL_WAHL == electionId
+                );
+                
+                // Apply filters if any
+                candidates = applyFilters(candidates);
+                
+                // Update statistics
+                updateStatistics(candidates);
+                
+                // Update detailed statistics
+                updateDetailedStatistics();
+                
+                // Render candidates
+                renderCandidates(candidates);
+            } catch (error) {
+                console.error('Error fetching candidates:', error);
+                contentArea.innerHTML = `
+                    <div class="error">
+                        Fehler beim Laden der Kandidaten: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Update overall statistics for the entire dataset
+        function updateOverallStatistics() {
+            // Count total candidates
+            totalCandidates.textContent = allCandidates.length;
+            
+            // Count unique persons
+            const uniquePersonsSet = new Set();
+            allCandidates.forEach(candidate => {
+                const personKey = `${candidate.VORNAME || ''} ${candidate.NACHNAME || ''}`.trim();
+                if (personKey) {
+                    uniquePersonsSet.add(personKey);
+                }
+            });
+            uniquePersons.textContent = uniquePersonsSet.size;
+            
+            // Count parties
+            const partiesSet = new Set();
+            allCandidates.forEach(candidate => {
+                const party = candidate.PARTEI_KURZ || candidate.LISTE_KURZNAME || '';
+                if (party) {
+                    partiesSet.add(party);
+                }
+            });
+            totalParties.textContent = partiesSet.size;
+            
+            // Count elections
+            const electionsSet = new Set();
+            allCandidates.forEach(candidate => {
+                const electionId = candidate.FK_WAHL_WAHL;
+                if (electionId) {
+                    electionsSet.add(electionId);
+                }
+            });
+            totalElections.textContent = electionsSet.size;
+            
+            // Count mandates (candidates with LISTENPLATZ)
+            const mandatesCount = allCandidates.filter(candidate => 
+                candidate.LISTENPLATZ && candidate.LISTENPLATZ > 0
+            ).length;
+            totalMandates.textContent = mandatesCount;
+            
+            // Count regions
+            const regionsSet = new Set();
+            allCandidates.forEach(candidate => {
+                const region = candidate.STIMMKREIS || candidate.STIMMBEZIRK || '';
+                if (region) {
+                    regionsSet.add(region);
+                }
+            });
+            totalRegions.textContent = regionsSet.size;
+        }
+
+        // Update statistics based on current candidate data
+        function updateStatistics(candidates) {
+            // Basic counts
+            totalCandidates.textContent = candidates.length;
+            
+            // Count unique persons
+            const uniquePersonsSet = new Set();
+            candidates.forEach(candidate => {
+                const personKey = `${candidate.VORNAME || ''} ${candidate.NACHNAME || ''}`.trim();
+                if (personKey) {
+                    uniquePersonsSet.add(personKey);
+                }
+            });
+            uniquePersons.textContent = uniquePersonsSet.size;
+            
+            // Count parties
+            const partiesSet = new Set();
+            candidates.forEach(candidate => {
+                const party = candidate.PARTEI_KURZ || candidate.LISTE_KURZNAME || '';
+                if (party) {
+                    partiesSet.add(party);
+                }
+            });
+            totalParties.textContent = partiesSet.size;
+            
+            // Count elections (always 1 when viewing a specific election)
+            totalElections.textContent = 1;
+            
+            // Count mandates (candidates with LISTENPLATZ)
+            const mandatesCount = candidates.filter(candidate => 
+                candidate.LISTENPLATZ && candidate.LISTENPLATZ > 0
+            ).length;
+            totalMandates.textContent = mandatesCount;
+            
+            // Count regions
+            const regionsSet = new Set();
+            candidates.forEach(candidate => {
+                const region = candidate.STIMMKREIS || candidate.STIMMBEZIRK || '';
+                if (region) {
+                    regionsSet.add(region);
+                }
+            });
+            totalRegions.textContent = regionsSet.size;
+            
+            // Top parties
+            const partyCounts = {};
+            candidates.forEach(candidate => {
+                const party = candidate.PARTEI_KURZ || candidate.LISTE_KURZNAME || 'Unbekannt';
+                partyCounts[party] = (partyCounts[party] || 0) + 1;
+            });
+            
+            // Sort parties by count and get top 5
+            const topParties = Object.entries(partyCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+            
+            topPartiesList.innerHTML = '';
+            topParties.forEach(([party, count]) => {
+                const listItem = document.createElement('li');
+                listItem.className = 'stats-list-item';
+                listItem.innerHTML = `
+                    <span>${party}</span>
+                    <span>${count}</span>
+                `;
+                topPartiesList.appendChild(listItem);
+            });
+            
+            // Top regions
+            const regionCounts = {};
+            candidates.forEach(candidate => {
+                const region = candidate.STIMMKREIS || candidate.STIMMBEZIRK || 'Unbekannt';
+                if (region) {
+                    regionCounts[region] = (regionCounts[region] || 0) + 1;
+                }
+            });
+            
+            // Sort regions by count and get top 5
+            const topRegions = Object.entries(regionCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+            
+            topRegionsList.innerHTML = '';
+            topRegions.forEach(([region, count]) => {
+                const listItem = document.createElement('li');
+                listItem.className = 'stats-list-item';
+                listItem.innerHTML = `
+                    <span>${region}</span>
+                    <span>${count}</span>
+                `;
+                topRegionsList.appendChild(listItem);
+            });
+        }
+
+        // Update detailed statistics table
+        function updateDetailedStatistics() {
+            detailedStatsBody.innerHTML = '';
+            
+            // Calculate statistics for overall data
+            const overallStats = calculateStatistics(allCandidates);
+            addStatisticsRow('Gesamt', overallStats);
+            
+            // Calculate statistics by election type
+            const electionTypes = {};
+            allCandidates.forEach(candidate => {
+                const electionType = candidate.WAHLART || candidate.FK_STD_WAHL_ART || 'Unbekannte Wahlart';
+                if (!electionTypes[electionType]) {
+                    electionTypes[electionType] = [];
+                }
+                electionTypes[electionType].push(candidate);
+            });
+            
+            for (const [electionType, candidates] of Object.entries(electionTypes)) {
+                const stats = calculateStatistics(candidates);
+                addStatisticsRow(electionType, stats);
+            }
+            
+            // Calculate statistics for current election if selected
+            if (currentElectionId) {
+                const currentElectionCandidates = allCandidates.filter(candidate => 
+                    candidate.FK_WAHL_WAHL == currentElectionId
+                );
+                const currentStats = calculateStatistics(currentElectionCandidates);
+                addStatisticsRow(currentElectionName, currentStats);
+            }
+        }
+
+        // Calculate statistics for a set of candidates
+        function calculateStatistics(candidates) {
+            const candidateCount = candidates.length;
+            
+            // Count unique persons
+            const uniquePersonsSet = new Set();
+            candidates.forEach(candidate => {
+                const personKey = `${candidate.VORNAME || ''} ${candidate.NACHNAME || ''}`.trim();
+                if (personKey) {
+                    uniquePersonsSet.add(personKey);
+                }
+            });
+            const uniquePersonCount = uniquePersonsSet.size;
+            
+            // Calculate ratio
+            const ratio = candidateCount > 0 ? (uniquePersonCount / candidateCount).toFixed(2) : '0.00';
+            
+            return {
+                candidates: candidateCount,
+                uniquePersons: uniquePersonCount,
+                ratio: ratio
+            };
+        }
+
+        // Add a row to the detailed statistics table
+        function addStatisticsRow(label, stats) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${label}</td>
+                <td>${stats.candidates}</td>
+                <td>${stats.uniquePersons}</td>
+                <td>${stats.ratio}</td>
+            `;
+            detailedStatsBody.appendChild(row);
+        }
+
+        // Apply filters to candidate list
+        function applyFilters(candidates) {
+            let filteredCandidates = [...candidates];
+            
+            // Filter by person ID
+            if (currentFilters.personId) {
+                filteredCandidates = filteredCandidates.filter(candidate => 
+                    candidate.FK_KON_PERSON && 
+                    candidate.FK_KON_PERSON.toString().includes(currentFilters.personId)
+                );
+            }
+            
+            // Filter by first name
+            if (currentFilters.firstName) {
+                filteredCandidates = filteredCandidates.filter(candidate => 
+                    candidate.VORNAME && 
+                    candidate.VORNAME.toLowerCase().includes(currentFilters.firstName.toLowerCase())
+                );
+            }
+            
+            // Filter by last name
+            if (currentFilters.lastName) {
+                filteredCandidates = filteredCandidates.filter(candidate => 
+                    candidate.NACHNAME && 
+                    candidate.NACHNAME.toLowerCase().includes(currentFilters.lastName.toLowerCase())
+                );
+            }
+            
+            // Filter by party
+            if (currentFilters.party) {
+                filteredCandidates = filteredCandidates.filter(candidate => 
+                    candidate.PARTEI_KURZ && 
+                    candidate.PARTEI_KURZ.toLowerCase().includes(currentFilters.party.toLowerCase())
+                );
+            }
+            
+            // Filter by region
+            if (currentFilters.region) {
+                filteredCandidates = filteredCandidates.filter(candidate => 
+                    (candidate.STIMMKREIS && 
+                    candidate.STIMMKREIS.toLowerCase().includes(currentFilters.region.toLowerCase())) ||
+                    (candidate.STIMMBEZIRK && 
+                    candidate.STIMMBEZIRK.toLowerCase().includes(currentFilters.region.toLowerCase()))
+                );
+            }
+            
+            return filteredCandidates;
+        }
+
+        // Render candidate cards
+        function renderCandidates(candidates) {
+            if (!candidates || candidates.length === 0) {
+                contentArea.innerHTML = '<div class="empty-state">Keine Kandidaten für diese Wahl gefunden.</div>';
+                return;
+            }
+            
+            let html = '<div class="candidates-container">';
+            
+            candidates.forEach(candidate => {
+                // Generate initials for avatar
+                const vorname = candidate.VORNAME || '';
+                const nachname = candidate.NACHNAME || '';
+                const name = `${vorname} ${nachname}`.trim();
+                const names = name ? name.split(' ') : ['?'];
+                const initials = names.length > 1 
+                    ? `${names[0].charAt(0)}${names[names.length-1].charAt(0)}`
+                    : names[0].charAt(0);
+                
+                // Format birth year
+                const geburtsjahr = candidate.GEBURTSJAHR || 'Unbekannt';
+                
+                // Format party
+                const partyKurz = candidate.PARTEI_KURZ || candidate.LISTE_KURZNAME || '';
+                const partyLang = candidate.LISTE_NAME || '';
+                const party = partyKurz || partyLang || 'Parteilos';
+                
+                html += `
+                    <div class="candidate-card">
+                        <div class="candidate-header">
+                            <div class="candidate-avatar">${initials}</div>
+                            <div>
+                                <div class="candidate-name">${name || 'Unbekannt'}</div>
+                                <div class="candidate-party">${party}</div>
+                            </div>
+                        </div>
+                        <div class="candidate-details">
+                            <div class="detail-row">
+                                <div class="detail-label">Person ID:</div>
+                                <div class="detail-value">${candidate.FK_KON_PERSON || 'N/A'}</div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Wahl:</div>
+                                <div class="detail-value">${candidate.BEZEICHNUNG || 'Nicht angegeben'}</div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Mandat:</div>
+                                <div class="detail-value">${candidate.LISTENPLATZ || 'N/A'}</div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Kandidat ID:</div>
+                                <div class="detail-value">${candidate.PK_WAHL_KANDIDATEN || 'N/A'}</div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Region:</div>
+                                <div class="detail-value">${candidate.STIMMBEZIRK || 'N/A'} ${candidate.STIMMKREIS || 'N/A'}</div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Geburtsjahr:</div>
+                                <div class="detail-value">${geburtsjahr}</div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Person:</div>
+                                <div class="detail-value">${candidate.pers_nachname || ''} ${candidate.pers_vorname || ''}</div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Erfolg:</div>
+                                <div class="detail-value">${candidate.ERFOLG || 'Nicht angegeben'}</div>
+                            </div>
+                            ${candidate.STIMMEN ? `
+                            <div class="detail-row">
+                                <div class="detail-label">Stimmen:</div>
+                                <div class="detail-value">${candidate.STIMMEN}</div>
+                            </div>
+                            ` : ''}
+                            ${candidate.GEWAEHLT ? `
+                            <div class="detail-row">
+                                <div class="detail-label">Gewählt:</div>
+                                <div class="detail-value">${candidate.GEWAEHLT === 'J' ? 'Ja' : 'Nein'}</div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            contentArea.innerHTML = html;
+        }
+
+        // Initialize the application when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

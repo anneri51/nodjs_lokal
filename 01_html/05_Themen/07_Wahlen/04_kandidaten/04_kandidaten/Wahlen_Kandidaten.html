@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wahl Kandidaten Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --light-color: #ecf0f1;
+            --dark-color: #2c3e50;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            padding-bottom: 40px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--dark-color));
+            color: white;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .card {
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            border: none;
+        }
+        
+        .card-header {
+            background: linear-gradient(to right, #f8f9fa, #e9ecef);
+            font-weight: 600;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .search-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+        
+        .table-container {
+            max-height: 65vh;
+            overflow-y: auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .table thead th {
+            position: sticky;
+            top: 0;
+            background-color: var(--primary-color);
+            color: white;
+            z-index: 100;
+        }
+        
+        .table-hover tbody tr:hover {
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+        
+        .pagination {
+            margin: 20px 0;
+        }
+        
+        .stats-box {
+            background-color: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+        
+        .stats-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 300px;
+        }
+        
+        .spinner {
+            width: 3rem;
+            height: 3rem;
+        }
+        
+        .badge-party {
+            background-color: #8e44ad;
+            color: white;
+        }
+        
+        .badge-mandant {
+            background-color: #16a085;
+            color: white;
+        }
+        
+        .btn-search {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+        }
+        
+        .btn-search:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .detail-view {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            margin-top: 20px;
+        }
+        
+        .detail-section {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .filter-active {
+            background-color: var(--secondary-color) !important;
+            color: white !important;
+        }
+        
+        .statistics-container {
+            margin-bottom: 20px;
+        }
+        
+        .statistics-card {
+            height: 100%;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-item {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--secondary-color);
+            margin: 10px 0;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .tree-stats {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .tree-item {
+            padding: 8px 12px;
+            border-left: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .tree-item:hover {
+            background-color: #f8f9fa;
+            border-left-color: var(--secondary-color);
+        }
+        
+        .tree-item.active {
+            background-color: #e3f2fd;
+            border-left-color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        .tree-header {
+            font-weight: 600;
+            color: var(--primary-color);
+            padding: 10px 12px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        
+        .tree-children {
+            margin-left: 15px;
+            border-left: 1px dashed #ddd;
+        }
+        
+        .stat-badge {
+            background-color: var(--secondary-color);
+            color: white;
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 0.8rem;
+            margin-left: 5px;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .header p {
+                font-size: 1rem;
+            }
+            
+            .table-container {
+                font-size: 0.85rem;
+            }
+            
+            .stats-box {
+                margin-bottom: 10px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header text-center mt-4">
+            <h1><i class="fas fa-users me-2"></i>Wahl Kandidaten Management</h1>
+            <p class="lead">Verwalten und durchsuchen Sie Kandidatendaten</p>
+        </div>
+
+        <!-- Statistik-Übersicht oben -->
+        <div class="statistics-container">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-chart-bar me-2"></i>Statistik-Übersicht
+                </div>
+                <div class="card-body">
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <i class="fas fa-user-friends fa-2x text-primary"></i>
+                            <div class="stat-value" id="totalCandidates">0</div>
+                            <div class="stat-label">Gesamtkandidaten</div>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-user fa-2x text-success"></i>
+                            <div class="stat-value" id="uniquePersons">0</div>
+                            <div class="stat-label">Eindeutige Personen</div>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-chart-pie fa-2x text-warning"></i>
+                            <div class="stat-value" id="displayedCandidates">0</div>
+                            <div class="stat-label">Angezeigte Kandidaten</div>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-filter fa-2x text-info"></i>
+                            <div class="stat-value" id="displayedPersons">0</div>
+                            <div class="stat-label">Angezeigte Personen</div>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-flag fa-2x text-danger"></i>
+                            <div class="stat-value" id="totalWahlen">0</div>
+                            <div class="stat-label">Anzahl Wahlen</div>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-landmark fa-2x text-secondary"></i>
+                            <div class="stat-value" id="totalParteien">0</div>
+                            <div class="stat-label">Anzahl Parteien</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-filter me-2"></i>Filter
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Partei</label>
+                            <select class="form-select" id="parteiFilter">
+                                <option value="">Alle Parteien</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Wahl</label>
+                            <select class="form-select" id="wahlFilter">
+                                <option value="">Alle Wahlen</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mandant</label>
+                            <select class="form-select" id="mandantFilter">
+                                <option value="">Alle Mandanten</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Ergebnis (min)</label>
+                            <input type="number" class="form-control" id="ergebnisFilter" min="0" max="100" step="0.1" placeholder="0">
+                        </div>
+                        <button class="btn btn-outline-secondary w-100" id="resetFilters">
+                            <i class="fas fa-undo me-1"></i> Filter zurücksetzen
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Statistik-Baum auf der linken Seite -->
+                <div class="card statistics-card">
+                    <div class="card-header">
+                        <i class="fas fa-sitemap me-2"></i>Statistik nach Kategorien
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="tree-stats" id="statisticsTree">
+                            <div class="text-center p-3">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Lädt...</span>
+                                </div>
+                                <span class="ms-2">Lade Statistik...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-9">
+                <div class="search-container">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                <input type="text" id="searchInput" class="form-control" placeholder="Kandidaten suchen...">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select" id="searchColumn">
+                                <option value="all">Alle Felder</option>
+                                <option value="VORNAME">Vorname</option>
+                                <option value="NACHNAME">Nachname</option>
+                                <option value="PARTEI_LANG">Partei</option>
+                                <option value="ORT">Ort</option>
+                                <option value="LANDKREIS">Landkreis</option>
+                                <option value="BERUF">Beruf</option>
+                                <option value="EMAIL">E-Mail</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-text mt-2">
+                        Durchsuchen Sie die Kandidatendaten. Die Suche berücksichtigt alle angezeigten Felder.
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Wahl ID</th>
+                                <th>Platz</th>
+                                <th>Name</th>
+                                <th>Partei</th>
+                                <th>Ort</th>
+                                <th>Beruf</th>
+                                <th>Ergebnis</th>
+                                <th>Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody id="candidatesTable">
+                            <tr>
+                                <td colspan="9">
+                                    <div class="loading">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Daten werden geladen...</span>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div>
+                        Zeige <span id="currentItems">0</span> von <span id="totalItems">0</span> Einträgen
+                    </div>
+                    <ul class="pagination" id="pagination">
+                        <li class="page-item disabled"><a class="page-link" href="#">Vorherige</a></li>
+                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                        <li class="page-item disabled"><a class="page-link" href="#">Nächste</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="detail-view" id="detailView" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3>Kandidatendetails</h3>
+                <button class="btn btn-sm btn-outline-secondary" id="closeDetail">
+                    <i class="fas fa-times"></i> Schließen
+                </button>
+            </div>
+            <div id="candidateDetailContent"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM-Elemente
+            const candidatesTable = document.getElementById('candidatesTable');
+            const searchInput = document.getElementById('searchInput');
+            const searchColumn = document.getElementById('searchColumn');
+            const parteiFilter = document.getElementById('parteiFilter');
+            const wahlFilter = document.getElementById('wahlFilter');
+            const mandantFilter = document.getElementById('mandantFilter');
+            const ergebnisFilter = document.getElementById('ergebnisFilter');
+            const resetFilters = document.getElementById('resetFilters');
+            const pagination = document.getElementById('pagination');
+            const detailView = document.getElementById('detailView');
+            const candidateDetailContent = document.getElementById('candidateDetailContent');
+            const closeDetail = document.getElementById('closeDetail');
+            const totalCandidates = document.getElementById('totalCandidates');
+            const uniquePersons = document.getElementById('uniquePersons');
+            const displayedCandidates = document.getElementById('displayedCandidates');
+            const displayedPersons = document.getElementById('displayedPersons');
+            const totalWahlen = document.getElementById('totalWahlen');
+            const totalParteien = document.getElementById('totalParteien');
+            const currentItems = document.getElementById('currentItems');
+            const totalItems = document.getElementById('totalItems');
+            const statisticsTree = document.getElementById('statisticsTree');
+            
+            // Daten und Statusvariablen
+            let allCandidates = [];
+            let filteredCandidates = [];
+            let currentPage = 1;
+            const itemsPerPage = 15;
+            let uniqueParties = new Set();
+            let uniqueWahlen = new Set();
+            let uniqueMandanten = new Set();
+            
+            // Beispieldaten (falls kein Backend verfügbar)
+            const sampleData = [
+                {
+                    PK_WAHL_KANDIDATEN: 1,
+                    FK_WAHL_WAHL: 101,
+                    PLATZ: 1,
+                    VORNAME: "Anna",
+                    NACHNAME: "Müller",
+                    PARTEI_LANG: "Sozialdemokratische Partei Deutschlands",
+                    ORT: "Berlin",
+                    LANDKREIS: "Berlin-Mitte",
+                    BERUF: "Politikerin",
+                    ERG_PROZENT: 45.2,
+                    GEBURTSJAHR: 1975,
+                    EMAIL: "anna.mueller@example.com",
+                    wahl: "Bundestagswahl 2021",
+                    mandant: "Bundeswahlleiter",
+                    SPITZENKANDIDAT: "Ja",
+                    LANDESVERBAND: "Berlin",
+                    KREISVERBAND: "Berlin-Mitte",
+                    BESCHREIBUNG: "Erfahrenes Mitglied des Bundestags",
+                    COMM: "Direktkandidatin im Wahlkreis Berlin-Mitte"
+                },
+                {
+                    PK_WAHL_KANDIDATEN: 2,
+                    FK_WAHL_WAHL: 101,
+                    PLATZ: 2,
+                    VORNAME: "Thomas",
+                    NACHNAME: "Schmidt",
+                    PARTEI_LANG: "Christlich Demokratische Union",
+                    ORT: "Hamburg",
+                    LANDKREIS: "Hamburg-Nord",
+                    BERUF: "Unternehmer",
+                    ERG_PROZENT: 38.7,
+                    GEBURTSJAHR: 1968,
+                    EMAIL: "thomas.schmidt@example.com",
+                    wahl: "Bundestagswahl 2021",
+                    mandant: "Bundeswahlleiter",
+                    SPITZENKANDIDAT: "Nein",
+                    LANDESVERBAND: "Hamburg",
+                    KREISVERBAND: "Hamburg-Nord",
+                    BESCHREIBUNG: "Erfolgreicher Unternehmer mit politischem Engagement",
+                    COMM: "Listenkandidat"
+                },
+                {
+                    PK_WAHL_KANDIDATEN: 3,
+                    FK_WAHL_WAHL: 102,
+                    PLATZ: 1,
+                    VORNAME: "Sabine",
+                    NACHNAME: "Weber",
+                    PARTEI_LANG: "Bündnis 90/Die Grünen",
+                    ORT: "München",
+                    LANDKREIS: "München",
+                    BERUF: "Umweltwissenschaftlerin",
+                    ERG_PROZENT: 52.1,
+                    GEBURTSJAHR: 1982,
+                    EMAIL: "sabine.weber@example.com",
+                    wahl: "Landtagswahl Bayern 2023",
+                    mandant: "Bayrischer Landeswahlleiter",
+                    SPITZENKANDIDAT: "Ja",
+                    LANDESVERBAND: "Bayern",
+                    KREISVERBAND: "München",
+                    BESCHREIBUNG: "Aktivistin für Klimaschutz und Nachhaltigkeit",
+                    COMM: "Direktkandidatin im Stimmkreis München-Land"
+                },
+                {
+                    PK_WAHL_KANDIDATEN: 4,
+                    FK_WAHL_WAHL: 101,
+                    PLATZ: 3,
+                    VORNAME: "Michael",
+                    NACHNAME: "Hoffmann",
+                    PARTEI_LANG: "Freie Demokratische Partei",
+                    ORT: "Frankfurt",
+                    LANDKREIS: "Frankfurt am Main",
+                    BERUF: "Rechtsanwalt",
+                    ERG_PROZENT: 12.5,
+                    GEBURTSJAHR: 1978,
+                    EMAIL: "michael.hoffmann@example.com",
+                    wahl: "Bundestagswahl 2021",
+                    mandant: "Bundeswahlleiter",
+                    SPITZENKANDIDAT: "Nein",
+                    LANDESVERBAND: "Hessen",
+                    KREISVERBAND: "Frankfurt",
+                    BESCHREIBUNG: "Spezialisiert auf Wirtschaftsrecht",
+                    COMM: "Listenkandidat"
+                },
+                {
+                    PK_WAHL_KANDIDATEN: 5,
+                    FK_WAHL_WAHL: 102,
+                    PLATZ: 2,
+                    VORNAME: "Markus",
+                    NACHNAME: "Bauer",
+                    PARTEI_LANG: "Christlich-Soziale Union in Bayern",
+                    ORT: "Nürnberg",
+                    LANDKREIS: "Nürnberg",
+                    BERUF: "Ingenieur",
+                    ERG_PROZENT: 41.3,
+                    GEBURTSJAHR: 1971,
+                    EMAIL: "markus.bauer@example.com",
+                    wahl: "Landtagswahl Bayern 2023",
+                    mandant: "Bayrischer Landeswahlleiter",
+                    SPITZENKANDIDAT: "Ja",
+                    LANDESVERBAND: "Bayern",
+                    KREISVERBAND: "Nürnberg",
+                    BESCHREIBUNG: "Experte für Infrastrukturprojekte",
+                    COMM: "Direktkandidat im Stimmkreis Nürnberg-Nord"
+                },
+                {
+                    PK_WAHL_KANDIDATEN: 6,
+                    FK_WAHL_WAHL: 103,
+                    PLATZ: 1,
+                    VORNAME: "Anna",
+                    NACHNAME: "Müller",
+                    PARTEI_LANG: "Sozialdemokratische Partei Deutschlands",
+                    ORT: "Berlin",
+                    LANDKREIS: "Berlin-Mitte",
+                    BERUF: "Politikerin",
+                    ERG_PROZENT: 48.7,
+                    GEBURTSJAHR: 1975,
+                    EMAIL: "anna.mueller@example.com",
+                    wahl: "Europawahl 2024",
+                    mandant: "Bundeswahlleiter",
+                    SPITZENKANDIDAT: "Ja",
+                    LANDESVERBAND: "Berlin",
+                    KREISVERBAND: "Berlin-Mitte",
+                    BESCHREIBUNG: "Erfahrenes Mitglied des Bundestags",
+                    COMM: "Spitzenkandidatin für die Europawahl"
+                },
+                {
+                    PK_WAHL_KANDIDATEN: 7,
+                    FK_WAHL_WAHL: 103,
+                    PLATZ: 2,
+                    VORNAME: "Claudia",
+                    NACHNAME: "Fischer",
+                    PARTEI_LANG: "Christlich Demokratische Union",
+                    ORT: "Köln",
+                    LANDKREIS: "Köln",
+                    BERUF: "Journalistin",
+                    ERG_PROZENT: 32.4,
+                    GEBURTSJAHR: 1985,
+                    EMAIL: "claudia.fischer@example.com",
+                    wahl: "Europawahl 2024",
+                    mandant: "Bundeswahlleiter",
+                    SPITZENKANDIDAT: "Nein",
+                    LANDESVERBAND: "Nordrhein-Westfalen",
+                    KREISVERBAND: "Köln",
+                    BESCHREIBUNG: "Europa-Expertin mit journalistischem Hintergrund",
+                    COMM: "Listenkandidatin"
+                },
+                {
+                    PK_WAHL_KANDIDATEN: 8,
+                    FK_WAHL_WAHL: 104,
+                    PLATZ: 1,
+                    VORNAME: "Robert",
+                    NACHNAME: "Klein",
+                    PARTEI_LANG: "Alternative für Deutschland",
+                    ORT: "Dresden",
+                    LANDKREIS: "Dresden",
+                    BERUF: "Betriebswirt",
+                    ERG_PROZENT: 28.9,
+                    GEBURTSJAHR: 1973,
+                    EMAIL: "robert.klein@example.com",
+                    wahl: "Landtagswahl Sachsen 2024",
+                    mandant: "Sächsischer Landeswahlleiter",
+                    SPITZENKANDIDAT: "Ja",
+                    LANDESVERBAND: "Sachsen",
+                    KREISVERBAND: "Dresden",
+                    BESCHREIBUNG: "Wirtschaftsexperte mit Fokus auf Regionalpolitik",
+                    COMM: "Direktkandidat im Wahlkreis Dresden I"
+                }
+            ];
+
+            // Daten laden (entweder von API oder Beispieldaten verwenden)
+            function loadData() {
+                // Versuche, Daten von der API zu laden
+                fetch('http://localhost:5000/wahl_kandidaten')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        allCandidates = data;
+                        initializeApp();
+                    })
+                    .catch(error => {
+                        console.error('Error fetching from API:', error);
+                        // Fallback zu Beispieldaten
+                        console.log('Using sample data instead');
+                        allCandidates = sampleData;
+                        initializeApp();
+                    });
+            }
+            
+            // App initialisieren
+            function initializeApp() {
+                filteredCandidates = [...allCandidates];
+                
+                // Update stats
+                updateStatistics();
+                
+                // Extract unique values for filters
+                allCandidates.forEach(candidate => {
+                    if (candidate.PARTEI_LANG) uniqueParties.add(candidate.PARTEI_LANG);
+                    if (candidate.wahl) uniqueWahlen.add(candidate.wahl);
+                    if (candidate.mandant) uniqueMandanten.add(candidate.mandant);
+                });
+                
+                // Populate filter dropdowns
+                populateFilter(parteiFilter, uniqueParties);
+                populateFilter(wahlFilter, uniqueWahlen);
+                populateFilter(mandantFilter, uniqueMandanten);
+                
+                // Render table and pagination
+                renderTable();
+                setupPagination();
+                renderStatisticsTree();
+            }
+            
+            // Update statistics
+            function updateStatistics() {
+                // Count total candidates
+                totalCandidates.textContent = allCandidates.length;
+                
+                // Count unique persons (by name combination)
+                const uniquePersonSet = new Set();
+                allCandidates.forEach(candidate => {
+                    const personKey = `${candidate.VORNAME || ''} ${candidate.NACHNAME || ''}`.trim();
+                    if (personKey) {
+                        uniquePersonSet.add(personKey);
+                    }
+                });
+                uniquePersons.textContent = uniquePersonSet.size;
+                
+                // Count displayed candidates
+                displayedCandidates.textContent = filteredCandidates.length;
+                
+                // Count unique persons in filtered results
+                const uniqueFilteredPersonSet = new Set();
+                filteredCandidates.forEach(candidate => {
+                    const personKey = `${candidate.VORNAME || ''} ${candidate.NACHNAME || ''}`.trim();
+                    if (personKey) {
+                        uniqueFilteredPersonSet.add(personKey);
+                    }
+                });
+                displayedPersons.textContent = uniqueFilteredPersonSet.size;
+                
+                // Count unique elections and parties
+                totalWahlen.textContent = uniqueWahlen.size;
+                totalParteien.textContent = uniqueParties.size;
+            }
+            
+            // Render statistics tree
+            function renderStatisticsTree() {
+                // Group data by different categories
+                const wahlenMap = new Map();
+                const parteienMap = new Map();
+                const mandantenMap = new Map();
+                const landkreiseMap = new Map();
+                
+                // Process data for statistics
+                allCandidates.forEach(candidate => {
+                    // Process by election
+                    const wahl = candidate.wahl || 'Unbekannt';
+                    if (!wahlenMap.has(wahl)) {
+                        wahlenMap.set(wahl, { candidates: 0, uniquePersons: new Set() });
+                    }
+                    const wahlData = wahlenMap.get(wahl);
+                    wahlData.candidates++;
+                    const personKey = `${candidate.VORNAME || ''} ${candidate.NACHNAME || ''}`.trim();
+                    if (personKey) wahlData.uniquePersons.add(personKey);
+                    
+                    // Process by party
+                    const partei = candidate.PARTEI_LANG || 'Unbekannt';
+                    if (!parteienMap.has(partei)) {
+                        parteienMap.set(partei, { candidates: 0, uniquePersons: new Set() });
+                    }
+                    const parteiData = parteienMap.get(partei);
+                    parteiData.candidates++;
+                    if (personKey) parteiData.uniquePersons.add(personKey);
+                    
+                    // Process by mandant
+                    const mandant = candidate.mandant || 'Unbekannt';
+                    if (!mandantenMap.has(mandant)) {
+                        mandantenMap.set(mandant, { candidates: 0, uniquePersons: new Set() });
+                    }
+                    const mandantData = mandantenMap.get(mandant);
+                    mandantData.candidates++;
+                    if (personKey) mandantData.uniquePersons.add(personKey);
+                    
+                    // Process by landkreis
+                    const landkreis = candidate.LANDKREIS || 'Unbekannt';
+                    if (!landkreiseMap.has(landkreis)) {
+                        landkreiseMap.set(landkreis, { candidates: 0, uniquePersons: new Set() });
+                    }
+                    const landkreisData = landkreiseMap.get(landkreis);
+                    landkreisData.candidates++;
+                    if (personKey) landkreisData.uniquePersons.add(personKey);
+                });
+                
+                // Create HTML for statistics tree
+                let html = `
+                    <div class="tree-header">Nach Wahlen</div>
+                `;
+                
+                // Wahlen
+                wahlenMap.forEach((data, wahl) => {
+                    html += `
+                        <div class="tree-item" data-filter="wahl" data-value="${wahl}">
+                            ${wahl} <span class="stat-badge">${data.candidates}</span>
+                        </div>
+                    `;
+                });
+                
+                html += `<div class="tree-header">Nach Parteien</div>`;
+                
+                // Parteien
+                parteienMap.forEach((data, partei) => {
+                    html += `
+                        <div class="tree-item" data-filter="partei" data-value="${partei}">
+                            ${partei} <span class="stat-badge">${data.candidates}</span>
+                        </div>
+                    `;
+                });
+                
+                html += `<div class="tree-header">Nach Mandanten</div>`;
+                
+                // Mandanten
+                mandantenMap.forEach((data, mandant) => {
+                    html += `
+                        <div class="tree-item" data-filter="mandant" data-value="${mandant}">
+                            ${mandant} <span class="stat-badge">${data.candidates}</span>
+                        </div>
+                    `;
+                });
+                
+                html += `<div class="tree-header">Nach Landkreisen</div>`;
+                
+                // Landkreise (Top 5)
+                const sortedLandkreise = Array.from(landkreiseMap.entries())
+                    .sort((a, b) => b[1].candidates - a[1].candidates)
+                    .slice(0, 5);
+                
+                sortedLandkreise.forEach(([landkreis, data]) => {
+                    html += `
+                        <div class="tree-item" data-filter="landkreis" data-value="${landkreis}">
+                            ${landkreis} <span class="stat-badge">${data.candidates}</span>
+                        </div>
+                    `;
+                });
+                
+                statisticsTree.innerHTML = html;
+                
+                // Add event listeners to tree items
+                document.querySelectorAll('.tree-item').forEach(item => {
+                    item.addEventListener('click', function() {
+                        // Remove active class from all items
+                        document.querySelectorAll('.tree-item').forEach(i => {
+                            i.classList.remove('active');
+                        });
+                        
+                        // Add active class to clicked item
+                        this.classList.add('active');
+                        
+                        // Apply filter based on data attributes
+                        const filterType = this.getAttribute('data-filter');
+                        const filterValue = this.getAttribute('data-value');
+                        
+                        // Reset other filters
+                        searchInput.value = '';
+                        searchColumn.value = 'all';
+                        ergebnisFilter.value = '';
+                        
+                        // Apply the specific filter
+                        switch(filterType) {
+                            case 'wahl':
+                                wahlFilter.value = filterValue;
+                                parteiFilter.value = '';
+                                mandantFilter.value = '';
+                                break;
+                            case 'partei':
+                                parteiFilter.value = filterValue;
+                                wahlFilter.value = '';
+                                mandantFilter.value = '';
+                                break;
+                            case 'mandant':
+                                mandantFilter.value = filterValue;
+                                wahlFilter.value = '';
+                                parteiFilter.value = '';
+                                break;
+                            case 'landkreis':
+                                // For landkreis, we need to use search since it's not a dedicated filter
+                                searchInput.value = filterValue;
+                                searchColumn.value = 'LANDKREIS';
+                                wahlFilter.value = '';
+                                parteiFilter.value = '';
+                                mandantFilter.value = '';
+                                break;
+                        }
+                        
+                        // Apply the filter
+                        filterCandidates();
+                    });
+                });
+            }
+            
+            // Populate filter dropdown with unique values
+            function populateFilter(selectElement, valuesSet) {
+                const values = Array.from(valuesSet).sort();
+                values.forEach(value => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = value;
+                    selectElement.appendChild(option);
+                });
+            }
+            
+            // Render the table with current data
+            function renderTable() {
+                if (filteredCandidates.length === 0) {
+                    candidatesTable.innerHTML = `
+                        <tr>
+                            <td colspan="9" class="text-center">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Keine Kandidaten gefunden, die den Suchkriterien entsprechen.
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                // Calculate pagination
+                const startIndex = (currentPage - 1) * itemsPerPage;
+                const endIndex = Math.min(startIndex + itemsPerPage, filteredCandidates.length);
+                const pageCandidates = filteredCandidates.slice(startIndex, endIndex);
+                
+                let html = '';
+                
+                pageCandidates.forEach(candidate => {
+                    html += `
+                        <tr>
+                            <td>${candidate.PK_WAHL_KANDIDATEN}</td>
+                            <td>${candidate.FK_WAHL_WAHL}</td>
+                            <td>${candidate.PLATZ || 'N/A'}</td>
+                            <td>${candidate.VORNAME || ''} ${candidate.NACHNAME || ''}</td>
+                            <td><span class="badge badge-party">${candidate.PARTEI_LANG || ''}</span></td>
+                            <td>${candidate.ORT || ''} ${candidate.LANDKREIS ? `(${candidate.LANDKREIS})` : ''}</td>
+                            <td>${candidate.BERUF || ''}</td>
+                            <td>${candidate.ERG_PROZENT ? `${candidate.ERG_PROZENT}%` : 'N/A'}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary view-detail" data-id="${candidate.PK_WAHL_KANDIDATEN}">
+                                    <i class="fas fa-eye"></i> Details
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                candidatesTable.innerHTML = html;
+                
+                // Update pagination info
+                currentItems.textContent = `${startIndex + 1}-${endIndex}`;
+                totalItems.textContent = filteredCandidates.length;
+                
+                // Add event listeners to detail buttons
+                document.querySelectorAll('.view-detail').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const candidateId = this.getAttribute('data-id');
+                        showCandidateDetail(candidateId);
+                    });
+                });
+            }
+            
+            // Set up pagination
+            function setupPagination() {
+                const pageCount = Math.ceil(filteredCandidates.length / itemsPerPage);
+                
+                let html = '';
+                
+                // Previous button
+                if (currentPage > 1) {
+                    html += `<li class="page-item"><a class="page-link" href="#" data-page="${currentPage - 1}">Vorherige</a></li>`;
+                } else {
+                    html += `<li class="page-item disabled"><a class="page-link" href="#">Vorherige</a></li>`;
+                }
+                
+                // Page numbers
+                const maxVisiblePages = 5;
+                let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+                let endPage = Math.min(pageCount, startPage + maxVisiblePages - 1);
+                
+                if (endPage - startPage + 1 < maxVisiblePages) {
+                    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                }
+                
+                for (let i = startPage; i <= endPage; i++) {
+                    if (i === currentPage) {
+                        html += `<li class="page-item active"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`;
+                    } else {
+                        html += `<li class="page-item"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`;
+                    }
+                }
+                
+                // Next button
+                if (currentPage < pageCount) {
+                    html += `<li class="page-item"><a class="page-link" href="#" data-page="${currentPage + 1}">Nächste</a></li>`;
+                } else {
+                    html += `<li class="page-item disabled"><a class="page-link" href="#">Nächste</a></li>`;
+                }
+                
+                pagination.innerHTML = html;
+                
+                // Add event listeners to pagination buttons
+                pagination.querySelectorAll('.page-link').forEach(link => {
+                    link.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const page = parseInt(this.getAttribute('data-page'));
+                        if (!isNaN(page)) {
+                            currentPage = page;
+                            renderTable();
+                            setupPagination();
+                            window.scrollTo(0, 0);
+                        }
+                    });
+                });
+            }
+            
+            // Show candidate detail
+            function showCandidateDetail(candidateId) {
+                const candidate = allCandidates.find(c => c.PK_WAHL_KANDIDATEN == candidateId);
+                
+                if (!candidate) {
+                    candidateDetailContent.innerHTML = `
+                        <div class="alert alert-danger">
+                            Kandidat nicht gefunden.
+                        </div>
+                    `;
+                    detailView.style.display = 'block';
+                    return;
+                }
+                
+                let html = `
+                    <div class="detail-section">
+                        <h4>Persönliche Informationen</h4>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Name:</strong> ${candidate.VORNAME || ''} ${candidate.NACHNAME || ''}</p>
+                                <p><strong>Geburtsjahr:</strong> ${candidate.GEBURTSJAHR || 'N/A'}</p>
+                                <p><strong>Beruf:</strong> ${candidate.BERUF || 'N/A'}</p>
+                                <p><strong>Unternehmen:</strong> ${candidate.unternehmen || 'N/A'}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>E-Mail:</strong> ${candidate.EMAIL || 'N/A'}</p>
+                                <p><strong>Webseite:</strong> ${candidate.LINK_WEBSEITE_PERSON ? `<a href="${candidate.LINK_WEBSEITE_PERSON}" target="_blank">${candidate.LINK_WEBSEITE_PERSON}</a>` : 'N/A'}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-section">
+                        <h4>Wahlinformationen</h4>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Partei:</strong> ${candidate.PARTEI_LANG || 'N/A'}</p>
+                                <p><strong>Wahl:</strong> ${candidate.wahl || 'N/A'}</p>
+                                <p><strong>Platz:</strong> ${candidate.PLATZ || 'N/A'}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Mandant:</strong> ${candidate.mandant || 'N/A'}</p>
+                                <p><strong>Ergebnis:</strong> ${candidate.ERG_PROZENT ? `${candidate.ERG_PROZENT}%` : 'N/A'}</p>
+                                <p><strong>Spitzenkandidat:</strong> ${candidate.SPITZENKANDIDAT || 'Nein'}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-section">
+                        <h4>Regionale Informationen</h4>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Ort:</strong> ${candidate.ORT || 'N/A'}</p>
+                                <p><strong>Landkreis:</strong> ${candidate.LANDKREIS || 'N/A'}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Landesverband:</strong> ${candidate.LANDESVERBAND || 'N/A'}</p>
+                                <p><strong>Kreisverband:</strong> ${candidate.KREISVERBAND || 'N/A'}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-section">
+                        <h4>Weitere Informationen</h4>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <p><strong>Beschreibung:</strong> ${candidate.BESCHREIBUNG || 'N/A'}</p>
+                                <p><strong>Kommentar:</strong> ${candidate.COMM || 'N/A'}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                candidateDetailContent.innerHTML = html;
+                detailView.style.display = 'block';
+            }
+            
+            // Close detail view
+            closeDetail.addEventListener('click', function() {
+                detailView.style.display = 'none';
+            });
+            
+            // Filter candidates based on search and filters
+            function filterCandidates() {
+                const searchTerm = searchInput.value.toLowerCase();
+                const selectedPartei = parteiFilter.value;
+                const selectedWahl = wahlFilter.value;
+                const selectedMandant = mandantFilter.value;
+                const minErgebnis = parseFloat(ergebnisFilter.value) || 0;
+                const searchField = searchColumn.value;
+                
+                filteredCandidates = allCandidates.filter(candidate => {
+                    // Apply dropdown filters
+                    if (selectedPartei && candidate.PARTEI_LANG !== selectedPartei) return false;
+                    if (selectedWahl && candidate.wahl !== selectedWahl) return false;
+                    if (selectedMandant && candidate.mandant !== selectedMandant) return false;
+                    
+                    // Apply result filter
+                    if (minErgebnis > 0 && (!candidate.ERG_PROZENT || candidate.ERG_PROZENT < minErgebnis)) {
+                        return false;
+                    }
+                    
+                    // Apply search filter
+                    if (searchTerm) {
+                        if (searchField === 'all') {
+                            // Search across all fields
+                            const candidateValues = Object.values(candidate).join(' ').toLowerCase();
+                            return candidateValues.includes(searchTerm);
+                        } else if (candidate[searchField]) {
+                            // Search in specific field
+                            return candidate[searchField].toString().toLowerCase().includes(searchTerm);
+                        }
+                        return false;
+                    }
+                    
+                    return true;
+                });
+                
+                // Reset to first page
+                currentPage = 1;
+                
+                // Update stats
+                updateStatistics();
+                
+                // Re-render table and pagination
+                renderTable();
+                setupPagination();
+            }
+            
+            // Event listeners for search and filters
+            searchInput.addEventListener('input', filterCandidates);
+            searchColumn.addEventListener('change', filterCandidates);
+            parteiFilter.addEventListener('change', filterCandidates);
+            wahlFilter.addEventListener('change', filterCandidates);
+            mandantFilter.addEventListener('change', filterCandidates);
+            ergebnisFilter.addEventListener('input', filterCandidates);
+            
+            // Reset filters
+            resetFilters.addEventListener('click', function() {
+                searchInput.value = '';
+                searchColumn.value = 'all';
+                parteiFilter.value = '';
+                wahlFilter.value = '';
+                mandantFilter.value = '';
+                ergebnisFilter.value = '';
+                
+                // Clear active tree items
+                document.querySelectorAll('.tree-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                
+                filterCandidates();
+            });
+            
+            // Start the application
+            loadData();
+        });
+    </script>
+</body>
+</html>

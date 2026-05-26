@@ -1,0 +1,2401 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organisationseinheiten & Standorte - Kartenansicht</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet CSS für Karten -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px 30px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.3rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        .main-content {
+            padding: 25px;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #e0e0e0;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 15px 25px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #666;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            background: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+            margin-right: 5px;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+            background: white;
+        }
+
+        .tab:hover {
+            background: #e9ecef;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px 0;
+            animation: fadeIn 0.5s;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+        }
+
+        .form-title {
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 18px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #444;
+            font-size: 0.95rem;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border 0.3s;
+            background: white;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #0da271;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3);
+        }
+
+        .status-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .status-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+            display: block;
+        }
+
+        .status-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+            display: block;
+        }
+
+        .status-info {
+            background: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #bae6fd;
+            display: block;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+            font-size: 1.1rem;
+        }
+
+        .loading i {
+            margin-right: 10px;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 50px 20px;
+            color: #6b7280;
+        }
+
+        .no-data i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        /* Kartencontainer */
+        .map-container {
+            height: 600px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 20px;
+            border: 2px solid #e0e0e0;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Kartensidebar */
+        .map-sidebar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 350px;
+            height: 100%;
+            background: white;
+            z-index: 1000;
+            box-shadow: 3px 0 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            overflow-y: auto;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+
+        .map-sidebar.active {
+            transform: translateX(0);
+        }
+
+        .sidebar-toggle {
+            position: absolute;
+            top: 20px;
+            right: -45px;
+            width: 45px;
+            height: 45px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 0 8px 8px 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            z-index: 1001;
+        }
+
+        .map-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .map-control-btn {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #374151;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+        }
+
+        .map-control-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* Legende */
+        .map-legend {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            max-width: 250px;
+        }
+
+        .legend-title {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Standort-Details */
+        .location-details {
+            background: white;
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 350px;
+            max-height: 300px;
+            border-radius: 8px;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            padding: 20px;
+            overflow-y: auto;
+            transform: translateY(100%);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .location-details.active {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .location-details-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .location-details-title {
+            color: #374151;
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Standortliste */
+        .locations-list {
+            margin-top: 15px;
+        }
+
+        .location-item {
+            padding: 12px 15px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+        }
+
+        .location-item:hover {
+            background: #f0f9ff;
+            border-color: #bae6fd;
+            transform: translateY(-2px);
+        }
+
+        .location-item.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .location-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .location-item-name {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .location-item-id {
+            font-size: 0.85rem;
+            color: #6b7280;
+            background: #f3f4f6;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .location-item.active .location-item-id {
+            color: white;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .location-item-details {
+            font-size: 0.85rem;
+            color: #6b7280;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 5px;
+        }
+
+        .location-item.active .location-item-details {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .tab {
+                margin-right: 0;
+                margin-bottom: 5px;
+                text-align: center;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .map-sidebar {
+                width: 100%;
+                transform: translateX(-100%);
+            }
+            
+            .location-details {
+                width: calc(100% - 40px);
+            }
+            
+            .map-controls {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .map-legend {
+                bottom: 10px;
+                left: 10px;
+                max-width: calc(100% - 20px);
+            }
+        }
+
+        /* Popup-Stile für Leaflet */
+        .leaflet-popup-content {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 300px;
+        }
+
+        .leaflet-popup-content h3 {
+            color: #667eea;
+            margin: 0 0 10px 0;
+            font-size: 1.1rem;
+        }
+
+        .leaflet-popup-content .popup-details {
+            font-size: 0.9rem;
+            color: #374151;
+        }
+
+        .leaflet-popup-content .popup-details div {
+            margin-bottom: 5px;
+        }
+
+        .leaflet-popup-content .popup-coordinates {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 0.85rem;
+            color: #6b7280;
+        }
+
+        /* Cluster-Marker */
+        .marker-cluster {
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .marker-cluster div {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: rgba(102, 126, 234, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Filter-Bereich */
+        .filters-container {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .filter-group {
+            margin-bottom: 15px;
+        }
+
+        .filter-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .filter-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.95rem;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: auto;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .slider-value {
+            min-width: 40px;
+            text-align: center;
+            font-weight: 600;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-map-marked-alt"></i> Organisationseinheiten & Standorte</h1>
+            <p class="subtitle">Interaktive Kartenansicht mit Koordinaten-basierter Darstellung</p>
+        </header>
+        
+        <div class="main-content">
+            <div class="tabs">
+                <div class="tab active" data-tab="mapView">Kartenansicht</div>
+                <div class="tab" data-tab="dataView">Datenübersicht</div>
+                <div class="tab" data-tab="export">Export</div>
+            </div>
+            
+            <div id="statusMessage" class="status-message"></div>
+            
+            <!-- Kartenansicht Tab -->
+            <div id="mapViewTab" class="tab-content active">
+                <div class="form-section">
+                    <h2 class="form-title"><i class="fas fa-map"></i> Interaktive Kartenansicht</h2>
+                    
+                    <div class="filters-container">
+                        <div class="form-grid">
+                            <div class="filter-group">
+                                <label class="filter-label">Nach Mandant filtern</label>
+                                <select id="mandantFilter">
+                                    <option value="all">Alle Mandanten</option>
+                                    <option value="1">Mandant 1</option>
+                                    <option value="12">Mandant 12</option>
+                                </select>
+                            </div>
+                            
+                            <div class="filter-group">
+                                <label class="filter-label">Nach Organisationseinheit</label>
+                                <select id="orgUnitFilter">
+                                    <option value="all">Alle Organisationseinheiten</option>
+                                </select>
+                            </div>
+                            
+                            <div class="filter-group">
+                                <label class="filter-label">Koordinaten Status</label>
+                                <div class="checkbox-group">
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="filterWithCoords" checked>
+                                        <label for="filterWithCoords">Mit Koordinaten</label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="filterWithoutCoords">
+                                        <label for="filterWithoutCoords">Ohne Koordinaten</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="button-group">
+                            <button class="btn btn-primary" id="btnApplyFilters">
+                                <i class="fas fa-filter"></i> Filter anwenden
+                            </button>
+                            <button class="btn btn-secondary" id="btnResetFilters">
+                                <i class="fas fa-times"></i> Filter zurücksetzen
+                            </button>
+                            <button class="btn btn-success" id="btnZoomToAll">
+                                <i class="fas fa-search"></i> Alle Standorte anzeigen
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="map-container">
+                        <!-- Kartensidebar -->
+                        <div class="map-sidebar" id="mapSidebar">
+                            <button class="sidebar-toggle" id="sidebarToggle">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                            <h3 style="color: #374151; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                                <i class="fas fa-list"></i> Standortliste
+                            </h3>
+                            <div class="locations-list" id="locationsList">
+                                <!-- Standorte werden hier dynamisch eingefügt -->
+                            </div>
+                        </div>
+                        
+                        <!-- Karte -->
+                        <div id="map"></div>
+                        
+                        <!-- Kartensteuerungen -->
+                        <div class="map-controls">
+                            <button class="map-control-btn" id="btnToggleSidebar" title="Standortliste">
+                                <i class="fas fa-list"></i>
+                            </button>
+                            <button class="map-control-btn" id="btnLocateUser" title="Meine Position">
+                                <i class="fas fa-location-crosshairs"></i>
+                            </button>
+                            <button class="map-control-btn" id="btnToggleSatellite" title="Satellitenansicht">
+                                <i class="fas fa-satellite"></i>
+                            </button>
+                            <button class="map-control-btn" id="btnPrintMap" title="Karte drucken">
+                                <i class="fas fa-print"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Legende -->
+                        <div class="map-legend">
+                            <div class="legend-title">
+                                <i class="fas fa-key"></i> Legende
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: #667eea;"></div>
+                                <span>Organisationseinheit</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: #10b981;"></div>
+                                <span>Ausgewählter Standort</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: #ef4444;"></div>
+                                <span>Ohne Koordinaten</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Standortdetails -->
+                        <div class="location-details" id="locationDetails">
+                            <div class="location-details-header">
+                                <div class="location-details-title">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span>Standortdetails</span>
+                                </div>
+                                <button class="map-control-btn" id="btnCloseDetails" style="width: 30px; height: 30px; font-size: 1rem;">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div id="locationDetailsContent">
+                                <!-- Details werden hier dynamisch eingefügt -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="button-group" style="margin-top: 20px;">
+                        <button class="btn btn-primary" id="btnGenerateRoute">
+                            <i class="fas fa-route"></i> Route berechnen
+                        </button>
+                        <button class="btn btn-secondary" id="btnShareMap">
+                            <i class="fas fa-share-alt"></i> Karte teilen
+                        </button>
+                        <button class="btn btn-success" id="btnAddCustomMarker">
+                            <i class="fas fa-map-marker-alt"></i> Eigenen Marker hinzufügen
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Datenübersicht Tab -->
+            <div id="dataViewTab" class="tab-content">
+                <div class="form-section">
+                    <h2 class="form-title"><i class="fas fa-table"></i> Datenübersicht</h2>
+                    
+                    <div class="filters-container">
+                        <div class="form-grid">
+                            <div class="filter-group">
+                                <label class="filter-label">Suche</label>
+                                <input type="text" id="searchData" placeholder="Suche nach Name, ID oder Adresse...">
+                            </div>
+                            
+                            <div class="filter-group">
+                                <label class="filter-label">Sortieren nach</label>
+                                <select id="sortData">
+                                    <option value="name">Name</option>
+                                    <option value="id">ID</option>
+                                    <option value="mandant">Mandant</option>
+                                    <option value="coordinates">Koordinaten</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="dataLoading" class="loading">
+                        <i class="fas fa-spinner fa-spin"></i> Lade Daten...
+                    </div>
+                    
+                    <div id="dataContainer" style="display: none;">
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                            <thead>
+                                <tr style="background: #667eea; color: white;">
+                                    <th style="padding: 12px; text-align: left;">ID</th>
+                                    <th style="padding: 12px; text-align: left;">Name</th>
+                                    <th style="padding: 12px; text-align: left;">Mandant</th>
+                                    <th style="padding: 12px; text-align: left;">Koordinaten</th>
+                                    <th style="padding: 12px; text-align: left;">Adresse</th>
+                                    <th style="padding: 12px; text-align: left;">Aktionen</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dataTableBody"></tbody>
+                        </table>
+                    </div>
+                    
+                    <div id="noData" class="no-data" style="display: none;">
+                        <i class="fas fa-database"></i>
+                        <h3>Keine Daten gefunden</h3>
+                        <p>Passen Sie die Filter an oder laden Sie neue Daten.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Export Tab -->
+            <div id="exportTab" class="tab-content">
+                <div class="form-section">
+                    <h2 class="form-title"><i class="fas fa-download"></i> Datenexport</h2>
+                    
+                    <div class="form-grid">
+                        <div class="filter-group">
+                            <label class="filter-label">Export-Format</label>
+                            <select id="exportFormat">
+                                <option value="geojson">GeoJSON (für GIS-Systeme)</option>
+                                <option value="kml">KML (für Google Earth)</option>
+                                <option value="csv">CSV (Tabellenformat)</option>
+                                <option value="json">JSON (Rohdaten)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label class="filter-label">Datenauswahl</label>
+                            <div class="checkbox-group">
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="exportCoords" checked>
+                                    <label for="exportCoords">Koordinaten</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="exportAddress" checked>
+                                    <label for="exportAddress">Adressen</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="exportMetadata" checked>
+                                    <label for="exportMetadata">Metadaten</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="button-group">
+                        <button class="btn btn-success" id="btnExportData">
+                            <i class="fas fa-file-export"></i> Daten exportieren
+                        </button>
+                        <button class="btn btn-primary" id="btnPreviewExport">
+                            <i class="fas fa-eye"></i> Vorschau anzeigen
+                        </button>
+                        <button class="btn btn-secondary" id="btnCopyExport">
+                            <i class="fas fa-copy"></i> In Zwischenablage kopieren
+                        </button>
+                    </div>
+                    
+                    <div id="exportPreview" style="margin-top: 20px; display: none;">
+                        <h3 style="color: #374151; margin-bottom: 10px;">Export-Vorschau</h3>
+                        <pre id="exportPreviewContent" style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 0.85rem;"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet Marker Cluster Plugin -->
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    
+    <script>
+        // Ihre Beispieldaten
+        const sampleData = [
+            {
+                "PK_ORG_UNIT": "78",
+                "FK_MDT_MANDANT": 1,
+                "ORG_UNIT_NAME": "Staatl.Bauamt Freising/München",
+                "ACTIVE": null,
+                "PK_LOC_LOCATION": "2597",
+                "vstr_hsnr": "40 18 26",
+                "ADR": "Münchner Straße 40, 85354 Freising",
+                "KOORDINATEN": "48.4020, 11.7480",
+                "FK_ADR_ADRESSE": 2244
+            },
+            {
+                "PK_ORG_UNIT": "77",
+                "FK_MDT_MANDANT": 1,
+                "ORG_UNIT_NAME": "Landratsamt Ebersberg",
+                "ACTIVE": null,
+                "PK_LOC_LOCATION": "2598",
+                "vstr_hsnr": "12 34 56",
+                "ADR": "Ebersberger Straße 12, 85560 Ebersberg",
+                "KOORDINATEN": "48.0776, 11.9702",
+                "FK_ADR_ADRESSE": 2245
+            },
+            {
+                "PK_ORG_UNIT": "823",
+                "FK_MDT_MANDANT": 1,
+                "ORG_UNIT_NAME": "EADS Deutschland GmbH",
+                "ACTIVE": true,
+                "PK_LOC_LOCATION": "2599",
+                "vstr_hsnr": "78 90 12",
+                "ADR": "Willy-Messerschmitt-Straße 1, 85521 Ottobrunn",
+                "KOORDINATEN": "48.0649, 11.6633",
+                "FK_ADR_ADRESSE": 2246
+            },
+            {
+                "PK_ORG_UNIT": "372",
+                "FK_MDT_MANDANT": 12,
+                "ORG_UNIT_NAME": "Goethe Institut - Deutschland - Mannheim",
+                "ACTIVE": true,
+                "PK_LOC_LOCATION": "2600",
+                "vstr_hsnr": "34 56 78",
+                "ADR": "Kaiserring 10-16, 68161 Mannheim",
+                "KOORDINATEN": "49.4875, 8.4660",
+                "FK_ADR_ADRESSE": 2247
+            },
+            {
+                "PK_ORG_UNIT": "76",
+                "FK_MDT_MANDANT": 1,
+                "ORG_UNIT_NAME": "Abwasserzweckverband - Mittleres Ilmtal",
+                "ACTIVE": true,
+                "PK_LOC_LOCATION": "2601",
+                "vstr_hsnr": "90 12 34",
+                "ADR": "Am Wasserwerk 5, 99310 Arnstadt",
+                "KOORDINATEN": "50.8408, 10.9461",
+                "FK_ADR_ADRESSE": 2248
+            },
+            {
+                "PK_ORG_UNIT": "374",
+                "FK_MDT_MANDANT": 12,
+                "ORG_UNIT_NAME": "Goethe Institut - Deutschland - München (Zentrale)",
+                "ACTIVE": true,
+                "PK_LOC_LOCATION": "2602",
+                "vstr_hsnr": "56 78 90",
+                "ADR": "Dachauer Straße 122, 80637 München",
+                "KOORDINATEN": "48.1578, 11.5504",
+                "FK_ADR_ADRESSE": 2249
+            },
+            {
+                "PK_ORG_UNIT": "373",
+                "FK_MDT_MANDANT": 12,
+                "ORG_UNIT_NAME": "Goethe Institut - Deutschland - München",
+                "ACTIVE": true,
+                "PK_LOC_LOCATION": "2603",
+                "vstr_hsnr": "12 34 56",
+                "ADR": "Lenbachplatz 3, 80333 München",
+                "KOORDINATEN": "48.1403, 11.5661",
+                "FK_ADR_ADRESSE": 2250
+            },
+            {
+                "PK_ORG_UNIT": "723",
+                "FK_MDT_MANDANT": 1,
+                "ORG_UNIT_NAME": "Buchhaltung",
+                "ACTIVE": true,
+                "PK_LOC_LOCATION": "2604",
+                "vstr_hsnr": "78 90 12",
+                "ADR": "Finanzstraße 8, 10115 Berlin",
+                "KOORDINATEN": null, // Ohne Koordinaten für Testzwecke
+                "FK_ADR_ADRESSE": 2251
+            },
+            // Weitere Beispieldaten für bessere Visualisierung
+            {
+                "PK_ORG_UNIT": "79",
+                "FK_MDT_MANDANT": 1,
+                "ORG_UNIT_NAME": "Technisches Rathaus München",
+                "ACTIVE": true,
+                "PK_LOC_LOCATION": "2605",
+                "vstr_hsnr": "15",
+                "ADR": "Friedenstraße 15, 81671 München",
+                "KOORDINATEN": "48.1230, 11.6000",
+                "FK_ADR_ADRESSE": 2252
+            },
+            {
+                "PK_ORG_UNIT": "80",
+                "FK_MDT_MANDANT": 1,
+                "ORG_UNIT_NAME": "Stadtverwaltung Nürnberg",
+                "ACTIVE": true,
+                "PK_LOC_LOCATION": "2606",
+                "vstr_hsnr": "2",
+                "ADR": "Rathausplatz 2, 90403 Nürnberg",
+                "KOORDINATEN": "49.4550, 11.0765",
+                "FK_ADR_ADRESSE": 2253
+            },
+            {
+                "PK_ORG_UNIT": "81",
+                "FK_MDT_MANDANT": 12,
+                "ORG_UNIT_NAME": "Goethe Institut Hamburg",
+                "ACTIVE": true,
+                "PK_LOC_LOCATION": "2607",
+                "vstr_hsnr": "23",
+                "ADR": "Hagedornstraße 23, 20149 Hamburg",
+                "KOORDINATEN": "53.5753, 9.9800",
+                "FK_ADR_ADRESSE": 2254
+            }
+        ];
+
+        // State Variables
+        let allData = [...sampleData];
+        let filteredData = [...sampleData];
+        let map = null;
+        let markersLayer = null;
+        let markerCluster = null;
+        let selectedLocation = null;
+        let currentMapType = 'roadmap';
+        let customMarkers = [];
+
+        // DOM Elements
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const statusMessage = document.getElementById('statusMessage');
+        const mapSidebar = document.getElementById('mapSidebar');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const btnToggleSidebar = document.getElementById('btnToggleSidebar');
+        const locationsList = document.getElementById('locationsList');
+        const locationDetails = document.getElementById('locationDetails');
+        const locationDetailsContent = document.getElementById('locationDetailsContent');
+        const btnCloseDetails = document.getElementById('btnCloseDetails');
+        const btnApplyFilters = document.getElementById('btnApplyFilters');
+        const btnResetFilters = document.getElementById('btnResetFilters');
+        const btnZoomToAll = document.getElementById('btnZoomToAll');
+        const btnLocateUser = document.getElementById('btnLocateUser');
+        const btnToggleSatellite = document.getElementById('btnToggleSatellite');
+        const btnPrintMap = document.getElementById('btnPrintMap');
+        const btnGenerateRoute = document.getElementById('btnGenerateRoute');
+        const btnShareMap = document.getElementById('btnShareMap');
+        const btnAddCustomMarker = document.getElementById('btnAddCustomMarker');
+        const mandantFilter = document.getElementById('mandantFilter');
+        const orgUnitFilter = document.getElementById('orgUnitFilter');
+        const filterWithCoords = document.getElementById('filterWithCoords');
+        const filterWithoutCoords = document.getElementById('filterWithoutCoords');
+        const dataLoading = document.getElementById('dataLoading');
+        const dataContainer = document.getElementById('dataContainer');
+        const dataTableBody = document.getElementById('dataTableBody');
+        const noData = document.getElementById('noData');
+        const searchData = document.getElementById('searchData');
+        const sortData = document.getElementById('sortData');
+        const btnExportData = document.getElementById('btnExportData');
+        const btnPreviewExport = document.getElementById('btnPreviewExport');
+        const btnCopyExport = document.getElementById('btnCopyExport');
+        const exportPreview = document.getElementById('exportPreview');
+        const exportPreviewContent = document.getElementById('exportPreviewContent');
+        const exportFormat = document.getElementById('exportFormat');
+        const exportCoords = document.getElementById('exportCoords');
+        const exportAddress = document.getElementById('exportAddress');
+        const exportMetadata = document.getElementById('exportMetadata');
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize map
+            initializeMap();
+            
+            // Process data
+            processData();
+            
+            // Setup event listeners
+            setupEventListeners();
+            
+            // Load initial data
+            loadMapData();
+            loadDataView();
+            
+            // Show success message
+            setTimeout(() => {
+                showSuccess('Karte und Daten erfolgreich geladen');
+            }, 1000);
+        });
+
+        // Initialize Leaflet map
+        function initializeMap() {
+            // Create map with initial view over Germany
+            map = L.map('map').setView([51.1657, 10.4515], 6);
+            
+            // Add base layers
+            const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            });
+            
+            const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+                maxZoom: 19
+            });
+            
+            // Add default layer
+            osmLayer.addTo(map);
+            
+            // Store layers for toggling
+            map.baseLayers = {
+                'OpenStreetMap': osmLayer,
+                'Satellit': satelliteLayer
+            };
+            
+            // Initialize marker cluster
+            markerCluster = L.markerClusterGroup({
+                maxClusterRadius: 40,
+                spiderfyOnMaxZoom: true,
+                showCoverageOnHover: true,
+                zoomToBoundsOnClick: true,
+                iconCreateFunction: function(cluster) {
+                    const count = cluster.getChildCount();
+                    let size = 'large';
+                    
+                    if (count < 10) size = 'small';
+                    else if (count < 100) size = 'medium';
+                    
+                    return L.divIcon({
+                        html: '<div><span>' + count + '</span></div>',
+                        className: 'marker-cluster marker-cluster-' + size,
+                        iconSize: L.point(40, 40)
+                    });
+                }
+            });
+            
+            // Add click event to map for custom markers
+            map.on('click', function(e) {
+                // This can be used for adding custom markers later
+                // console.log('Map clicked at:', e.latlng);
+            });
+        }
+
+        // Process and filter data
+        function processData() {
+            // Populate org unit filter
+            const orgUnits = [...new Set(allData.map(item => item.PK_ORG_UNIT))];
+            orgUnitFilter.innerHTML = '<option value="all">Alle Organisationseinheiten</option>';
+            
+            orgUnits.forEach(unitId => {
+                const unitData = allData.find(item => item.PK_ORG_UNIT === unitId);
+                const option = document.createElement('option');
+                option.value = unitId;
+                option.textContent = `${unitData.ORG_UNIT_NAME} (ID: ${unitId})`;
+                orgUnitFilter.appendChild(option);
+            });
+            
+            // Filter data based on initial settings
+            filterData();
+        }
+
+        // Filter data based on current filter settings
+        function filterData() {
+            const selectedMandant = mandantFilter.value;
+            const selectedOrgUnit = orgUnitFilter.value;
+            const withCoords = filterWithCoords.checked;
+            const withoutCoords = filterWithoutCoords.checked;
+            
+            filteredData = allData.filter(item => {
+                let matches = true;
+                
+                // Filter by mandant
+                if (selectedMandant !== 'all') {
+                    matches = matches && item.FK_MDT_MANDANT.toString() === selectedMandant;
+                }
+                
+                // Filter by org unit
+                if (selectedOrgUnit !== 'all') {
+                    matches = matches && item.PK_ORG_UNIT === selectedOrgUnit;
+                }
+                
+                // Filter by coordinates
+                if (withCoords && withoutCoords) {
+                    // Show all (both with and without coordinates)
+                } else if (withCoords) {
+                    matches = matches && item.KOORDINATEN !== null && item.KOORDINATEN.trim() !== '';
+                } else if (withoutCoords) {
+                    matches = matches && (!item.KOORDINATEN || item.KOORDINATEN.trim() === '');
+                } else {
+                    // If neither is checked, show none
+                    matches = false;
+                }
+                
+                return matches;
+            });
+        }
+
+        // Load data onto the map
+        function loadMapData() {
+            // Clear existing markers
+            if (markersLayer) {
+                markerCluster.removeLayer(markersLayer);
+            }
+            if (markerCluster) {
+                map.removeLayer(markerCluster);
+            }
+            
+            // Filter data
+            filterData();
+            
+            // Create new marker cluster
+            markerCluster = L.markerClusterGroup({
+                maxClusterRadius: 40,
+                spiderfyOnMaxZoom: true,
+                showCoverageOnHover: true,
+                zoomToBoundsOnClick: true
+            });
+            
+            // Process each location
+            const markers = [];
+            const locationsWithCoords = [];
+            const locationsWithoutCoords = [];
+            
+            filteredData.forEach(location => {
+                const hasCoords = location.KOORDINATEN && location.KOORDINATEN.trim() !== '';
+                
+                if (hasCoords) {
+                    locationsWithCoords.push(location);
+                } else {
+                    locationsWithoutCoords.push(location);
+                }
+                
+                if (hasCoords) {
+                    const coords = location.KOORDINATEN.split(',');
+                    const lat = parseFloat(coords[0].trim());
+                    const lng = parseFloat(coords[1].trim());
+                    
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        // Create custom icon based on mandant
+                        const iconColor = location.FK_MDT_MANDANT === 1 ? '#667eea' : '#10b981';
+                        
+                        const customIcon = L.divIcon({
+                            html: `<div style="background-color: ${iconColor}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;">
+                                     <i class="fas fa-building" style="color: white; font-size: 10px;"></i>
+                                   </div>`,
+                            className: 'custom-marker',
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 12]
+                        });
+                        
+                        // Create marker
+                        const marker = L.marker([lat, lng], { icon: customIcon });
+                        
+                        // Create popup content
+                        const popupContent = `
+                            <div style="max-width: 300px;">
+                                <h3 style="color: #667eea; margin: 0 0 10px 0; font-size: 1.1rem;">
+                                    <i class="fas fa-building"></i> ${location.ORG_UNIT_NAME}
+                                </h3>
+                                <div class="popup-details">
+                                    <div><strong>ID:</strong> ${location.PK_LOC_LOCATION}</div>
+                                    <div><strong>Organisationseinheit:</strong> ${location.PK_ORG_UNIT}</div>
+                                    <div><strong>Mandant:</strong> ${location.FK_MDT_MANDANT}</div>
+                                    ${location.vstr_hsnr ? `<div><strong>Hausnummer:</strong> ${location.vstr_hsnr}</div>` : ''}
+                                    ${location.ADR ? `<div><strong>Adresse:</strong> ${location.ADR}</div>` : ''}
+                                </div>
+                                <div class="popup-coordinates">
+                                    <strong>Koordinaten:</strong> ${lat.toFixed(6)}, ${lng.toFixed(6)}
+                                </div>
+                                <div style="margin-top: 10px;">
+                                    <button onclick="selectLocation('${location.PK_LOC_LOCATION}')" style="background: #667eea; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">
+                                        <i class="fas fa-info-circle"></i> Details anzeigen
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        
+                        marker.bindPopup(popupContent);
+                        
+                        // Add click event
+                        marker.on('click', function() {
+                            selectLocation(location.PK_LOC_LOCATION);
+                        });
+                        
+                        markers.push(marker);
+                        marker.locationId = location.PK_LOC_LOCATION;
+                    }
+                }
+            });
+            
+            // Add all markers to cluster
+            markers.forEach(marker => {
+                markerCluster.addLayer(marker);
+            });
+            
+            // Add cluster to map
+            map.addLayer(markerCluster);
+            
+            // Update sidebar list
+            updateLocationsList(locationsWithCoords, locationsWithoutCoords);
+            
+            // Zoom to show all markers if there are any
+            if (locationsWithCoords.length > 0) {
+                const bounds = markerCluster.getBounds();
+                if (bounds.isValid()) {
+                    map.fitBounds(bounds, { padding: [50, 50] });
+                }
+            }
+            
+            // Update statistics
+            updateMapStatistics(locationsWithCoords.length, locationsWithoutCoords.length);
+            
+            // Store reference to markers layer
+            markersLayer = L.layerGroup(markers);
+            
+            return {
+                withCoords: locationsWithCoords,
+                withoutCoords: locationsWithoutCoords
+            };
+        }
+
+        // Update locations list in sidebar
+        function updateLocationsList(locationsWithCoords, locationsWithoutCoords) {
+            locationsList.innerHTML = '';
+            
+            // Add locations with coordinates
+            locationsWithCoords.forEach(location => {
+                const locationItem = document.createElement('div');
+                locationItem.className = 'location-item';
+                locationItem.dataset.id = location.PK_LOC_LOCATION;
+                
+                const coords = location.KOORDINATEN.split(',');
+                const lat = parseFloat(coords[0].trim());
+                const lng = parseFloat(coords[1].trim());
+                
+                locationItem.innerHTML = `
+                    <div class="location-item-header">
+                        <div class="location-item-name">
+                            <i class="fas fa-map-marker-alt"></i> ${location.ORG_UNIT_NAME}
+                        </div>
+                        <div class="location-item-id">${location.PK_LOC_LOCATION}</div>
+                    </div>
+                    <div class="location-item-details">
+                        <div><strong>Mandant:</strong> ${location.FK_MDT_MANDANT}</div>
+                        <div><strong>Koord.:</strong> ${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
+                    </div>
+                `;
+                
+                locationItem.addEventListener('click', () => {
+                    selectLocation(location.PK_LOC_LOCATION);
+                    flyToLocation(lat, lng);
+                });
+                
+                locationsList.appendChild(locationItem);
+            });
+            
+            // Add locations without coordinates (if showing)
+            if (filterWithoutCoords.checked && locationsWithoutCoords.length > 0) {
+                const noCoordsHeader = document.createElement('div');
+                noCoordsHeader.innerHTML = `<div style="margin: 15px 0 10px 0; padding-bottom: 5px; border-bottom: 1px solid #e5e7eb; color: #ef4444; font-weight: 600;">
+                    <i class="fas fa-exclamation-triangle"></i> Ohne Koordinaten
+                </div>`;
+                locationsList.appendChild(noCoordsHeader);
+                
+                locationsWithoutCoords.forEach(location => {
+                    const locationItem = document.createElement('div');
+                    locationItem.className = 'location-item';
+                    locationItem.dataset.id = location.PK_LOC_LOCATION;
+                    locationItem.style.opacity = '0.7';
+                    
+                    locationItem.innerHTML = `
+                        <div class="location-item-header">
+                            <div class="location-item-name">
+                                <i class="fas fa-map-marker-alt"></i> ${location.ORG_UNIT_NAME}
+                            </div>
+                            <div class="location-item-id">${location.PK_LOC_LOCATION}</div>
+                        </div>
+                        <div class="location-item-details">
+                            <div><strong>Mandant:</strong> ${location.FK_MDT_MANDANT}</div>
+                            <div><strong>Status:</strong> Keine Koordinaten</div>
+                        </div>
+                    `;
+                    
+                    locationItem.addEventListener('click', () => {
+                        selectLocation(location.PK_LOC_LOCATION);
+                        showError('Dieser Standort hat keine Koordinaten und kann nicht auf der Karte angezeigt werden.');
+                    });
+                    
+                    locationsList.appendChild(locationItem);
+                });
+            }
+            
+            // Update counter
+            const counter = document.createElement('div');
+            counter.innerHTML = `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 0.85rem; text-align: center;">
+                ${locationsWithCoords.length} Standorte mit Koordinaten
+                ${locationsWithoutCoords.length > 0 ? `, ${locationsWithoutCoords.length} ohne Koordinaten` : ''}
+            </div>`;
+            locationsList.appendChild(counter);
+        }
+
+        // Select a specific location
+        function selectLocation(locationId) {
+            // Remove active class from all items
+            document.querySelectorAll('.location-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Add active class to selected item
+            const selectedItem = document.querySelector(`.location-item[data-id="${locationId}"]`);
+            if (selectedItem) {
+                selectedItem.classList.add('active');
+                selectedItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+            
+            // Find location data
+            const location = allData.find(item => item.PK_LOC_LOCATION === locationId);
+            if (!location) return;
+            
+            selectedLocation = location;
+            
+            // Update location details panel
+            updateLocationDetails(location);
+            
+            // Open details panel
+            locationDetails.classList.add('active');
+            
+            // If location has coordinates, highlight marker
+            if (location.KOORDINATEN && location.KOORDINATEN.trim() !== '') {
+                const coords = location.KOORDINATEN.split(',');
+                const lat = parseFloat(coords[0].trim());
+                const lng = parseFloat(coords[1].trim());
+                
+                // Find and open marker popup
+                markerCluster.eachLayer(function(layer) {
+                    if (layer.locationId === locationId) {
+                        layer.openPopup();
+                        
+                        // Create a highlight effect
+                        const icon = layer.options.icon;
+                        if (icon && icon.options) {
+                            const highlightIcon = L.divIcon({
+                                html: `<div style="background-color: #ef4444; width: 30px; height: 30px; border-radius: 50%; border: 3px solid white; box-shadow: 0 3px 8px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center;">
+                                         <i class="fas fa-building" style="color: white; font-size: 12px;"></i>
+                                       </div>`,
+                                className: 'custom-marker-highlight',
+                                iconSize: [36, 36],
+                                iconAnchor: [18, 18]
+                            });
+                            
+                            layer.setIcon(highlightIcon);
+                            
+                            // Reset icon after 3 seconds
+                            setTimeout(() => {
+                                const originalColor = location.FK_MDT_MANDANT === 1 ? '#667eea' : '#10b981';
+                                const originalIcon = L.divIcon({
+                                    html: `<div style="background-color: ${originalColor}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;">
+                                             <i class="fas fa-building" style="color: white; font-size: 10px;"></i>
+                                           </div>`,
+                                    className: 'custom-marker',
+                                    iconSize: [24, 24],
+                                    iconAnchor: [12, 12]
+                                });
+                                layer.setIcon(originalIcon);
+                            }, 3000);
+                        }
+                    }
+                });
+            }
+        }
+
+        // Fly to a specific location on the map
+        function flyToLocation(lat, lng) {
+            map.flyTo([lat, lng], 14, {
+                duration: 1.5,
+                easeLinearity: 0.25
+            });
+        }
+
+        // Update location details panel
+        function updateLocationDetails(location) {
+            let detailsHTML = '';
+            
+            if (location.KOORDINATEN && location.KOORDINATEN.trim() !== '') {
+                const coords = location.KOORDINATEN.split(',');
+                const lat = parseFloat(coords[0].trim());
+                const lng = parseFloat(coords[1].trim());
+                
+                detailsHTML = `
+                    <div style="margin-bottom: 15px;">
+                        <div style="font-weight: 600; color: #374151; margin-bottom: 5px;">Koordinaten</div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <div style="background: #f3f4f6; padding: 8px 12px; border-radius: 6px; font-family: monospace;">
+                                Breite: ${lat.toFixed(6)}
+                            </div>
+                            <div style="background: #f3f4f6; padding: 8px 12px; border-radius: 6px; font-family: monospace;">
+                                Länge: ${lng.toFixed(6)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            detailsHTML += `
+                <div style="margin-bottom: 15px;">
+                    <div style="font-weight: 600; color: #374151; margin-bottom: 5px;">Organisationsdaten</div>
+                    <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; font-size: 0.9rem;">
+                        <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px 15px;">
+                            <div style="font-weight: 600;">ID:</div>
+                            <div>${location.PK_LOC_LOCATION}</div>
+                            
+                            <div style="font-weight: 600;">Organisationseinheit:</div>
+                            <div>${location.PK_ORG_UNIT} - ${location.ORG_UNIT_NAME}</div>
+                            
+                            <div style="font-weight: 600;">Mandant:</div>
+                            <div>${location.FK_MDT_MANDANT}</div>
+                            
+                            ${location.vstr_hsnr ? `
+                                <div style="font-weight: 600;">Hausnummer:</div>
+                                <div>${location.vstr_hsnr}</div>
+                            ` : ''}
+                            
+                            ${location.ADR ? `
+                                <div style="font-weight: 600;">Adresse:</div>
+                                <div>${location.ADR}</div>
+                            ` : ''}
+                            
+                            ${location.FK_ADR_ADRESSE ? `
+                                <div style="font-weight: 600;">FK Adresse:</div>
+                                <div>${location.FK_ADR_ADRESSE}</div>
+                            ` : ''}
+                            
+                            <div style="font-weight: 600;">Status:</div>
+                            <div>${location.ACTIVE === true ? 'Aktiv' : location.ACTIVE === false ? 'Inaktiv' : 'Nicht definiert'}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="copyCoordinates('${location.PK_LOC_LOCATION}')" style="flex: 1; background: #6b7280; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.9rem;">
+                        <i class="fas fa-copy"></i> Koordinaten kopieren
+                    </button>
+                    <button onclick="openInGoogleMaps('${location.PK_LOC_LOCATION}')" style="flex: 1; background: #10b981; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.9rem;">
+                        <i class="fas fa-external-link-alt"></i> In Google Maps öffnen
+                    </button>
+                </div>
+            `;
+            
+            locationDetailsContent.innerHTML = detailsHTML;
+        }
+
+        // Update map statistics
+        function updateMapStatistics(withCoordsCount, withoutCoordsCount) {
+            // Update legend or statistics display if needed
+            const legend = document.querySelector('.map-legend');
+            if (withoutCoordsCount > 0) {
+                legend.style.display = 'block';
+            } else {
+                legend.style.display = 'block';
+            }
+        }
+
+        // Load data for data view tab
+        function loadDataView() {
+            dataLoading.style.display = 'block';
+            dataContainer.style.display = 'none';
+            noData.style.display = 'none';
+            
+            setTimeout(() => {
+                filterData();
+                
+                if (filteredData.length === 0) {
+                    noData.style.display = 'block';
+                    dataContainer.style.display = 'none';
+                } else {
+                    renderDataTable(filteredData);
+                    dataContainer.style.display = 'block';
+                    noData.style.display = 'none';
+                }
+                
+                dataLoading.style.display = 'none';
+            }, 500);
+        }
+
+        // Render data table
+        function renderDataTable(data) {
+            // Sort data
+            const sortBy = sortData.value;
+            const sortedData = [...data].sort((a, b) => {
+                switch (sortBy) {
+                    case 'name':
+                        return a.ORG_UNIT_NAME.localeCompare(b.ORG_UNIT_NAME);
+                    case 'id':
+                        return a.PK_LOC_LOCATION.localeCompare(b.PK_LOC_LOCATION);
+                    case 'mandant':
+                        return a.FK_MDT_MANDANT - b.FK_MDT_MANDANT;
+                    case 'coordinates':
+                        const aHasCoords = a.KOORDINATEN ? 1 : 0;
+                        const bHasCoords = b.KOORDINATEN ? 1 : 0;
+                        return bHasCoords - aHasCoords;
+                    default:
+                        return 0;
+                }
+            });
+            
+            // Filter by search
+            const searchTerm = searchData.value.toLowerCase();
+            const filtered = searchTerm ? 
+                sortedData.filter(item => 
+                    item.ORG_UNIT_NAME.toLowerCase().includes(searchTerm) ||
+                    item.PK_LOC_LOCATION.toLowerCase().includes(searchTerm) ||
+                    (item.ADR && item.ADR.toLowerCase().includes(searchTerm)) ||
+                    item.PK_ORG_UNIT.toLowerCase().includes(searchTerm)
+                ) : sortedData;
+            
+            let tableHTML = '';
+            
+            filtered.forEach(location => {
+                const hasCoords = location.KOORDINATEN && location.KOORDINATEN.trim() !== '';
+                let coordsDisplay = 'Keine Koordinaten';
+                
+                if (hasCoords) {
+                    const coords = location.KOORDINATEN.split(',');
+                    const lat = parseFloat(coords[0].trim());
+                    const lng = parseFloat(coords[1].trim());
+                    coordsDisplay = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                }
+                
+                tableHTML += `
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 12px;">${location.PK_LOC_LOCATION}</td>
+                        <td style="padding: 12px;">${location.ORG_UNIT_NAME}</td>
+                        <td style="padding: 12px;">${location.FK_MDT_MANDANT}</td>
+                        <td style="padding: 12px;">${coordsDisplay}</td>
+                        <td style="padding: 12px;">${location.ADR || 'N/A'}</td>
+                        <td style="padding: 12px;">
+                            <button onclick="selectLocation('${location.PK_LOC_LOCATION}')" style="background: #667eea; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin-right: 5px;">
+                                <i class="fas fa-map-marker-alt"></i>
+                            </button>
+                            <button onclick="copyLocationData('${location.PK_LOC_LOCATION}')" style="background: #6b7280; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            dataTableBody.innerHTML = tableHTML;
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Tab switching
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+            });
+            
+            // Sidebar toggle
+            sidebarToggle.addEventListener('click', toggleSidebar);
+            btnToggleSidebar.addEventListener('click', toggleSidebar);
+            
+            // Close details
+            btnCloseDetails.addEventListener('click', () => {
+                locationDetails.classList.remove('active');
+            });
+            
+            // Filter buttons
+            btnApplyFilters.addEventListener('click', () => {
+                const currentTab = document.querySelector('.tab.active').dataset.tab;
+                if (currentTab === 'mapView') {
+                    loadMapData();
+                    showSuccess('Filter angewendet');
+                } else {
+                    loadDataView();
+                    showSuccess('Filter angewendet');
+                }
+            });
+            
+            btnResetFilters.addEventListener('click', () => {
+                mandantFilter.value = 'all';
+                orgUnitFilter.value = 'all';
+                filterWithCoords.checked = true;
+                filterWithoutCoords.checked = false;
+                searchData.value = '';
+                
+                const currentTab = document.querySelector('.tab.active').dataset.tab;
+                if (currentTab === 'mapView') {
+                    loadMapData();
+                } else {
+                    loadDataView();
+                }
+                
+                showSuccess('Filter zurückgesetzt');
+            });
+            
+            // Map control buttons
+            btnZoomToAll.addEventListener('click', () => {
+                if (markerCluster && markerCluster.getBounds().isValid()) {
+                    map.fitBounds(markerCluster.getBounds(), { padding: [50, 50] });
+                    showSuccess('Alle Standorte angezeigt');
+                }
+            });
+            
+            btnLocateUser.addEventListener('click', locateUser);
+            btnToggleSatellite.addEventListener('click', toggleSatelliteView);
+            btnPrintMap.addEventListener('click', printMap);
+            btnGenerateRoute.addEventListener('click', generateRoute);
+            btnShareMap.addEventListener('click', shareMap);
+            btnAddCustomMarker.addEventListener('click', addCustomMarker);
+            
+            // Data view interactions
+            searchData.addEventListener('input', loadDataView);
+            sortData.addEventListener('change', loadDataView);
+            
+            // Export buttons
+            btnExportData.addEventListener('click', exportData);
+            btnPreviewExport.addEventListener('click', previewExport);
+            btnCopyExport.addEventListener('click', copyExport);
+        }
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Update active tab
+            tabs.forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.tab === tabName);
+            });
+            
+            // Show active content
+            tabContents.forEach(content => {
+                content.classList.toggle('active', content.id === tabName + 'Tab');
+            });
+            
+            // Load data for the tab
+            switch (tabName) {
+                case 'mapView':
+                    loadMapData();
+                    break;
+                case 'dataView':
+                    loadDataView();
+                    break;
+                case 'export':
+                    // Nothing to load initially
+                    break;
+            }
+        }
+
+        // Toggle sidebar
+        function toggleSidebar() {
+            mapSidebar.classList.toggle('active');
+            const icon = sidebarToggle.querySelector('i');
+            if (mapSidebar.classList.contains('active')) {
+                icon.className = 'fas fa-chevron-left';
+            } else {
+                icon.className = 'fas fa-chevron-right';
+            }
+        }
+
+        // Locate user
+        function locateUser() {
+            if (!navigator.geolocation) {
+                showError('Geolocation wird von Ihrem Browser nicht unterstützt');
+                return;
+            }
+            
+            showInfo('Suche nach Ihrem Standort...');
+            
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    
+                    // Add user marker
+                    const userIcon = L.divIcon({
+                        html: `<div style="background-color: #ef4444; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 3px 8px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center;">
+                                 <i class="fas fa-user" style="color: white; font-size: 10px;"></i>
+                               </div>`,
+                        className: 'user-marker',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 15]
+                    });
+                    
+                    const userMarker = L.marker([latitude, longitude], { icon: userIcon })
+                        .bindPopup('<b>Ihr Standort</b><br>Sie befinden sich hier.')
+                        .addTo(map);
+                    
+                    customMarkers.push(userMarker);
+                    
+                    // Fly to user location
+                    map.flyTo([latitude, longitude], 14, {
+                        duration: 1.5,
+                        easeLinearity: 0.25
+                    });
+                    
+                    showSuccess(`Ihr Standort: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+                },
+                (error) => {
+                    showError(`Standort konnte nicht ermittelt werden: ${error.message}`);
+                }
+            );
+        }
+
+        // Toggle satellite view
+        function toggleSatelliteView() {
+            if (currentMapType === 'roadmap') {
+                // Switch to satellite
+                map.removeLayer(map.baseLayers['OpenStreetMap']);
+                map.addLayer(map.baseLayers['Satellit']);
+                currentMapType = 'satellite';
+                btnToggleSatellite.innerHTML = '<i class="fas fa-map"></i>';
+                btnToggleSatellite.title = 'Kartenansicht';
+            } else {
+                // Switch to roadmap
+                map.removeLayer(map.baseLayers['Satellit']);
+                map.addLayer(map.baseLayers['OpenStreetMap']);
+                currentMapType = 'roadmap';
+                btnToggleSatellite.innerHTML = '<i class="fas fa-satellite"></i>';
+                btnToggleSatellite.title = 'Satellitenansicht';
+            }
+        }
+
+        // Print map
+        function printMap() {
+            showInfo('Karte wird vorbereitet...');
+            
+            // Create a print-friendly version
+            const printWindow = window.open('', '_blank');
+            const mapBounds = map.getBounds();
+            const mapCenter = map.getCenter();
+            const zoom = map.getZoom();
+            
+            // Create a static map image URL (using OpenStreetMap static tiles)
+            const staticMapUrl = `https://static-maps.yandex.ru/1.x/?ll=${mapCenter.lng},${mapCenter.lat}&z=${zoom}&size=800,600&l=map&pt=${mapCenter.lng},${mapCenter.lat},pm2rdl`;
+            
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Kartenausdruck - Organisationseinheiten</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        h1 { color: #667eea; }
+                        .map-container { margin: 20px 0; }
+                        .map-image { width: 100%; max-width: 800px; height: auto; }
+                        .details { margin-top: 20px; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                        th { background-color: #f8f9fa; }
+                        @media print {
+                            .no-print { display: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>Organisationseinheiten & Standorte</h1>
+                    <p>Erstellt am: ${new Date().toLocaleString('de-DE')}</p>
+                    
+                    <div class="map-container">
+                        <h2>Kartenübersicht</h2>
+                        <img src="${staticMapUrl}" alt="Kartenausschnitt" class="map-image">
+                        <p>Kartenmittelpunkt: ${mapCenter.lat.toFixed(6)}, ${mapCenter.lng.toFixed(6)} | Zoom: ${zoom}</p>
+                    </div>
+                    
+                    <div class="details">
+                        <h2>Standortliste (${filteredData.length})</h2>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Mandant</th>
+                                    <th>Koordinaten</th>
+                                    <th>Adresse</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${filteredData.map(location => {
+                                    const hasCoords = location.KOORDINATEN && location.KOORDINATEN.trim() !== '';
+                                    let coordsDisplay = 'Keine Koordinaten';
+                                    
+                                    if (hasCoords) {
+                                        const coords = location.KOORDINATEN.split(',');
+                                        const lat = parseFloat(coords[0].trim());
+                                        const lng = parseFloat(coords[1].trim());
+                                        coordsDisplay = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                                    }
+                                    
+                                    return `
+                                        <tr>
+                                            <td>${location.PK_LOC_LOCATION}</td>
+                                            <td>${location.ORG_UNIT_NAME}</td>
+                                            <td>${location.FK_MDT_MANDANT}</td>
+                                            <td>${coordsDisplay}</td>
+                                            <td>${location.ADR || 'N/A'}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="no-print" style="margin-top: 20px;">
+                        <button onclick="window.print()">Drucken</button>
+                        <button onclick="window.close()">Schließen</button>
+                    </div>
+                    
+                    <script>
+                        window.onload = function() {
+                            window.print();
+                        };
+                    <\/script>
+                </body>
+                </html>
+            `);
+            
+            printWindow.document.close();
+        }
+
+        // Generate route (simplified)
+        function generateRoute() {
+            if (!selectedLocation || !selectedLocation.KOORDINATEN) {
+                showError('Bitte wählen Sie zuerst einen Standort mit Koordinaten aus');
+                return;
+            }
+            
+            const coords = selectedLocation.KOORDINATEN.split(',');
+            const lat = parseFloat(coords[0].trim());
+            const lng = parseFloat(coords[1].trim());
+            
+            // Open Google Maps with directions
+            const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+            window.open(googleMapsUrl, '_blank');
+            
+            showSuccess(`Route zu ${selectedLocation.ORG_UNIT_NAME} wird in Google Maps geöffnet`);
+        }
+
+        // Share map
+        function shareMap() {
+            const mapCenter = map.getCenter();
+            const zoom = map.getZoom();
+            const shareUrl = `${window.location.origin}${window.location.pathname}?lat=${mapCenter.lat}&lng=${mapCenter.lng}&zoom=${zoom}`;
+            
+            // Create share text
+            const shareText = `Organisationseinheiten Karte - ${filteredData.length} Standorte`;
+            
+            // Try Web Share API first
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Organisationseinheiten Karte',
+                    text: shareText,
+                    url: shareUrl
+                }).catch(err => {
+                    console.log('Error sharing:', err);
+                    fallbackShare(shareText, shareUrl);
+                });
+            } else {
+                fallbackShare(shareText, shareUrl);
+            }
+        }
+
+        function fallbackShare(text, url) {
+            // Create a temporary input for copying
+            const tempInput = document.createElement('input');
+            tempInput.value = `${text}\n\n${url}`;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            
+            showSuccess('Link in Zwischenablage kopiert!');
+        }
+
+        // Add custom marker
+        function addCustomMarker() {
+            const lat = prompt('Breitengrad eingeben (z.B. 48.1351):');
+            const lng = prompt('Längengrad eingeben (z.B. 11.5820):');
+            const title = prompt('Titel für den Marker:');
+            
+            if (lat && lng && title) {
+                const latNum = parseFloat(lat);
+                const lngNum = parseFloat(lng);
+                
+                if (!isNaN(latNum) && !isNaN(lngNum)) {
+                    const customIcon = L.divIcon({
+                        html: `<div style="background-color: #f59e0b; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 3px 8px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center;">
+                                 <i class="fas fa-star" style="color: white; font-size: 10px;"></i>
+                               </div>`,
+                        className: 'custom-marker-added',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 15]
+                    });
+                    
+                    const marker = L.marker([latNum, lngNum], { icon: customIcon })
+                        .bindPopup(`<b>${title}</b><br>Benutzerdefinierter Marker<br>Koordinaten: ${latNum.toFixed(6)}, ${lngNum.toFixed(6)}`)
+                        .addTo(map);
+                    
+                    customMarkers.push(marker);
+                    
+                    // Fly to the new marker
+                    map.flyTo([latNum, lngNum], 14, {
+                        duration: 1.5,
+                        easeLinearity: 0.25
+                    });
+                    
+                    showSuccess(`Benutzerdefinierter Marker "${title}" hinzugefügt`);
+                } else {
+                    showError('Ungültige Koordinaten eingegeben');
+                }
+            }
+        }
+
+        // Export data
+        function exportData() {
+            const format = exportFormat.value;
+            const includeCoords = exportCoords.checked;
+            const includeAddress = exportAddress.checked;
+            const includeMetadata = exportMetadata.checked;
+            
+            let exportData;
+            
+            switch (format) {
+                case 'geojson':
+                    exportData = generateGeoJSON(includeCoords, includeAddress, includeMetadata);
+                    downloadFile(exportData, 'standorte.geojson', 'application/json');
+                    break;
+                case 'kml':
+                    exportData = generateKML(includeCoords, includeAddress, includeMetadata);
+                    downloadFile(exportData, 'standorte.kml', 'application/vnd.google-earth.kml+xml');
+                    break;
+                case 'csv':
+                    exportData = generateCSV(includeCoords, includeAddress, includeMetadata);
+                    downloadFile(exportData, 'standorte.csv', 'text/csv');
+                    break;
+                case 'json':
+                    exportData = generateJSON(includeCoords, includeAddress, includeMetadata);
+                    downloadFile(exportData, 'standorte.json', 'application/json');
+                    break;
+            }
+            
+            showSuccess(`Daten als ${format.toUpperCase()} exportiert`);
+        }
+
+        // Preview export
+        function previewExport() {
+            const format = exportFormat.value;
+            const includeCoords = exportCoords.checked;
+            const includeAddress = exportAddress.checked;
+            const includeMetadata = exportMetadata.checked;
+            
+            let exportData;
+            
+            switch (format) {
+                case 'geojson':
+                    exportData = generateGeoJSON(includeCoords, includeAddress, includeMetadata);
+                    break;
+                case 'kml':
+                    exportData = generateKML(includeCoords, includeAddress, includeMetadata);
+                    break;
+                case 'csv':
+                    exportData = generateCSV(includeCoords, includeAddress, includeMetadata);
+                    break;
+                case 'json':
+                    exportData = generateJSON(includeCoords, includeAddress, includeMetadata);
+                    break;
+            }
+            
+            exportPreviewContent.textContent = typeof exportData === 'string' ? exportData : JSON.stringify(exportData, null, 2);
+            exportPreview.style.display = 'block';
+            
+            // Scroll to preview
+            exportPreview.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Copy export to clipboard
+        function copyExport() {
+            const format = exportFormat.value;
+            const includeCoords = exportCoords.checked;
+            const includeAddress = exportAddress.checked;
+            const includeMetadata = exportMetadata.checked;
+            
+            let exportData;
+            
+            switch (format) {
+                case 'geojson':
+                    exportData = generateGeoJSON(includeCoords, includeAddress, includeMetadata);
+                    break;
+                case 'kml':
+                    exportData = generateKML(includeCoords, includeAddress, includeMetadata);
+                    break;
+                case 'csv':
+                    exportData = generateCSV(includeCoords, includeAddress, includeMetadata);
+                    break;
+                case 'json':
+                    exportData = generateJSON(includeCoords, includeAddress, includeMetadata);
+                    break;
+            }
+            
+            const textToCopy = typeof exportData === 'string' ? exportData : JSON.stringify(exportData, null, 2);
+            
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                showSuccess('Export-Daten in Zwischenablage kopiert');
+            }).catch(err => {
+                showError('Fehler beim Kopieren: ' + err.message);
+            });
+        }
+
+        // Generate GeoJSON
+        function generateGeoJSON(includeCoords, includeAddress, includeMetadata) {
+            const features = filteredData
+                .filter(location => location.KOORDINATEN && location.KOORDINATEN.trim() !== '')
+                .map(location => {
+                    const coords = location.KOORDINATEN.split(',');
+                    const lat = parseFloat(coords[0].trim());
+                    const lng = parseFloat(coords[1].trim());
+                    
+                    const properties = {
+                        id: location.PK_LOC_LOCATION,
+                        name: location.ORG_UNIT_NAME,
+                        mandant: location.FK_MDT_MANDANT,
+                        org_unit: location.PK_ORG_UNIT
+                    };
+                    
+                    if (includeAddress && location.ADR) {
+                        properties.address = location.ADR;
+                    }
+                    
+                    if (includeAddress && location.vstr_hsnr) {
+                        properties.housenumber = location.vstr_hsnr;
+                    }
+                    
+                    if (includeMetadata) {
+                        properties.active = location.ACTIVE;
+                        properties.fk_address = location.FK_ADR_ADRESSE;
+                    }
+                    
+                    return {
+                        type: 'Feature',
+                        geometry: {
+                            type: 'Point',
+                            coordinates: [lng, lat]
+                        },
+                        properties: properties
+                    };
+                });
+            
+            return {
+                type: 'FeatureCollection',
+                features: features
+            };
+        }
+
+        // Generate KML
+        function generateKML(includeCoords, includeAddress, includeMetadata) {
+            let kml = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Organisationseinheiten Standorte</name>
+    <description>Exportiert am ${new Date().toLocaleString('de-DE')}</description>`;
+            
+            filteredData
+                .filter(location => location.KOORDINATEN && location.KOORDINATEN.trim() !== '')
+                .forEach(location => {
+                    const coords = location.KOORDINATEN.split(',');
+                    const lat = parseFloat(coords[0].trim());
+                    const lng = parseFloat(coords[1].trim());
+                    
+                    let description = `<b>${location.ORG_UNIT_NAME}</b><br>`;
+                    description += `ID: ${location.PK_LOC_LOCATION}<br>`;
+                    description += `Mandant: ${location.FK_MDT_MANDANT}<br>`;
+                    description += `Organisationseinheit: ${location.PK_ORG_UNIT}<br>`;
+                    
+                    if (includeAddress && location.ADR) {
+                        description += `Adresse: ${location.ADR}<br>`;
+                    }
+                    
+                    if (includeAddress && location.vstr_hsnr) {
+                        description += `Hausnummer: ${location.vstr_hsnr}<br>`;
+                    }
+                    
+                    if (includeMetadata) {
+                        description += `Status: ${location.ACTIVE === true ? 'Aktiv' : location.ACTIVE === false ? 'Inaktiv' : 'Nicht definiert'}<br>`;
+                        description += `FK Adresse: ${location.FK_ADR_ADRESSE || 'N/A'}<br>`;
+                    }
+                    
+                    description += `Koordinaten: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                    
+                    kml += `
+    <Placemark>
+      <name>${location.ORG_UNIT_NAME}</name>
+      <description><![CDATA[${description}]]></description>
+      <Point>
+        <coordinates>${lng},${lat},0</coordinates>
+      </Point>
+    </Placemark>`;
+                });
+            
+            kml += `
+  </Document>
+</kml>`;
+            
+            return kml;
+        }
+
+        // Generate CSV
+        function generateCSV(includeCoords, includeAddress, includeMetadata) {
+            const headers = ['ID', 'Name', 'Mandant', 'Org_Einheit', 'Latitude', 'Longitude'];
+            
+            if (includeAddress) {
+                headers.push('Adresse', 'Hausnummer');
+            }
+            
+            if (includeMetadata) {
+                headers.push('Status', 'FK_Adresse');
+            }
+            
+            let csv = headers.join(',') + '\n';
+            
+            filteredData.forEach(location => {
+                const hasCoords = location.KOORDINATEN && location.KOORDINATEN.trim() !== '';
+                let lat = '', lng = '';
+                
+                if (hasCoords) {
+                    const coords = location.KOORDINATEN.split(',');
+                    lat = parseFloat(coords[0].trim());
+                    lng = parseFloat(coords[1].trim());
+                }
+                
+                const row = [
+                    `"${location.PK_LOC_LOCATION}"`,
+                    `"${location.ORG_UNIT_NAME}"`,
+                    location.FK_MDT_MANDANT,
+                    location.PK_ORG_UNIT,
+                    hasCoords ? lat : '',
+                    hasCoords ? lng : ''
+                ];
+                
+                if (includeAddress) {
+                    row.push(`"${location.ADR || ''}"`);
+                    row.push(`"${location.vstr_hsnr || ''}"`);
+                }
+                
+                if (includeMetadata) {
+                    row.push(location.ACTIVE === true ? 'Aktiv' : location.ACTIVE === false ? 'Inaktiv' : 'Nicht definiert');
+                    row.push(location.FK_ADR_ADRESSE || '');
+                }
+                
+                csv += row.join(',') + '\n';
+            });
+            
+            return csv;
+        }
+
+        // Generate JSON
+        function generateJSON(includeCoords, includeAddress, includeMetadata) {
+            return filteredData.map(location => {
+                const hasCoords = location.KOORDINATEN && location.KOORDINATEN.trim() !== '';
+                let coordinates = null;
+                
+                if (hasCoords) {
+                    const coords = location.KOORDINATEN.split(',');
+                    coordinates = {
+                        latitude: parseFloat(coords[0].trim()),
+                        longitude: parseFloat(coords[1].trim())
+                    };
+                }
+                
+                const item = {
+                    id: location.PK_LOC_LOCATION,
+                    name: location.ORG_UNIT_NAME,
+                    mandant: location.FK_MDT_MANDANT,
+                    org_unit: location.PK_ORG_UNIT
+                };
+                
+                if (includeCoords && coordinates) {
+                    item.coordinates = coordinates;
+                }
+                
+                if (includeAddress) {
+                    item.address = location.ADR || null;
+                    item.housenumber = location.vstr_hsnr || null;
+                }
+                
+                if (includeMetadata) {
+                    item.active = location.ACTIVE;
+                    item.fk_address = location.FK_ADR_ADRESSE || null;
+                }
+                
+                return item;
+            });
+        }
+
+        // Helper function to download file
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Helper function to copy coordinates
+        function copyCoordinates(locationId) {
+            const location = allData.find(item => item.PK_LOC_LOCATION === locationId);
+            if (!location || !location.KOORDINATEN) return;
+            
+            navigator.clipboard.writeText(location.KOORDINATEN).then(() => {
+                showSuccess('Koordinaten kopiert');
+            }).catch(err => {
+                showError('Fehler beim Kopieren: ' + err.message);
+            });
+        }
+
+        // Helper function to open in Google Maps
+        function openInGoogleMaps(locationId) {
+            const location = allData.find(item => item.PK_LOC_LOCATION === locationId);
+            if (!location || !location.KOORDINATEN) return;
+            
+            const coords = location.KOORDINATEN.split(',');
+            const lat = parseFloat(coords[0].trim());
+            const lng = parseFloat(coords[1].trim());
+            
+            const url = `https://www.google.com/maps?q=${lat},${lng}`;
+            window.open(url, '_blank');
+        }
+
+        // Helper function to copy location data
+        function copyLocationData(locationId) {
+            const location = allData.find(item => item.PK_LOC_LOCATION === locationId);
+            if (!location) return;
+            
+            const text = `
+ID: ${location.PK_LOC_LOCATION}
+Name: ${location.ORG_UNIT_NAME}
+Mandant: ${location.FK_MDT_MANDANT}
+Organisationseinheit: ${location.PK_ORG_UNIT}
+${location.ADR ? `Adresse: ${location.ADR}\n` : ''}
+${location.vstr_hsnr ? `Hausnummer: ${location.vstr_hsnr}\n` : ''}
+${location.KOORDINATEN ? `Koordinaten: ${location.KOORDINATEN}` : 'Keine Koordinaten'}
+            `.trim();
+            
+            navigator.clipboard.writeText(text).then(() => {
+                showSuccess('Standortdaten kopiert');
+            }).catch(err => {
+                showError('Fehler beim Kopieren: ' + err.message);
+            });
+        }
+
+        // UI Helper Functions
+        function showSuccess(message) {
+            statusMessage.textContent = `✓ ${message}`;
+            statusMessage.className = 'status-message status-success';
+            setTimeout(() => {
+                statusMessage.className = 'status-message';
+            }, 3000);
+        }
+        
+        function showError(message) {
+            statusMessage.textContent = `✗ ${message}`;
+            statusMessage.className = 'status-message status-error';
+            setTimeout(() => {
+                statusMessage.className = 'status-message';
+            }, 5000);
+        }
+        
+        function showInfo(message) {
+            statusMessage.textContent = `ℹ ${message}`;
+            statusMessage.className = 'status-message status-info';
+            setTimeout(() => {
+                statusMessage.className = 'status-message';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

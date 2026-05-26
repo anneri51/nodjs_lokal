@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KFZ Kennzeichen</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .description {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+        }
+        
+        .search-box input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .search-box input:focus {
+            border-color: #3498db;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+        
+        .filter-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .filter-group select {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            font-size: 16px;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            border-spacing: 0;
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        
+        tr.group-header {
+            background-color: #3498db;
+            color: white;
+            cursor: pointer;
+        }
+        
+        tr.group-header:hover {
+            background-color: #2980b9;
+        }
+        
+        .flag {
+            width: 24px;
+            height: 16px;
+            margin-right: 10px;
+            vertical-align: middle;
+            display: inline-block;
+            background-size: cover;
+            border: 1px solid #ddd;
+        }
+        
+        .group-content {
+            display: none;
+        }
+        
+        .group-content.show {
+            display: table-row-group;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+            color: #7f8c8d;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #e74c3c;
+            font-size: 18px;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+            font-size: 18px;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+            gap: 10px;
+        }
+        
+        .pagination button {
+            padding: 8px 15px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .pagination button:hover:not(:disabled) {
+            background: #2980b9;
+        }
+        
+        .pagination button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+            }
+            
+            .search-box, .filter-group {
+                width: 100%;
+            }
+            
+            th, td {
+                padding: 8px 10px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>KFZ Kennzeichen</h1>
+            <p class="description">Übersicht aller KFZ-Kennzeichen, gruppiert nach Ländern</p>
+        </header>
+        
+        <div class="controls">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Kennzeichen, Region oder Beschreibung suchen...">
+            </div>
+            <div class="filter-group">
+                <select id="itemsPerPage">
+                    <option value="10">10 Einträge</option>
+                    <option value="25" selected>25 Einträge</option>
+                    <option value="50">50 Einträge</option>
+                    <option value="100">100 Einträge</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <table id="kennzeichenTable">
+                <thead>
+                    <tr>
+                        <th>Land</th>
+ <th>KENNZEICHEN_LAND</th>
+ <th>LAND</th>
+                        <th>Kennzeichen</th>
+                        <th>Bezeichnung</th>
+                        <th>Region</th>
+                        <th>Beschreibung</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr>
+                        <td colspan="5" class="loading">Daten werden geladen...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="pagination">
+            <button id="prevPage" disabled>Zurück</button>
+            <span id="pageInfo">Seite 1 von 1</span>
+            <button id="nextPage" disabled>Weiter</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const tableBody = document.getElementById('tableBody');
+            const searchInput = document.getElementById('searchInput');
+            const itemsPerPageSelect = document.getElementById('itemsPerPage');
+            const prevPageButton = document.getElementById('prevPage');
+            const nextPageButton = document.getElementById('nextPage');
+            const pageInfo = document.getElementById('pageInfo');
+            
+            let allData = [];
+            let filteredData = [];
+            let groupedData = {};
+            let currentPage = 1;
+            let itemsPerPage = 25;
+            let expandedGroups = new Set();
+            
+            // Fetch data from the API
+            async function fetchData() {
+                try {
+                    tableBody.innerHTML = '<tr><td colspan="5" class="loading">Daten werden geladen...</td></tr>';
+                    const response = await fetch('http://localhost:5000/kfz_kennzeichen');
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    allData = await response.json();
+                    
+                    if (allData.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="5" class="no-data">Keine Daten verfügbar</td></tr>';
+                        return;
+                    }
+                    
+                    processData(allData);
+                    
+                } catch (error) {
+                    console.error('Fehler beim Abrufen der Daten:', error);
+                    tableBody.innerHTML = '<tr><td colspan="5" class="error">Fehler beim Laden der Daten. Bitte stellen Sie sicher, dass der Server unter http://localhost:5000 erreichbar ist.</td></tr>';
+                }
+            }
+            
+            // Process and group the data
+            function processData(data) {
+                // Filter data based on search input
+                const searchTerm = searchInput.value.toLowerCase();
+                filteredData = data.filter(item => {
+                    return Object.values(item).some(value => 
+                        value && value.toString().toLowerCase().includes(searchTerm)
+                    );
+                });
+                
+                // Group data by FK_ADR_LAND
+                groupedData = {};
+                filteredData.forEach(item => {
+                    const land = item.FK_ADR_LAND || 'Unbekannt';
+                    if (!groupedData[land]) {
+                        groupedData[land] = [];
+                    }
+                    groupedData[land].push(item);
+                });
+                
+                // Reset pagination
+                currentPage = 1;
+                updatePagination();
+                
+                renderTable();
+            }
+            
+            // Render the table with grouped data
+            function renderTable() {
+                const groups = Object.keys(groupedData);
+                
+                if (groups.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="5" class="no-data">Keine passenden Einträge gefunden</td></tr>';
+                    return;
+                }
+                
+                let html = '';
+                const startIndex = (currentPage - 1) * itemsPerPage;
+                const endIndex = Math.min(startIndex + itemsPerPage, groups.length);
+                
+                for (let i = startIndex; i < endIndex; i++) {
+                    const land = groups[i];
+                    const items = groupedData[land];
+                    const isExpanded = expandedGroups.has(land);
+                    
+                    // Add group header
+                    html += `
+                        <tr class="group-header" data-land="${land}">
+                            <td colspan="5">
+                                <strong>${land}</strong> (${items.length} Einträge)
+                            </td>
+                        </tr>
+                    `;
+                    
+                    // Add group content if expanded
+                    if (isExpanded) {
+                        items.forEach(item => {
+                            html += `
+                                <tr class="group-content show">
+                                    <td>${item.FK_ADR_LAND || ''}</td>
+   <td>${item.KENNZEICHEN_LAND || ''}</td>
+   <td>${item.LAND || ''}</td>
+                                    <td>${item.KENNZEICHEN || ''}</td>
+                                    <td>${item.BEZEICHNUNG || ''}</td>
+                                    <td>${item.REGION || ''}</td>
+                                    <td>${item.BESCHREIBUNG || ''}</td>
+                                </tr>
+                            `;
+                        });
+                    }
+                }
+                
+                tableBody.innerHTML = html;
+                
+                // Add event listeners to group headers
+                document.querySelectorAll('.group-header').forEach(header => {
+                    header.addEventListener('click', function() {
+                        const land = this.getAttribute('data-land');
+                        if (expandedGroups.has(land)) {
+                            expandedGroups.delete(land);
+                        } else {
+                            expandedGroups.add(land);
+                        }
+                        renderTable();
+                    });
+                });
+            }
+            
+            // Update pagination controls
+            function updatePagination() {
+                const totalGroups = Object.keys(groupedData).length;
+                const totalPages = Math.ceil(totalGroups / itemsPerPage);
+                
+                prevPageButton.disabled = currentPage <= 1;
+                nextPageButton.disabled = currentPage >= totalPages;
+                
+                pageInfo.textContent = `Seite ${currentPage} von ${totalPages}`;
+            }
+            
+            // Event listeners
+            searchInput.addEventListener('input', function() {
+                processData(allData);
+            });
+            
+            itemsPerPageSelect.addEventListener('change', function() {
+                itemsPerPage = parseInt(this.value);
+                currentPage = 1;
+                processData(allData);
+            });
+            
+            prevPageButton.addEventListener('click', function() {
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderTable();
+                    updatePagination();
+                }
+            });
+            
+            nextPageButton.addEventListener('click', function() {
+                const totalGroups = Object.keys(groupedData).length;
+                const totalPages = Math.ceil(totalGroups / itemsPerPage);
+                
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    renderTable();
+                    updatePagination();
+                }
+            });
+            
+            // Initialize
+            fetchData();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1452 @@
+function filterMarkers(filterType) {
+    if (filterType === 'all') {
+        // Show all markers
+        markerCluster.clearLayers();
+        currentMarkers.forEach(marker => {
+            markerCluster.addLayer(marker);
+        });
+    } else {
+        // Filter by type
+        markerCluster.clearLayers();
+        currentMarkers.forEach(marker => {
+            if (marker.locationType === filterType || 
+                (filterType === 'all' && !marker.locationType) ||
+                marker.orgUnitId) {
+                markerCluster.addLayer(marker);
+            }
+        });
+    }
+    
+    updateMarkerCount();
+    showInfo(`Marker nach Typ gefiltert: ${getLocationType(filterType)}`, 'mapMessage');
+}
+
+function showAllMarkers() {
+    document.getElementById('markerFilter').value = 'all';
+    filterMarkers('all');
+}
+
+function fitToMarkers() {
+    if (currentMarkers.length === 0) {
+        showError('Keine Marker auf der Karte vorhanden.', 'mapMessage');
+        return;
+    }
+    
+    const group = new L.featureGroup(currentMarkers);
+    map.fitBounds(group.getBounds().pad(0.1));
+    showInfo('Kartenansicht an alle Marker angepasst', 'mapMessage');
+}
+
+function updateMarkerCount() {
+    const markerCount = currentMarkers.length;
+    document.getElementById('markerCount').textContent = markerCount;
+}
+
+function exportMap() {
+    // Use html2canvas to capture the map as an image
+    html2canvas(document.getElementById('map')).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `karte_${new Date().toISOString().split('T')[0]}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        
+        showSuccess('Karte wurde als Bild exportiert', 'mapMessage');
+        addActivityLog('Karte exportiert', 'PNG Bild erstellt');
+    }).catch(error => {
+        console.error('Error exporting map:', error);
+        showError('Fehler beim Export der Karte', 'mapMessage');
+    });
+}
+
+// ============================
+// EXPORT FUNKTIONEN
+// ============================
+function loadExportSettings() {
+    const savedSettings = localStorage.getItem('exportSettings');
+    if (savedSettings) {
+        exportSettings = JSON.parse(savedSettings);
+        
+        document.getElementById('exportFormat').value = exportSettings.format;
+        document.getElementById('exportEncoding').value = exportSettings.encoding;
+        document.getElementById('exportDelimiter').value = exportSettings.delimiter;
+        document.getElementById('exportDate').value = exportSettings.dateFormat;
+        document.getElementById('includeHeaders').checked = exportSettings.includeHeaders;
+    }
+}
+
+function saveExportSettings() {
+    exportSettings = {
+        format: document.getElementById('exportFormat').value,
+        encoding: document.getElementById('exportEncoding').value,
+        delimiter: document.getElementById('exportDelimiter').value,
+        dateFormat: document.getElementById('exportDate').value,
+        includeHeaders: document.getElementById('includeHeaders').checked
+    };
+    
+    localStorage.setItem('exportSettings', JSON.stringify(exportSettings));
+    showSuccess('Export-Einstellungen gespeichert', 'exportMessage');
+}
+
+function resetExportSettings() {
+    exportSettings = {
+        format: 'csv',
+        encoding: 'utf8',
+        delimiter: 'comma',
+        dateFormat: 'de',
+        includeHeaders: true
+    };
+    
+    document.getElementById('exportFormat').value = exportSettings.format;
+    document.getElementById('exportEncoding').value = exportSettings.encoding;
+    document.getElementById('exportDelimiter').value = exportSettings.delimiter;
+    document.getElementById('exportDate').value = exportSettings.dateFormat;
+    document.getElementById('includeHeaders').checked = exportSettings.includeHeaders;
+    
+    localStorage.removeItem('exportSettings');
+    showSuccess('Export-Einstellungen auf Standard zurückgesetzt', 'exportMessage');
+}
+
+function exportLehrgaengeCSV() {
+    if (lehrgaenge.length === 0) {
+        showError('Keine Lehrgangsdaten verfügbar', 'exportMessage');
+        return;
+    }
+    
+    const delimiter = getDelimiter(exportSettings.delimiter);
+    const headers = ['ID', 'Bezeichnung', 'Beschreibung', 'Mandant', 'Status', 'Erstellt am'];
+    
+    let csvRows = [];
+    
+    if (exportSettings.includeHeaders) {
+        csvRows.push(headers.join(delimiter));
+    }
+    
+    lehrgaenge.forEach(lehrgang => {
+        const row = [
+            lehrgang.PK_LEHR_LEHRGANG,
+            `"${lehrgang.BEZEICHNUNG || lehrgang.LEHRGANG_NAME || ''}"`,
+            `"${lehrgang.BESCHREIBUNG || ''}"`,
+            getMandantName(lehrgang.FK_MDT_MANDANT),
+            lehrgang.STATUS || '',
+            formatDate(lehrgang.CREATED_AT, exportSettings.dateFormat)
+        ];
+        csvRows.push(row.join(delimiter));
+    });
+    
+    const csvString = csvRows.join('\n');
+    downloadFile(csvString, `lehrgaenge_${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
+    
+    showSuccess(`${lehrgaenge.length} Lehrgänge als CSV exportiert`, 'exportMessage');
+    addActivityLog('Lehrgänge exportiert', `${lehrgaenge.length} Einträge als CSV`);
+}
+
+function exportLehrgaengeJSON() {
+    if (lehrgaenge.length === 0) {
+        showError('Keine Lehrgangsdaten verfügbar', 'exportMessage');
+        return;
+    }
+    
+    const exportData = {
+        meta: {
+            exportDate: new Date().toISOString(),
+            count: lehrgaenge.length
+        },
+        data: lehrgaenge.map(lehrgang => ({
+            id: lehrgang.PK_LEHR_LEHRGANG,
+            bezeichnung: lehrgang.BEZEICHNUNG || lehrgang.LEHRGANG_NAME,
+            beschreibung: lehrgang.BESCHREIBUNG,
+            mandant: getMandantName(lehrgang.FK_MDT_MANDANT),
+            status: lehrgang.STATUS,
+            createdAt: lehrgang.CREATED_AT
+        }))
+    };
+    
+    const jsonString = JSON.stringify(exportData, null, 2);
+    downloadFile(jsonString, `lehrgaenge_${new Date().toISOString().split('T')[0]}.json`, 'application/json');
+    
+    showSuccess(`${lehrgaenge.length} Lehrgänge als JSON exportiert`, 'exportMessage');
+    addActivityLog('Lehrgänge exportiert', `${lehrgaenge.length} Einträge als JSON`);
+}
+
+function exportLehrgaengePDF() {
+    // Note: This is a simplified version. In production, use a proper PDF library
+    showInfo('PDF-Export wird vorbereitet...', 'exportMessage');
+    
+    setTimeout(() => {
+        const content = `
+            <html>
+            <head>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    h1 { color: #333; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    th { background-color: #f2f2f2; }
+                </style>
+            </head>
+            <body>
+                <h1>Lehrgangsliste</h1>
+                <p>Exportiert am: ${new Date().toLocaleString('de-DE')}</p>
+                <p>Anzahl: ${lehrgaenge.length}</p>
+                <table>
+                    <tr>
+                        <th>ID</th>
+                        <th>Bezeichnung</th>
+                        <th>Mandant</th>
+                        <th>Status</th>
+                    </tr>
+                    ${lehrgaenge.map(lehrgang => `
+                        <tr>
+                            <td>${lehrgang.PK_LEHR_LEHRGANG}</td>
+                            <td>${lehrgang.BEZEICHNUNG || lehrgang.LEHRGANG_NAME || ''}</td>
+                            <td>${getMandantName(lehrgang.FK_MDT_MANDANT)}</td>
+                            <td>${lehrgang.STATUS || ''}</td>
+                        </tr>
+                    `).join('')}
+                </table>
+            </body>
+            </html>
+        `;
+        
+        const blob = new Blob([content], { type: 'text/html' });
+        const link = document.createElement('a');
+        link.download = `lehrgaenge_${new Date().toISOString().split('T')[0]}.html`;
+        link.href = URL.createObjectURL(blob);
+        link.click();
+        
+        showSuccess(`${lehrgaenge.length} Lehrgänge als HTML für PDF-Export vorbereitet`, 'exportMessage');
+        addActivityLog('Lehrgänge exportiert', `${lehrgaenge.length} Einträge als HTML/PDF`);
+    }, 1000);
+}
+
+function exportEvaluationsCSV() {
+    exportEvaluations();
+}
+
+function exportEvaluationsExcel() {
+    const dataToExport = filteredEvaluations.length > 0 ? filteredEvaluations : currentEvaluations;
+    
+    if (!dataToExport || dataToExport.length === 0) {
+        showError('Keine Bewertungen zum Exportieren verfügbar', 'exportMessage');
+        return;
+    }
+    
+    try {
+        const wb = XLSX.utils.book_new();
+        
+        const headers = ['ID', 'Schüler', 'Lehrer', 'Mandant', 'Bewertungsdatum', 'Typ', 'Gesamturteil', 'Inhalt', 'Korrektheit', 'Sprachlich', 'Gesamteindruck'];
+        const rows = dataToExport.map(eval => {
+            const schueler = schuelerList.find(s => s.PK_KON_PERSON == eval.FK_KON_PERSON_SCHUELER);
+            const lehrer = lehrerList.find(l => l.PK_KON_PERSON == eval.FK_KON_PERSON_LEHRER);
+            
+            const schuelerName = schueler ? `${schueler.VORNAME} ${schueler.NACHNAME}` : `Schüler ID: ${eval.FK_KON_PERSON_SCHUELER}`;
+            const lehrerName = lehrer ? `${lehrer.VORNAME} ${lehrer.NACHNAME}` : `Lehrer ID: ${eval.FK_KON_PERSON_LEHRER}`;
+            
+            const typMap = {
+                '1': 'Klassenarbeit',
+                '2': 'Test',
+                '3': 'Mündliche Prüfung',
+                '4': 'Projekt',
+                '5': 'Hausaufgabe'
+            };
+            
+            const urteilMap = {
+                'SEHR_GUT': 'Sehr gut',
+                'GUT': 'Gut',
+                'BEFRIEDIGEND': 'Befriedigend',
+                'AUSREICHEND': 'Ausreichend',
+                'MANGELHAFT': 'Mangelhaft',
+                'UNGENÜGEND': 'Ungenügend'
+            };
+            
+            const typ = typMap[eval.FK_STD_BEW_BEWERTUNGSTYP] || eval.FK_STD_BEW_BEWERTUNGSTYP;
+            const urteil = urteilMap[eval.GESAMTURTEIL] || eval.GESAMTURTEIL;
+            const date = new Date(eval.DATUM_BEWERTUNG).toLocaleDateString('de-DE');
+            
+            return [
+                eval.PK_LEHR_BEWERTUNG_SCHUELER,
+                schuelerName,
+                lehrerName,
+                eval.FK_MDT_MANDANT,
+                date,
+                typ,
+                urteil,
+                eval.INHALT_WERT || '0',
+                eval.KORREKTHEIT_WERT || '0',
+                eval.VERFUEGBARE_SPRACHLICHE_MITTEL_WERT || '0',
+                eval.GESAMTEINDRUCK_WERT || '0'
+            ];
+        });
+        
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+        XLSX.utils.book_append_sheet(wb, ws, 'Bewertungen');
+        
+        XLSX.writeFile(wb, `bewertungen_${new Date().toISOString().split('T')[0]}.xlsx`);
+        
+        showSuccess(`${dataToExport.length} Bewertungen als Excel exportiert`, 'exportMessage');
+        addActivityLog('Bewertungen exportiert', `${dataToExport.length} Einträge als Excel`);
+    } catch (error) {
+        console.error('Error exporting to Excel:', error);
+        showError('Fehler beim Excel-Export', 'exportMessage');
+    }
+}
+
+function exportPersonsCSV() {
+    const allPersons = [...teachers, ...students];
+    
+    if (allPersons.length === 0) {
+        showError('Keine Personendaten verfügbar', 'exportMessage');
+        return;
+    }
+    
+    const delimiter = getDelimiter(exportSettings.delimiter);
+    const headers = ['Typ', 'Name', 'E-Mail', 'Telefon', 'Status', 'Fachbereich/Kurs', 'Qualifikation/Matrikel', 'Notizen'];
+    
+    let csvRows = [];
+    
+    if (exportSettings.includeHeaders) {
+        csvRows.push(headers.join(delimiter));
+    }
+    
+    allPersons.forEach(person => {
+        const isTeacher = person.id.startsWith('teacher_');
+        const type = isTeacher ? 'Lehrperson' : 'Schüler/Teilnehmer';
+        const field1 = isTeacher ? person.subject : person.course;
+        const field2 = isTeacher ? person.qualification : person.matrikel;
+        
+        const row = [
+            type,
+            `"${person.name}"`,
+            `"${person.email || ''}"`,
+            `"${person.phone || ''}"`,
+            person.status,
+            `"${field1 || ''}"`,
+            `"${field2 || ''}"`,
+            `"${person.notes || ''}"`
+        ];
+        csvRows.push(row.join(delimiter));
+    });
+    
+    const csvString = csvRows.join('\n');
+    downloadFile(csvString, `personen_${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
+    
+    showSuccess(`${allPersons.length} Personen als CSV exportiert`, 'exportMessage');
+    addActivityLog('Personen exportiert', `${allPersons.length} Einträge als CSV`);
+}
+
+function exportPersonsVCard() {
+    const allPersons = [...teachers, ...students];
+    
+    if (allPersons.length === 0) {
+        showError('Keine Personendaten verfügbar', 'exportMessage');
+        return;
+    }
+    
+    let vcards = [];
+    
+    allPersons.forEach(person => {
+        const nameParts = person.name.split(' ');
+        const firstName = nameParts.shift() || '';
+        const lastName = nameParts.join(' ') || '';
+        
+        const vcard = `BEGIN:VCARD
+VERSION:3.0
+FN:${person.name}
+N:${lastName};${firstName};;;
+EMAIL:${person.email || ''}
+TEL:${person.phone || ''}
+NOTE:${person.notes || ''}
+END:VCARD`;
+        
+        vcards.push(vcard);
+    });
+    
+    const vcardString = vcards.join('\n');
+    downloadFile(vcardString, `personen_${new Date().toISOString().split('T')[0]}.vcf`, 'text/vcard');
+    
+    showSuccess(`${allPersons.length} Personen als vCard exportiert`, 'exportMessage');
+    addActivityLog('Personen exportiert', `${allPersons.length} Einträge als vCard`);
+}
+
+function exportOrgUnitsCSV() {
+    if (orgUnitTreeData.length === 0) {
+        showError('Keine Organisationseinheiten verfügbar', 'exportMessage');
+        return;
+    }
+    
+    const delimiter = getDelimiter(exportSettings.delimiter);
+    const headers = ['ID', 'Name', 'Beschreibung', 'Land', 'Mandant', 'Eltern-ID', 'Pfad'];
+    
+    let csvRows = [];
+    let allOrgUnits = [];
+    
+    // Flatten the tree
+    function flattenTree(nodes, parentId = null, path = '') {
+        nodes.forEach(node => {
+            const unitPath = path ? `${path} → ${node.ORG_UNIT_NAME}` : node.ORG_UNIT_NAME;
+            allOrgUnits.push({
+                ...node,
+                PARENT_ID: parentId,
+                PATH: unitPath
+            });
+            
+            if (node.CHILDREN && node.CHILDREN.length > 0) {
+                flattenTree(node.CHILDREN, node.PK_ORG_UNIT, unitPath);
+            }
+        });
+    }
+    
+    flattenTree(orgUnitTreeData);
+    
+    if (exportSettings.includeHeaders) {
+        csvRows.push(headers.join(delimiter));
+    }
+    
+    allOrgUnits.forEach(unit => {
+        const row = [
+            unit.PK_ORG_UNIT,
+            `"${unit.ORG_UNIT_NAME || ''}"`,
+            `"${unit.DESCR || ''}"`,
+            unit.COUNTRY_CODE,
+            getMandantName(unit.FK_MDT_MANDANT),
+            unit.PARENT_ID || '',
+            `"${unit.PATH || ''}"`
+        ];
+        csvRows.push(row.join(delimiter));
+    });
+    
+    const csvString = csvRows.join('\n');
+    downloadFile(csvString, `organisationseinheiten_${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
+    
+    showSuccess(`${allOrgUnits.length} Organisationseinheiten als CSV exportiert`, 'exportMessage');
+    addActivityLog('Org-Einheiten exportiert', `${allOrgUnits.length} Einträge als CSV`);
+}
+
+function exportOrgUnitsXML() {
+    if (orgUnitTreeData.length === 0) {
+        showError('Keine Organisationseinheiten verfügbar', 'exportMessage');
+        return;
+    }
+    
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xml += '<organisationseinheiten>\n';
+    xml += `  <exportDatum>${new Date().toISOString()}</exportDatum>\n`;
+    xml += `  <anzahl>${orgUnitTreeData.length}</anzahl>\n`;
+    
+    function buildXml(nodes, indent = '  ') {
+        nodes.forEach(node => {
+            xml += `${indent}<orgUnit>\n`;
+            xml += `${indent}  <id>${node.PK_ORG_UNIT}</id>\n`;
+            xml += `${indent}  <name><![CDATA[${node.ORG_UNIT_NAME || ''}]]></name>\n`;
+            xml += `${indent}  <beschreibung><![CDATA[${node.DESCR || ''}]]></beschreibung>\n`;
+            xml += `${indent}  <land>${node.COUNTRY_CODE}</land>\n`;
+            xml += `${indent}  <mandant>${getMandantName(node.FK_MDT_MANDANT)}</mandant>\n`;
+            
+            if (node.CHILDREN && node.CHILDREN.length > 0) {
+                xml += `${indent}  <children>\n`;
+                buildXml(node.CHILDREN, indent + '    ');
+                xml += `${indent}  </children>\n`;
+            }
+            
+            xml += `${indent}</orgUnit>\n`;
+        });
+    }
+    
+    buildXml(orgUnitTreeData);
+    xml += '</organisationseinheiten>';
+    
+    downloadFile(xml, `organisationseinheiten_${new Date().toISOString().split('T')[0]}.xml`, 'application/xml');
+    
+    showSuccess('Organisationseinheiten als XML exportiert', 'exportMessage');
+    addActivityLog('Org-Einheiten exportiert', `${orgUnitTreeData.length} Einträge als XML`);
+}
+
+function downloadFile(content, filename, contentType) {
+    const blob = new Blob([content], { type: `${contentType};charset=${exportSettings.encoding}` });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+// ============================
+// LEHR EINSENDEAUFGABE LEHRER FUNKTIONEN
+// ============================
+async function loadLehrEinsendeaufgabeData() {
+    const orgUnitId = document.getElementById('orgUnitSelect').value;
+    
+    if (!orgUnitId) {
+        showError('Bitte wählen Sie eine Organisationseinheit aus.', 'errorMessage');
+        return;
+    }
+    
+    currentLehrEinsendeaufgabeOrgUnitId = orgUnitId;
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('errorMessage').style.display = 'none';
+    
+    try {
+        let data = [];
+        
+        try {
+            const response = await apiFetch(API_ENDPOINTS.LEHR_EINSENDEAUFGABE_LEHRER);
+            data = Array.isArray(response) ? response : (response.data || []);
+            
+            // Filter by org unit if possible
+            if (data.length > 0 && data[0].FK_ORG_UNIT) {
+                data = data.filter(item => item.FK_ORG_UNIT == orgUnitId);
+            }
+        } catch (apiError) {
+            console.log('Using fallback data for Lehr Einsendeaufgabe Lehrer');
+            data = getFallbackLehrEinsendeaufgabeData(orgUnitId);
+        }
+        
+        allLehrEinsendeaufgabeData = data;
+        filteredLehrEinsendeaufgabeData = [...data];
+        
+        updateLehrEinsendeaufgabeDropdowns();
+        updateDataTable();
+        
+        document.getElementById('dataSelection').style.display = 'block';
+        document.getElementById('orgUnitDisplay').value = orgUnitId;
+        document.getElementById('loading').style.display = 'none';
+        
+        showInfo(`${data.length} Datensätze geladen`, 'errorMessage');
+        addActivityLog('Lehr Einsendeaufgabe Lehrer Daten geladen', `${data.length} Einträge`);
+        
+    } catch (error) {
+        console.error('Error loading data:', error);
+        document.getElementById('loading').style.display = 'none';
+        showError(`Fehler beim Laden der Daten: ${error.message}`, 'errorMessage');
+    }
+}
+
+function getFallbackLehrEinsendeaufgabeData(orgUnitId) {
+    return [
+        {
+            PK_LEHR_EINSENDEAUFGABE_LEHRER: '1001',
+            FK_LEHR_EINSENDEAUFGABE: '101',
+            FK_KON_PERSON_LEHRER: '201',
+            FK_ORG_UNIT: orgUnitId,
+            CREATED_AT: '2024-01-15T10:30:00Z'
+        },
+        {
+            PK_LEHR_EINSENDEAUFGABE_LEHRER: '1002',
+            FK_LEHR_EINSENDEAUFGABE: '102',
+            FK_KON_PERSON_LEHRER: '202',
+            FK_ORG_UNIT: orgUnitId,
+            CREATED_AT: '2024-01-20T14:45:00Z'
+        },
+        {
+            PK_LEHR_EINSENDEAUFGABE_LEHRER: '1003',
+            FK_LEHR_EINSENDEAUFGABE: '101',
+            FK_KON_PERSON_LEHRER: '203',
+            FK_ORG_UNIT: orgUnitId,
+            CREATED_AT: '2024-01-25T09:15:00Z'
+        }
+    ];
+}
+
+function updateLehrEinsendeaufgabeDropdowns() {
+    const einsendeaufgabeSelect = document.getElementById('einsendeaufgabeSelect');
+    const lehrerSelect = document.getElementById('lehrerSelect');
+    
+    // Get unique einsendeaufgaben
+    const uniqueEinsendeaufgaben = [...new Set(
+        filteredLehrEinsendeaufgabeData.map(item => item.FK_LEHR_EINSENDEAUFGABE)
+    )];
+    
+    einsendeaufgabeSelect.innerHTML = '<option value="">-- Bitte Einsendeaufgabe auswählen --</option>' + 
+        uniqueEinsendeaufgaben.map(id => `<option value="${id}">Einsendeaufgabe ${id}</option>`).join('');
+    
+    // Get unique lehrer
+    const uniqueLehrer = [...new Set(
+        filteredLehrEinsendeaufgabeData.map(item => item.FK_KON_PERSON_LEHRER)
+    )];
+    
+    lehrerSelect.innerHTML = '<option value="">-- Bitte zuerst Einsendeaufgabe auswählen --</option>' + 
+        uniqueLehrer.map(id => `<option value="${id}">Lehrer ${id}</option>`).join('');
+}
+
+function updateDataTable() {
+    const tableBody = document.getElementById('dataTableBody');
+    
+    if (filteredLehrEinsendeaufgabeData.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 20px; color: #9ca3af; font-style: italic;">
+                    Keine Daten verfügbar
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tableBody.innerHTML = '';
+    
+    filteredLehrEinsendeaufgabeData.forEach((item, index) => {
+        const isSelected = selectedLehrEinsendeaufgabeRowData && 
+                          selectedLehrEinsendeaufgabeRowData.PK_LEHR_EINSENDEAUFGABE_LEHRER === item.PK_LEHR_EINSENDEAUFGABE_LEHRER;
+        
+        const row = document.createElement('tr');
+        if (isSelected) {
+            row.classList.add('selected-row');
+        }
+        
+        row.innerHTML = `
+            <td>
+                <button class="button button-sm" onclick="selectLehrEinsendeaufgabeRow(${index}, this)">
+                    <i class="fas fa-check"></i> Auswählen
+                </button>
+            </td>
+            <td>${item.PK_LEHR_EINSENDEAUFGABE_LEHRER}</td>
+            <td>${item.FK_ORG_UNIT || currentLehrEinsendeaufgabeOrgUnitId}</td>
+            <td>${item.FK_LEHR_EINSENDEAUFGABE}</td>
+            <td>${item.FK_KON_PERSON_LEHRER}</td>
+            <td>
+                <div class="action-buttons">
+                    <button class="button button-sm button-info" onclick="editLehrEinsendeaufgabeRow(${index})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="button button-sm button-danger" onclick="deleteLehrEinsendeaufgabeRow(${index})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        
+        tableBody.appendChild(row);
+    });
+}
+
+function selectLehrEinsendeaufgabeRow(index, button) {
+    const rows = document.querySelectorAll('#dataTableBody tr');
+    rows.forEach(row => {
+        row.classList.remove('selected-row');
+    });
+    
+    selectedLehrEinsendeaufgabeRowData = filteredLehrEinsendeaufgabeData[index];
+    selectedLehrEinsendeaufgabeRowElement = button.closest('tr');
+    selectedLehrEinsendeaufgabeRowElement.classList.add('selected-row');
+    
+    updateSelectedDisplay();
+    document.getElementById('selectionInfo').style.display = 'block';
+}
+
+function updateSelectedDisplay() {
+    if (!selectedLehrEinsendeaufgabeRowData) return;
+    
+    document.getElementById('selectedPk').textContent = selectedLehrEinsendeaufgabeRowData.PK_LEHR_EINSENDEAUFGABE_LEHRER;
+    document.getElementById('selectedEinsendeaufgabe').textContent = selectedLehrEinsendeaufgabeRowData.FK_LEHR_EINSENDEAUFGABE;
+    document.getElementById('selectedLehrer').textContent = selectedLehrEinsendeaufgabeRowData.FK_KON_PERSON_LEHRER;
+    document.getElementById('selectedOrgUnit').textContent = selectedLehrEinsendeaufgabeRowData.FK_ORG_UNIT || currentLehrEinsendeaufgabeOrgUnitId;
+    
+    document.getElementById('pkDisplay').value = selectedLehrEinsendeaufgabeRowData.PK_LEHR_EINSENDEAUFGABE_LEHRER;
+    document.getElementById('einsendeaufgabeDisplay').value = selectedLehrEinsendeaufgabeRowData.FK_LEHR_EINSENDEAUFGABE;
+    document.getElementById('lehrerDisplay').value = selectedLehrEinsendeaufgabeRowData.FK_KON_PERSON_LEHRER;
+    document.getElementById('orgUnitDisplay').value = selectedLehrEinsendeaufgabeRowData.FK_ORG_UNIT || currentLehrEinsendeaufgabeOrgUnitId;
+}
+
+function editLehrEinsendeaufgabeRow(index) {
+    const item = filteredLehrEinsendeaufgabeData[index];
+    
+    document.getElementById('pkDisplay').value = item.PK_LEHR_EINSENDEAUFGABE_LEHRER;
+    document.getElementById('einsendeaufgabeDisplay').value = item.FK_LEHR_EINSENDEAUFGABE;
+    document.getElementById('lehrerDisplay').value = item.FK_KON_PERSON_LEHRER;
+    document.getElementById('orgUnitDisplay').value = item.FK_ORG_UNIT || currentLehrEinsendeaufgabeOrgUnitId;
+    
+    selectLehrEinsendeaufgabeRow(index, document.querySelector(`#dataTableBody tr:nth-child(${index + 1}) button`));
+    
+    showInfo('Datensatz zum Bearbeiten geladen', 'errorMessage');
+}
+
+function deleteLehrEinsendeaufgabeRow(index) {
+    const item = filteredLehrEinsendeaufgabeData[index];
+    
+    if (confirm(`Sind Sie sicher, dass Sie den Eintrag mit PK ${item.PK_LEHR_EINSENDEAUFGABE_LEHRER} löschen möchten?`)) {
+        filteredLehrEinsendeaufgabeData.splice(index, 1);
+        allLehrEinsendeaufgabeData = allLehrEinsendeaufgabeData.filter(
+            data => data.PK_LEHR_EINSENDEAUFGABE_LEHRER !== item.PK_LEHR_EINSENDEAUFGABE_LEHRER
+        );
+        
+        updateDataTable();
+        
+        if (selectedLehrEinsendeaufgabeRowData && 
+            selectedLehrEinsendeaufgabeRowData.PK_LEHR_EINSENDEAUFGABE_LEHRER === item.PK_LEHR_EINSENDEAUFGABE_LEHRER) {
+            clearLehrSelection();
+        }
+        
+        showSuccess(`Eintrag mit PK ${item.PK_LEHR_EINSENDEAUFGABE_LEHRER} wurde gelöscht`, 'errorMessage');
+        addActivityLog('Lehr Einsendeaufgabe Eintrag gelöscht', `PK: ${item.PK_LEHR_EINSENDEAUFGABE_LEHRER}`);
+    }
+}
+
+function onEinsendeaufgabeSelect() {
+    const selectedEinsendeaufgabe = document.getElementById('einsendeaufgabeSelect').value;
+    const lehrerSelect = document.getElementById('lehrerSelect');
+    
+    if (selectedEinsendeaufgabe) {
+        // Filter available lehrer based on selected einsendeaufgabe
+        const availableLehrer = [...new Set(
+            filteredLehrEinsendeaufgabeData
+                .filter(item => item.FK_LEHR_EINSENDEAUFGABE == selectedEinsendeaufgabe)
+                .map(item => item.FK_KON_PERSON_LEHRER)
+        )];
+        
+        lehrerSelect.innerHTML = '<option value="">-- Bitte Lehrer auswählen --</option>' + 
+            availableLehrer.map(id => `<option value="${id}">Lehrer ${id}</option>`).join('');
+        lehrerSelect.disabled = false;
+    } else {
+        lehrerSelect.innerHTML = '<option value="">-- Bitte zuerst Einsendeaufgabe auswählen --</option>';
+        lehrerSelect.disabled = true;
+    }
+}
+
+function onLehrerSelect() {
+    const selectedEinsendeaufgabe = document.getElementById('einsendeaufgabeSelect').value;
+    const selectedLehrer = document.getElementById('lehrerSelect').value;
+    
+    if (selectedEinsendeaufgabe && selectedLehrer) {
+        // Find existing entry or create new one
+        const existingEntry = filteredLehrEinsendeaufgabeData.find(item => 
+            item.FK_LEHR_EINSENDEAUFGABE == selectedEinsendeaufgabe && 
+            item.FK_KON_PERSON_LEHRER == selectedLehrer
+        );
+        
+        if (existingEntry) {
+            document.getElementById('pkDisplay').value = existingEntry.PK_LEHR_EINSENDEAUFGABE_LEHRER;
+        } else {
+            document.getElementById('pkDisplay').value = 'Neu';
+        }
+        
+        document.getElementById('einsendeaufgabeDisplay').value = selectedEinsendeaufgabe;
+        document.getElementById('lehrerDisplay').value = selectedLehrer;
+        document.getElementById('orgUnitDisplay').value = currentLehrEinsendeaufgabeOrgUnitId;
+    }
+}
+
+function clearLehrSelection() {
+    selectedLehrEinsendeaufgabeRowData = null;
+    selectedLehrEinsendeaufgabeRowElement = null;
+    
+    document.getElementById('einsendeaufgabeSelect').value = '';
+    document.getElementById('lehrerSelect').value = '';
+    document.getElementById('lehrerSelect').disabled = true;
+    
+    document.getElementById('pkDisplay').value = '';
+    document.getElementById('einsendeaufgabeDisplay').value = '';
+    document.getElementById('lehrerDisplay').value = '';
+    document.getElementById('orgUnitDisplay').value = currentLehrEinsendeaufgabeOrgUnitId;
+    
+    document.getElementById('selectionInfo').style.display = 'none';
+    
+    const rows = document.querySelectorAll('#dataTableBody tr');
+    rows.forEach(row => {
+        row.classList.remove('selected-row');
+    });
+    
+    showInfo('Auswahl wurde gelöscht', 'errorMessage');
+}
+
+async function saveLehrEinsendeaufgabe() {
+    const pk = document.getElementById('pkDisplay').value;
+    const einsendeaufgabe = document.getElementById('einsendeaufgabeDisplay').value;
+    const lehrer = document.getElementById('lehrerDisplay').value;
+    const orgUnit = document.getElementById('orgUnitDisplay').value;
+    
+    if (!einsendeaufgabe || !lehrer || !orgUnit) {
+        showError('Bitte füllen Sie alle Felder aus.', 'errorMessage');
+        return;
+    }
+    
+    try {
+        const newEntry = {
+            FK_LEHR_EINSENDEAUFGABE: einsendeaufgabe,
+            FK_KON_PERSON_LEHRER: lehrer,
+            FK_ORG_UNIT: orgUnit,
+            CREATED_AT: new Date().toISOString()
+        };
+        
+        if (pk && pk !== 'Neu') {
+            // Update existing entry
+            newEntry.PK_LEHR_EINSENDEAUFGABE_LEHRER = pk;
+            const index = filteredLehrEinsendeaufgabeData.findIndex(item => item.PK_LEHR_EINSENDEAUFGABE_LEHRER == pk);
+            if (index !== -1) {
+                filteredLehrEinsendeaufgabeData[index] = newEntry;
+            }
+            
+            const allIndex = allLehrEinsendeaufgabeData.findIndex(item => item.PK_LEHR_EINSENDEAUFGABE_LEHRER == pk);
+            if (allIndex !== -1) {
+                allLehrEinsendeaufgabeData[allIndex] = newEntry;
+            }
+            
+            showSuccess(`Eintrag mit PK ${pk} wurde aktualisiert`, 'errorMessage');
+            addActivityLog('Lehr Einsendeaufgabe aktualisiert', `PK: ${pk}`);
+        } else {
+            // Create new entry
+            const newPk = Date.now().toString();
+            newEntry.PK_LEHR_EINSENDEAUFGABE_LEHRER = newPk;
+            
+            filteredLehrEinsendeaufgabeData.push(newEntry);
+            allLehrEinsendeaufgabeData.push(newEntry);
+            
+            showSuccess(`Neuer Eintrag mit PK ${newPk} wurde erstellt`, 'errorMessage');
+            addActivityLog('Lehr Einsendeaufgabe erstellt', `PK: ${newPk}`);
+        }
+        
+        updateDataTable();
+        updateLehrEinsendeaufgabeDropdowns();
+        
+    } catch (error) {
+        console.error('Error saving data:', error);
+        showError(`Fehler beim Speichern: ${error.message}`, 'errorMessage');
+    }
+}
+
+async function deleteLehrEinsendeaufgabe() {
+    const pk = document.getElementById('pkDisplay').value;
+    
+    if (!pk || pk === 'Neu') {
+        showError('Kein Eintrag zum Löschen ausgewählt', 'errorMessage');
+        return;
+    }
+    
+    if (confirm(`Sind Sie sicher, dass Sie den Eintrag mit PK ${pk} löschen möchten?`)) {
+        const index = filteredLehrEinsendeaufgabeData.findIndex(item => item.PK_LEHR_EINSENDEAUFGABE_LEHRER == pk);
+        if (index !== -1) {
+            filteredLehrEinsendeaufgabeData.splice(index, 1);
+        }
+        
+        const allIndex = allLehrEinsendeaufgabeData.findIndex(item => item.PK_LEHR_EINSENDEAUFGABE_LEHRER == pk);
+        if (allIndex !== -1) {
+            allLehrEinsendeaufgabeData.splice(allIndex, 1);
+        }
+        
+        updateDataTable();
+        clearLehrSelection();
+        
+        showSuccess(`Eintrag mit PK ${pk} wurde gelöscht`, 'errorMessage');
+        addActivityLog('Lehr Einsendeaufgabe gelöscht', `PK: ${pk}`);
+    }
+}
+
+// ============================
+// BEWERTUNGSFORMULAR FUNKTIONEN
+// ============================
+function initializeStarRating() {
+    document.querySelectorAll('.rating-stars').forEach(starsContainer => {
+        starsContainer.addEventListener('click', function(e) {
+            if (e.target.classList.contains('star')) {
+                const stars = Array.from(this.querySelectorAll('.star'));
+                const value = parseInt(e.target.getAttribute('data-value'));
+                const hiddenInputId = this.id.replace('rating', '').toLowerCase() + 'Wert';
+                
+                stars.forEach((star, index) => {
+                    if (index < value) {
+                        star.classList.add('active');
+                    } else {
+                        star.classList.remove('active');
+                    }
+                });
+                
+                document.getElementById(hiddenInputId).value = value;
+            }
+        });
+        
+        starsContainer.addEventListener('mouseover', function(e) {
+            if (e.target.classList.contains('star')) {
+                const stars = Array.from(this.querySelectorAll('.star'));
+                const value = parseInt(e.target.getAttribute('data-value'));
+                
+                stars.forEach((star, index) => {
+                    if (index < value) {
+                        star.classList.add('hover');
+                    } else {
+                        star.classList.remove('hover');
+                    }
+                });
+            }
+        });
+        
+        starsContainer.addEventListener('mouseout', function() {
+            const stars = Array.from(this.querySelectorAll('.star'));
+            stars.forEach(star => {
+                star.classList.remove('hover');
+            });
+        });
+    });
+}
+
+function saveEvaluation() {
+    const studentId = document.getElementById('studentSelect').value;
+    const teacherId = document.getElementById('teacherSelect').value;
+    const evaluationDate = document.getElementById('evaluationDate').value;
+    const subject = document.getElementById('subjectSelect').value;
+    const comment = document.getElementById('comment').value;
+    
+    const inhaltWert = parseInt(document.getElementById('inhaltWert').value) || 0;
+    const korrektheitWert = parseInt(document.getElementById('korrektheitWert').value) || 0;
+    const sprachlichWert = parseInt(document.getElementById('sprachlichWert').value) || 0;
+    const gesamteindruckWert = parseInt(document.getElementById('gesamteindruckWert').value) || 0;
+    
+    if (!studentId || !teacherId || !evaluationDate || !subject) {
+        showError('Bitte füllen Sie alle erforderlichen Felder aus.', 'evalMessage');
+        return;
+    }
+    
+    if (inhaltWert === 0 || korrektheitWert === 0 || sprachlichWert === 0 || gesamteindruckWert === 0) {
+        showError('Bitte bewerten Sie alle Kriterien.', 'evalMessage');
+        return;
+    }
+    
+    const totalPoints = inhaltWert + korrektheitWert + sprachlichWert + gesamteindruckWert;
+    const average = totalPoints / 4;
+    
+    let gesamturteil;
+    if (average >= 4.5) {
+        gesamturteil = 'SEHR_GUT';
+    } else if (average >= 3.5) {
+        gesamturteil = 'GUT';
+    } else if (average >= 2.5) {
+        gesamturteil = 'BEFRIEDIGEND';
+    } else if (average >= 1.5) {
+        gesamturteil = 'AUSREICHEND';
+    } else if (average >= 0.5) {
+        gesamturteil = 'MANGELHAFT';
+    } else {
+        gesamturteil = 'UNGENÜGEND';
+    }
+    
+    const student = schuelerList.find(s => s.PK_KON_PERSON == studentId) || 
+                   students.find(s => s.id === studentId);
+    const teacher = lehrerList.find(l => l.PK_KON_PERSON == teacherId) || 
+                   teachers.find(t => t.id === teacherId);
+    
+    const newEvaluation = {
+        PK_LEHR_BEWERTUNG_SCHUELER: (currentEvaluations.length + 1).toString(),
+        FK_KON_PERSON_SCHUELER: studentId,
+        FK_KON_PERSON_LEHRER: teacherId,
+        FK_MDT_MANDANT: '1',
+        DATUM_BEWERTUNG: evaluationDate,
+        FK_STD_BEW_BEWERTUNGSTYP: getEvaluationType(subject),
+        GESAMTURTEIL: gesamturteil,
+        CREATED_AT: new Date().toISOString(),
+        INHALT_WERT: inhaltWert.toString(),
+        KORREKTHEIT_WERT: korrektheitWert.toString(),
+        VERFUEGBARE_SPRACHLICHE_MITTEL_WERT: sprachlichWert.toString(),
+        GESAMTEINDRUCK_WERT: gesamteindruckWert.toString(),
+        COMMENT: comment
+    };
+    
+    currentEvaluations.unshift(newEvaluation);
+    
+    clearEvaluationForm();
+    
+    showSuccess(`Bewertung für ${student?.name || 'Schüler'} wurde erfolgreich gespeichert`, 'evalMessage');
+    addActivityLog('Bewertung erstellt', 
+        `${student?.name || 'Schüler'} - ${teacher?.name || 'Lehrer'} - ${gesamturteil}`);
+    
+    updateDashboardBadges();
+    
+    // Switch to evaluations tab after 2 seconds
+    setTimeout(() => {
+        switchTab('evaluationList');
+        loadEvaluations();
+    }, 2000);
+}
+
+function getEvaluationType(subject) {
+    const types = {
+        'mathe': '1',
+        'deutsch': '1', 
+        'englisch': '2',
+        'geschichte': '3',
+        'physik': '4'
+    };
+    return types[subject] || '1';
+}
+
+function clearEvaluationForm() {
+    document.getElementById('studentSelect').value = '';
+    document.getElementById('teacherSelect').value = '';
+    document.getElementById('evaluationDate').value = '';
+    document.getElementById('subjectSelect').value = '';
+    document.getElementById('comment').value = '';
+    
+    // Reset stars
+    document.querySelectorAll('.rating-stars').forEach(starsContainer => {
+        const stars = Array.from(starsContainer.querySelectorAll('.star'));
+        stars.forEach(star => {
+            star.classList.remove('active');
+        });
+    });
+    
+    // Reset hidden inputs
+    document.getElementById('inhaltWert').value = '0';
+    document.getElementById('korrektheitWert').value = '0';
+    document.getElementById('sprachlichWert').value = '0';
+    document.getElementById('gesamteindruckWert').value = '0';
+    
+    showInfo('Formular wurde zurückgesetzt', 'evalMessage');
+}
+
+// ============================
+// DASHBOARD FUNKTIONEN
+// ============================
+function updateDashboardStats() {
+    // Organisationseinheiten
+    const totalOrgUnits = orgUnitTreeData.length > 0 ? 
+        flattenTree(orgUnitTreeData).length : 0;
+    document.getElementById('statOrgUnits').textContent = totalOrgUnits;
+    document.getElementById('statSelectedOrgUnitsLabel').textContent = 
+        `${selectedOrgUnits.size} ausgewählt`;
+    
+    // Lehrgänge
+    const totalLehrgaenge = lehrgaenge.length;
+    const activeLehrgaenge = lehrgaenge.filter(l => l.STATUS === 'aktiv').length;
+    document.getElementById('statLehrgaenge').textContent = totalLehrgaenge;
+    document.getElementById('statActiveLehrgaengeLabel').textContent = 
+        `${activeLehrgaenge} aktiv`;
+    
+    // Einsendeaufgaben
+    let totalAufgaben = 0;
+    let openAufgaben = 0;
+    einsendeaufgaben.forEach(aufgaben => {
+        totalAufgaben += aufgaben.length;
+        aufgaben.forEach(aufgabe => {
+            if (aufgabe.STATUS === 'offen' || aufgabe.STATUS === 'in_bearbeitung') {
+                openAufgaben++;
+            }
+        });
+    });
+    document.getElementById('statAufgaben').textContent = totalAufgaben;
+    document.getElementById('statAufgabenStatusLabel').textContent = 
+        `${openAufgaben} offen`;
+    
+    // Verknüpfungen
+    let totalRelations = 0;
+    aufgabeOrgUnits.forEach(units => {
+        totalRelations += units.length;
+    });
+    document.getElementById('statRelations').textContent = totalRelations;
+    
+    // Standorte (aus Map)
+    const totalLocations = currentMarkers.length;
+    const locationsWithCoords = currentMarkers.filter(m => 
+        m.getLatLng() && m.getLatLng().lat && m.getLatLng().lng
+    ).length;
+    document.getElementById('statLocations').textContent = totalLocations;
+    document.getElementById('statLocationsWithCoords').textContent = locationsWithCoords;
+    
+    // Lehrer
+    const activeTeachers = teachers.filter(t => t.status !== 'inactive').length;
+    const teachersWithTasks = teachers.filter(t => 
+        t.subject && t.subject.trim() !== ''
+    ).length;
+    document.getElementById('statTeachers').textContent = activeTeachers;
+    document.getElementById('statTeachersWithTasks').textContent = teachersWithTasks;
+    
+    // Bewertungen
+    const totalEvaluations = currentEvaluations.length;
+    let totalPoints = 0;
+    let ratedEvaluations = 0;
+    currentEvaluations.forEach(eval => {
+        const points = (parseInt(eval.INHALT_WERT) || 0) + 
+                      (parseInt(eval.KORREKTHEIT_WERT) || 0) + 
+                      (parseInt(eval.VERFUEGBARE_SPRACHLICHE_MITTEL_WERT) || 0) + 
+                      (parseInt(eval.GESAMTEINDRUCK_WERT) || 0);
+        if (points > 0) {
+            totalPoints += points / 4; // Average
+            ratedEvaluations++;
+        }
+    });
+    const avgEvaluation = ratedEvaluations > 0 ? (totalPoints / ratedEvaluations).toFixed(1) : '0.0';
+    document.getElementById('statEvaluations').textContent = totalEvaluations;
+    document.getElementById('statAvgEvaluation').textContent = avgEvaluation;
+    
+    // Schüler
+    const activeStudents = students.filter(s => s.status !== 'inactive').length;
+    document.getElementById('statStudents').textContent = activeStudents;
+    document.getElementById('statActiveStudents').textContent = activeStudents;
+}
+
+function flattenTree(nodes) {
+    let result = [];
+    nodes.forEach(node => {
+        result.push(node);
+        if (node.CHILDREN && node.CHILDREN.length > 0) {
+            result = result.concat(flattenTree(node.CHILDREN));
+        }
+    });
+    return result;
+}
+
+function updateDashboardBadges() {
+    // Dashboard badge - total activities
+    const logs = JSON.parse(localStorage.getItem('activityLogs') || '[]');
+    document.getElementById('dashboardBadge').textContent = logs.length;
+    
+    // Lehrgänge badge
+    document.getElementById('lehrgaengeBadge').textContent = lehrgaenge.length;
+    
+    // Organisationseinheiten badge
+    document.getElementById('orgUnitsBadge').textContent = orgUnitTreeData.length > 0 ? 
+        flattenTree(orgUnitTreeData).length : 0;
+    
+    // Schülerbewertung badge - pending evaluations
+    const pendingEvaluations = currentEvaluations.filter(e => 
+        !e.PK_LEHR_BEWERTUNG_SCHUELER || e.PK_LEHR_BEWERTUNG_SCHUELER === 'Neu'
+    ).length;
+    document.getElementById('evaluationBadge').textContent = pendingEvaluations;
+    
+    // Bewertungen badge
+    document.getElementById('bewertungenBadge').textContent = currentEvaluations.length;
+    
+    // Personen badge
+    document.getElementById('personenBadge').textContent = teachers.length + students.length;
+}
+
+// ============================
+// EVENT LISTENER INITIALISIERUNG
+// ============================
+document.addEventListener('DOMContentLoaded', function() {
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            const tabName = this.getAttribute('data-tab');
+            switchTab(tabName);
+        });
+    });
+    
+    // Mandant selection for Lehrgänge
+    const mandantSelectLehrgang = document.getElementById('mandantSelectLehrgang');
+    if (mandantSelectLehrgang) {
+        mandantSelectLehrgang.addEventListener('change', function() {
+            selectedMandantIds = Array.from(this.selectedOptions).map(option => option.value);
+            updateSelectedMandantsDisplay();
+        });
+    }
+    
+    // Mandant selection for Org Units
+    const mandantSelect = document.getElementById('mandantSelect');
+    if (mandantSelect) {
+        mandantSelect.addEventListener('change', function() {
+            if (this.value) {
+                loadOrgUnitTree();
+            }
+        });
+    }
+    
+    // Tree search
+    const treeSearch = document.getElementById('treeSearch');
+    if (treeSearch) {
+        treeSearch.addEventListener('input', function() {
+            filterTree(this.value);
+        });
+    }
+    
+    // Person search
+    const searchPersonsInput = document.getElementById('searchPersons');
+    if (searchPersonsInput) {
+        searchPersonsInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchPersons();
+            }
+        });
+    }
+    
+    // Evaluation date
+    const evaluationDate = document.getElementById('evaluationDate');
+    if (evaluationDate) {
+        const today = new Date().toISOString().split('T')[0];
+        evaluationDate.value = today;
+        evaluationDate.max = today;
+    }
+    
+    // Initialize star rating
+    initializeStarRating();
+    
+    // Load org unit select for student evaluation
+    loadOrgUnitSelectForStudentEvaluation();
+    
+    // Initialize activity table
+    updateActivityTable();
+    
+    // Update dashboard stats
+    updateDashboardStats();
+    updateDashboardBadges();
+    
+    // Show welcome message
+    setTimeout(() => {
+        showInfo('Willkommen im Lernmanagement System! Bitte wählen Sie einen Tab aus, um zu beginnen.', 'lehrgangMessage');
+        addActivityLog('System gestartet', 'Anwendung wurde geladen');
+    }, 1000);
+});
+
+async function loadOrgUnitSelectForStudentEvaluation() {
+    const orgUnitSelect = document.getElementById('orgUnitSelect');
+    if (!orgUnitSelect) return;
+    
+    try {
+        let data = [];
+        
+        try {
+            const response = await apiFetch(API_ENDPOINTS.ORG_UNIT);
+            data = Array.isArray(response) ? response : (response.data || []);
+        } catch (error) {
+            console.log('Using fallback org units for student evaluation');
+            data = getFallbackOrgUnits();
+        }
+        
+        orgUnitSelect.innerHTML = '<option value="">-- Bitte Organisationseinheit auswählen --</option>' + 
+            data.map(unit => `<option value="${unit.PK_ORG_UNIT}">${unit.ORG_UNIT_NAME} (ID: ${unit.PK_ORG_UNIT})</option>`).join('');
+        
+        document.getElementById('submitOrgUnit').disabled = false;
+        
+    } catch (error) {
+        console.error('Error loading org units:', error);
+        orgUnitSelect.innerHTML = '<option value="">-- Bitte Organisationseinheit auswählen --</option>';
+    }
+}
+
+function getFallbackOrgUnits() {
+    return [
+        { PK_ORG_UNIT: '1001', ORG_UNIT_NAME: 'IT-Abteilung München' },
+        { PK_ORG_UNIT: '1002', ORG_UNIT_NAME: 'Marketing Wien' },
+        { PK_ORG_UNIT: '1003', ORG_UNIT_NAME: 'Entwicklung Berlin' },
+        { PK_ORG_UNIT: '1004', ORG_UNIT_NAME: 'Support Frankfurt' },
+        { PK_ORG_UNIT: '1005', ORG_UNIT_NAME: 'Schule Stuttgart' }
+    ];
+}
+
+// ============================
+// DRUCK FUNKTIONALITÄT
+// ============================
+function printPage() {
+    window.print();
+}
+
+// ============================
+// WEITERE HELPER FUNKTIONEN
+// ============================
+function formatNumber(num) {
+    return new Intl.NumberFormat('de-DE').format(num);
+}
+
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        background: ${type === 'success' ? '#d4edda' : type === 'error' ? '#f8d7da' : '#d1ecf1'};
+        color: ${type === 'success' ? '#155724' : type === 'error' ? '#721c24' : '#0c5460'};
+        border: 1px solid ${type === 'success' ? '#c3e6cb' : type === 'error' ? '#f5c6cb' : '#bee5eb'};
+        border-radius: 6px;
+        z-index: 9999;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    notification.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// Add animation styles
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+`;
+document.head.appendChild(style);
+
+// ============================
+// DATA PERSISTENCE
+// ============================
+function saveDataToLocalStorage() {
+    try {
+        localStorage.setItem('lehrgaenge', JSON.stringify(lehrgaenge));
+        localStorage.setItem('einsendeaufgaben', JSON.stringify(Array.from(einsendeaufgaben.entries())));
+        localStorage.setItem('fragen', JSON.stringify(Array.from(fragen.entries())));
+        localStorage.setItem('aufgabeOrgUnits', JSON.stringify(Array.from(aufgabeOrgUnits.entries())));
+        localStorage.setItem('orgUnitTreeData', JSON.stringify(orgUnitTreeData));
+        localStorage.setItem('selectedOrgUnits', JSON.stringify(Array.from(selectedOrgUnits)));
+        localStorage.setItem('currentEvaluations', JSON.stringify(currentEvaluations));
+        localStorage.setItem('teachers', JSON.stringify(teachers));
+        localStorage.setItem('students', JSON.stringify(students));
+        
+        console.log('Daten wurden gespeichert');
+    } catch (error) {
+        console.error('Fehler beim Speichern der Daten:', error);
+    }
+}
+
+function loadDataFromLocalStorage() {
+    try {
+        const savedLehrgaenge = localStorage.getItem('lehrgaenge');
+        if (savedLehrgaenge) lehrgaenge = JSON.parse(savedLehrgaenge);
+        
+        const savedEinsendeaufgaben = localStorage.getItem('einsendeaufgaben');
+        if (savedEinsendeaufgaben) einsendeaufgaben = new Map(JSON.parse(savedEinsendeaufgaben));
+        
+        const savedFragen = localStorage.getItem('fragen');
+        if (savedFragen) fragen = new Map(JSON.parse(savedFragen));
+        
+        const savedAufgabeOrgUnits = localStorage.getItem('aufgabeOrgUnits');
+        if (savedAufgabeOrgUnits) aufgabeOrgUnits = new Map(JSON.parse(savedAufgabeOrgUnits));
+        
+        const savedOrgUnitTreeData = localStorage.getItem('orgUnitTreeData');
+        if (savedOrgUnitTreeData) orgUnitTreeData = JSON.parse(savedOrgUnitTreeData);
+        
+        const savedSelectedOrgUnits = localStorage.getItem('selectedOrgUnits');
+        if (savedSelectedOrgUnits) selectedOrgUnits = new Set(JSON.parse(savedSelectedOrgUnits));
+        
+        const savedEvaluations = localStorage.getItem('currentEvaluations');
+        if (savedEvaluations) currentEvaluations = JSON.parse(savedEvaluations);
+        
+        const savedTeachers = localStorage.getItem('teachers');
+        if (savedTeachers) teachers = JSON.parse(savedTeachers);
+        
+        const savedStudents = localStorage.getItem('students');
+        if (savedStudents) students = JSON.parse(savedStudents);
+        
+        console.log('Daten wurden geladen');
+        
+        // Update displays with loaded data
+        if (lehrgaenge.length > 0) {
+            displayLehrgaenge();
+            updateLehrgangDataStatus();
+        }
+        
+        if (orgUnitTreeData.length > 0) {
+            renderOrgUnitTree();
+            updateSelectedOrgUnitsList();
+        }
+        
+        updateDashboardStats();
+        updateDashboardBadges();
+        
+    } catch (error) {
+        console.error('Fehler beim Laden der Daten:', error);
+    }
+}
+
+// Auto-save data when leaving the page
+window.addEventListener('beforeunload', saveDataToLocalStorage);
+
+// Load data on startup
+loadDataFromLocalStorage();
+
+// Auto-save every 30 seconds
+setInterval(saveDataToLocalStorage, 30000);
+
+// ============================
+// RESPONSIVE MENU TOGGLE (for mobile)
+// ============================
+function toggleMobileMenu() {
+    const tabs = document.querySelector('.tabs');
+    tabs.classList.toggle('mobile-open');
+}
+
+// Add mobile menu toggle button
+const mobileMenuButton = document.createElement('button');
+mobileMenuButton.innerHTML = '<i class="fas fa-bars"></i>';
+mobileMenuButton.style.cssText = `
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px;
+    z-index: 1000;
+    display: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+`;
+
+document.body.appendChild(mobileMenuButton);
+mobileMenuButton.addEventListener('click', toggleMobileMenu);
+
+// Add media query for mobile
+const mobileMediaQuery = window.matchMedia('(max-width: 768px)');
+function handleMobileChange(e) {
+    if (e.matches) {
+        mobileMenuButton.style.display = 'block';
+        document.querySelector('.tabs').classList.add('mobile-collapsed');
+    } else {
+        mobileMenuButton.style.display = 'none';
+        document.querySelector('.tabs').classList.remove('mobile-collapsed', 'mobile-open');
+    }
+}
+
+mobileMediaQuery.addListener(handleMobileChange);
+handleMobileChange(mobileMediaQuery);
+
+// Add mobile styles
+const mobileStyles = document.createElement('style');
+mobileStyles.textContent = `
+    @media (max-width: 768px) {
+        .tabs.mobile-collapsed {
+            display: none;
+            flex-direction: column;
+            position: absolute;
+            top: 60px;
+            right: 10px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 999;
+            min-width: 200px;
+        }
+        
+        .tabs.mobile-collapsed.mobile-open {
+            display: flex;
+        }
+        
+        .tab {
+            width: 100%;
+            text-align: left;
+            border-radius: 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .tab:last-child {
+            border-bottom: none;
+        }
+    }
+`;
+document.head.appendChild(mobileStyles);
+</script>
+</body>
+</html>

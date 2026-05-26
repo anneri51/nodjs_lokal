@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LKW · Kalender mit Zeitauswahl · Default 00:00</title>
+    <style>
+        * { box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+        body { background: #f2f5f9; margin: 0; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .card { max-width: 1600px; width: 100%; background: white; border-radius: 28px; box-shadow: 0 20px 40px -10px rgba(0,20,40,0.25); overflow: hidden; border: 1px solid #e9eef2; }
+        .header { background: #0b2a3c; color: white; padding: 24px 28px; }
+        .header h1 { margin: 0; font-weight: 500; font-size: 1.8rem; display: flex; align-items: center; gap: 8px; }
+        .header h1 span { background: #1f4b6e; padding: 4px 14px; border-radius: 40px; font-size: 1rem; color: #d3e5f5; }
+        .toolbar { padding: 20px 28px 8px; background: white; border-bottom: 1px solid #dee7ed; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 15px; }
+        .refresh-btn { background: #3a5c7c; color: white; border: none; padding: 10px 22px; border-radius: 60px; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; }
+        .global-search-box { background: white; border: 1px solid #b8cde0; border-radius: 40px; padding: 8px 20px; display: flex; align-items: center; gap: 10px; flex: 1 1 260px; max-width: 320px; }
+        .global-search-box input { border: none; background: transparent; width: 100%; font-size: 0.95rem; outline: none; }
+        .endpoint-badge { background: #edf3f8; padding: 8px 18px; border-radius: 40px; font-size: 0.9rem; }
+        .search-columns-row { padding: 16px 28px; background: #ffffff; border-bottom: 1px solid #dee7ed; display: flex; flex-wrap: wrap; gap: 16px 20px; align-items: flex-end; }
+        .search-col { display: flex; flex-direction: column; min-width: 130px; }
+        .search-col label { font-size: 0.7rem; font-weight: 700; color: #2f5575; text-transform: uppercase; margin-bottom: 4px; }
+        .search-col select { padding: 8px 12px; border: 1px solid #cbd7e4; border-radius: 30px; background: #f9fcff; }
+        .reset-filters-btn { background: #e5eef7; border: 1px solid #b8cde0; padding: 8px 18px; border-radius: 30px; cursor: pointer; font-weight: 500; }
+        .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px 28px 10px; background: white; }
+        .chart-wrapper { background: #f8fafd; border-radius: 20px; padding: 20px; border: 1px solid #dee7ed; }
+        .chart-header { display: flex; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+        .chart-title { font-weight: 600; color: #1c3d5e; }
+        .date-filter { display: flex; gap: 8px; align-items: center; }
+        .date-filter input { padding: 5px 10px; border-radius: 30px; border: 1px solid #cbd7e4; font-size: 0.8rem; }
+        .date-filter button { background: #edf3f8; border: 1px solid #b8cde0; border-radius: 30px; padding: 5px 14px; cursor: pointer; font-size:0.8rem;}
+        .no-data-chart { text-align: center; padding: 30px; color: #6b7f90; font-style: italic; }
+        .table-controls { padding: 12px 28px; display: flex; gap: 20px; background: white; border-bottom: 1px solid #dee7ed; }
+        .group-toggle label { display: inline-flex; align-items:center; gap:6px; background:#edf3f8; padding:8px 16px; border-radius:36px; font-weight:500; cursor:pointer; }
+        .collapse-all-btn { background:#e5eff9; border:1px solid #b8cde0; padding:6px 18px; border-radius:30px; cursor:pointer; }
+        .form-container { padding: 20px 28px; background:#f8fafd; border-bottom:1px solid #dee7ed; }
+        .form-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(180px,1fr)); gap:16px; }
+        .form-group { display:flex; flex-direction:column; gap:4px; }
+        .form-group label { font-size:0.75rem; font-weight:600; color:#2f5575; text-transform:uppercase; }
+        .form-group input, .form-group select { padding:8px 10px; border-radius:20px; border:1px solid #cbd7e4; }
+        .time-note { font-size:0.7rem; color:#4a6a8a; margin-top:2px; font-style:italic; }
+        .form-actions { display:flex; gap:12px; justify-content:flex-end; margin-top:12px; }
+        .submit-btn { background:#1a6f5c; color:white; border:none; padding:10px 24px; border-radius:40px; cursor:pointer; }
+        .reset-btn { background:#e5eef7; color:#2c4a6b; border:1px solid #b8cde0; padding:10px 24px; border-radius:40px; }
+        .table-container { padding:8px 28px 28px; overflow-x:auto; }
+        table { width:100%; border-collapse:collapse; background:white; border-radius:18px; box-shadow:0 5px 15px -8px rgba(0,0,0,0.1); }
+        th { text-align:left; padding:16px 12px; background:#f8fafd; color:#1c3d5e; font-size:0.75rem; border-bottom:2px solid #cbd7e4; }
+        td { padding:16px 12px; border-bottom:1px solid #e2eaf1; vertical-align:middle; }
+        .group-row { background:#e9f0f7; cursor:pointer; font-weight:600; }
+        .group-row td { padding:12px; }
+        .btn-group { display:flex; gap:6px; }
+        .btn-update { background:#e5f0ff; color:#1f5090; border:1px solid #b8d1f0; padding:4px 10px; border-radius:30px; cursor:pointer; }
+        .btn-delete { background:#feeaea; color:#b13e3e; border:1px solid #f5c2c2; padding:4px 10px; border-radius:30px; cursor:pointer; }
+        .null-badge { background:#f0f0f0; color:#666; font-style:italic; padding:4px 8px; border-radius:20px; font-size:0.7rem; }
+        .value-1 { background:#e1f5e8; color:#1d6f4c; padding:4px 8px; border-radius:20px; font-weight:600; }
+        .value-0 { background:#fee9e9; color:#b13e3e; padding:4px 8px; border-radius:20px; font-weight:600; }
+        .diff-badge { background: #dfe9f5; color: #0b3b5c; padding: 4px 10px; border-radius: 30px; font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
+        .toast-panel { background:#253544; color:#eff8ff; padding:12px 28px; display:flex; gap:24px; border-top:1px solid #3e4f5e; }
+        .log { color:#c0d3e3; flex:1; }
+        .error-message, .success-message { padding:8px 16px; border-radius:8px; margin:0 28px 8px; }
+        .error-message { background: #ffebee; color: #b71c1c; border-left: 4px solid #f44336; }
+        .success-message { background: #e8f5e9; color: #1b5e20; border-left: 4px solid #4caf50; }
+        .clear-log { background:#3f5566; border:none; color:white; padding:5px 15px; border-radius:30px; cursor:pointer; }
+        .debug-info { font-family: monospace; font-size: 0.8rem; background: #1e2b36; color: #a0d0ff; padding: 8px; border-radius: 4px; white-space: pre-wrap; }
+        .param-highlight { background: #ffd700; color: #000; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        .date-warning { background: #ff9800; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; }
+        .text-field { background: #e3f2fd; }
+        .bus-select { background: #e8f5e8; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+</head>
+<body>
+<div class="card">
+    <div class="header">
+        <h1>🚛 Kalender mit Zeitauswahl · Default 00:00 wenn keine Zeit</h1>
+        <div style="font-size:0.9rem; margin-top:8px; background:#1f4b6e; padding:8px; border-radius:4px;">
+            <span class="param-highlight">$1 BESCHRIFTUNG</span> → 
+            <span class="param-highlight">$2 PARKPLATZ_LINKS</span> → 
+            <span class="param-highlight">$3 PARKPLATZ_RECHTS</span> → 
+            <span class="param-highlight">$4 DURCHFAHRT_LINKS_RI_DE</span> → 
+            <span class="param-highlight">$5 DATUM</span> → 
+            <span class="param-highlight">$6 DURCHLEUCHTUNG</span> → 
+            <span class="param-highlight">$7 BUS</span> → 
+            <span class="param-highlight">$8 GROSSRAUM <span class="text-field">(TEXT)</span></span> → 
+            <span class="param-highlight">$9 ZOLLKONTROLLE <span class="date-warning">(DATE)</span></span> → 
+            <span class="param-highlight">$10 DURCHFAHRT_LINKS_RI_CH</span> → 
+            <span class="param-highlight">$11 PARKPLATZ_AUSFAHRT <span class="date-warning">(DATE)</span></span>
+        </div>
+    </div>
+    <div class="toolbar">
+        <button class="refresh-btn" id="refreshBtn">🔄 Aktualisieren</button>
+        <div class="global-search-box"><span>🔍</span><input type="text" id="globalSearch" placeholder="Globale Suche"></div>
+        <div class="endpoint-badge"><code>Kalender mit Zeit · Default 00:00</code></div>
+    </div>
+
+    <!-- Spaltenfilter -->
+    <div class="search-columns-row">
+        <div class="search-col"><label>PARKPLATZ_LINKS</label><select id="filterParkLinks"><option value="">alle</option><option value="1">1</option><option value="0">0</option><option value="null">NULL</option></select></div>
+        <div class="search-col"><label>PARKPLATZ_RECHTS</label><select id="filterParkRechts"><option value="">alle</option><option value="1">1</option><option value="0">0</option><option value="null">NULL</option></select></div>
+        <div class="search-col"><label>DURCHFAHRT_LINKS_RI_DE</label><select id="filterDurchLinksDe"><option value="">alle</option><option value="1">1</option><option value="0">0</option><option value="null">NULL</option></select></div>
+        <div class="search-col"><label>DURCHLEUCHTUNG</label><select id="filterDurchleuchtung"><option value="">alle</option><option value="1">1</option><option value="0">0</option><option value="null">NULL</option></select></div>
+        <div class="search-col"><label>BUS</label><select id="filterBus">
+<option value="">alle</option>
+
+<option value="0">0</option>
+<option value="1">1</option>
+<option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7">7</option>
+        <option value="8">8</option>
+        <option value="9">9</option>
+        <option value="10">10</option>
+<option value="null">NULL</option>
+</select></div>
+        <div class="search-col"><label>GROSSRAUM</label><input type="text" id="filterGrossraumText" placeholder="Text filter" style="padding:8px 12px; border-radius:30px; border:1px solid #cbd7e4;"></div>
+        <div class="search-col"><label>ZOLLKONTROLLE</label><select id="filterZoll"><option value="">alle</option><option value="1">vorhanden</option><option value="0">leer</option><option value="null">NULL</option></select></div>
+        <div class="search-col"><label>DURCHF_LINKS_RI_CH</label><select id="filterDurchLinksCh"><option value="">alle</option><option value="1">1</option><option value="0">0</option><option value="null">NULL</option></select></div>
+        <div class="search-col"><label>PARKPLATZ_AUSFAHRT</label><select id="filterAusfahrt"><option value="">alle</option><option value="1">vorhanden</option><option value="0">leer</option><option value="null">NULL</option></select></div>
+        <div class="search-col"><button class="reset-filters-btn" id="resetFiltersBtn">Filter zurücksetzen</button></div>
+    </div>
+
+    <!-- Zwei Charts -->
+    <div class="charts-row">
+        <div class="chart-wrapper">
+            <div class="chart-header"><span class="chart-title">📊 Einträge pro Tag</span><span id="chartStats">0</span></div>
+            <div style="height:240px;"><canvas id="dailyChart"></canvas></div>
+            <div id="chartNoData" class="no-data-chart" style="display:none;">Keine Daten</div>
+        </div>
+        <div class="chart-wrapper">
+            <div class="chart-header">
+                <span class="chart-title">📊 SUMME(1) pro Spalte · BUS-Farben</span>
+                <div class="date-filter" id="columnDateFilter">
+                    <input type="date" id="columnStartDate" placeholder="von">
+                    <input type="date" id="columnEndDate" placeholder="bis">
+                    <button id="applyColumnDateFilter">Filtern</button>
+                    <button id="resetColumnDateFilter">Alle</button>
+                </div>
+            </div>
+            <div style="height:240px;"><canvas id="columnBusChart"></canvas></div>
+            <div id="columnNoData" class="no-data-chart" style="display:none;">Keine Daten</div>
+        </div>
+    </div>
+
+    <!-- Gruppensteuerung -->
+    <div class="table-controls">
+        <div class="group-toggle">
+            <label><input type="checkbox" id="groupByDayCheckbox" checked> 📅 Nach Tag gruppieren</label>
+            <button class="collapse-all-btn" id="collapseAllBtn">Alle einklappen</button>
+            <button class="collapse-all-btn" id="expandAllBtn">Alle ausklappen</button>
+        </div>
+    </div>
+
+    <!-- Insert Form – Kalender mit Zeitauswahl -->
+    <div class="form-container">
+        <div class="form-title">➕ Neuen LKW-Eintrag · Kalender mit Zeit (Default 00:00 wenn leer)</div>
+        <form id="insertForm" class="form-grid">
+            <div class="form-group" style="background:#e3f2fd; border-radius:8px; padding:8px;">
+                <label><strong>$1 BESCHRIFTUNG *</strong></label>
+                <input type="text" id="beschriftung" value="test" required>
+            </div>
+            <div class="form-group" style="background:#fff3e0; border-radius:8px; padding:8px;">
+                <label><strong>$5 DATUM </strong></label>
+                <input type="datetime-local" id="datum" >
+                <div class="time-note">Wenn keine Zeit: 00:00 wird automatisch gesetzt</div>
+            </div>
+            <div class="form-group" style="background:#e8f5e8; border-radius:8px; padding:8px;">
+                <label><strong>$2 PARKPLATZ_LINKS</strong></label>
+                <select id="parkplatz_links"><option value="">NULL</option><option value="1" selected>1</option><option value="0">0</option></select>
+            </div>
+            <div class="form-group" style="background:#e8f5e8; border-radius:8px; padding:8px;">
+                <label><strong>$3 PARKPLATZ_RECHTS</strong></label>
+                <select id="parkplatz_rechts"><option value="">NULL</option><option value="1" selected>1</option><option value="0">0</option></select>
+            </div>
+            <div class="form-group" style="background:#f3e5f5; border-radius:8px; padding:8px;">
+                <label><strong>$11 PARKPLATZ_AUSFAHRT (DATE)</strong></label>
+                <input type="datetime-local" id="parkplatz_ausfahrt">
+                <div class="time-note">Wenn keine Zeit: 00:00 wird automatisch gesetzt</div>
+            </div>
+       <div class="form-group" style="background:#e8f5e8; border-radius:8px; padding:8px;">
+                <label><strong>$10 DURCHFAHRT_RECHTS</strong></label>
+                <select id="durchfahrt_rechts"><option value="">NULL</option><option value="1" selected>1</option><option value="0">0</option></select>
+            </div>
+       <div class="form-group" style="background:#e8f5e8; border-radius:8px; padding:8px;">
+                <label><strong>$10 DURCHFAHRT_LINKS_RI_CH</strong></label>
+                <select id="durchfahrt_links_ch"><option value="">NULL</option><option value="1" selected>1</option><option value="0">0</option></select>
+            </div>
+            <div class="form-group" style="background:#e8f5e8; border-radius:8px; padding:8px;">
+                <label><strong>$4 DURCHFAHRT_LINKS_RI_DE</strong></label>
+                <select id="durchfahrt_links_de"><option value="">NULL</option><option value="1" selected>1</option><option value="0">0</option></select>
+            </div>
+            <div class="form-group" style="background:#fff3e0; border-radius:8px; padding:8px;">
+                <label><strong>$9 ZOLLKONTROLLE (DATE)</strong></label>
+                <input type="datetime-local" id="zollkontrolle">
+                <div class="time-note">Wenn keine Zeit: 00:00 wird automatisch gesetzt</div>
+            </div>
+            <div class="form-group" style="background:#e8f5e8; border-radius:8px; padding:8px;">
+                <label><strong>$6 DURCHLEUCHTUNG</strong></label>
+                <select id="durchleuchtung"><option value="">NULL</option><option value="1" selected>1</option><option value="0">0</option></select>
+            </div>
+            <div class="form-group" style="background:#e8f5e8; border-radius:8px; padding:8px;">
+                <label><strong>$7 BUS (0-10)</strong></label>
+                <select id="bus" class="bus-select">
+                    <option value="">NULL</option>
+                    <option value="0">0 - Standard</option>
+                    <option value="1">1 - Bus</option>
+                    <option value="2">2 - Minibus</option>
+                    <option value="3">3 - LKW</option>
+                    <option value="4">4 - LKW Anhänger</option>
+                    <option value="5">5 - LKW 7,5t</option>
+                    <option value="6" selected>6 - Wohnmobil</option>
+                    <option value="7">7 - Transporter</option>
+                    <option value="8">8 - Transporter Anhänger</option>
+                    <option value="9">9 - Autotransporter</option>
+                    <option value="10">10 - Autotransporter beladen</option>
+                </select>
+            </div>
+            <div class="form-group" style="background:#e3f2fd; border-radius:8px; padding:8px;">
+                <label><strong>$8 GROSSRAUM (Text)</strong></label>
+                <input type="text" id="grossraum" value="BIETINGEN" class="text-field">
+            </div>
+     
+            <div class="form-group" style="background:#e3f2fd; border-radius:8px; padding:8px;">
+                <label><strong>FK_LOC_LOCATION (number)</strong></label>
+                <input type="number" id="fk_loc_location" value="4684" class="number-field">
+            </div>
+        </form>
+        <div class="form-actions">
+            <button class="reset-btn" id="resetFormBtn">↩️ Zurücksetzen</button>
+            <button class="submit-btn" id="submitFormBtn">➕ Einfügen (11 Parameter + FK_LOC)</button>
+        </div>
+        <div id="debugPayload" class="debug-info" style="margin-top:10px;"></div>
+        <div id="arrayOrder" class="debug-info" style="margin-top:5px; background:#2a3f54;"></div>
+    </div>
+    <div id="messagesContainer"></div>
+
+    <!-- Tabelle -->
+    <div class="table-container">
+        <table id="lkwTable">
+            <thead><tr>
+                <th>BESCHRIFTUNG</th>
+                <th>PARK_L</th>
+                <th>PARK_R</th>
+                <th>DURCH_DE</th>
+                <th>DATUM</th>
+                <th>DURCHL.</th>
+                <th>BUS</th>
+                <th>GROSSRAUM</th>
+                <th>ZOLL (DATE)</th>
+                <th>DURCH_CH</th>
+                <th>AUSFAHRT</th>
+                <th>⏱️ Diff</th>
+                <th>FK_LOC</th>
+                <th>Aktionen</th>
+            </tr></thead>
+            <tbody id="tableBody"><tr><td colspan="14">Lade …</td></tr></tbody>
+        </table>
+    </div>
+
+    <div class="toast-panel">
+        <span class="method">🌐</span>
+        <span class="log" id="liveLog">Bereit</span>
+        <button class="clear-log" id="clearLogBtn">löschen</button>
+    </div>
+</div>
+
+<script>
+    (function() {
+        Chart.register(ChartDataLabels);
+        const BASE_URL = 'http://localhost:5000';
+        const ENDPOINTS = { 
+            ALL: '/grenze_lkw/all', 
+            INSERT: '/grenze_lkw/insert', 
+            UPDATE: '/grenze_lkw/update', 
+            DELETE: '/grenze_lkw/delete' 
+        };
+
+        let lkwData = [], filteredData = [];
+        let dailyChart, columnChart;
+        let groupCollapseState = new Map();
+
+        // DOM-Elemente
+        const tbody = document.getElementById('tableBody');
+        const liveLogSpan = document.getElementById('liveLog');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const clearLogBtn = document.getElementById('clearLogBtn');
+        const messages = document.getElementById('messagesContainer');
+        const globalSearch = document.getElementById('globalSearch');
+        const groupCheck = document.getElementById('groupByDayCheckbox');
+        const collapseBtn = document.getElementById('collapseAllBtn');
+        const expandBtn = document.getElementById('expandAllBtn');
+        const debugPayload = document.getElementById('debugPayload');
+        const arrayOrder = document.getElementById('arrayOrder');
+
+        // Filter selects
+        const filterParkLinks = document.getElementById('filterParkLinks');
+        const filterParkRechts = document.getElementById('filterParkRechts');
+        const filterDurchLinksDe = document.getElementById('filterDurchLinksDe');
+        const filterDurchleuchtung = document.getElementById('filterDurchleuchtung');
+        const filterBus = document.getElementById('filterBus');
+        const filterGrossraumText = document.getElementById('filterGrossraumText');
+        const filterZoll = document.getElementById('filterZoll');
+        const filterDurchLinksCh = document.getElementById('filterDurchLinksCh');
+        const filterAusfahrt = document.getElementById('filterAusfahrt');
+        const resetFiltersBtn = document.getElementById('resetFiltersBtn');
+
+        // Datumsfilter Elemente
+        const columnStartDate = document.getElementById('columnStartDate');
+        const columnEndDate = document.getElementById('columnEndDate');
+        const applyColumnFilter = document.getElementById('applyColumnDateFilter');
+        const resetColumnFilter = document.getElementById('resetColumnDateFilter');
+
+        // Form Elemente
+        const beschriftung = document.getElementById('beschriftung');
+        const parkLinks = document.getElementById('parkplatz_links');
+        const parkRechts = document.getElementById('parkplatz_rechts');
+        const durchfahrtLinksDe = document.getElementById('durchfahrt_links_de');
+        const datumInput = document.getElementById('datum');
+        const durchleuchtung = document.getElementById('durchleuchtung');
+        const busSel = document.getElementById('bus');
+        const grossraum = document.getElementById('grossraum');
+        const zollkontrolle = document.getElementById('zollkontrolle');
+        const durchfahrtLinksCh = document.getElementById('durchfahrt_links_ch');
+ const durchfahrtRechts = document.getElementById('durchfahrt_rechts');
+        const ausfahrtInput = document.getElementById('parkplatz_ausfahrt');
+        const fkLocLocation = document.getElementById('fk_loc_location');
+
+        const submitBtn = document.getElementById('submitFormBtn');
+        const resetFormBtn = document.getElementById('resetFormBtn');
+
+        function setCurrentDateTime() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth()+1).padStart(2,'0');
+            const day = String(now.getDate()).padStart(2,'0');
+            const hours = String(now.getHours()).padStart(2,'0');
+            const minutes = String(now.getMinutes()).padStart(2,'0');
+            const dateTimeStr = `${year}-${month}-${day}T${hours}:${minutes}`;
+            datumInput.value = dateTimeStr;
+        }
+        setCurrentDateTime();
+
+        function resetForm() {
+            beschriftung.value = 'test';
+            parkLinks.value = '1';
+            parkRechts.value = '1';
+            durchfahrtLinksDe.value = '1';
+            setCurrentDateTime();
+            durchleuchtung.value = '1';
+            busSel.value = '6';
+            grossraum.value = 'BIETINGEN';
+            zollkontrolle.value = '';
+            durchfahrtLinksCh.value = '1';
+            ausfahrtInput.value = '';
+            fkLocLocation.value = '4684';
+        }
+        resetFormBtn.addEventListener('click', resetForm);
+
+        function log(msg, method='', isError=false) {
+            liveLogSpan.innerHTML = `${isError?'❌':'✅'} ${method} ${msg}`;
+        }
+        function showMessage(text, type='error') {
+            messages.innerHTML = `<div class="${type}-message">${text}</div>`;
+            setTimeout(()=> messages.innerHTML='', 8000);
+        }
+
+        function escapeHtml(unsafe) {
+            if(!unsafe) return unsafe;
+            return String(unsafe).replace(/[&<>"]/g, m=> m==='&'?'&amp;':m==='<'?'&lt;':m==='>'?'&gt;':'"'?'&quot;':m);
+        }
+        function formatDate(d) { 
+            if (!d) return '<span class="null-badge">NULL</span>';
+            try {
+                return new Date(d).toLocaleString('de-DE');
+            } catch {
+                return '<span class="null-badge">NULL</span>';
+            }
+        }
+        function toYMD(d) { try { return new Date(d).toISOString().slice(0,10); } catch { return ''; } }
+
+        function formatValue(v) {
+            if (v===null || v==='' || v===undefined) return '<span class="null-badge">NULL</span>';
+            if (v===1 || v==='1') return '<span class="value-1">1</span>';
+            if (v===0 || v==='0') return '<span class="value-0">0</span>';
+            if (typeof v === 'number' || (typeof v === 'string' && /^\d+$/.test(v))) {
+                const num = parseInt(v);
+                if (num >= 2 && num <= 10) {
+                    return `<span class="value-1" style="background:#cfe3ff;">${num}</span>`;
+                }
+            }
+            if (typeof v === 'string' && v.includes('T')) {
+                return formatDate(v);
+            }
+            return escapeHtml(v);
+        }
+        
+        function normalize(val) {
+            if (val===null || val==='' || val===undefined) return null;
+            if (val===1 || val==='1') return 1;
+            if (val===0 || val==='0') return 0;
+            const num = parseInt(val);
+            if (!isNaN(num)) {
+                return num;
+            }
+            return null;
+        }
+
+        function computeDiffMinutes(einfahrtStr, ausfahrtStr) {
+            if (!einfahrtStr || !ausfahrtStr) return null;
+            try {
+                const ein = new Date(einfahrtStr).getTime();
+                const aus = new Date(ausfahrtStr).getTime();
+                if (isNaN(ein) || isNaN(aus)) return null;
+                const diffMs = aus - ein;
+                if (diffMs < 0) return null;
+                return Math.round(diffMs / 60000);
+            } catch { return null; }
+        }
+
+        function applyFilters() {
+            let data = lkwData;
+            const filters = [
+                { el: filterParkLinks, field: 'PARKPLATZ_LINKS' },
+                { el: filterParkRechts, field: 'PARKPLATZ_RECHTS' },
+                { el: filterDurchLinksDe, field: 'DURCHFAHRT_LINKS_RI_DE' },
+                { el: filterDurchleuchtung, field: 'DURCHLEUCHTUNG' },
+                { el: filterBus, field: 'BUS' },
+                { el: filterZoll, field: 'ZOLLKONTROLLE' },
+                { el: filterDurchLinksCh, field: 'DURCHFAHRT_LINKS_RI_CH' },
+                { el: filterAusfahrt, field: 'PARKPLATZ_AUSFAHRT' }
+            ];
+            
+            filters.forEach(f => {
+                const filterVal = f.el.value;
+                if (filterVal === '') return;
+                data = data.filter(item => {
+                    if (f.field === 'PARKPLATZ_AUSFAHRT' || f.field === 'ZOLLKONTROLLE') {
+                        const val = item[f.field];
+                        if (filterVal === 'null') return val === null || val === undefined || val === '';
+                        if (filterVal === '1') return val !== null && val !== undefined && val !== '';
+                        if (filterVal === '0') return val === null || val === undefined || val === '';
+                        return true;
+                    } else {
+                        const normItem = normalize(item[f.field]);
+                        if (filterVal === 'null') return normItem === null;
+                        if (filterVal === '1') return normItem === 1;
+                        if (filterVal === '0') return normItem === 0;
+                        return true;
+                    }
+                });
+            });
+
+            const grossraumFilter = filterGrossraumText.value.trim().toLowerCase();
+            if (grossraumFilter) {
+                data = data.filter(item => {
+                    const val = item.GROSSRAUM || '';
+                    return val.toString().toLowerCase().includes(grossraumFilter);
+                });
+            }
+
+            const globalTerm = globalSearch.value.trim().toLowerCase();
+            if (globalTerm) {
+                data = data.filter(item => {
+                    const rowStr = Object.values(item).map(v=>v===null?'':String(v)).join(' ').toLowerCase();
+                    return rowStr.includes(globalTerm);
+                });
+            }
+
+            filteredData = data;
+            renderGrouped();
+            updateDailyChart();
+            updateColumnSumChart();
+        }
+
+        function updateDailyChart() {
+            if (dailyChart) dailyChart.destroy();
+            const ctx = document.getElementById('dailyChart').getContext('2d');
+            if (!filteredData.length) {
+                document.getElementById('chartNoData').style.display='block';
+                return;
+            }
+            document.getElementById('chartNoData').style.display='none';
+            const daily = {};
+            filteredData.forEach(i=>{ if(i.DATUM){ let y=toYMD(i.DATUM); daily[y]=(daily[y]||0)+1; }});
+            const sorted = Object.keys(daily).sort();
+            const labels = sorted.map(d=>d.split('-').reverse().join('.'));
+            const values = sorted.map(d=>daily[d]);
+
+            dailyChart = new Chart(ctx, {
+                type:'bar',
+                data:{ labels, datasets:[{ label:'Einträge', data: values, backgroundColor:'#1f5090',
+                    datalabels: { anchor: 'end', align: 'top', offset:4, color:'#0b2a3c', font:{weight:'bold',size:11} }
+                }] },
+                options:{ responsive:true, maintainAspectRatio:false,
+                    plugins:{ datalabels:{display:true}, legend:{display:false} },
+                    layout:{ padding:{ top:20 } }
+                }
+            });
+            document.getElementById('chartStats').innerText = `Gesamt: ${filteredData.length}`;
+        }
+
+        function updateColumnSumChart() {
+            const ctx = document.getElementById('columnBusChart').getContext('2d');
+            if (columnChart) columnChart.destroy();
+            
+            let chartData = filteredData;
+            
+            if (columnStartDate.value) {
+                const start = new Date(columnStartDate.value);
+                start.setHours(0,0,0,0);
+                chartData = chartData.filter(item => item.DATUM && new Date(item.DATUM) >= start);
+            }
+            if (columnEndDate.value) {
+                const end = new Date(columnEndDate.value);
+                end.setHours(23,59,59,999);
+                chartData = chartData.filter(item => item.DATUM && new Date(item.DATUM) <= end);
+            }
+            
+            if (!chartData.length) {
+                document.getElementById('columnNoData').style.display = 'block';
+                if (columnChart) columnChart.destroy();
+                return;
+            }
+            document.getElementById('columnNoData').style.display = 'none';
+            
+            const columns = [
+                { field: 'PARKPLATZ_LINKS', label: 'PARK_L' },
+                { field: 'PARKPLATZ_RECHTS', label: 'PARK_R' },
+{ field: 'DURCHFAHRT_RECHTS', label: 'DURCH' },
+                { field: 'DURCHFAHRT_LINKS_RI_DE', label: 'DURCH_DE' },
+ { field: 'DURCHFAHRT_LINKS_RI_CH', label: 'DURCH_CH' },
+                { field: 'DURCHLEUCHTUNG', label: 'DURCHL.' },
+                { field: 'BUS', label: 'BUS' }
+            ];
+            
+            const labels = columns.map(c => c.label);
+            
+            const busSums = {
+                0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], 8: [], 9: [], 10: [], null: []
+            };
+            
+            Object.keys(busSums).forEach(key => {
+                busSums[key] = new Array(columns.length).fill(0);
+            });
+            
+            chartData.forEach(item => {
+                const busVal = normalize(item.BUS);
+                const busKey = busVal !== null ? busVal.toString() : 'null';
+                
+                columns.forEach((col, colIndex) => {
+                    let colVal;
+                    if (col.field === 'PARKPLATZ_AUSFAHRT' || col.field === 'ZOLLKONTROLLE') {
+                        colVal = (item[col.field] && item[col.field] !== '') ? 1 : 0;
+                    } else {
+                        colVal = normalize(item[col.field]);
+                    }
+                    
+                    if (colVal === 1 && busSums[busKey]) {
+                        busSums[busKey][colIndex] += 1;
+                    }
+                });
+            });
+            
+            columnChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'BUS = 0', data: busSums['0'], backgroundColor: '#ff9800', stack: 'busStack' },
+                        { label: 'BUS = 1', data: busSums['1'], backgroundColor: '#4caf50', stack: 'busStack' },
+                        { label: 'BUS = 2', data: busSums['2'], backgroundColor: '#2196f3', stack: 'busStack' },
+                        { label: 'BUS = 3', data: busSums['3'], backgroundColor: '#9c27b0', stack: 'busStack' },
+                        { label: 'BUS = 4', data: busSums['4'], backgroundColor: '#f44336', stack: 'busStack' },
+                        { label: 'BUS = 5', data: busSums['5'], backgroundColor: '#00bcd4', stack: 'busStack' },
+                        { label: 'BUS = 6', data: busSums['6'], backgroundColor: '#795548', stack: 'busStack' },
+                        { label: 'BUS = 7', data: busSums['7'], backgroundColor: '#e91e63', stack: 'busStack' },
+                        { label: 'BUS = 8', data: busSums['8'], backgroundColor: '#607d8b', stack: 'busStack' },
+                        { label: 'BUS = 9', data: busSums['9'], backgroundColor: '#ffeb3b', stack: 'busStack' },
+                        { label: 'BUS = 10', data: busSums['10'], backgroundColor: '#3f51b5', stack: 'busStack' },
+                        { label: 'BUS = NULL', data: busSums['null'], backgroundColor: '#9e9e9e', stack: 'busStack' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            mode: 'index',
+                            callbacks: {
+                                label: (ctx) => `${ctx.dataset.label}: ${ctx.raw} Einträge`
+                            }
+                        },
+                        legend: { 
+                            position: 'bottom',
+                            labels: { 
+                                boxWidth: 12, 
+                                font: { size: 10 },
+                                filter: (legendItem, data) => {
+                                    const dataset = data.datasets[legendItem.datasetIndex];
+                                    return dataset.data.some(value => value > 0);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true, 
+                            ticks: { stepSize: 1, precision: 0 },
+                            title: { display: true, text: 'Anzahl der 1-Werte' },
+                            stacked: true
+                        },
+                        x: { 
+                            title: { display: true, text: 'Spalten' },
+                            stacked: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderGrouped() {
+            if (!groupCheck.checked) { renderFlat(); return; }
+            const data = filteredData.length ? filteredData : lkwData;
+            if (!data.length) { tbody.innerHTML = '<tr><td colspan="14">Keine Datensätze</td></tr>'; return; }
+
+            const groups = {};
+            data.forEach(item => { let y = toYMD(item.DATUM) || 'kein Datum'; if (!groups[y]) groups[y] = []; groups[y].push(item); });
+            const sortedDates = Object.keys(groups).sort((a,b)=>b.localeCompare(a));
+            let html = '';
+            sortedDates.forEach(dateKey => {
+                const items = groups[dateKey];
+                const collapsed = groupCollapseState.get(dateKey) === true;
+                html += `<tr class="group-row" data-group="${dateKey}" onclick="toggleGroup('${dateKey}')"><td colspan="14"><span class="group-toggle-icon">${collapsed?'▶':'▼'}</span> <strong>${dateKey}</strong> (${items.length})</td></tr>`;
+                items.forEach(item => {
+                    const id = item.id || item.ID || item._id || item.PK_GRENZE_LKW || '';
+                    const style = collapsed ? ' style="display:none;"' : '';
+                    const ausfahrt = item.PARKPLATZ_AUSFAHRT;
+                    const zoll = item.ZOLLKONTROLLE;
+                    const diffMin = computeDiffMinutes(item.DATUM, ausfahrt);
+                    const diffDisplay = diffMin !== null ? `<span class="diff-badge">${diffMin} min</span>` : '<span class="null-badge">—</span>';
+                    
+                    html += `<tr class="data-row group-${dateKey}" data-id="${escapeHtml(id)}"${style}>`;
+                    html += `<td>${escapeHtml(item.BESCHRIFTUNG||'')}</td>`;
+                    html += `<td>${formatValue(item.PARKPLATZ_LINKS)}</td>`;
+                    html += `<td>${formatValue(item.PARKPLATZ_RECHTS)}</td>`;
+                    html += `<td>${formatValue(item.DURCHFAHRT_LINKS_RI_DE)}</td>`;
+                    html += `<td class="date-cell">${formatDate(item.DATUM)}</td>`;
+                    html += `<td>${formatValue(item.DURCHLEUCHTUNG)}</td>`;
+                    html += `<td>${formatValue(item.BUS)}</td>`;
+                    html += `<td>${escapeHtml(item.GROSSRAUM||'')}</td>`;
+                    html += `<td class="date-cell">${formatDate(zoll)}</td>`;
+                    html += `<td>${formatValue(item.DURCHFAHRT_LINKS_RI_CH)}</td>`;
+                    html += `<td class="date-cell">${formatDate(ausfahrt)}</td>`;
+                    html += `<td>${diffDisplay}</td>`;
+                    html += `<td>${escapeHtml(item.FK_LOC_LOCATION||'4684')}</td>`;
+                    html += `<td><div class="btn-group"><button class="btn-update update-row" data-id="${escapeHtml(id)}">🔄 edit</button><button class="btn-delete delete-row" data-id="${escapeHtml(id)}">🗑️ del</button></div></td>`;
+                    html += `</tr>`;
+                });
+            });
+            tbody.innerHTML = html;
+            attachRowActions();
+        }
+
+        function renderFlat() {
+            const data = filteredData.length ? filteredData : lkwData;
+            if (!data.length) { tbody.innerHTML = '<tr><td colspan="14">Keine Einträge</td></tr>'; return; }
+            let html = '';
+            data.forEach(item => {
+                const id = item.id || item.ID || item._id || item.PK_GRENZE_LKW || '';
+                const ausfahrt = item.PARKPLATZ_AUSFAHRT;
+                const zoll = item.ZOLLKONTROLLE;
+                const diffMin = computeDiffMinutes(item.DATUM, ausfahrt);
+                const diffDisplay = diffMin !== null ? `<span class="diff-badge">${diffMin} min</span>` : '<span class="null-badge">—</span>';
+                
+                html += `<tr data-id="${escapeHtml(id)}">`;
+                html += `<td>${escapeHtml(item.BESCHRIFTUNG||'')}</td>`;
+                html += `<td>${formatValue(item.PARKPLATZ_LINKS)}</td>`;
+                html += `<td>${formatValue(item.PARKPLATZ_RECHTS)}</td>`;
+                html += `<td>${formatValue(item.DURCHFAHRT_LINKS_RI_DE)}</td>`;
+                html += `<td>${formatDate(item.DATUM)}</td>`;
+                html += `<td>${formatValue(item.DURCHLEUCHTUNG)}</td>`;
+                html += `<td>${formatValue(item.BUS)}</td>`;
+                html += `<td>${escapeHtml(item.GROSSRAUM||'')}</td>`;
+                html += `<td>${formatDate(zoll)}</td>`;
+                html += `<td>${formatValue(item.DURCHFAHRT_LINKS_RI_CH)}</td>`;
+                html += `<td>${formatDate(ausfahrt)}</td>`;
+                html += `<td>${diffDisplay}</td>`;
+                html += `<td>${escapeHtml(item.FK_LOC_LOCATION||'4684')}</td>`;
+                html += `<td><div class="btn-group"><button class="btn-update update-row" data-id="${escapeHtml(id)}">🔄 edit</button><button class="btn-delete delete-row" data-id="${escapeHtml(id)}">🗑️ del</button></div></td></tr>`;
+            });
+            tbody.innerHTML = html;
+            attachRowActions();
+        }
+
+        window.toggleGroup = (key) => {
+            groupCollapseState.set(key, !(groupCollapseState.get(key)===true));
+            renderGrouped();
+        };
+
+        function attachRowActions() {
+            document.querySelectorAll('.update-row').forEach(b=>{ b.removeEventListener('click', handleUpd); b.addEventListener('click', handleUpd); });
+            document.querySelectorAll('.delete-row').forEach(b=>{ b.removeEventListener('click', handleDel); b.addEventListener('click', handleDel); });
+        }
+
+        async function handleUpd(e) {
+            const id = e.currentTarget.getAttribute('data-id');
+            const rec = lkwData.find(r => String(r.id||r.ID||r._id||r.PK_GRENZE_LKW) === String(id));
+            if (!rec) return showMessage('nicht gefunden');
+            const upd = prompt('Update JSON', JSON.stringify(rec,null,2));
+            if (!upd) return;
+            try { await updateRecord(id, JSON.parse(upd)); } catch { showMessage('JSON Fehler'); }
+        }
+        async function handleDel(e) {
+            const id = e.currentTarget.getAttribute('data-id');
+            if (!id || !confirm('Löschen?')) return;
+            await deleteRecord(id);
+        }
+
+        async function fetchAll() {
+            try {
+                log('Lade /all', 'GET');
+                const res = await fetch(`${BASE_URL}${ENDPOINTS.ALL}`, {headers:{Accept:'application/json'}});
+                if (!res.ok) throw new Error(`Status ${res.status}`);
+                lkwData = await res.json() || [];
+                filteredData = [...lkwData];
+                groupCollapseState.clear();
+                applyFilters();
+            } catch (err) {
+                log(err.message, '', true);
+                showMessage('Server nicht erreichbar');
+            }
+        }
+
+        async function insertRecord(rec) {
+            try {
+                const valuesArray = [
+                    rec.BESCHRIFTUNG,
+                    rec.PARKPLATZ_LINKS,
+                    rec.PARKPLATZ_RECHTS,
+                    rec.DURCHFAHRT_LINKS_RI_DE,
+                    rec.DATUM,
+                    rec.DURCHLEUCHTUNG,
+                    rec.BUS,
+                    rec.GROSSRAUM,
+                    rec.ZOLLKONTROLLE,
+                    rec.DURCHFAHRT_LINKS_RI_CH,
+                    rec.PARKPLATZ_AUSFAHRT
+                ];
+                
+                arrayOrder.innerHTML = '📤 Werte-Array [$1..$11]: ' + JSON.stringify(valuesArray);
+                debugPayload.innerHTML = '📤 JSON: ' + JSON.stringify(rec, null, 2);
+                
+                const res = await fetch(`${BASE_URL}${ENDPOINTS.INSERT}`, {
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'}, 
+                    body: JSON.stringify(rec)
+                });
+                
+                const responseText = await res.text();
+                
+                if (!res.ok) {
+                    throw new Error(`Server (${res.status}): ${responseText}`);
+                }
+                
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                } catch {
+                    result = responseText;
+                }
+                
+                showMessage('Eingefügt: ' + JSON.stringify(result), 'success');
+                resetForm();
+                await fetchAll();
+            } catch (err) {
+                showMessage('Insert fehlgeschlagen: ' + err.message);
+                log(err.message, 'POST', true);
+            }
+        }
+
+        async function updateRecord(id, upd) {
+            try { 
+                await fetch(`${BASE_URL}${ENDPOINTS.UPDATE}`, {
+                    method:'PUT', 
+                    headers:{'Content-Type':'application/json'}, 
+                    body:JSON.stringify({id,...upd})
+                });
+                showMessage('Aktualisiert','success'); 
+                await fetchAll(); 
+            } catch { showMessage('Update fehler'); }
+        }
+        async function deleteRecord(id) {
+            try { 
+                await fetch(`${BASE_URL}${ENDPOINTS.DELETE}`, {
+                    method:'DELETE', 
+                    headers:{'Content-Type':'application/json'}, 
+                    body:JSON.stringify({id})
+                });
+                showMessage('Gelöscht','success'); 
+                await fetchAll(); 
+            } catch { showMessage('Löschen fehler'); }
+        }
+
+        // Event-Listener
+        refreshBtn.addEventListener('click', fetchAll);
+        clearLogBtn.addEventListener('click', ()=>liveLogSpan.innerHTML='Log gelöscht');
+        globalSearch.addEventListener('input', applyFilters);
+        
+        [filterParkLinks, filterParkRechts, filterDurchLinksDe, filterDurchleuchtung, 
+         filterBus, filterZoll, filterDurchLinksCh, filterAusfahrt]
+            .forEach(s => s.addEventListener('change', applyFilters));
+        
+        filterGrossraumText.addEventListener('input', applyFilters);
+        
+        resetFiltersBtn.addEventListener('click', ()=>{
+            filterParkLinks.value=''; filterParkRechts.value=''; filterDurchLinksDe.value='';
+            filterDurchleuchtung.value=''; filterBus.value=''; filterGrossraumText.value=''; 
+            filterZoll.value=''; filterDurchLinksCh.value=''; filterAusfahrt.value='';
+            globalSearch.value='';
+            applyFilters();
+        });
+
+        applyColumnFilter.addEventListener('click', () => { updateColumnSumChart(); });
+        resetColumnFilter.addEventListener('click', () => {
+            columnStartDate.value = '';
+            columnEndDate.value = '';
+            updateColumnSumChart();
+        });
+
+        groupCheck.addEventListener('change', ()=>{ groupCheck.checked ? renderGrouped() : renderFlat(); });
+        collapseBtn.addEventListener('click', ()=>{
+            document.querySelectorAll('.group-row').forEach(r=>{ let k=r.getAttribute('data-group'); if(k) groupCollapseState.set(k,true); });
+            renderGrouped();
+        });
+        expandBtn.addEventListener('click', ()=>{ groupCollapseState.clear(); renderGrouped(); });
+
+        submitBtn.addEventListener('click', async ()=>{
+            if (!beschriftung.value.trim()) return showMessage('BESCHRIFTUNG ist notwendig');
+            
+            function getVal(sel) { 
+                let v = sel.value; 
+                return v === '' ? null : (v === '1' ? 1 : (v === '0' ? 0 : parseInt(v) || null)); 
+            }
+            
+            const busValue = busSel.value === '' ? null : parseInt(busSel.value);
+            
+            let datumDate;
+            if (datumInput.value) {
+                if (datumInput.value.length === 10) {
+                    datumDate = new Date(`${datumInput.value}T00:00:00`);
+                } else {
+                    datumDate = new Date(datumInput.value);
+                }
+            } else {
+                return showMessage('DATUM ist erforderlich');
+            }
+            
+            if (isNaN(datumDate.getTime())) {
+                return showMessage('Ungültiges DATUM');
+            }
+            
+            let zollVal = null;
+            if (zollkontrolle.value) {
+                let zollDate;
+                if (zollkontrolle.value.length === 10) {
+                    zollDate = new Date(`${zollkontrolle.value}T00:00:00`);
+                } else {
+                    zollDate = new Date(zollkontrolle.value);
+                }
+                if (!isNaN(zollDate.getTime())) {
+                    zollVal = zollDate.toISOString();
+                }
+            }
+            
+            let ausfahrtVal = null;
+            if (ausfahrtInput.value) {
+                let ausfahrtDate;
+                if (ausfahrtInput.value.length === 10) {
+                    ausfahrtDate = new Date(`${ausfahrtInput.value}T00:00:00`);
+                } else {
+                    ausfahrtDate = new Date(ausfahrtInput.value);
+                }
+                if (!isNaN(ausfahrtDate.getTime())) {
+                    ausfahrtVal = ausfahrtDate.toISOString();
+                }
+            }
+            
+            const grossraumVal = grossraum.value.trim() || 'BIETINGEN';
+            
+            const rec = {
+                BESCHRIFTUNG: beschriftung.value.trim() || 'test',
+                PARKPLATZ_LINKS: getVal(parkLinks),
+                PARKPLATZ_RECHTS: getVal(parkRechts),
+                DURCHFAHRT_LINKS_RI_DE: getVal(durchfahrtLinksDe),
+                DATUM: datumDate.toISOString(),
+                DURCHLEUCHTUNG: getVal(durchleuchtung),
+                BUS: busValue,
+                GROSSRAUM: grossraumVal,
+                ZOLLKONTROLLE: zollVal,
+                DURCHFAHRT_LINKS_RI_CH: getVal(durchfahrtLinksCh),
+                PARKPLATZ_AUSFAHRT: ausfahrtVal,
+                FK_LOC_LOCATION: fkLocLocation.value,
+                DURCHFAHRT_RECHTS: getVal(durchfahrtRechts)
+            };
+            
+            await insertRecord(rec);
+        });
+
+        // Initial load
+        resetForm();
+        fetchAll();
+        setInterval(()=> fetchAll(), 30000);
+    })();
+</script>
+</body>
+</html>

@@ -1,0 +1,2020 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flugzeugvermietungstool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .section {
+            background-color: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            flex: 1;
+            min-width: 300px;
+        }
+        h1, h2, h3 {
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px 0;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button.secondary {
+            background-color: #2196F3;
+        }
+        button.warning {
+            background-color: #ff9800;
+        }
+        button.danger {
+            background-color: #f44336;
+        }
+        input, select, textarea {
+            padding: 8px;
+            margin: 5px 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .tab {
+            padding: 10px 20px;
+            background-color: #ddd;
+            cursor: pointer;
+            margin-right: 5px;
+            border-radius: 5px 5px 0 0;
+        }
+        .tab.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .dashboard-card {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        .status-available {
+            background-color: #4CAF50;
+        }
+        .status-reserved {
+            background-color: #FFC107;
+        }
+        .status-maintenance {
+            background-color: #F44336;
+        }
+        .status-in-use {
+            background-color: #2196F3;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        .highlight {
+            background-color: #fffde7;
+        }
+        .maintenance-due {
+            background-color: #ffebee;
+        }
+        .available {
+            background-color: #e8f5e9;
+        }
+        .logbook-entry {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+        }
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+        .calendar-day {
+            border: 1px solid #ddd;
+            padding: 5px;
+            min-height: 80px;
+        }
+        .calendar-day-header {
+            font-weight: bold;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 5px;
+        }
+        .event {
+            font-size: 12px;
+            padding: 2px;
+            margin: 2px 0;
+            border-radius: 3px;
+            background-color: #e3f2fd;
+        }
+    </style>
+</head>
+<body>
+    <h1>Flugzeugvermietungs- und Verwaltungstool</h1>
+    
+    <div class="tabs">
+        <div class="tab active" data-tab="dashboard">Dashboard</div>
+        <div class="tab" data-tab="aircraft">Flugzeugverwaltung</div>
+        <div class="tab" data-tab="reservations">Reservierungen</div>
+        <div class="tab" data-tab="bookings">Buchungen</div>
+        <div class="tab" data-tab="maintenance">Wartung</div>
+        <div class="tab" data-tab="logbooks">Bordbücher</div>
+        <div class="tab" data-tab="airports">Flugplätze</div>
+    </div>
+    
+    <!-- Dashboard Tab -->
+    <div id="dashboard" class="tab-content active">
+        <div class="dashboard">
+            <div class="dashboard-card">
+                <h2>Flugzeugstatus</h2>
+                <p>Verfügbar: <strong id="availableAircraft">0</strong></p>
+                <p>Reserviert: <strong id="reservedAircraft">0</strong></p>
+                <p>In Benutzung: <strong id="inUseAircraft">0</strong></p>
+                <p>In Wartung: <strong id="maintenanceAircraft">0</strong></p>
+            </div>
+            
+            <div class="dashboard-card">
+                <h2>Buchungen & Reservierungen</h2>
+                <p>Aktive Reservierungen: <strong id="activeReservations">0</strong></p>
+                <p>Laufende Buchungen: <strong id="activeBookings">0</strong></p>
+                <p>Heute fällige Rückgaben: <strong id="dueReturns">0</strong></p>
+            </div>
+            
+            <div class="dashboard-card">
+                <h2>Wartung</h2>
+                <p>Anstehende Wartungen: <strong id="upcomingMaintenance">0</strong></p>
+                <p>Überfällige Wartungen: <strong id="overdueMaintenance">0</strong></p>
+                <p>Aktuell in Wartung: <strong id="inProgressMaintenance">0</strong></p>
+            </div>
+            
+            <div class="dashboard-card">
+                <h2>Kalender</h2>
+                <div id="miniCalendar"></div>
+            </div>
+            
+            <div class="dashboard-card">
+                <h2>Letzte Flüge</h2>
+                <table id="recentFlights">
+                    <thead>
+                        <tr>
+                            <th>Datum</th>
+                            <th>Flugzeug</th>
+                            <th>Pilot</th>
+                            <th>Flugzeit</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            
+            <div class="dashboard-card">
+                <h2>Warnungen</h2>
+                <div id="warningsList"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Flugzeugverwaltung Tab -->
+    <div id="aircraft" class="tab-content">
+        <div class="container">
+            <div class="section">
+                <h2>Neues Flugzeug erfassen</h2>
+                <input type="text" id="aircraftRegistration" placeholder="Kennzeichen">
+                <input type="text" id="aircraftType" placeholder="Typ">
+                <input type="text" id="aircraftModel" placeholder="Modell">
+                <input type="number" id="aircraftSeats" placeholder="Sitzplätze" min="1">
+                <input type="number" id="aircraftRange" placeholder="Reichweite (km)" min="1">
+                <input type="number" id="aircraftCruiseSpeed" placeholder="Reisegeschwindigkeit (km/h)" min="1">
+                <select id="aircraftHomeAirport">
+                    <option value="">Heimatflugplatz auswählen</option>
+                </select>
+                <select id="aircraftStatus">
+                    <option value="available">Verfügbar</option>
+                    <option value="maintenance">In Wartung</option>
+                    <option value="out-of-service">Außer Betrieb</option>
+                </select>
+                <textarea id="aircraftNotes" placeholder="Bemerkungen"></textarea>
+                <button onclick="addAircraft()">Flugzeug hinzufügen</button>
+            </div>
+            
+            <div class="section">
+                <h2>Flugzeugliste</h2>
+                <table id="aircraftTable">
+                    <thead>
+                        <tr>
+                            <th>Kennzeichen</th>
+                            <th>Typ</th>
+                            <th>Modell</th>
+                            <th>Status</th>
+                            <th>Standort</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Flugzeugdetails</h2>
+            <select id="aircraftDetailSelect" onchange="showAircraftDetails()">
+                <option value="">Flugzeug auswählen</option>
+            </select>
+            <div id="aircraftDetails"></div>
+        </div>
+    </div>
+    
+    <!-- Reservierungen Tab -->
+    <div id="reservations" class="tab-content">
+        <div class="container">
+            <div class="section">
+                <h2>Neue Reservierung</h2>
+                <select id="reservationAircraft">
+                    <option value="">Flugzeug auswählen</option>
+                </select>
+                <select id="reservationCustomer">
+                    <option value="">Kunde auswählen</option>
+                </select>
+                <input type="datetime-local" id="reservationStart">
+                <input type="datetime-local" id="reservationEnd">
+                <select id="reservationStartAirport">
+                    <option value="">Startflugplatz auswählen</option>
+                </select>
+                <select id="reservationEndAirport">
+                    <option value="">Zielflugplatz auswählen</option>
+                </select>
+                <input type="text" id="reservationPurpose" placeholder="Zweck">
+                <button onclick="addReservation()">Reservierung anlegen</button>
+            </div>
+            
+            <div class="section">
+                <h2>Reservierungsübersicht</h2>
+                <input type="month" id="reservationMonth" onchange="loadReservations()">
+                <table id="reservationTable">
+                    <thead>
+                        <tr>
+                            <th>Flugzeug</th>
+                            <th>Kunde</th>
+                            <th>Von</th>
+                            <th>Bis</th>
+                            <th>Startort</th>
+                            <th>Zielort</th>
+                            <th>Status</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Reservierungskalender</h2>
+            <div id="reservationCalendar"></div>
+        </div>
+    </div>
+    
+    <!-- Buchungen Tab -->
+    <div id="bookings" class="tab-content">
+        <div class="container">
+            <div class="section">
+                <h2>Neue Buchung</h2>
+                <select id="bookingAircraft">
+                    <option value="">Flugzeug auswählen</option>
+                </select>
+                <select id="bookingCustomer">
+                    <option value="">Kunde auswählen</option>
+                </select>
+                <select id="bookingPilot">
+                    <option value="">Pilot auswählen</option>
+                </select>
+                <input type="datetime-local" id="bookingStart">
+                <input type="datetime-local" id="bookingEnd">
+                <select id="bookingStartAirport">
+                    <option value="">Startflugplatz auswählen</option>
+                </select>
+                <select id="bookingEndAirport">
+                    <option value="">Zielflugplatz auswählen</option>
+                </select>
+                <input type="number" id="bookingFlightHours" placeholder="Geplante Flugstunden" step="0.1" min="0">
+                <input type="text" id="bookingPurpose" placeholder="Zweck">
+                <button onclick="addBooking()">Buchung anlegen</button>
+            </div>
+            
+            <div class="section">
+                <h2>Buchungsübersicht</h2>
+                <input type="month" id="bookingMonth" onchange="loadBookings()">
+                <table id="bookingTable">
+                    <thead>
+                        <tr>
+                            <th>Flugzeug</th>
+                            <th>Kunde</th>
+                            <th>Pilot</th>
+                            <th>Von</th>
+                            <th>Bis</th>
+                            <th>Flugstunden</th>
+                            <th>Status</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Wartung Tab -->
+    <div id="maintenance" class="tab-content">
+        <div class="container">
+            <div class="section">
+                <h2>Neue Wartung planen</h2>
+                <select id="maintenanceAircraft">
+                    <option value="">Flugzeug auswählen</option>
+                </select>
+                <select id="maintenanceType">
+                    <option value="routine">Routinewartung</option>
+                    <option value="inspection">Inspektion</option>
+                    <option value="repair">Reparatur</option>
+                    <option value="overhaul">Überholung</option>
+                </select>
+                <input type="datetime-local" id="maintenanceStart">
+                <input type="datetime-local" id="maintenanceEnd">
+                <select id="maintenanceHangar">
+                    <option value="">Hangar auswählen</option>
+                </select>
+                <input type="text" id="maintenanceDescription" placeholder="Beschreibung">
+                <input type="number" id="maintenanceInterval" placeholder="Intervall (Stunden)" min="0" step="1">
+                <button onclick="addMaintenance()">Wartung planen</button>
+            </div>
+            
+            <div class="section">
+                <h2>Wartungsübersicht</h2>
+                <table id="maintenanceTable">
+                    <thead>
+                        <tr>
+                            <th>Flugzeug</th>
+                            <th>Art</th>
+                            <th>Von</th>
+                            <th>Bis</th>
+                            <th>Hangar</th>
+                            <th>Status</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Wartungshistorie</h2>
+            <select id="maintenanceHistoryAircraft" onchange="loadMaintenanceHistory()">
+                <option value="">Flugzeug auswählen</option>
+            </select>
+            <table id="maintenanceHistoryTable">
+                <thead>
+                    <tr>
+                        <th>Datum</th>
+                        <th>Art</th>
+                        <th>Beschreibung</th>
+                        <th>Hangar</th>
+                        <th>Flugstunden</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Bordbücher Tab -->
+    <div id="logbooks" class="tab-content">
+        <div class="container">
+            <div class="section">
+                <h2>Neuer Bordbucheintrag</h2>
+                <select id="logbookAircraft">
+                    <option value="">Flugzeug auswählen</option>
+                </select>
+                <select id="logbookBooking">
+                    <option value="">Buchung auswählen (optional)</option>
+                </select>
+                <input type="date" id="logbookDate">
+                <input type="time" id="logbookDepartureTime">
+                <input type="time" id="logbookArrivalTime">
+                <input type="number" id="logbookFlightHours" placeholder="Flugstunden" step="0.1" min="0">
+                <select id="logbookDepartureAirport">
+                    <option value="">Startflugplatz auswählen</option>
+                </select>
+                <select id="logbookArrivalAirport">
+                    <option value="">Zielflugplatz auswählen</option>
+                </select>
+                <input type="text" id="logbookPilot" placeholder="Pilot">
+                <input type="number" id="logbookPassengers" placeholder="Passagiere" min="0">
+                <textarea id="logbookRemarks" placeholder="Bemerkungen"></textarea>
+                <button onclick="addLogbookEntry()">Eintrag hinzufügen</button>
+            </div>
+            
+            <div class="section">
+                <h2>Bordbuch</h2>
+                <select id="logbookAircraftSelect" onchange="loadLogbookEntries()">
+                    <option value="">Flugzeug auswählen</option>
+                </select>
+                <table id="logbookTable">
+                    <thead>
+                        <tr>
+                            <th>Datum</th>
+                            <th>Flugzeug</th>
+                            <th>Start</th>
+                            <th>Ziel</th>
+                            <th>Pilot</th>
+                            <th>Flugzeit</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Flugplätze Tab -->
+    <div id="airports" class="tab-content">
+        <div class="container">
+            <div class="section">
+                <h2>Neuer Flugplatz</h2>
+                <input type="text" id="airportCode" placeholder="ICAO-Code">
+                <input type="text" id="airportName" placeholder="Name">
+                <input type="text" id="airportLocation" placeholder="Ort">
+                <input type="text" id="airportRunways" placeholder="Start-/Landebahnen">
+                <input type="text" id="airportFuelType" placeholder="Kraftstofftyp">
+                <input type="text" id="airportHangars" placeholder="Hangars (kommagetrennt)">
+                <button onclick="addAirport()">Flugplatz hinzufügen</button>
+            </div>
+            
+            <div class="section">
+                <h2>Flugplatzliste</h2>
+                <table id="airportTable">
+                    <thead>
+                        <tr>
+                            <th>ICAO-Code</th>
+                            <th>Name</th>
+                            <th>Ort</th>
+                            <th>Bahnen</th>
+                            <th>Hangars</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Datenstrukturen
+        let aircrafts = [];
+        let customers = [];
+        let pilots = [];
+        let reservations = [];
+        let bookings = [];
+        let maintenance = [];
+        let logbookEntries = [];
+        let airports = [];
+        
+        // Initialisierung
+        window.onload = function() {
+            loadData();
+            updateAircraftDropdowns();
+            updateCustomerDropdown();
+            updatePilotDropdown();
+            updateAirportDropdowns();
+            
+            // Aktuelle Datumswerte setzen
+            const now = new Date();
+            const today = now.toISOString().slice(0, 10);
+            const time = now.toTimeString().slice(0, 5);
+            
+            document.getElementById('reservationStart').value = `${today}T${time}`;
+            document.getElementById('reservationEnd').value = `${today}T${time}`;
+            document.getElementById('bookingStart').value = `${today}T${time}`;
+            document.getElementById('bookingEnd').value = `${today}T${time}`;
+            document.getElementById('maintenanceStart').value = `${today}T${time}`;
+            document.getElementById('maintenanceEnd').value = `${today}T${time}`;
+            document.getElementById('logbookDate').value = today;
+            document.getElementById('logbookDepartureTime').value = time;
+            document.getElementById('logbookArrivalTime').value = time;
+            
+            // Aktuellen Monat setzen
+            const currentMonth = now.toISOString().slice(0, 7);
+            document.getElementById('reservationMonth').value = currentMonth;
+            document.getElementById('bookingMonth').value = currentMonth;
+            
+            generateMiniCalendar();
+            updateDashboard();
+            
+            // Tab-Funktionalität initialisieren
+            initializeTabs();
+        };
+
+        function initializeTabs() {
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Alle Tabs und Inhalte deaktivieren
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabContents.forEach(c => c.classList.remove('active'));
+                    
+                    // Aktiven Tab markieren
+                    this.classList.add('active');
+                    
+                    // Entsprechenden Tab-Inhalt anzeigen
+                    const tabName = this.getAttribute('data-tab');
+                    document.getElementById(tabName).classList.add('active');
+                    
+                    // Tab-spezifische Initialisierung
+                    initializeTab(tabName);
+                });
+            });
+        }
+        
+        function initializeTab(tabName) {
+            switch(tabName) {
+                case 'dashboard': updateDashboard(); break;
+                case 'aircraft': updateAircraftDropdowns(); break;
+                case 'reservations': loadReservations(); break;
+                case 'bookings': loadBookings(); break;
+                case 'maintenance': loadMaintenance(); break;
+                case 'logbooks': updateLogbookDropdowns(); break;
+                case 'airports': loadAirports(); break;
+            }
+        }
+        
+        // Daten laden/speichern
+        function loadData() {
+            if(localStorage.getItem('aircrafts')) {
+                aircrafts = JSON.parse(localStorage.getItem('aircrafts'));
+                updateAircraftTable();
+            }
+            
+            if(localStorage.getItem('customers')) {
+                customers = JSON.parse(localStorage.getItem('customers'));
+            }
+            
+            if(localStorage.getItem('pilots')) {
+                pilots = JSON.parse(localStorage.getItem('pilots'));
+            }
+            
+            if(localStorage.getItem('reservations')) {
+                reservations = JSON.parse(localStorage.getItem('reservations'));
+            }
+            
+            if(localStorage.getItem('bookings')) {
+                bookings = JSON.parse(localStorage.getItem('bookings'));
+            }
+            
+            if(localStorage.getItem('maintenance')) {
+                maintenance = JSON.parse(localStorage.getItem('maintenance'));
+            }
+            
+            if(localStorage.getItem('logbookEntries')) {
+                logbookEntries = JSON.parse(localStorage.getItem('logbookEntries'));
+            }
+            
+            if(localStorage.getItem('airports')) {
+                airports = JSON.parse(localStorage.getItem('airports'));
+            }
+        }
+        
+        function saveData() {
+            localStorage.setItem('aircrafts', JSON.stringify(aircrafts));
+            localStorage.setItem('customers', JSON.stringify(customers));
+            localStorage.setItem('pilots', JSON.stringify(pilots));
+            localStorage.setItem('reservations', JSON.stringify(reservations));
+            localStorage.setItem('bookings', JSON.stringify(bookings));
+            localStorage.setItem('maintenance', JSON.stringify(maintenance));
+            localStorage.setItem('logbookEntries', JSON.stringify(logbookEntries));
+            localStorage.setItem('airports', JSON.stringify(airports));
+        }
+        
+        // Dashboard-Funktionen
+        function updateDashboard() {
+            // Flugzeugstatus
+            document.getElementById('availableAircraft').textContent = aircrafts.filter(a => a.status === 'available').length;
+            document.getElementById('reservedAircraft').textContent = aircrafts.filter(a => a.status === 'reserved').length;
+            document.getElementById('inUseAircraft').textContent = aircrafts.filter(a => a.status === 'in-use').length;
+            document.getElementById('maintenanceAircraft').textContent = aircrafts.filter(a => a.status === 'maintenance').length;
+            
+            // Buchungen & Reservierungen
+            const now = new Date();
+            const today = now.toISOString().slice(0, 10);
+            
+            document.getElementById('activeReservations').textContent = reservations.filter(r => new Date(r.end) > now).length;
+            document.getElementById('activeBookings').textContent = bookings.filter(b => b.status === 'active').length;
+            document.getElementById('dueReturns').textContent = bookings.filter(b => b.endDate.slice(0, 10) === today && b.status === 'active').length;
+            
+            // Wartung
+            document.getElementById('upcomingMaintenance').textContent = maintenance.filter(m => m.status === 'scheduled').length;
+            document.getElementById('overdueMaintenance').textContent = maintenance.filter(m => m.status === 'overdue').length;
+            document.getElementById('inProgressMaintenance').textContent = maintenance.filter(m => m.status === 'in-progress').length;
+            
+            // Letzte Flüge
+            const recentTable = document.getElementById('recentFlights').getElementsByTagName('tbody')[0];
+            recentTable.innerHTML = '';
+            
+            const recentEntries = [...logbookEntries].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+            recentEntries.forEach(entry => {
+                const row = recentTable.insertRow();
+                row.innerHTML = `
+                    <td>${entry.date}</td>
+                    <td>${entry.aircraftRegistration}</td>
+                    <td>${entry.pilot}</td>
+                    <td>${entry.flightHours}</td>
+                `;
+            });
+            
+            // Warnungen
+            const warningsList = document.getElementById('warningsList');
+            warningsList.innerHTML = '';
+            
+            // Überfällige Wartungen
+            const overdueMaintenance = maintenance.filter(m => m.status === 'overdue');
+            if(overdueMaintenance.length > 0) {
+                const warning = document.createElement('div');
+                warning.className = 'warning';
+                warning.innerHTML = `<span style="color:red;">⚠ ${overdueMaintenance.length} überfällige Wartungen</span>`;
+                warningsList.appendChild(warning);
+            }
+            
+            // Flugzeuge mit hohen Flugstunden
+            const highHourAircraft = aircrafts.filter(a => {
+                const aircraftEntries = logbookEntries.filter(e => e.aircraftId === a.id);
+                const totalHours = aircraftEntries.reduce((sum, e) => sum + e.flightHours, 0);
+                return totalHours >= 90; // Beispiel: Wartung bei 100 Stunden
+            });
+            
+            if(highHourAircraft.length > 0) {
+                const warning = document.createElement('div');
+                warning.className = 'warning';
+                warning.innerHTML = `<span style="color:orange;">⚠ ${highHourAircraft.length} Flugzeuge nähern sich Wartungsintervall</span>`;
+                warningsList.appendChild(warning);
+            }
+            
+            // Konflikte in Reservierungen
+            // (Hier könnte man nach doppelten Buchungen suchen)
+        }
+        
+        function generateMiniCalendar() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            
+            const daysInMonth = lastDay.getDate();
+            const startingDay = firstDay.getDay();
+            
+            const calendar = document.getElementById('miniCalendar');
+            calendar.innerHTML = '';
+            
+            // Monatsname
+            const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni",
+                                "Juli", "August", "September", "Oktober", "November", "Dezember"];
+            const monthHeader = document.createElement('h3');
+            monthHeader.textContent = monthNames[month] + ' ' + year;
+            calendar.appendChild(monthHeader);
+            
+            // Wochentage
+            const dayNames = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+            const dayHeader = document.createElement('div');
+            dayHeader.style.display = 'grid';
+            dayHeader.style.gridTemplateColumns = 'repeat(7, 1fr)';
+            dayHeader.style.textAlign = 'center';
+            dayHeader.style.fontWeight = 'bold';
+            dayHeader.style.marginBottom = '5px';
+            
+            dayNames.forEach(day => {
+                const dayElement = document.createElement('div');
+                dayElement.textContent = day;
+                dayHeader.appendChild(dayElement);
+            });
+            
+            calendar.appendChild(dayHeader);
+            
+            // Kalendertage
+            const daysGrid = document.createElement('div');
+            daysGrid.style.display = 'grid';
+            daysGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
+            daysGrid.style.gap = '2px';
+            
+            // Leere Zellen für den Anfang des Monats
+            for(let i = 0; i < startingDay; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.style.height = '20px';
+                daysGrid.appendChild(emptyCell);
+            }
+            
+            // Tage des Monats
+            for(let day = 1; day <= daysInMonth; day++) {
+                const dayCell = document.createElement('div');
+                dayCell.style.textAlign = 'center';
+                dayCell.style.padding = '2px';
+                dayCell.style.borderRadius = '3px';
+                dayCell.textContent = day;
+                
+                // Heutigen Tag markieren
+                if(day === now.getDate() && month === now.getMonth()) {
+                    dayCell.style.backgroundColor = '#4CAF50';
+                    dayCell.style.color = 'white';
+                }
+                
+                daysGrid.appendChild(dayCell);
+            }
+            
+            calendar.appendChild(daysGrid);
+        }
+        
+        // Flugzeugfunktionen
+        function updateAircraftDropdowns() {
+            const dropdowns = [
+                'aircraftHomeAirport', 'reservationAircraft', 
+                'bookingAircraft', 'maintenanceAircraft',
+                'logbookAircraft', 'aircraftDetailSelect',
+                'maintenanceHistoryAircraft', 'logbookAircraftSelect'
+            ];
+            
+            dropdowns.forEach(dropdownId => {
+                const dropdown = document.getElementById(dropdownId);
+                if(dropdown) {
+                    const selectedValue = dropdown.value;
+                    
+                    // Dropdown leeren (aber den ersten Platzhalter behalten)
+                    while(dropdown.options.length > 1) {
+                        dropdown.remove(1);
+                    }
+                    
+                    // Flugzeuge hinzufügen
+                    aircrafts.forEach(aircraft => {
+                        const option = document.createElement('option');
+                        option.value = aircraft.id;
+                        option.textContent = `${aircraft.registration} (${aircraft.type})`;
+                        dropdown.appendChild(option);
+                    });
+                    
+                    // Vorherige Auswahl wiederherstellen, falls noch gültig
+                    if(aircrafts.some(a => a.id === selectedValue)) {
+                        dropdown.value = selectedValue;
+                    }
+                }
+            });
+        }
+        
+        function addAircraft() {
+            const registration = document.getElementById('aircraftRegistration').value;
+            const type = document.getElementById('aircraftType').value;
+            const model = document.getElementById('aircraftModel').value;
+            const seats = parseInt(document.getElementById('aircraftSeats').value) || 1;
+            const range = parseInt(document.getElementById('aircraftRange').value) || 0;
+            const cruiseSpeed = parseInt(document.getElementById('aircraftCruiseSpeed').value) || 0;
+            const homeAirportId = document.getElementById('aircraftHomeAirport').value;
+            const status = document.getElementById('aircraftStatus').value;
+            const notes = document.getElementById('aircraftNotes').value;
+            
+            if(!registration || !type) {
+                alert('Bitte mindestens Kennzeichen und Typ eingeben!');
+                return;
+            }
+            
+            const homeAirport = airports.find(a => a.id === homeAirportId);
+            
+            const newAircraft = {
+                id: Date.now().toString(),
+                registration,
+                type,
+                model,
+                seats,
+                range,
+                cruiseSpeed,
+                homeAirport: homeAirport ? homeAirport.name : '',
+                homeAirportId,
+                status,
+                notes,
+                totalFlightHours: 0,
+                lastMaintenance: null
+            };
+            
+            aircrafts.push(newAircraft);
+            saveData();
+            updateAircraftTable();
+            updateAircraftDropdowns();
+            updateDashboard();
+            
+            // Formular zurücksetzen
+            document.getElementById('aircraftRegistration').value = '';
+            document.getElementById('aircraftType').value = '';
+            document.getElementById('aircraftModel').value = '';
+            document.getElementById('aircraftSeats').value = '';
+            document.getElementById('aircraftRange').value = '';
+            document.getElementById('aircraftCruiseSpeed').value = '';
+            document.getElementById('aircraftHomeAirport').value = '';
+            document.getElementById('aircraftStatus').value = 'available';
+            document.getElementById('aircraftNotes').value = '';
+        }
+        
+        function updateAircraftTable() {
+            const table = document.getElementById('aircraftTable').getElementsByTagName('tbody')[0];
+            table.innerHTML = '';
+            
+            aircrafts.forEach(aircraft => {
+                const row = table.insertRow();
+                
+                // Status-Indikator
+                let statusClass = '';
+                let statusText = '';
+                switch(aircraft.status) {
+                    case 'available':
+                        statusClass = 'status-available';
+                        statusText = 'Verfügbar';
+                        break;
+                    case 'reserved':
+                        statusClass = 'status-reserved';
+                        statusText = 'Reserviert';
+                        break;
+                    case 'in-use':
+                        statusClass = 'status-in-use';
+                        statusText = 'In Benutzung';
+                        break;
+                    case 'maintenance':
+                        statusClass = 'status-maintenance';
+                        statusText = 'In Wartung';
+                        break;
+                    default:
+                        statusClass = '';
+                        statusText = aircraft.status;
+                }
+                
+                row.innerHTML = `
+                    <td>${aircraft.registration}</td>
+                    <td>${aircraft.type}</td>
+                    <td>${aircraft.model}</td>
+                    <td><span class="status-indicator ${statusClass}"></span> ${statusText}</td>
+                    <td>${aircraft.homeAirport || '-'}</td>
+                    <td>
+                        <button onclick="editAircraft('${aircraft.id}')">Bearbeiten</button>
+                        <button class="danger" onclick="deleteAircraft('${aircraft.id}')">Löschen</button>
+                    </td>
+                `;
+            });
+        }
+        
+        function editAircraft(id) {
+            const aircraft = aircrafts.find(a => a.id === id);
+            if(!aircraft) return;
+            
+            const newRegistration = prompt("Kennzeichen:", aircraft.registration);
+            if(newRegistration === null) return;
+            
+            const newType = prompt("Typ:", aircraft.type);
+            const newModel = prompt("Modell:", aircraft.model || '');
+            const newSeats = parseInt(prompt("Sitzplätze:", aircraft.seats || 1));
+            const newRange = parseInt(prompt("Reichweite (km):", aircraft.range || 0));
+            const newCruiseSpeed = parseInt(prompt("Reisegeschwindigkeit (km/h):", aircraft.cruiseSpeed || 0));
+            const newStatus = prompt("Status (available/reserved/in-use/maintenance):", aircraft.status);
+            const newNotes = prompt("Bemerkungen:", aircraft.notes || '');
+            
+            aircraft.registration = newRegistration;
+            aircraft.type = newType;
+            aircraft.model = newModel;
+            aircraft.seats = newSeats;
+            aircraft.range = newRange;
+            aircraft.cruiseSpeed = newCruiseSpeed;
+            aircraft.status = newStatus;
+            aircraft.notes = newNotes;
+            
+            saveData();
+            updateAircraftTable();
+            updateAircraftDropdowns();
+            updateDashboard();
+        }
+        
+        function deleteAircraft(id) {
+            if(confirm('Flugzeug wirklich löschen? Alle damit verbundenen Daten werden ebenfalls gelöscht!')) {
+                // Verweise in anderen Tabellen prüfen
+                const hasReservations = reservations.some(r => r.aircraftId === id);
+                const hasBookings = bookings.some(b => b.aircraftId === id);
+                const hasMaintenance = maintenance.some(m => m.aircraftId === id);
+                const hasLogbookEntries = logbookEntries.some(l => l.aircraftId === id);
+                
+                if(hasReservations || hasBookings || hasMaintenance || hasLogbookEntries) {
+                    alert('Dieses Flugzeug kann nicht gelöscht werden, da es mit bestehenden Reservierungen, Buchungen, Wartungen oder Bordbucheinträgen verknüpft ist!');
+                    return;
+                }
+                
+                aircrafts = aircrafts.filter(a => a.id !== id);
+                saveData();
+                updateAircraftTable();
+                updateAircraftDropdowns();
+                updateDashboard();
+            }
+        }
+        
+        function showAircraftDetails() {
+            const aircraftId = document.getElementById('aircraftDetailSelect').value;
+            if(!aircraftId) {
+                document.getElementById('aircraftDetails').innerHTML = '';
+                return;
+            }
+            
+            const aircraft = aircrafts.find(a => a.id === aircraftId);
+            if(!aircraft) return;
+            
+            // Flugstunden berechnen
+            const aircraftEntries = logbookEntries.filter(e => e.aircraftId === aircraftId);
+            const totalHours = aircraftEntries.reduce((sum, e) => sum + e.flightHours, 0);
+            
+            // Wartungshistorie
+            const aircraftMaintenance = maintenance.filter(m => m.aircraftId === aircraftId && m.status === 'completed');
+            
+            // Aktuelle Reservierungen
+            const now = new Date();
+            const aircraftReservations = reservations.filter(r => 
+                r.aircraftId === aircraftId && new Date(r.end) > now
+            );
+            
+            let html = `
+                <h3>${aircraft.registration} - ${aircraft.type} ${aircraft.model}</h3>
+                <p><strong>Status:</strong> ${aircraft.status}</p>
+                <p><strong>Standort:</strong> ${aircraft.homeAirport || 'Unbekannt'}</p>
+                <p><strong>Sitzplätze:</strong> ${aircraft.seats}</p>
+                <p><strong>Reichweite:</strong> ${aircraft.range} km</p>
+                <p><strong>Reisegeschwindigkeit:</strong> ${aircraft.cruiseSpeed} km/h</p>
+                <p><strong>Gesamtflugstunden:</strong> ${totalHours.toFixed(1)}</p>
+                
+                <h4>Letzte Wartungen</h4>
+                <ul>
+                    ${aircraftMaintenance.slice(0, 3).map(m => `
+                        <li>${new Date(m.end).toLocaleDateString()} - ${m.type} (${m.description || 'keine Beschreibung'})</li>
+                    `).join('') || '<li>Keine Wartungshistorie</li>'}
+                </ul>
+                
+                <h4>Kommende Reservierungen</h4>
+                <ul>
+                    ${aircraftReservations.slice(0, 3).map(r => `
+                        <li>${new Date(r.start).toLocaleString()} bis ${new Date(r.end).toLocaleString()}</li>
+                    `).join('') || '<li>Keine kommenden Reservierungen</li>'}
+                </ul>
+                
+                <h4>Bemerkungen</h4>
+                <p>${aircraft.notes || 'Keine Bemerkungen'}</p>
+            `;
+            
+            document.getElementById('aircraftDetails').innerHTML = html;
+        }
+        
+        // Kundenfunktionen
+        function updateCustomerDropdown() {
+            const dropdowns = ['reservationCustomer', 'bookingCustomer'];
+            
+            dropdowns.forEach(dropdownId => {
+                const dropdown = document.getElementById(dropdownId);
+                if(dropdown) {
+                    const selectedValue = dropdown.value;
+                    
+                    while(dropdown.options.length > 1) {
+                        dropdown.remove(1);
+                    }
+                    
+                    customers.forEach(customer => {
+                        const option = document.createElement('option');
+                        option.value = customer.id;
+                        option.textContent = `${customer.name} (${customer.license || 'kein Schein'})`;
+                        dropdown.appendChild(option);
+                    });
+                    
+                    if(customers.some(c => c.id === selectedValue)) {
+                        dropdown.value = selectedValue;
+                    }
+                }
+            });
+        }
+        
+        // Pilotfunktionen
+        function updatePilotDropdown() {
+            const dropdowns = ['bookingPilot', 'logbookPilot'];
+            
+            dropdowns.forEach(dropdownId => {
+                const dropdown = document.getElementById(dropdownId);
+                if(dropdown) {
+                    const selectedValue = dropdown.value;
+                    
+                    while(dropdown.options.length > 1) {
+                        dropdown.remove(1);
+                    }
+                    
+                    pilots.forEach(pilot => {
+                        const option = document.createElement('option');
+                        option.value = pilot.id;
+                        option.textContent = `${pilot.name} (${pilot.license})`;
+                        dropdown.appendChild(option);
+                    });
+                    
+                    if(pilots.some(p => p.id === selectedValue)) {
+                        dropdown.value = selectedValue;
+                    }
+                }
+            });
+        }
+        
+        // Flugplatzfunktionen
+        function updateAirportDropdowns() {
+            const dropdowns = [
+                'aircraftHomeAirport', 'reservationStartAirport',
+                'reservationEndAirport', 'bookingStartAirport',
+                'bookingEndAirport', 'maintenanceHangar',
+                'logbookDepartureAirport', 'logbookArrivalAirport'
+            ];
+            
+            dropdowns.forEach(dropdownId => {
+                const dropdown = document.getElementById(dropdownId);
+                if(dropdown) {
+                    const selectedValue = dropdown.value;
+                    
+                    while(dropdown.options.length > 1) {
+                        dropdown.remove(1);
+                    }
+                    
+                    airports.forEach(airport => {
+                        const option = document.createElement('option');
+                        option.value = airport.id;
+                        option.textContent = `${airport.code} - ${airport.name}`;
+                        dropdown.appendChild(option);
+                    });
+                    
+                    if(airports.some(a => a.id === selectedValue)) {
+                        dropdown.value = selectedValue;
+                    }
+                }
+            });
+        }
+        
+        function addAirport() {
+            const code = document.getElementById('airportCode').value;
+            const name = document.getElementById('airportName').value;
+            const location = document.getElementById('airportLocation').value;
+            const runways = document.getElementById('airportRunways').value;
+            const fuelType = document.getElementById('airportFuelType').value;
+            const hangars = document.getElementById('airportHangars').value.split(',').map(h => h.trim());
+            
+            if(!code || !name) {
+                alert('Bitte mindestens ICAO-Code und Name eingeben!');
+                return;
+            }
+            
+            const newAirport = {
+                id: Date.now().toString(),
+                code,
+                name,
+                location,
+                runways,
+                fuelType,
+                hangars
+            };
+            
+            airports.push(newAirport);
+            saveData();
+            loadAirports();
+            updateAirportDropdowns();
+            
+            // Formular zurücksetzen
+            document.getElementById('airportCode').value = '';
+            document.getElementById('airportName').value = '';
+            document.getElementById('airportLocation').value = '';
+            document.getElementById('airportRunways').value = '';
+            document.getElementById('airportFuelType').value = '';
+            document.getElementById('airportHangars').value = '';
+        }
+        
+        function loadAirports() {
+            const table = document.getElementById('airportTable').getElementsByTagName('tbody')[0];
+            table.innerHTML = '';
+            
+            airports.forEach(airport => {
+                const row = table.insertRow();
+                row.innerHTML = `
+                    <td>${airport.code}</td>
+                    <td>${airport.name}</td>
+                    <td>${airport.location}</td>
+                    <td>${airport.runways || '-'}</td>
+                    <td>${airport.hangars ? airport.hangars.join(', ') : '-'}</td>
+                    <td>
+                        <button onclick="editAirport('${airport.id}')">Bearbeiten</button>
+                        <button class="danger" onclick="deleteAirport('${airport.id}')">Löschen</button>
+                    </td>
+                `;
+            });
+        }
+        
+        function editAirport(id) {
+            const airport = airports.find(a => a.id === id);
+            if(!airport) return;
+            
+            const newCode = prompt("ICAO-Code:", airport.code);
+            if(newCode === null) return;
+            
+            const newName = prompt("Name:", airport.name);
+            const newLocation = prompt("Ort:", airport.location || '');
+            const newRunways = prompt("Start-/Landebahnen:", airport.runways || '');
+            const newFuelType = prompt("Kraftstofftyp:", airport.fuelType || '');
+            const newHangars = prompt("Hangars (kommagetrennt):", airport.hangars ? airport.hangars.join(', ') : '');
+            
+            airport.code = newCode;
+            airport.name = newName;
+            airport.location = newLocation;
+            airport.runways = newRunways;
+            airport.fuelType = newFuelType;
+            airport.hangars = newHangars.split(',').map(h => h.trim());
+            
+            saveData();
+            loadAirports();
+            updateAirportDropdowns();
+        }
+        
+        function deleteAirport(id) {
+            if(confirm('Flugplatz wirklich löschen?')) {
+                // Verweise prüfen
+                const isHomeAirport = aircrafts.some(a => a.homeAirportId === id);
+                const isUsedInReservations = reservations.some(r => r.startAirportId === id || r.endAirportId === id);
+                const isUsedInBookings = bookings.some(b => b.startAirportId === id || b.endAirportId === id);
+                const isUsedInLogbook = logbookEntries.some(l => l.departureAirportId === id || l.arrivalAirportId === id);
+                const isUsedInMaintenance = maintenance.some(m => m.hangarAirportId === id);
+                
+                if(isHomeAirport || isUsedInReservations || isUsedInBookings || isUsedInLogbook || isUsedInMaintenance) {
+                    alert('Dieser Flugplatz kann nicht gelöscht werden, da er noch verwendet wird!');
+                    return;
+                }
+                
+                airports = airports.filter(a => a.id !== id);
+                saveData();
+                loadAirports();
+                updateAirportDropdowns();
+            }
+        }
+        
+        // Reservierungsfunktionen
+        function addReservation() {
+            const aircraftId = document.getElementById('reservationAircraft').value;
+            const customerId = document.getElementById('reservationCustomer').value;
+            const start = document.getElementById('reservationStart').value;
+            const end = document.getElementById('reservationEnd').value;
+            const startAirportId = document.getElementById('reservationStartAirport').value;
+            const endAirportId = document.getElementById('reservationEndAirport').value;
+            const purpose = document.getElementById('reservationPurpose').value;
+            
+            if(!aircraftId || !customerId || !start || !end) {
+                alert('Bitte alle Pflichtfelder ausfüllen!');
+                return;
+            }
+            
+            const aircraft = aircrafts.find(a => a.id === aircraftId);
+            const customer = customers.find(c => c.id === customerId);
+            const startAirport = airports.find(a => a.id === startAirportId);
+            const endAirport = airports.find(a => a.id === endAirportId);
+            
+            // Verfügbarkeit prüfen
+            const overlappingReservation = reservations.some(r => 
+                r.aircraftId === aircraftId && 
+                ((new Date(start) >= new Date(r.start) && new Date(start) <= new Date(r.end)) ||
+                ((new Date(end) >= new Date(r.start) && new Date(end) <= new Date(r.end)))
+            );
+            
+            if(overlappingReservation) {
+                alert('Das Flugzeug ist in diesem Zeitraum bereits reserviert!');
+                return;
+            }
+            
+            const overlappingBooking = bookings.some(b => 
+                b.aircraftId === aircraftId && 
+                b.status === 'active' &&
+                ((new Date(start) >= new Date(b.startDate) && new Date(start) <= new Date(b.endDate)) ||
+                ((new Date(end) >= new Date(b.startDate) && new Date(end) <= new Date(b.endDate)))
+            );
+            
+            if(overlappingBooking) {
+                alert('Das Flugzeug ist in diesem Zeitraum bereits gebucht!');
+                return;
+            }
+            
+            const newReservation = {
+                id: Date.now().toString(),
+                aircraftId,
+                aircraftRegistration: aircraft.registration,
+                customerId,
+                customerName: customer.name,
+                start,
+                end,
+                startAirportId,
+                startAirport: startAirport ? startAirport.name : '',
+                endAirportId,
+                endAirport: endAirport ? endAirport.name : '',
+                purpose: purpose || '',
+                status: 'active'
+            };
+            
+            reservations.push(newReservation);
+            
+            // Flugzeugstatus aktualisieren
+            aircraft.status = 'reserved';
+            
+            saveData();
+            loadReservations();
+            updateAircraftTable();
+            updateDashboard();
+            
+            // Formular zurücksetzen
+            document.getElementById('reservationStart').value = '';
+            document.getElementById('reservationEnd').value = '';
+            document.getElementById('reservationPurpose').value = '';
+        }
+        
+        function loadReservations() {
+            const month = document.getElementById('reservationMonth').value;
+            if(!month) return;
+            
+            const [year, monthNum] = month.split('-');
+            const startDate = new Date(year, monthNum - 1, 1);
+            const endDate = new Date(year, monthNum, 0);
+            
+            const filteredReservations = reservations.filter(reservation => {
+                const resStart = new Date(reservation.start);
+                const resEnd = new Date(reservation.end);
+                return (resStart >= startDate && resStart <= endDate) || 
+                       (resEnd >= startDate && resEnd <= endDate);
+            });
+            
+            const table = document.getElementById('reservationTable').getElementsByTagName('tbody')[0];
+            table.innerHTML = '';
+            
+            filteredReservations.forEach(res => {
+                const row = table.insertRow();
+                row.innerHTML = `
+                    <td>${res.aircraftRegistration}</td>
+                    <td>${res.customerName}</td>
+                    <td>${new Date(res.start).toLocaleString()}</td>
+                    <td>${new Date(res.end).toLocaleString()}</td>
+                    <td>${res.startAirport || '-'}</td>
+                    <td>${res.endAirport || '-'}</td>
+                    <td>${res.status}</td>
+                    <td>
+                        <button onclick="cancelReservation('${res.id}')">Stornieren</button>
+                        <button onclick="convertReservationToBooking('${res.id}')">Zu Buchung machen</button>
+                    </td>
+                `;
+            });
+            
+            // Reservierungskalender aktualisieren
+            updateReservationCalendar();
+        }
+        
+        function cancelReservation(id) {
+            if(confirm('Reservierung wirklich stornieren?')) {
+                const reservation = reservations.find(r => r.id === id);
+                if(reservation) {
+                    // Flugzeugstatus zurücksetzen, falls keine anderen aktiven Reservierungen
+                    const otherReservations = reservations.filter(r => 
+                        r.aircraftId === reservation.aircraftId && 
+                        r.id !== id && 
+                        r.status === 'active'
+                    );
+                    
+                    if(otherReservations.length === 0) {
+                        const aircraft = aircrafts.find(a => a.id === reservation.aircraftId);
+                        if(aircraft) {
+                            aircraft.status = 'available';
+                        }
+                    }
+                    
+                    reservation.status = 'cancelled';
+                    saveData();
+                    loadReservations();
+                    updateAircraftTable();
+                    updateDashboard();
+                }
+            }
+        }
+        
+        function convertReservationToBooking(id) {
+            const reservation = reservations.find(r => r.id === id);
+            if(!reservation) return;
+            
+            // Hier könnte man ein Formular öffnen, um zusätzliche Buchungsdetails zu erfassen
+            const pilot = prompt("Pilot eingeben:", "");
+            if(pilot === null) return;
+            
+            const flightHours = parseFloat(prompt("Geplante Flugstunden:", "0"));
+            
+            const newBooking = {
+                id: Date.now().toString(),
+                aircraftId: reservation.aircraftId,
+                aircraftRegistration: reservation.aircraftRegistration,
+                customerId: reservation.customerId,
+                customerName: reservation.customerName,
+                pilot,
+                startDate: reservation.start,
+                endDate: reservation.end,
+                startAirportId: reservation.startAirportId,
+                startAirport: reservation.startAirport,
+                endAirportId: reservation.endAirportId,
+                endAirport: reservation.endAirport,
+                flightHours: flightHours || 0,
+                purpose: reservation.purpose,
+                status: 'active'
+            };
+            
+            bookings.push(newBooking);
+            
+            // Flugzeugstatus aktualisieren
+            const aircraft = aircrafts.find(a => a.id === reservation.aircraftId);
+            if(aircraft) {
+                aircraft.status = 'in-use';
+            }
+            
+            // Reservierung als umgewandelt markieren
+            reservation.status = 'converted';
+            
+            saveData();
+            loadReservations();
+            loadBookings();
+            updateAircraftTable();
+            updateDashboard();
+        }
+        
+        function updateReservationCalendar() {
+            const calendar = document.getElementById('reservationCalendar');
+            calendar.innerHTML = '';
+            
+            // Einfacher Kalender für Demo-Zwecke
+            const now = new Date();
+            const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+            
+            const calendarGrid = document.createElement('div');
+            calendarGrid.className = 'calendar';
+            
+            // Kopfzeile mit Wochentagen
+            const dayNames = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+            dayNames.forEach(day => {
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'calendar-day-header';
+                dayHeader.textContent = day;
+                calendarGrid.appendChild(dayHeader);
+            });
+            
+            // Kalendertage
+            for(let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(now.getFullYear(), now.getMonth(), day);
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'calendar-day-header';
+                dayHeader.textContent = day;
+                dayElement.appendChild(dayHeader);
+                
+                // Reservierungen für diesen Tag finden
+                const dayReservations = reservations.filter(r => {
+                    const resDate = new Date(r.start);
+                    return resDate.getDate() === day && 
+                           resDate.getMonth() === now.getMonth() && 
+                           resDate.getFullYear() === now.getFullYear();
+                });
+                
+                dayReservations.forEach(res => {
+                    const event = document.createElement('div');
+                    event.className = 'event';
+                    event.textContent = `${res.aircraftRegistration} (${res.customerName})`;
+                    dayElement.appendChild(event);
+                });
+                
+                calendarGrid.appendChild(dayElement);
+            }
+            
+            calendar.appendChild(calendarGrid);
+        }
+        
+        // Buchungsfunktionen
+        function addBooking() {
+            const aircraftId = document.getElementById('bookingAircraft').value;
+            const customerId = document.getElementById('bookingCustomer').value;
+            const pilot = document.getElementById('bookingPilot').value;
+            const start = document.getElementById('bookingStart').value;
+            const end = document.getElementById('bookingEnd').value;
+            const startAirportId = document.getElementById('bookingStartAirport').value;
+            const endAirportId = document.getElementById('bookingEndAirport').value;
+            const flightHours = parseFloat(document.getElementById('bookingFlightHours').value) || 0;
+            const purpose = document.getElementById('bookingPurpose').value;
+            
+            if(!aircraftId || !customerId || !pilot || !start || !end) {
+                alert('Bitte alle Pflichtfelder ausfüllen!');
+                return;
+            }
+            
+            const aircraft = aircrafts.find(a => a.id === aircraftId);
+            const customer = customers.find(c => c.id === customerId);
+            const startAirport = airports.find(a => a.id === startAirportId);
+            const endAirport = airports.find(a => a.id === endAirportId);
+            
+            // Verfügbarkeit prüfen
+            const overlappingBooking = bookings.some(b => 
+                b.aircraftId === aircraftId && 
+                b.status === 'active' &&
+                ((new Date(start) >= new Date(b.startDate) && new Date(start) <= new Date(b.endDate)) ||
+                ((new Date(end) >= new Date(b.startDate) && new Date(end) <= new Date(b.endDate)))
+            );
+            
+            if(overlappingBooking) {
+                alert('Das Flugzeug ist in diesem Zeitraum bereits gebucht!');
+                return;
+            }
+            
+            const overlappingReservation = reservations.some(r => 
+                r.aircraftId === aircraftId && 
+                r.status === 'active' &&
+                ((new Date(start) >= new Date(r.start) && new Date(start) <= new Date(r.end)) ||
+                ((new Date(end) >= new Date(r.start) && new Date(end) <= new Date(r.end)))
+            );
+            
+            if(overlappingReservation) {
+                alert('Das Flugzeug ist in diesem Zeitraum bereits reserviert!');
+                return;
+            }
+            
+            const newBooking = {
+                id: Date.now().toString(),
+                aircraftId,
+                aircraftRegistration: aircraft.registration,
+                customerId,
+                customerName: customer.name,
+                pilot,
+                startDate: start,
+                endDate: end,
+                startAirportId,
+                startAirport: startAirport ? startAirport.name : '',
+                endAirportId,
+                endAirport: endAirport ? endAirport.name : '',
+                flightHours,
+                purpose: purpose || '',
+                status: 'active'
+            };
+            
+            bookings.push(newBooking);
+            
+            // Flugzeugstatus aktualisieren
+            aircraft.status = 'in-use';
+            
+            saveData();
+            loadBookings();
+            updateAircraftTable();
+            updateDashboard();
+            
+            // Formular zurücksetzen
+            document.getElementById('bookingStart').value = '';
+            document.getElementById('bookingEnd').value = '';
+            document.getElementById('bookingFlightHours').value = '';
+            document.getElementById('bookingPurpose').value = '';
+        }
+        
+        function loadBookings() {
+            const month = document.getElementById('bookingMonth').value;
+            if(!month) return;
+            
+            const [year, monthNum] = month.split('-');
+            const startDate = new Date(year, monthNum - 1, 1);
+            const endDate = new Date(year, monthNum, 0);
+            
+            const filteredBookings = bookings.filter(booking => {
+                const bookingStart = new Date(booking.startDate);
+                const bookingEnd = new Date(booking.endDate);
+                return (bookingStart >= startDate && bookingStart <= endDate) || 
+                       (bookingEnd >= startDate && bookingEnd <= endDate);
+            });
+            
+            const table = document.getElementById('bookingTable').getElementsByTagName('tbody')[0];
+            table.innerHTML = '';
+            
+            filteredBookings.forEach(booking => {
+                const row = table.insertRow();
+                row.innerHTML = `
+                    <td>${booking.aircraftRegistration}</td>
+                    <td>${booking.customerName}</td>
+                    <td>${booking.pilot}</td>
+                    <td>${new Date(booking.startDate).toLocaleString()}</td>
+                    <td>${new Date(booking.endDate).toLocaleString()}</td>
+                    <td>${booking.flightHours}</td>
+                    <td>${booking.status}</td>
+                    <td>
+                        ${booking.status === 'active' ? `
+                            <button onclick="completeBooking('${booking.id}')">Abschließen</button>
+                            <button class="danger" onclick="cancelBooking('${booking.id}')">Stornieren</button>
+                        ` : ''}
+                    </td>
+                `;
+            });
+        }
+        
+        function completeBooking(id) {
+            const booking = bookings.find(b => b.id === id);
+            if(!booking) return;
+            
+            // Hier könnte man ein Formular öffnen, um tatsächliche Flugdaten zu erfassen
+            const actualHours = parseFloat(prompt("Tatsächliche Flugstunden:", booking.flightHours));
+            
+            booking.status = 'completed';
+            booking.actualFlightHours = actualHours || booking.flightHours;
+            
+            // Flugzeugstatus aktualisieren
+            const aircraft = aircrafts.find(a => a.id === booking.aircraftId);
+            if(aircraft) {
+                // Prüfen, ob es noch andere aktive Buchungen gibt
+                const otherActiveBookings = bookings.filter(b => 
+                    b.aircraftId === booking.aircraftId && 
+                    b.id !== id && 
+                    b.status === 'active'
+                );
+                
+                if(otherActiveBookings.length === 0) {
+                    aircraft.status = 'available';
+                }
+            }
+            
+            saveData();
+            loadBookings();
+            updateAircraftTable();
+            updateDashboard();
+        }
+        
+        function cancelBooking(id) {
+            if(confirm('Buchung wirklich stornieren?')) {
+                const booking = bookings.find(b => b.id === id);
+                if(booking) {
+                    booking.status = 'cancelled';
+                    
+                    // Flugzeugstatus aktualisieren
+                    const aircraft = aircrafts.find(a => a.id === booking.aircraftId);
+                    if(aircraft) {
+                        // Prüfen, ob es noch andere aktive Buchungen gibt
+                        const otherActiveBookings = bookings.filter(b => 
+                            b.aircraftId === booking.aircraftId && 
+                            b.id !== id && 
+                            b.status === 'active'
+                        );
+                        
+                        if(otherActiveBookings.length === 0) {
+                            aircraft.status = 'available';
+                        }
+                    }
+                    
+                    saveData();
+                    loadBookings();
+                    updateAircraftTable();
+                    updateDashboard();
+                }
+            }
+        }
+        
+        // Wartungsfunktionen
+        function addMaintenance() {
+            const aircraftId = document.getElementById('maintenanceAircraft').value;
+            const type = document.getElementById('maintenanceType').value;
+            const start = document.getElementById('maintenanceStart').value;
+            const end = document.getElementById('maintenanceEnd').value;
+            const hangarAirportId = document.getElementById('maintenanceHangar').value;
+            const description = document.getElementById('maintenanceDescription').value;
+            const interval = parseInt(document.getElementById('maintenanceInterval').value) || 0;
+            
+            if(!aircraftId || !start || !end) {
+                alert('Bitte alle Pflichtfelder ausfüllen!');
+                return;
+            }
+            
+            const aircraft = aircrafts.find(a => a.id === aircraftId);
+            const hangarAirport = airports.find(a => a.id === hangarAirportId);
+            
+            // Flugzeugstatus prüfen
+            if(aircraft.status === 'in-use') {
+                alert('Flugzeug ist aktuell im Einsatz und kann nicht zur Wartung eingebucht werden!');
+                return;
+            }
+            
+            const newMaintenance = {
+                id: Date.now().toString(),
+                aircraftId,
+                aircraftRegistration: aircraft.registration,
+                type,
+                start,
+                end,
+                hangarAirportId,
+                hangarAirport: hangarAirport ? hangarAirport.name : '',
+                hangar: hangarAirport ? (hangarAirport.hangars && hangarAirport.hangars.length > 0 ? hangarAirport.hangars[0] : '') : '',
+                description: description || '',
+                interval,
+                status: 'scheduled'
+            };
+            
+            maintenance.push(newMaintenance);
+            
+            // Flugzeugstatus aktualisieren
+            aircraft.status = 'maintenance';
+            aircraft.lastMaintenance = new Date().toISOString();
+            
+            saveData();
+            loadMaintenance();
+            updateAircraftTable();
+            updateDashboard();
+            
+            // Formular zurücksetzen
+            document.getElementById('maintenanceStart').value = '';
+            document.getElementById('maintenanceEnd').value = '';
+            document.getElementById('maintenanceDescription').value = '';
+            document.getElementById('maintenanceInterval').value = '';
+        }
+        
+        function loadMaintenance() {
+            const table = document.getElementById('maintenanceTable').getElementsByTagName('tbody')[0];
+            table.innerHTML = '';
+            
+            // Aktuelle und zukünftige Wartungen anzeigen
+            const now = new Date();
+            const upcomingMaintenance = maintenance.filter(m => new Date(m.end) >= now);
+            
+            upcomingMaintenance.forEach(maint => {
+                const row = table.insertRow();
+                
+                // Status-Indikator
+                let statusClass = '';
+                let statusText = '';
+                switch(maint.status) {
+                    case 'scheduled':
+                        statusClass = 'status-pending';
+                        statusText = 'Geplant';
+                        break;
+                    case 'in-progress':
+                        statusClass = 'status-in-use';
+                        statusText = 'In Arbeit';
+                        break;
+                    case 'overdue':
+                        statusClass = 'status-maintenance';
+                        statusText = 'Überfällig';
+                        break;
+                    case 'completed':
+                        statusClass = 'status-available';
+                        statusText = 'Abgeschlossen';
+                        break;
+                    default:
+                        statusClass = '';
+                        statusText = maint.status;
+                }
+                
+                row.innerHTML = `
+                    <td>${maint.aircraftRegistration}</td>
+                    <td>${maint.type}</td>
+                    <td>${new Date(maint.start).toLocaleString()}</td>
+                    <td>${new Date(maint.end).toLocaleString()}</td>
+                    <td>${maint.hangarAirport} (${maint.hangar})</td>
+                    <td><span class="status-indicator ${statusClass}"></span> ${statusText}</td>
+                    <td>
+                        ${maint.status === 'scheduled' || maint.status === 'overdue' ? `
+                            <button onclick="startMaintenance('${maint.id}')">Starten</button>
+                            <button class="danger" onclick="cancelMaintenance('${maint.id}')">Abbrechen</button>
+                        ` : ''}
+                        ${maint.status === 'in-progress' ? `
+                            <button onclick="completeMaintenance('${maint.id}')">Abschließen</button>
+                        ` : ''}
+                    </td>
+                `;
+            });
+        }
+        
+        function startMaintenance(id) {
+            const maint = maintenance.find(m => m.id === id);
+            if(maint) {
+                maint.status = 'in-progress';
+                saveData();
+                loadMaintenance();
+                updateDashboard();
+            }
+        }
+        
+        function completeMaintenance(id) {
+            const maint = maintenance.find(m => m.id === id);
+            if(!maint) return;
+            
+            const notes = prompt("Wartungsnotizen:", "");
+            
+            maint.status = 'completed';
+            maint.notes = notes || '';
+            maint.completedDate = new Date().toISOString();
+            
+            // Flugzeugstatus aktualisieren
+            const aircraft = aircrafts.find(a => a.id === maint.aircraftId);
+            if(aircraft) {
+                aircraft.status = 'available';
+                aircraft.lastMaintenance = maint.completedDate;
+            }
+            
+            saveData();
+            loadMaintenance();
+            updateAircraftTable();
+            updateDashboard();
+        }
+        
+        function cancelMaintenance(id) {
+            if(confirm('Wartung wirklich abbrechen?')) {
+                const maint = maintenance.find(m => m.id === id);
+                if(maint) {
+                    maint.status = 'cancelled';
+                    
+                    // Flugzeugstatus aktualisieren
+                    const aircraft = aircrafts.find(a => a.id === maint.aircraftId);
+                    if(aircraft) {
+                        aircraft.status = 'available';
+                    }
+                    
+                    saveData();
+                    loadMaintenance();
+                    updateAircraftTable();
+                    updateDashboard();
+                }
+            }
+        }
+        
+        function loadMaintenanceHistory() {
+            const aircraftId = document.getElementById('maintenanceHistoryAircraft').value;
+            if(!aircraftId) {
+                document.getElementById('maintenanceHistoryTable').getElementsByTagName('tbody')[0].innerHTML = '';
+                return;
+            }
+            
+            const aircraftMaintenance = maintenance.filter(m => 
+                m.aircraftId === aircraftId && 
+                m.status === 'completed'
+            ).sort((a,b) => new Date(b.completedDate) - new Date(a.completedDate));
+            
+            const table = document.getElementById('maintenanceHistoryTable').getElementsByTagName('tbody')[0];
+            table.innerHTML = '';
+            
+            aircraftMaintenance.forEach(maint => {
+                const row = table.insertRow();
+                row.innerHTML = `
+                    <td>${new Date(maint.completedDate).toLocaleDateString()}</td>
+                    <td>${maint.type}</td>
+                    <td>${maint.description || '-'}</td>
+                    <td>${maint.hangarAirport} (${maint.hangar})</td>
+                    <td>${maint.interval || '-'}</td>
+                `;
+            });
+        }
+        
+        // Bordbuchfunktionen
+        function updateLogbookDropdowns() {
+            const dropdowns = ['logbookAircraft', 'logbookAircraftSelect'];
+            
+            dropdowns.forEach(dropdownId => {
+                const dropdown = document.getElementById(dropdownId);
+                if(dropdown) {
+                    const selectedValue = dropdown.value;
+                    
+                    while(dropdown.options.length > 1) {
+                        dropdown.remove(1);
+                    }
+                    
+                    aircrafts.forEach(aircraft => {
+                        const option = document.createElement('option');
+                        option.value = aircraft.id;
+                        option.textContent = `${aircraft.registration} (${aircraft.type})`;
+                        dropdown.appendChild(option);
+                    });
+                    
+                    if(aircrafts.some(a => a.id === selectedValue)) {
+                        dropdown.value = selectedValue;
+                    }
+                }
+            });
+            
+            // Buchungs-Dropdown aktualisieren
+            const bookingDropdown = document.getElementById('logbookBooking');
+            if(bookingDropdown) {
+                const selectedValue = bookingDropdown.value;
+                
+                while(bookingDropdown.options.length > 1) {
+                    bookingDropdown.remove(1);
+                }
+                
+                bookings.forEach(booking => {
+                    const option = document.createElement('option');
+                    option.value = booking.id;
+                    option.textContent = `${booking.aircraftRegistration} - ${new Date(booking.startDate).toLocaleDateString()}`;
+                    bookingDropdown.appendChild(option);
+                });
+                
+                if(bookings.some(b => b.id === selectedValue)) {
+                    bookingDropdown.value = selectedValue;
+                }
+            }
+        }
+        
+        function addLogbookEntry() {
+            const aircraftId = document.getElementById('logbookAircraft').value;
+            const bookingId = document.getElementById('logbookBooking').value;
+            const date = document.getElementById('logbookDate').value;
+            const departureTime = document.getElementById('logbookDepartureTime').value;
+            const arrivalTime = document.getElementById('logbookArrivalTime').value;
+            const flightHours = parseFloat(document.getElementById('logbookFlightHours').value) || 0;
+            const departureAirportId = document.getElementById('logbookDepartureAirport').value;
+            const arrivalAirportId = document.getElementById('logbookArrivalAirport').value;
+            const pilot = document.getElementById('logbookPilot').value;
+            const passengers = parseInt(document.getElementById('logbookPassengers').value) || 0;
+            const remarks = document.getElementById('logbookRemarks').value;
+            
+            if(!aircraftId || !date || !departureTime || !arrivalTime || !pilot) {
+                alert('Bitte alle Pflichtfelder ausfüllen!');
+                return;
+            }
+            
+            const aircraft = aircrafts.find(a => a.id === aircraftId);
+            const booking = bookings.find(b => b.id === bookingId);
+            const departureAirport = airports.find(a => a.id === departureAirportId);
+            const arrivalAirport = airports.find(a => a.id === arrivalAirportId);
+            
+            const newEntry = {
+                id: Date.now().toString(),
+                aircraftId,
+                aircraftRegistration: aircraft.registration,
+                bookingId,
+                date,
+                departureTime,
+                arrivalTime,
+                flightHours,
+                departureAirportId,
+                departureAirport: departureAirport ? departureAirport.name : '',
+                arrivalAirportId,
+                arrivalAirport: arrivalAirport ? arrivalAirport.name : '',
+                pilot,
+                passengers,
+                remarks: remarks || ''
+            };
+            
+            logbookEntries.push(newEntry);
+            
+            // Flugstunden im Flugzeug aktualisieren
+            aircraft.totalFlightHours = (aircraft.totalFlightHours || 0) + flightHours;
+            
+            // Falls mit Buchung verknüpft, Flugstunden aktualisieren
+            if(booking) {
+                booking.actualFlightHours = (booking.actualFlightHours || 0) + flightHours;
+            }
+            
+            saveData();
+            loadLogbookEntries();
+            updateDashboard();
+            
+            // Formular zurücksetzen (außer Datum)
+            document.getElementById('logbookDepartureTime').value = '';
+            document.getElementById('logbookArrivalTime').value = '';
+            document.getElementById('logbookFlightHours').value = '';
+            document.getElementById('logbookPilot').value = '';
+            document.getElementById('logbookPassengers').value = '';
+            document.getElementById('logbookRemarks').value = '';
+        }
+        
+        function loadLogbookEntries() {
+            const aircraftId = document.getElementById('logbookAircraftSelect').value;
+            if(!aircraftId) {
+                document.getElementById('logbookTable').getElementsByTagName('tbody')[0].innerHTML = '';
+                return;
+            }
+            
+            const aircraftEntries = logbookEntries.filter(entry => entry.aircraftId === aircraftId)
+                .sort((a,b) => new Date(b.date) - new Date(a.date));
+            
+            const table = document.getElementById('logbookTable').getElementsByTagName('tbody')[0];
+            table.innerHTML = '';
+            
+            aircraftEntries.forEach(entry => {
+                const row = table.insertRow();
+                row.innerHTML = `
+                    <td>${entry.date}</td>
+                    <td>${entry.aircraftRegistration}</td>
+                    <td>${entry.departureAirport || '-'}</td>
+                    <td>${entry.arrivalAirport || '-'}</td>
+                    <td>${entry.pilot}</td>
+                    <td>${entry.flightHours}</td>
+                    <td>
+                        <button onclick="showLogbookEntryDetails('${entry.id}')">Details</button>
+                        <button class="danger" onclick="deleteLogbookEntry('${entry.id}')">Löschen</button>
+                    </td>
+                `;
+            });
+        }
+        
+        function showLogbookEntryDetails(id) {
+            const entry = logbookEntries.find(e => e.id === id);
+            if(!entry) return;
+            
+            let html = `
+                <h3>Bordbucheintrag vom ${entry.date}</h3>
+                <p><strong>Flugzeug:</strong> ${entry.aircraftRegistration}</p>
+                <p><strong>Start:</strong> ${entry.departureAirport} um ${entry.departureTime}</p>
+                <p><strong>Ziel:</strong> ${entry.arrivalAirport} um ${entry.arrivalTime}</p>
+                <p><strong>Flugzeit:</strong> ${entry.flightHours} Stunden</p>
+                <p><strong>Pilot:</strong> ${entry.pilot}</p>
+                <p><strong>Passagiere:</strong> ${entry.passengers}</p>
+                <h4>Bemerkungen:</h4>
+                <p>${entry.remarks || 'Keine Bemerkungen'}</p>
+            `;
+            
+            alert(html);
+        }
+        
+        function deleteLogbookEntry(id) {
+            if(confirm('Bordbucheintrag wirklich löschen?')) {
+                const entry = logbookEntries.find(e => e.id === id);
+                if(entry) {
+                    // Flugstunden im Flugzeug aktualisieren
+                    const aircraft = aircrafts.find(a => a.id === entry.aircraftId);
+                    if(aircraft) {
+                        aircraft.totalFlightHours = Math.max(0, (aircraft.totalFlightHours || 0) - entry.flightHours);
+                    }
+                    
+                    // Falls mit Buchung verknüpft, Flugstunden aktualisieren
+                    if(entry.bookingId) {
+                        const booking = bookings.find(b => b.id === entry.bookingId);
+                        if(booking) {
+                            booking.actualFlightHours = Math.max(0, (booking.actualFlightHours || 0) - entry.flightHours);
+                        }
+                    }
+                }
+                
+                logbookEntries = logbookEntries.filter(e => e.id !== id);
+                saveData();
+                loadLogbookEntries();
+                updateDashboard();
+            }
+        }
+    </script>
+</body>
+</html>

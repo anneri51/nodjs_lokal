@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parteien Bildergalerie - BILD4 Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: #2c3e50;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .api-info {
+            background: #34495e;
+            padding: 15px 25px;
+            border-radius: 10px;
+            display: inline-block;
+            margin-top: 15px;
+            font-family: monospace;
+            font-size: 1.1em;
+        }
+
+        .controls {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex: 2;
+            min-width: 300px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 12px 20px;
+            border: 2px solid #e1e8ed;
+            border-radius: 30px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+        }
+
+        .search-box button {
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .search-box button:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+
+        .sort-controls {
+            flex: 1;
+            min-width: 250px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background: white;
+            padding: 5px 15px;
+            border-radius: 30px;
+            border: 2px solid #e1e8ed;
+        }
+
+        .sort-controls label {
+            color: #495057;
+            font-weight: 500;
+            font-size: 0.9em;
+        }
+
+        .sort-controls select {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            background: transparent;
+            font-size: 0.95em;
+            color: #2c3e50;
+            font-weight: 500;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .sort-order {
+            background: none;
+            border: none;
+            font-size: 1.2em;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 20px;
+            color: #667eea;
+            transition: all 0.3s;
+        }
+
+        .sort-order:hover {
+            background: #f0f3f8;
+        }
+
+        .stats {
+            background: #e9ecef;
+            padding: 12px 25px;
+            border-radius: 30px;
+            font-weight: 500;
+            color: #495057;
+            font-size: 1em;
+            white-space: nowrap;
+        }
+
+        .gallery {
+            padding: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 25px;
+            background: #f1f3f5;
+        }
+
+        .party-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .party-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+        }
+
+        .image-container {
+            height: 220px;
+            background: linear-gradient(45deg, #f8f9fa 0%, #e9ecef 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+            border-bottom: 2px solid #dee2e6;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .party-image {
+            max-width: 100%;
+            max-height: 200px;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            border-radius: 8px;
+            transition: transform 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .party-image:hover {
+            transform: scale(1.08);
+        }
+
+        .no-image {
+            color: #6c757d;
+            font-style: italic;
+            text-align: center;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            width: 100%;
+            font-size: 1.1em;
+        }
+
+        .party-info {
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .party-name {
+            font-size: 1.6em;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .party-fullname {
+            color: #6c757d;
+            font-size: 0.95em;
+            margin-bottom: 12px;
+            line-height: 1.4;
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 10px;
+        }
+
+        .party-details {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 10px 0;
+        }
+
+        .party-badge {
+            background: #e9ecef;
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            color: #495057;
+            font-weight: 500;
+        }
+
+        .party-badge.id {
+            background: #cfe2ff;
+            color: #084298;
+        }
+
+        .bild4-info {
+            background: #d4edda;
+            color: #155724;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 500;
+            margin-top: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid #c3e6cb;
+        }
+
+        .bild4-info.error {
+            background: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            background: #f1f3f5;
+            font-size: 1.2em;
+            color: #6c757d;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 30px;
+            margin: 20px;
+            border-radius: 10px;
+            border-left: 5px solid #c82333;
+            text-align: center;
+        }
+
+        .error-message button {
+            margin-top: 20px;
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+        }
+
+        .footer {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 0.95em;
+        }
+
+        .footer a {
+            color: #90cdf4;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .image-stats {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.75em;
+            backdrop-filter: blur(2px);
+        }
+
+        .active-sort {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .gallery {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-box {
+                width: 100%;
+            }
+            
+            .sort-controls {
+                width: 100%;
+            }
+            
+            .stats {
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🗳️ Parteien Bildergalerie</h1>
+            <p>BILD4 Base64 Bild Konvertierung</p>
+            <div class="api-info">
+                📡 API: http://localhost:5000/wahl/parteien
+            </div>
+        </header>
+
+        <div class="controls">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Suche nach Partei, Kürzel oder ID...">
+                <button id="searchBtn">🔍 Suchen</button>
+            </div>
+            
+            <div class="sort-controls">
+                <label>Sortieren nach:</label>
+                <select id="sortSelect">
+                    <option value="pk">PK_WAHL_PARTEI (ID)</option>
+                    <option value="kurz">PARTEI_KURZ</option>
+                    <option value="lang">PARTEI_LANG</option>
+                </select>
+                <button id="sortOrderBtn" class="sort-order" title="Sortierreihenfolge umkehren">⬆️</button>
+            </div>
+            
+            <div class="stats" id="statsDisplay">
+                <span id="partyCount">0</span> Parteien · 
+                <span id="imageCount">0</span> Bilder
+            </div>
+        </div>
+
+        <div id="galleryContainer">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <p>Lade Parteien und konvertiere BILD4 Base64...</p>
+                <small>Verbindung zu localhost:5000 wird hergestellt...</small>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>🔧 BILD4 Base64 Strings werden automatisch zu Bildern konvertiert · Sortierbar nach PK_WAHL_PARTEI, PARTEI_KURZ, PARTEI_LANG · <a href="#" onclick="window.location.reload()">Neu laden</a></p>
+        </div>
+    </div>
+
+    <script>
+        class PartyGallery {
+            constructor() {
+                this.apiUrl = 'http://localhost:5000/wahl/parteien';
+                this.parties = [];
+                this.filteredParties = [];
+                this.sortField = 'pk'; // Standard: PK_WAHL_PARTEI
+                this.sortAscending = true;
+                this.init();
+            }
+
+            async init() {
+                try {
+                    await this.fetchParties();
+                    this.setupEventListeners();
+                } catch (error) {
+                    this.showError(error);
+                }
+            }
+
+            async fetchParties() {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+                    const response = await fetch(this.apiUrl, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                        },
+                        signal: controller.signal,
+                        mode: 'cors'
+                    });
+
+                    clearTimeout(timeoutId);
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+                    
+                    if (!Array.isArray(data)) {
+                        throw new Error('API Antwort ist kein Array');
+                    }
+
+                    this.parties = data;
+                    this.filteredParties = [...this.parties];
+                    this.sortParties();
+                    this.renderGallery();
+                } catch (error) {
+                    if (error.name === 'AbortError') {
+                        throw new Error('Zeitüberschreitung: Server antwortet nicht');
+                    }
+                    throw error;
+                }
+            }
+
+            // Sortierfunktion
+            sortParties() {
+                this.filteredParties.sort((a, b) => {
+                    let valA, valB;
+
+                    // Werte basierend auf Sortierfeld extrahieren
+                    switch (this.sortField) {
+                        case 'pk':
+                            valA = a.PK_WAHL_PARTEI || a.pk_wahl_partei || a.id || '';
+                            valB = b.PK_WAHL_PARTEI || b.pk_wahl_partei || b.id || '';
+                            break;
+                        case 'kurz':
+                            valA = a.PARTEI_KURZ || a.partei_kurz || a.name || '';
+                            valB = b.PARTEI_KURZ || b.partei_kurz || b.name || '';
+                            break;
+                        case 'lang':
+                            valA = a.PARTEI_LANG || a.partei_lang || a.fullName || a.description || '';
+                            valB = b.PARTEI_LANG || b.partei_lang || b.fullName || b.description || '';
+                            break;
+                        default:
+                            return 0;
+                    }
+
+                    // String-Vergleich (Case-insensitive)
+                    valA = String(valA).toLowerCase();
+                    valB = String(valB).toLowerCase();
+
+                    if (valA < valB) {
+                        return this.sortAscending ? -1 : 1;
+                    }
+                    if (valA > valB) {
+                        return this.sortAscending ? 1 : -1;
+                    }
+                    return 0;
+                });
+
+                // Sortier-Indikator im Button aktualisieren
+                this.updateSortOrderButton();
+            }
+
+            updateSortOrderButton() {
+                const orderBtn = document.getElementById('sortOrderBtn');
+                if (orderBtn) {
+                    orderBtn.textContent = this.sortAscending ? '⬆️' : '⬇️';
+                    orderBtn.title = this.sortAscending ? 'Aufsteigend sortiert - Zum Umkehren klicken' : 'Absteigend sortiert - Zum Umkehren klicken';
+                }
+            }
+
+            // Hauptfunktion: BILD4 Base64 String zu Bild konvertieren
+            getImageFromBild4(bild4Data) {
+                try {
+                    if (!bild4Data) {
+                        return null;
+                    }
+
+                    let base64String = null;
+
+                    if (typeof bild4Data === 'string') {
+                        base64String = bild4Data;
+                    }
+                    else if (bild4Data.BILD4 && typeof bild4Data.BILD4 === 'string') {
+                        base64String = bild4Data.BILD4;
+                    }
+                    else if (bild4Data.data && typeof bild4Data.data === 'string') {
+                        base64String = bild4Data.data;
+                    }
+                    else if (bild4Data.type === 'Buffer' && Array.isArray(bild4Data.data)) {
+                        console.warn('BILD3 Buffer gefunden, erwarte BILD4 Base64');
+                        return this.handleBufferFallback(bild4Data);
+                    }
+
+                    if (!base64String) {
+                        return null;
+                    }
+
+                    base64String = base64String.trim();
+                    
+                    if (base64String.includes('base64,')) {
+                        return base64String;
+                    }
+                    
+                    return `data:image/png;base64,${base64String}`;
+                    
+                } catch (error) {
+                    console.error('BILD4 Konvertierung fehlgeschlagen:', error);
+                    return null;
+                }
+            }
+
+            // Fallback für BILD3 Buffer
+            handleBufferFallback(bufferData) {
+                try {
+                    let byteArray = null;
+                    
+                    if (Array.isArray(bufferData.data)) {
+                        byteArray = bufferData.data;
+                    } else if (bufferData.data && bufferData.data.data && Array.isArray(bufferData.data.data)) {
+                        byteArray = bufferData.data.data;
+                    }
+
+                    if (!byteArray || !byteArray.length) {
+                        return null;
+                    }
+
+                    const uint8Array = new Uint8Array(byteArray);
+                    let binary = '';
+                    for (let i = 0; i < uint8Array.length; i++) {
+                        binary += String.fromCharCode(uint8Array[i]);
+                    }
+                    
+                    const base64String = btoa(binary);
+                    return `data:image/png;base64,${base64String}`;
+                } catch (error) {
+                    console.error('Buffer-Fallback fehlgeschlagen:', error);
+                    return null;
+                }
+            }
+
+            getBild4Info(bild4Data) {
+                try {
+                    if (!bild4Data) return null;
+                    
+                    let base64String = null;
+                    
+                    if (typeof bild4Data === 'string') {
+                        base64String = bild4Data;
+                    } else if (bild4Data.BILD4 && typeof bild4Data.BILD4 === 'string') {
+                        base64String = bild4Data.BILD4;
+                    } else if (bild4Data.data && typeof bild4Data.data === 'string') {
+                        base64String = bild4Data.data;
+                    }
+                    
+                    if (base64String) {
+                        const approxBytes = Math.floor(base64String.length * 0.75);
+                        const sizeKB = (approxBytes / 1024).toFixed(2);
+                        return {
+                            sizeKB: sizeKB,
+                            length: base64String.length,
+                            preview: base64String.substring(0, 20) + '...'
+                        };
+                    }
+                    return null;
+                } catch (error) {
+                    return null;
+                }
+            }
+
+            renderGallery() {
+                const container = document.getElementById('galleryContainer');
+                const statsParty = document.getElementById('partyCount');
+                const statsImages = document.getElementById('imageCount');
+
+                if (!this.filteredParties.length) {
+                    container.innerHTML = `
+                        <div class="error-message">
+                            <strong>🔍 Keine Ergebnisse</strong>
+                            <p>Es wurden keine Parteien gefunden, die Ihren Suchkriterien entsprechen.</p>
+                        </div>
+                    `;
+                    statsParty.textContent = '0';
+                    statsImages.textContent = '0';
+                    return;
+                }
+
+                let imageCount = 0;
+                let galleryHTML = '<div class="gallery">';
+
+                this.filteredParties.forEach(party => {
+                    // Parteidaten
+                    const kurz = party.PARTEI_KURZ || party.partei_kurz || party.name || 'N/A';
+                    const lang = party.PARTEI_LANG || party.partei_lang || party.fullName || party.description || kurz;
+                    const pk = party.PK_WAHL_PARTEI || party.pk_wahl_partei || party.id || 'Keine ID';
+                    
+                    // BILD4 Base64 finden
+                    const bild4Data = party.BILD4 || party.bild4 || party.imageBase64 || party.image || party.img;
+                    
+                    // Bild konvertieren
+                    let imageSrc = null;
+                    let bild4Info = null;
+                    
+                    if (bild4Data) {
+                        imageSrc = this.getImageFromBild4(bild4Data);
+                        bild4Info = this.getBild4Info(bild4Data);
+                        if (imageSrc) imageCount++;
+                    }
+
+                    galleryHTML += `
+                        <div class="party-card">
+                            <div class="image-container">
+                                ${imageSrc ? 
+                                    `<img class="party-image" src="${imageSrc}" 
+                                          alt="${this.escapeHtml(kurz)}" 
+                                          loading="lazy"
+                                          onerror="this.onerror=null; this.style.display='none'; this.parentElement.innerHTML+='<div class=\'no-image\'>❌ Bildfehler</div>';">` : 
+                                    `<div class="no-image">📷 Kein Bild</div>`
+                                }
+                                ${bild4Info ? `<span class="image-stats">${bild4Info.sizeKB} KB</span>` : ''}
+                            </div>
+                            <div class="party-info">
+                                <div class="party-name">${this.escapeHtml(kurz)}</div>
+                                <div class="party-fullname">${this.escapeHtml(lang)}</div>
+                                
+                                <div class="party-details">
+                                    <span class="party-badge id">🔑 ${this.escapeHtml(pk)}</span>
+                                </div>
+
+                                ${bild4Info ? `
+                                    <div class="bild4-info">
+                                        <span>🖼️ BILD4</span>
+                                        <span>•</span>
+                                        <span>${bild4Info.sizeKB} KB</span>
+                                        <span>•</span>
+                                        <span>${bild4Info.length} Zeichen</span>
+                                    </div>
+                                ` : ''}
+                                
+                                ${bild4Data && !imageSrc ? `
+                                    <div class="bild4-info error">
+                                        ⚠️ BILD4 Base64 (${bild4Info?.sizeKB || '?'} KB) nicht konvertierbar
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                galleryHTML += '</div>';
+                container.innerHTML = galleryHTML;
+
+                // Statistiken aktualisieren
+                statsParty.textContent = this.filteredParties.length;
+                statsImages.textContent = imageCount;
+            }
+
+            filterParties(searchTerm) {
+                if (!searchTerm) {
+                    this.filteredParties = [...this.parties];
+                } else {
+                    const term = searchTerm.toLowerCase();
+                    this.filteredParties = this.parties.filter(party => {
+                        const kurz = (party.PARTEI_KURZ || party.partei_kurz || '').toLowerCase();
+                        const lang = (party.PARTEI_LANG || party.partei_lang || '').toLowerCase();
+                        const pk = (party.PK_WAHL_PARTEI || party.pk_wahl_partei || '').toLowerCase();
+                        
+                        return kurz.includes(term) || lang.includes(term) || pk.includes(term);
+                    });
+                }
+                this.sortParties();
+                this.renderGallery();
+            }
+
+            handleSortChange() {
+                const sortSelect = document.getElementById('sortSelect');
+                this.sortField = sortSelect.value;
+                this.sortParties();
+                this.renderGallery();
+            }
+
+            toggleSortOrder() {
+                this.sortAscending = !this.sortAscending;
+                this.sortParties();
+                this.renderGallery();
+            }
+
+            setupEventListeners() {
+                const searchInput = document.getElementById('searchInput');
+                const searchBtn = document.getElementById('searchBtn');
+                const sortSelect = document.getElementById('sortSelect');
+                const sortOrderBtn = document.getElementById('sortOrderBtn');
+
+                const performSearch = () => {
+                    this.filterParties(searchInput.value.trim());
+                };
+
+                searchBtn.addEventListener('click', performSearch);
+                searchInput.addEventListener('keyup', (e) => {
+                    if (e.key === 'Enter') performSearch();
+                });
+
+                sortSelect.addEventListener('change', () => this.handleSortChange());
+                sortOrderBtn.addEventListener('click', () => this.toggleSortOrder());
+            }
+
+            showError(error) {
+                const container = document.getElementById('galleryContainer');
+                container.innerHTML = `
+                    <div class="error-message">
+                        <strong>❌ Fehler beim Laden</strong>
+                        <p>${this.escapeHtml(error.message)}</p>
+                        <p style="margin-top: 15px;">
+                            🔧 Stellen Sie sicher dass:<br>
+                            1. Der Server unter http://localhost:5000 läuft<br>
+                            2. Der Endpunkt /wahl/parteien existiert<br>
+                            3. CORS auf dem Server aktiviert ist<br>
+                            4. Die API BILD4 Base64 Strings liefert
+                        </p>
+                        <button onclick="window.location.reload()">
+                            🔄 Erneut versuchen
+                        </button>
+                    </div>
+                `;
+                
+                document.getElementById('partyCount').textContent = '0';
+                document.getElementById('imageCount').textContent = '0';
+            }
+
+            escapeHtml(unsafe) {
+                if (!unsafe) return '';
+                return String(unsafe)
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+        }
+
+        // Galerie starten
+        document.addEventListener('DOMContentLoaded', () => {
+            new PartyGallery();
+        });
+    </script>
+</body>
+</html>

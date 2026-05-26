@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kandidaten-Dashboard · Ist vs. Soll (mock)</title>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 24px;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #a5b4fc, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .endpoint-badge {
+            background: #1e293b;
+            color: #94a3b8;
+            font-size: 0.9rem;
+            padding: 6px 16px;
+            border-radius: 40px;
+            font-family: monospace;
+            border: 1px solid #334155;
+        }
+
+        /* Tabs */
+        .tab-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 8px;
+        }
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            padding: 10px 28px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 40px 40px 0 0;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .tab-btn.active {
+            background: #1e293b;
+            color: #f1f5f9;
+            box-shadow: 0 -2px 8px #00000033;
+        }
+        .tab-btn:hover:not(.active) {
+            color: #cbd5e1;
+            background: #1e293b60;
+        }
+
+        /* Statusleiste */
+        .status-bar {
+            background: #1e293b;
+            border-radius: 60px;
+            padding: 16px 28px;
+            margin-bottom: 32px;
+            display: flex;
+            align-items: center;
+            gap: 28px;
+            flex-wrap: wrap;
+            border: 1px solid #334155;
+            box-shadow: 0 10px 25px -8px #00000055;
+        }
+        .load-btn {
+            background: #3b82f6;
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 12px 32px;
+            border-radius: 40px;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: 0.2s;
+            box-shadow: 0 8px 16px -6px #1e3a8a;
+        }
+        .load-btn:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+        }
+        .connection-status {
+            background: #2d3748;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            border: 1px solid #4a5568;
+        }
+        .connection-status.connected { background: #065f46; border-color: #10b981; }
+        .stats {
+            display: flex;
+            gap: 24px;
+            margin-left: auto;
+        }
+        .stat-item {
+            background: #2d3748;
+            padding: 6px 18px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+        }
+
+        /* Filterbereich */
+        .filter-section {
+            background: #1e293b;
+            border-radius: 30px;
+            padding: 20px 28px;
+            margin-bottom: 32px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 28px;
+            border: 1px solid #334155;
+        }
+        .filter-group {
+            min-width: 200px;
+            flex: 1;
+        }
+        .filter-group label {
+            display: block;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #94a3b8;
+            font-weight: 600;
+            margin-bottom: 6px;
+            letter-spacing: 0.5px;
+        }
+        .filter-group select, .filter-group input {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: white;
+            padding: 12px 18px;
+            border-radius: 30px;
+            font-size: 0.95rem;
+        }
+        .reset-btn {
+            background: #475569;
+            border: none;
+            color: white;
+            padding: 12px 28px;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            height: fit-content;
+        }
+        .reset-btn:hover { background: #64748b; }
+
+        /* Tab-Container */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Dashboard Grid - Karten für Parteien (Tab 1) */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 24px;
+            margin-top: 24px;
+        }
+
+        .partei-card {
+            background: #1e293b;
+            border-radius: 28px;
+            overflow: hidden;
+            border: 1px solid #334155;
+            transition: 0.2s;
+            box-shadow: 0 15px 30px -15px #000000aa;
+        }
+        .partei-card:hover {
+            border-color: #4f5b73;
+            transform: translateY(-3px);
+        }
+        .partei-header {
+            background: linear-gradient(145deg, #2d3b4f, #1f2a3a);
+            padding: 16px 20px;
+            border-bottom: 2px solid #3b4b64;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .partei-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #cbd5e1;
+        }
+        .partei-id {
+            background: #2563eb;
+            color: white;
+            padding: 4px 16px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .partei-body { padding: 16px; }
+        .kandidaten-liste {
+            max-height: 280px;
+            overflow-y: auto;
+        }
+        .kandidat-item {
+            background: #0f172a;
+            border-radius: 20px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border-left: 4px solid #3b82f6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .kandidat-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .kandidat-name { font-weight: 600; color: #f1f5f9; }
+        .kandidat-details {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .kandidat-detail-item { display: flex; align-items: center; gap: 4px; }
+        .kandidat-badge {
+            background: #2d3748;
+            padding: 2px 10px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            color: #cbd5e1;
+        }
+
+        /* Grafiken Tab */
+        .graph-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 28px;
+            margin-top: 24px;
+        }
+        .graph-card {
+            background: #1e293b;
+            border-radius: 28px;
+            padding: 24px 20px 20px 20px;
+            border: 1px solid #334155;
+            box-shadow: 0 15px 30px -15px #000000aa;
+        }
+        .graph-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 18px;
+            color: #a5b4fc;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px dashed #334155;
+            padding-bottom: 12px;
+        }
+        .chart-container {
+            position: relative;
+            height: 280px;
+            margin-top: 10px;
+        }
+        .graph-note {
+            color: #94a3b8;
+            font-size: 0.8rem;
+            margin-top: 20px;
+            text-align: center;
+            background: #0f172a80;
+            padding: 8px 16px;
+            border-radius: 40px;
+        }
+        .mini-stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 16px 0 8px;
+        }
+        .legend-inline {
+            display: flex;
+            justify-content: center;
+            gap: 28px;
+            margin: 8px 0;
+            font-size: 0.9rem;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .color-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+        }
+
+        /* Spinner */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid #ffffff33;
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                🗳️ Kandidaten-Dashboard · Ist vs. Soll
+                <span class="endpoint-badge">GET /wahl_kand/1/ + mock Sollwerte</span>
+            </h1>
+            <div class="connection-status" id="connectionStatus">🔌 Verbindung prüfen…</div>
+        </div>
+
+        <!-- Statusleiste -->
+        <div class="status-bar">
+            <button class="load-btn" onclick="loadKandidaten()" id="loadBtn">
+                <span>📥</span> Kandidaten laden
+            </button>
+            <div class="stats">
+                <span class="stat-item" id="kandidatenCount">0 Kandidaten</span>
+                <span class="stat-item" id="parteienCount">0 Parteien</span>
+                <span class="stat-item" id="wahlCount">0 Wahlen</span>
+            </div>
+        </div>
+
+        <!-- Filterbereich -->
+        <div class="filter-section">
+            <div class="filter-group">
+                <label>📋 Filter nach Wahl (FK_WAHL_WAHL)</label>
+                <select id="wahlFilter" onchange="applyFilters()">
+                    <option value="">Alle Wahlen</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>🏛️ Filter nach Partei (FK_WAHL_PARTEI)</label>
+                <select id="parteiFilter" onchange="applyFilters()">
+                    <option value="">Alle Parteien</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>🔍 Suche in Personen</label>
+                <input type="text" id="searchInput" placeholder="Name oder Ort..." onkeyup="applyFilters()">
+            </div>
+            <button class="reset-btn" onclick="resetFilters()">⟲ Zurücksetzen</button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tab-bar">
+            <button class="tab-btn active" id="tabListBtn" onclick="switchTab('list')"><span>📋</span> Listenansicht</button>
+            <button class="tab-btn" id="tabGraphBtn" onclick="switchTab('graph')"><span>📊</span> Grafiken (Ist vs Soll)</button>
+        </div>
+
+        <!-- Tab 1: Listen -->
+        <div id="listTab" class="tab-content active">
+            <div id="dashboardContainer" class="dashboard-grid">
+                <div style="grid-column:1/-1; text-align:center; padding:60px; color:#64748b;">
+                    ⬆️ Klicke auf "Kandidaten laden"
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Grafiken mit zweitem Balken (Soll) -->
+        <div id="graphTab" class="tab-content">
+            <div class="graph-grid" id="graphContainer">
+                <div style="grid-column:1/-1; text-align:center; padding:60px; color:#64748b;">
+                    📊 Nach dem Laden erscheint Ist (blau) und Soll (grau) pro Partei.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const WS_BASE = 'http://localhost:5000';
+            
+            // Globale Daten
+            let allKandidaten = [];
+            let filteredKandidaten = [];
+            
+            // Für Filter
+            let uniqueWahlen = new Set();
+            let uniqueParteien = new Set();
+            
+            // ----- MOCK-SOLLWERTE für Parteien (hart codiert als JSON-ähnliches Objekt) -----
+            // Die Eigenschaften entsprechen möglichen Partei-IDs (als string oder number)
+            const mockSollwerte = {
+                "2": 100,    // Partei 1 Soll = 12 Kandidaten
+                "4": 100,     // Partei 2 Soll = 8
+                "5": 70,    // Partei 3 Soll = 15
+                "111": 100,     // Partei 4 Soll = 5
+                "6": 100,    // Partei 5 Soll = 10
+                "10": 100,     // Partei 6 Soll = 7
+                "7": 100,     // Partei 7 Soll = 9
+                "8": 100,     // Partei 8 Soll = 6
+                "23": 100,    // Partei 9 Soll = 14
+                "11": 62,   // Partei 10 Soll = 11
+"572": 61,   // Partei 10 Soll = 11
+"571": 100,   // Partei 10 Soll = 11
+"9": 33,   // Partei 10 Soll = 11
+"570": 100,   // Partei 10 Soll = 11
+                "ohne Partei": 3  // falls es Kandidaten ohne Partei gibt, Soll = 3
+            };
+            
+            // UI Elemente
+            const dashboard = document.getElementById('dashboardContainer');
+            const graphContainer = document.getElementById('graphContainer');
+            const wahlFilter = document.getElementById('wahlFilter');
+            const parteiFilter = document.getElementById('parteiFilter');
+            const searchInput = document.getElementById('searchInput');
+            const kandidatenCountSpan = document.getElementById('kandidatenCount');
+            const parteienCountSpan = document.getElementById('parteienCount');
+            const wahlCountSpan = document.getElementById('wahlCount');
+            const connectionSpan = document.getElementById('connectionStatus');
+            const loadBtn = document.getElementById('loadBtn');
+
+            // Chart-Instanzen
+            let parteienChartInstance = null;
+            let wahlenChartInstance = null;
+
+            // ----- Helper -----
+            function showLoading(loading) {
+                if (loading) {
+                    loadBtn.innerHTML = '<span class="spinner"></span> Lade…';
+                    loadBtn.disabled = true;
+                } else {
+                    loadBtn.innerHTML = '<span>📥</span> Kandidaten laden';
+                    loadBtn.disabled = false;
+                }
+            }
+
+            function escapeHtml(text) {
+                if (!text) return '';
+                return String(text).replace(/[&<>"]/g, function(m) {
+                    if (m === '&') return '&amp;';
+                    if (m === '<') return '&lt;';
+                    if (m === '>') return '&gt;';
+                    if (m === '"') return '&quot;';
+                    return m;
+                });
+            }
+
+            // ----- Verbindung testen -----
+            async function testConnection() {
+                try {
+                    const r = await fetch(`${WS_BASE}/wahl_kand/1/`, { method: 'HEAD' });
+                    if (r.ok) {
+                        connectionSpan.innerHTML = '✅ Verbunden mit localhost:5000';
+                        connectionSpan.classList.add('connected');
+                        return true;
+                    }
+                    throw new Error();
+                } catch {
+                    connectionSpan.innerHTML = '❌ Server nicht erreichbar';
+                    connectionSpan.classList.remove('connected');
+                    return false;
+                }
+            }
+
+            // ----- Hauptfunktion: Kandidaten laden -----
+            window.loadKandidaten = async function() {
+                showLoading(true);
+                try {
+                    const res = await fetch(`${WS_BASE}/wahl_kand/1/`);
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    
+                    const data = await res.json();
+                    console.log('Geladene Kandidaten:', data);
+                    
+                    allKandidaten = Array.isArray(data) ? data : [];
+                    
+                    uniqueWahlen.clear();
+                    uniqueParteien.clear();
+                    
+                    allKandidaten.forEach(k => {
+                        if (k.FK_WAHL_WAHL) uniqueWahlen.add(k.FK_WAHL_WAHL);
+                        if (k.FK_WAHL_PARTEI) uniqueParteien.add(k.FK_WAHL_PARTEI);
+                    });
+                    
+                    populateFilters();
+                    filteredKandidaten = [...allKandidaten];
+                    
+                    renderDashboard();
+                    renderGraphs();   // <- hier werden auch die Sollbalken eingefügt
+                    updateStats();
+                    
+                } catch (err) {
+                    console.error('Fehler:', err);
+                    dashboard.innerHTML = `<div style="grid-column:1/-1; background:#2d1a1a; padding:40px; border-radius:30px; text-align:center; color:#f87171;">Fehler beim Laden: ${err.message}</div>`;
+                    graphContainer.innerHTML = `<div style="grid-column:1/-1; background:#2d1a1a; padding:40px; border-radius:30px; text-align:center; color:#f87171;">Fehler beim Laden: ${err.message}</div>`;
+                } finally {
+                    showLoading(false);
+                }
+            };
+
+            function populateFilters() {
+                wahlFilter.innerHTML = '<option value="">Alle Wahlen</option>';
+                Array.from(uniqueWahlen).sort((a,b) => a - b).forEach(w => {
+                    const opt = document.createElement('option');
+                    opt.value = w;
+                    opt.textContent = `Wahl ${w}`;
+                    wahlFilter.appendChild(opt);
+                });
+                
+                parteiFilter.innerHTML = '<option value="">Alle Parteien</option>';
+                Array.from(uniqueParteien).sort((a,b) => a - b).forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p;
+                    opt.textContent = `Partei ${p}`;
+                    parteiFilter.appendChild(opt);
+                });
+            }
+
+            window.applyFilters = function() {
+                const wahlValue = wahlFilter.value;
+                const parteiValue = parteiFilter.value;
+                const searchText = searchInput.value.toLowerCase().trim();
+                
+                filteredKandidaten = allKandidaten.filter(k => {
+                    if (wahlValue && String(k.FK_WAHL_WAHL) !== String(wahlValue)) return false;
+                    if (parteiValue && String(k.FK_WAHL_PARTEI) !== String(parteiValue)) return false;
+                    if (searchText) {
+                        const vorname = (k.VORNAME || '').toLowerCase();
+                        const nachname = (k.NACHNAME || '').toLowerCase();
+                        const ort = (k.ORT || '').toLowerCase();
+                        const beruf = (k.BERUF || '').toLowerCase();
+                        if (!(vorname + ' ' + nachname + ' ' + ort + ' ' + beruf).includes(searchText)) return false;
+                    }
+                    return true;
+                });
+                
+                renderDashboard();
+                renderGraphs();
+                updateStats();
+            };
+
+            window.resetFilters = function() {
+                wahlFilter.value = '';
+                parteiFilter.value = '';
+                searchInput.value = '';
+                filteredKandidaten = [...allKandidaten];
+                renderDashboard();
+                renderGraphs();
+                updateStats();
+            };
+
+            // ----- Tab-Wechsel -----
+            window.switchTab = function(tab) {
+                const listTab = document.getElementById('listTab');
+                const graphTab = document.getElementById('graphTab');
+                const tabListBtn = document.getElementById('tabListBtn');
+                const tabGraphBtn = document.getElementById('tabGraphBtn');
+                
+                if (tab === 'list') {
+                    listTab.classList.add('active');
+                    graphTab.classList.remove('active');
+                    tabListBtn.classList.add('active');
+                    tabGraphBtn.classList.remove('active');
+                } else {
+                    graphTab.classList.add('active');
+                    listTab.classList.remove('active');
+                    tabGraphBtn.classList.add('active');
+                    tabListBtn.classList.remove('active');
+                    renderGraphs(); // sicherstellen, dass Grafiken aktuell
+                }
+            };
+
+            // ----- Listen Dashboard rendern (wie gehabt) -----
+            function renderDashboard() {
+                if (!filteredKandidaten.length) {
+                    dashboard.innerHTML = `<div style="grid-column:1/-1; background:#1e293b; padding:50px; border-radius:30px; text-align:center; color:#94a3b8;">
+                        🕳️ Keine Kandidaten gefunden für diese Filter
+                    </div>`;
+                    return;
+                }
+                
+                const groups = {};
+                filteredKandidaten.forEach(k => {
+                    const parteiId = k.FK_WAHL_PARTEI || 'keine Partei';
+                    if (!groups[parteiId]) groups[parteiId] = [];
+                    groups[parteiId].push(k);
+                });
+                
+                const sortedParteien = Object.keys(groups).sort((a,b) => {
+                    if (a === 'keine Partei') return 1;
+                    if (b === 'keine Partei') return -1;
+                    return Number(a) - Number(b);
+                });
+                
+                let html = '';
+                sortedParteien.forEach(parteiId => {
+                    const kandidaten = groups[parteiId];
+                    const parteiName = (parteiId === 'keine Partei') ? '⚪ Ohne Partei' : `🏛️ Partei ${parteiId}`;
+                    
+                    html += `<div class="partei-card"><div class="partei-header"><span class="partei-name">${parteiName}</span><span class="partei-id">${kandidaten.length} Kandidat(en)</span></div><div class="partei-body"><div class="kandidaten-liste">`;
+                    
+                    kandidaten.forEach(k => {
+                        const vorname = escapeHtml(k.VORNAME || '—');
+                        const nachname = escapeHtml(k.NACHNAME || '—');
+                        const ort = escapeHtml(k.ORT || '—');
+                        const beruf = escapeHtml(k.BERUF || '—');
+                        const wahl = k.FK_WAHL_WAHL || '?';
+                        const platz = k.PLATZ !== null ? k.PLATZ : '—';
+                        const geburtsjahr = k.GEBURTSJAHR || '—';
+                        
+                        html += `<div class="kandidat-item"><div class="kandidat-info"><div class="kandidat-name">${vorname} ${nachname}</div><div class="kandidat-details"><span class="kandidat-detail-item">📍 ${ort}</span><span class="kandidat-detail-item">💼 ${beruf}</span><span class="kandidat-detail-item">🎂 ${geburtsjahr}</span><span class="kandidat-detail-item">🗳️ Wahl ${wahl}</span><span class="kandidat-detail-item">🪑 Platz ${platz}</span></div></div><div class="kandidat-badge">ID: ${k.PK_WAHL_KANDIDATEN || ''}</div></div>`;
+                    });
+                    
+                    html += `</div></div></div>`;
+                });
+                
+                dashboard.innerHTML = html;
+            }
+
+            // ----- Grafiken rendern mit zweitem Balken (Soll) -----
+            function renderGraphs() {
+                if (!filteredKandidaten.length) {
+                    graphContainer.innerHTML = `<div style="grid-column:1/-1; background:#1e293b; padding:60px; border-radius:30px; text-align:center; color:#94a3b8;">
+                        📭 Keine Daten für Grafiken – Filter anpassen oder laden.
+                    </div>`;
+                    return;
+                }
+
+                // Ist-Daten: Kandidaten pro Partei (aus gefilterter Liste)
+                const parteiCounts = {};
+                filteredKandidaten.forEach(k => {
+                    const p = k.FK_WAHL_PARTEI || 'ohne Partei';
+                    parteiCounts[p] = (parteiCounts[p] || 0) + 1;
+                });
+
+                // Wahlen-Daten (für rechte Grafik)
+                const wahlCounts = {};
+                filteredKandidaten.forEach(k => {
+                    const w = k.FK_WAHL_WAHL || 'unbek. Wahl';
+                    wahlCounts[w] = (wahlCounts[w] || 0) + 1;
+                });
+
+                // Sortiere Parteien (IDs als String, aber "ohne Partei" ans Ende)
+                const sortedParteiLabels = Object.keys(parteiCounts).sort((a,b) => {
+                    if (a === 'ohne Partei') return 1;
+                    if (b === 'ohne Partei') return -1;
+                    return Number(a) - Number(b);
+                });
+
+                // Ist-Werte pro Partei
+                const istValues = sortedParteiLabels.map(l => parteiCounts[l]);
+
+                // Soll-Werte passend zu den Parteien (aus mockSollwerte, Fallback auf 0)
+                const sollValues = sortedParteiLabels.map(label => {
+                    // Wenn label eine Zahl ist (Partei-ID) oder 'ohne Partei'
+                    if (label === 'ohne Partei') {
+                        return mockSollwerte['ohne Partei'] || 0;
+                    } else {
+                        // label ist die ID als string (z.B. "5")
+                        return mockSollwerte[label] || 0;
+                    }
+                });
+
+                // Beschriftung für die Anzeige
+                const displayParteiLabels = sortedParteiLabels.map(l => 
+                    l === 'ohne Partei' ? '⚪ Ohne Partei' : `Partei ${l}`
+                );
+
+                // Rechte Grafik: Wahlen
+                const sortedWahlLabels = Object.keys(wahlCounts).sort((a,b) => Number(a) - Number(b));
+                const wahlValues = sortedWahlLabels.map(l => wahlCounts[l]);
+
+                // HTML-Struktur mit Platz für zwei Balkensätze
+                graphContainer.innerHTML = `
+                    <div class="graph-card">
+                        <div class="graph-title"><span>🏛️</span> Kandidaten pro Partei · Ist vs Soll</div>
+                        <div class="legend-inline">
+                            <span class="legend-item"><span class="color-dot" style="background:#3b82f6;"></span> Ist (echte Daten)</span>
+                            <span class="legend-item"><span class="color-dot" style="background:#9aa4b3;"></span> Soll (mock)</span>
+                        </div>
+                        <div class="chart-container"><canvas id="parteiChart"></canvas></div>
+                        <div class="mini-stats"><span>🔵 ${sortedParteiLabels.length} Parteien</span><span>👥 ${filteredKandidaten.length} Kandidaten</span></div>
+                        <div class="graph-note">Sollwerte aus mock JSON: z.B. Partei 1 = 12, Partei 2 = 8, …</div>
+                    </div>
+                    <div class="graph-card">
+                        <div class="graph-title"><span>🗳️</span> Kandidaten pro Wahl (nur Ist)</div>
+                        <div class="chart-container"><canvas id="wahlChart"></canvas></div>
+                        <div class="mini-stats"><span>📊 ${sortedWahlLabels.length} Wahlen</span><span>👥 ${filteredKandidaten.length} Kandidaten</span></div>
+                        <div class="graph-note">Verteilung auf die verschiedenen Wahlen</div>
+                    </div>
+                `;
+
+                // Chart links (Partei) mit zwei Datensätzen
+                const ctxPartei = document.getElementById('parteiChart')?.getContext('2d');
+                if (parteienChartInstance) parteienChartInstance.destroy();
+                if (ctxPartei) {
+                    parteienChartInstance = new Chart(ctxPartei, {
+                        type: 'bar',
+                        data: {
+                            labels: displayParteiLabels,
+                            datasets: [
+                                {
+                                    label: 'Ist (Kandidaten)',
+                                    data: istValues,
+                                    backgroundColor: '#3b82f6',
+                                    borderRadius: 8,
+                                    barPercentage: 0.7,
+                                    categoryPercentage: 0.8
+                                },
+                                {
+                                    label: 'Soll (mock)',
+                                    data: sollValues,
+                                    backgroundColor: '#9aa4b3',  // helleres Grau
+                                    borderRadius: 8,
+                                    barPercentage: 0.7,
+                                    categoryPercentage: 0.8
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false }  // wir haben eigene Legende inline
+                            },
+                            scales: {
+                                y: { 
+                                    beginAtZero: true, 
+                                    grid: { color: '#334155' }, 
+                                    ticks: { color: '#94a3b8' },
+                                    title: { display: true, text: 'Anzahl', color: '#a5b4fc' }
+                                },
+                                x: { ticks: { color: '#cbd5e1', maxRotation: 20 } }
+                            }
+                        }
+                    });
+                }
+
+                // Chart rechts (Wahlen) – nur Ist
+                const ctxWahl = document.getElementById('wahlChart')?.getContext('2d');
+                if (wahlenChartInstance) wahlenChartInstance.destroy();
+                if (ctxWahl) {
+                    wahlenChartInstance = new Chart(ctxWahl, {
+                        type: 'bar',
+                        data: {
+                            labels: sortedWahlLabels.map(l => `Wahl ${l}`),
+                            datasets: [{
+                                label: 'Kandidaten',
+                                data: wahlValues,
+                                backgroundColor: '#a78bfa',
+                                borderRadius: 8,
+                                barPercentage: 0.6
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                                x: { ticks: { color: '#cbd5e1' } }
+                            }
+                        }
+                    });
+                }
+            }
+
+            function updateStats() {
+                kandidatenCountSpan.innerText = `${filteredKandidaten.length} Kandidaten`;
+                const parteienInFilter = new Set(filteredKandidaten.map(k => k.FK_WAHL_PARTEI).filter(p => p));
+                parteienCountSpan.innerText = `${parteienInFilter.size} Parteien`;
+                const wahlenInFilter = new Set(filteredKandidaten.map(k => k.FK_WAHL_WAHL).filter(w => w));
+                wahlCountSpan.innerText = `${wahlenInFilter.size} Wahlen`;
+            }
+
+            // ----- Initialisierung -----
+            document.addEventListener('DOMContentLoaded', () => {
+                testConnection();
+            });
+        })();
+    </script>
+</body>
+</html>

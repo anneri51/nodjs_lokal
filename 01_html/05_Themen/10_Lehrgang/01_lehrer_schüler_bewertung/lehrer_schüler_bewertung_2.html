@@ -1,0 +1,3391 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organisationseinheiten & Schülerbewertung</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --info-color: #3b82f6;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 25px 30px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.3rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        .main-content {
+            padding: 25px;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #e0e0e0;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .tab {
+            padding: 15px 25px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #666;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            background: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .tab.active {
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+            background: white;
+        }
+
+        .tab:hover {
+            background: #e9ecef;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px 0;
+            animation: fadeIn 0.5s;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Tab content styling */
+        .tab-panel {
+            background: #f9f9f9;
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 10px;
+        }
+
+        .tab-panel h2 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        /* Dashboard */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card i {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+
+        .stat-card h3 {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .stat-card p {
+            color: #666;
+            font-size: 1rem;
+            margin: 0;
+        }
+
+        .stat-card .stat-label {
+            font-size: 0.9rem;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .activity-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+
+        .activity-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .activity-table th {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #495057;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .activity-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e9ecef;
+            vertical-align: middle;
+        }
+
+        .activity-table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .status-badge {
+            background: #d1fae5;
+            color: #065f46;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        /* Organisationseinheiten */
+        .org-units-container {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .org-tree-section {
+            flex: 1;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .selected-units-section {
+            flex: 0 0 300px;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .control-panel {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .control-group label {
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .select-control {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            background: white;
+            color: #495057;
+            min-width: 200px;
+        }
+
+        .search-control {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            background: white;
+            color: #495057;
+            min-width: 250px;
+        }
+
+        .button {
+            padding: 8px 16px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+
+        .button:hover {
+            background: #5a67d8;
+        }
+
+        .button-secondary {
+            background: #6c757d;
+        }
+
+        .button-secondary:hover {
+            background: #5a6268;
+        }
+
+        .button-success {
+            background: var(--success-color);
+        }
+
+        .button-success:hover {
+            background: #0da271;
+        }
+
+        .button-warning {
+            background: var(--warning-color);
+        }
+
+        .button-warning:hover {
+            background: #d97706;
+        }
+
+        .button-danger {
+            background: var(--danger-color);
+        }
+
+        .button-danger:hover {
+            background: #dc2626;
+        }
+
+        .button-info {
+            background: var(--info-color);
+        }
+
+        .button-info:hover {
+            background: #2563eb;
+        }
+
+        .tree-container {
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            background: #f8f9fa;
+        }
+
+        .tree-item {
+            margin-bottom: 5px;
+        }
+
+        .tree-item-content {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 3px;
+        }
+
+        .tree-item-content:hover {
+            background: #e9ecef;
+            border-color: #ced4da;
+        }
+
+        .tree-toggle {
+            margin-right: 10px;
+            color: var(--primary-color);
+            cursor: pointer;
+            width: 20px;
+            text-align: center;
+        }
+
+        .tree-checkbox {
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        .tree-label {
+            flex: 1;
+            color: #374151;
+        }
+
+        .tree-label small {
+            color: #9ca3af;
+            font-size: 0.85rem;
+            margin-left: 10px;
+        }
+
+        .tree-children {
+            margin-left: 25px;
+            border-left: 2px solid #e5e7eb;
+            padding-left: 15px;
+        }
+
+        .selected-list {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+
+        .selected-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .selected-item i {
+            margin-right: 10px;
+            color: var(--primary-color);
+        }
+
+        .remove-btn {
+            margin-left: auto;
+            background: none;
+            border: none;
+            color: var(--danger-color);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+        }
+
+        .remove-btn:hover {
+            background: #fee2e2;
+        }
+
+        /* Map Container */
+        .map-container {
+            position: relative;
+            height: 700px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Map Controls */
+        .map-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .map-control-btn {
+            width: 50px;
+            height: 50px;
+            background: white;
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            color: var(--primary-color);
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .map-control-btn:hover {
+            background: var(--primary-color);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* Schülerbewertung */
+        .select-group {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .selected-row {
+            background-color: #e3f2fd !important;
+            border-left: 4px solid #2196f3 !important;
+        }
+
+        .selection-info {
+            background-color: #e8f5e9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .action-button {
+            min-width: 80px;
+            margin: 2px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+
+        .error-message {
+            color: var(--danger-color);
+            display: none;
+            margin-top: 10px;
+        }
+
+        .table-container {
+            margin-top: 30px;
+            overflow-x: auto;
+        }
+
+        /* Bewertungen */
+        .evaluation-form {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .form-control {
+            padding: 10px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            background: white;
+            color: #495057;
+            font-size: 0.95rem;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .rating-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 25px 0;
+        }
+
+        .rating-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .rating-item label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .rating-stars {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+        }
+
+        .star {
+            font-size: 1.5rem;
+            color: #e5e7eb;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .star.active {
+            color: var(--warning-color);
+        }
+
+        /* Action buttons in tables */
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+        }
+
+        .action-btn {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Messages */
+        .message {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .message.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+            display: block;
+        }
+
+        .message.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+            display: block;
+        }
+
+        .message.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+            display: block;
+        }
+
+        /* Loading */
+        .loading-spinner {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #9ca3af;
+            font-style: italic;
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .page-info {
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+
+        .page-numbers {
+            display: flex;
+            gap: 5px;
+        }
+
+        .page-btn {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e5e7eb;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .page-btn:hover {
+            background: #f3f4f6;
+            border-color: #d1d5db;
+        }
+
+        .page-btn.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .page-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Delete Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            color: #333;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6b7280;
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+            color: #4b5563;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        /* Personen Verwaltung */
+        .persons-control-panel {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            background: #e9ecef;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .filter-btn.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .filter-btn:hover:not(.active) {
+            background: #dee2e6;
+        }
+
+        .search-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .person-list-container {
+            display: grid;
+            gap: 30px;
+        }
+
+        .person-list-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .person-list-section h3 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .person-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .person-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .person-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Person Modal */
+        .person-modal-content {
+            max-width: 600px;
+            width: 90%;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .org-units-container {
+                flex-direction: column;
+            }
+            
+            .selected-units-section {
+                flex: 1;
+            }
+            
+            .person-grid {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .tab {
+                width: 100%;
+                text-align: center;
+            }
+            
+            .control-panel {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .control-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .select-control,
+            .search-control {
+                min-width: 100%;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .person-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-map-marked-alt"></i> Organisationseinheiten & Schülerbewertung</h1>
+            <p class="subtitle">Verwalten Sie Standorte, Lehrer und Schülerbewertungen mit interaktiver Kartenansicht</p>
+        </header>
+        
+        <div class="main-content">
+            <div class="tabs">
+                <div class="tab active" data-tab="dashboard">Dashboard</div>
+                <div class="tab" data-tab="orgUnits">Organisationseinheiten</div>
+                <div class="tab" data-tab="studentEvaluation">Schülerbewertung</div>
+                <div class="tab" data-tab="evaluationList">Bewertungen</div>
+                <div class="tab" data-tab="personen">Personen</div>
+                <div class="tab" data-tab="mapView">Kartenansicht</div>
+                <div class="tab" data-tab="einsendeaufgabeLehrer">Einsendeaufgabe & Lehrer</div>
+                <div class="tab" data-tab="dataView">Datenübersicht</div>
+                <div class="tab" data-tab="export">Export</div>
+            </div>
+            
+            <!-- Dashboard Tab -->
+            <div id="dashboard" class="tab-content active">
+                <div class="tab-panel">
+                    <h2><i class="fas fa-tachometer-alt"></i> Dashboard</h2>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <i class="fas fa-sitemap"></i>
+                            <h3 id="statOrgUnits">0</h3>
+                            <p>Organisationseinheiten</p>
+                            <div class="stat-label" id="statSelectedOrgUnitsLabel">0 ausgewählt</div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <h3 id="statLocations">0</h3>
+                            <p>Standorte</p>
+                            <div class="stat-label">
+                                <span id="statLocationsWithCoords">0</span> mit Koordinaten | 
+                                <span id="statLocationsWithoutCoords">0</span> ohne
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <i class="fas fa-chalkboard-teacher"></i>
+                            <h3 id="statTeachers">0</h3>
+                            <p>Lehrer</p>
+                            <div class="stat-label">
+                                <span id="statTeachersWithTasks">0</span> mit Aufgaben | 
+                                <span id="statTeachersWithoutTasks">0</span> ohne
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <i class="fas fa-clipboard-check"></i>
+                            <h3 id="statEvaluations">0</h3>
+                            <p>Bewertungen</p>
+                            <div class="stat-label">
+                                Ø <span id="statAvgEvaluation">0.0</span> Punkte
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="activity-section">
+                        <h3><i class="fas fa-history"></i> Aktuelle Aktivitäten</h3>
+                        <div class="table-responsive">
+                            <table class="activity-table">
+                                <thead>
+                                    <tr>
+                                        <th>Zeitpunkt</th>
+                                        <th>Aktion</th>
+                                        <th>Details</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="activityTableBody">
+                                    <!-- Activity logs will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Organisationseinheiten Tab -->
+            <div id="orgUnits" class="tab-content">
+                <div class="tab-panel">
+                    <h2><i class="fas fa-sitemap"></i> Organisationseinheiten</h2>
+                    
+                    <!-- Control Panel -->
+                    <div class="control-panel">
+                        <div class="control-group">
+                            <label for="mandantSelect"><i class="fas fa-user-tie"></i> Mandant:</label>
+                            <select id="mandantSelect" class="select-control">
+                                <option value="">Bitte Mandant auswählen...</option>
+                            </select>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="treeSearch"><i class="fas fa-search"></i> Suche:</label>
+                            <input type="text" id="treeSearch" class="search-control" placeholder="Suche nach Name oder ID...">
+                        </div>
+                        
+                        <button onclick="loadOrgUnitTree()" class="button">
+                            <i class="fas fa-sync-alt"></i> Laden
+                        </button>
+                        
+                        <button onclick="clearOrgUnitTree()" class="button button-secondary">
+                            <i class="fas fa-trash-alt"></i> Zurücksetzen
+                        </button>
+                        
+                        <button onclick="clearSelection()" class="button button-secondary">
+                            <i class="fas fa-times-circle"></i> Auswahl löschen
+                        </button>
+                        
+                        <button onclick="loadLocationsForSelectedOrgUnits()" class="button button-success">
+                            <i class="fas fa-map-marker-alt"></i> Zu Karte wechseln
+                        </button>
+                    </div>
+                    
+                    <!-- Messages -->
+                    <div id="orgMessage" class="message"></div>
+                    
+                    <div class="org-units-container">
+                        <!-- Tree Section -->
+                        <div class="org-tree-section">
+                            <h3>
+                                <i class="fas fa-tree"></i> Organisationsbaum 
+                                <small id="treeCount" style="color: #6b7280; font-size: 0.9rem;">(0 Einheiten)</small>
+                            </h3>
+                            
+                            <div class="tree-container">
+                                <div id="treeLoading" class="loading-spinner" style="display: none;">
+                                    <i class="fas fa-spinner fa-spin"></i> Lade Organisationseinheiten...
+                                </div>
+                                <div id="orgTree">
+                                    <div class="no-data">
+                                        <i class="fas fa-info-circle fa-2x" style="margin-bottom: 10px;"></i>
+                                        <p>Bitte wählen Sie einen Mandanten aus</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Selected Units Section -->
+                        <div class="selected-units-section">
+                            <h3>
+                                <i class="fas fa-check-circle"></i> Ausgewählte Einheiten
+                                <small id="selectedCount" style="color: #6b7280; font-size: 0.9rem;">(0 ausgewählt)</small>
+                            </h3>
+                            
+                            <div class="selected-list" id="selectedOrgUnitsList">
+                                <div style="color: #9ca3af; font-style: italic; text-align: center; padding: 20px;">
+                                    Keine Organisationseinheiten ausgewählt
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Schülerbewertung Tab -->
+            <div id="studentEvaluation" class="tab-content">
+                <div class="tab-panel">
+                    <h2><i class="fas fa-star"></i> Schülerbewertung</h2>
+                    
+                    <!-- Lehr Einsendeaufgabe Lehrer Management Section -->
+                    <div class="select-group">
+                        <h3>Schülerbewertung über Organisationseinheiten</h3>
+                        
+                        <!-- Selected Values Display -->
+                        <div id="selectionInfo" class="selection-info">
+                            <h4>Aktuell ausgewählt:</h4>
+                            <div class="row" style="display: flex; flex-wrap: wrap; margin: 0 -10px;">
+                                <div style="flex: 1; min-width: 200px; padding: 0 10px;">
+                                    <strong>PK:</strong> <span id="selectedPk">-</span>
+                                </div>
+                                <div style="flex: 1; min-width: 200px; padding: 0 10px;">
+                                    <strong>Einsendeaufgabe:</strong> <span id="selectedEinsendeaufgabe">-</span>
+                                </div>
+                                <div style="flex: 1; min-width: 200px; padding: 0 10px;">
+                                    <strong>Lehrer:</strong> <span id="selectedLehrer">-</span>
+                                </div>
+                                <div style="flex: 1; min-width: 200px; padding: 0 10px;">
+                                    <strong>Org Unit:</strong> <span id="selectedOrgUnit">-</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Org Unit Selection -->
+                        <div style="margin-bottom: 20px;">
+                            <h4>Schritt 1: Organisationseinheit auswählen</h4>
+                            <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+                                <div style="flex: 1; min-width: 300px;">
+                                    <label for="orgUnitSelect" class="form-label">Organisationseinheit ID:</label>
+                                    <select id="orgUnitSelect" class="form-control">
+                                        <option value="">-- Bitte Organisationseinheit auswählen --</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <button id="submitOrgUnit" class="button" disabled>Daten laden</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Loading Indicator -->
+                        <div id="loading" class="loading-spinner" style="display: none;">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p class="mt-2">Lade Daten...</p>
+                        </div>
+
+                        <!-- Error Message -->
+                        <div id="errorMessage" class="message error" role="alert"></div>
+
+                        <!-- Data Selection (hidden initially) -->
+                        <div id="dataSelection" style="display: none;">
+                            <div style="margin-bottom: 20px;">
+                                <h4>Schritt 2: Einsendeaufgabe auswählen</h4>
+                                <div class="form-group">
+                                    <label for="einsendeaufgabeSelect" class="form-label">FK_LEHR_EINSENDEAUFGABE:</label>
+                                    <select id="einsendeaufgabeSelect" class="form-control">
+                                        <option value="">-- Bitte Einsendeaufgabe auswählen --</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom: 20px;">
+                                <h4>Schritt 3: Lehrer auswählen</h4>
+                                <div class="form-group">
+                                    <label for="lehrerSelect" class="form-label">FK_KON_PERSON_LEHRER:</label>
+                                    <select id="lehrerSelect" class="form-control" disabled>
+                                        <option value="">-- Bitte zuerst Einsendeaufgabe auswählen --</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom: 20px;">
+                                <h4>Schritt 4: Primärschlüssel auswählen</h4>
+                                <div class="form-group">
+                                    <label for="pkSelect" class="form-label">PK_LEHR_EINSENDEAUFGABE_LEHRER:</label>
+                                    <select id="pkSelect" class="form-control" disabled>
+                                        <option value="">-- Bitte zuerst Lehrer auswählen --</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Form to display selected values -->
+                            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                                <h4>Ausgewählter Eintrag</h4>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
+                                    <div class="form-group">
+                                        <label for="pkDisplay" class="form-label">PK_LEHR_EINSENDEAUFGABE_LEHRER</label>
+                                        <input type="text" class="form-control" id="pkDisplay" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="einsendeaufgabeDisplay" class="form-label">FK_LEHR_EINSENDEAUFGABE</label>
+                                        <input type="text" class="form-control" id="einsendeaufgabeDisplay" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="lehrerDisplay" class="form-label">FK_KON_PERSON_LEHRER</label>
+                                        <input type="text" class="form-control" id="lehrerDisplay" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="orgUnitDisplay" class="form-label">Org Unit ID</label>
+                                        <input type="text" class="form-control" id="orgUnitDisplay" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="lehrerNameDisplay" class="form-label">Lehrer Name</label>
+                                        <input type="text" class="form-control" id="lehrerNameDisplay" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="einsendeaufgabeNameDisplay" class="form-label">Einsendeaufgabe Name</label>
+                                        <input type="text" class="form-control" id="einsendeaufgabeNameDisplay" readonly>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 10px;">
+                                    <button id="clearSelectionBtn" class="button button-warning">
+                                        <i class="fas fa-times"></i> Auswahl löschen
+                                    </button>
+                                    <button id="saveChangesBtn" class="button button-success">
+                                        <i class="fas fa-save"></i> Änderungen speichern
+                                    </button>
+                                    <button id="deleteEntryBtn" class="button button-danger">
+                                        <i class="fas fa-trash"></i> Eintrag löschen
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Data Table -->
+                            <div class="table-container">
+                                <h4>Verfügbare Daten</h4>
+                                <div style="background: white; border-radius: 8px; overflow: hidden;">
+                                    <div style="padding: 20px;">
+                                        <div class="table-responsive">
+                                            <table id="dataTable" style="width: 100%; border-collapse: collapse;">
+                                                <thead>
+                                                    <tr style="background: #f8f9fa;">
+                                                        <th style="padding: 12px 15px; text-align: left; border-bottom: 2px solid #e9ecef;">Auswählen</th>
+                                                        <th style="padding: 12px 15px; text-align: left; border-bottom: 2px solid #e9ecef;">PK</th>
+                                                        <th style="padding: 12px 15px; text-align: left; border-bottom: 2px solid #e9ecef;">Org Unit ID</th>
+                                                        <th style="padding: 12px 15px; text-align: left; border-bottom: 2px solid #e9ecef;">FK_LEHR_EINSENDEAUFGABE</th>
+                                                        <th style="padding: 12px 15px; text-align: left; border-bottom: 2px solid #e9ecef;">FK_KON_PERSON_LEHRER</th>
+                                                        <th style="padding: 12px 15px; text-align: left; border-bottom: 2px solid #e9ecef;">Lehrer Name</th>
+                                                        <th style="padding: 12px 15px; text-align: left; border-bottom: 2px solid #e9ecef;">Einsendeaufgabe Name</th>
+                                                        <th style="padding: 12px 15px; text-align: left; border-bottom: 2px solid #e9ecef;">Aktionen</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="dataTableBody">
+                                                    <!-- Data will be populated here -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Bewertungsformular -->
+                    <div class="evaluation-form">
+                        <h3>Neue Schülerbewertung erstellen</h3>
+                        
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="studentSelect"><i class="fas fa-user-graduate"></i> Schüler:</label>
+                                <select id="studentSelect" class="form-control">
+                                    <option value="">Schüler auswählen...</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="evaluationDate"><i class="fas fa-calendar-alt"></i> Bewertungsdatum:</label>
+                                <input type="date" id="evaluationDate" class="form-control" value="">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="teacherSelect"><i class="fas fa-chalkboard-teacher"></i> Bewertender Lehrer:</label>
+                                <select id="teacherSelect" class="form-control">
+                                    <option value="">Lehrer auswählen...</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="subjectSelect"><i class="fas fa-book"></i> Fach:</label>
+                                <select id="subjectSelect" class="form-control">
+                                    <option value="">Fach auswählen...</option>
+                                    <option value="mathe">Mathematik</option>
+                                    <option value="deutsch">Deutsch</option>
+                                    <option value="englisch">Englisch</option>
+                                    <option value="geschichte">Geschichte</option>
+                                    <option value="physik">Physik</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <h4 style="margin: 30px 0 15px 0; color: #495057;">Bewertungskriterien</h4>
+                        
+                        <div class="rating-grid">
+                            <div class="rating-item">
+                                <label>Inhalt:</label>
+                                <div class="rating-stars" id="ratingInhalt">
+                                    <span class="star" data-value="1">★</span>
+                                    <span class="star" data-value="2">★</span>
+                                    <span class="star" data-value="3">★</span>
+                                    <span class="star" data-value="4">★</span>
+                                    <span class="star" data-value="5">★</span>
+                                </div>
+                                <input type="hidden" id="inhaltWert" value="0">
+                            </div>
+                            
+                            <div class="rating-item">
+                                <label>Korrektheit:</label>
+                                <div class="rating-stars" id="ratingKorrektheit">
+                                    <span class="star" data-value="1">★</span>
+                                    <span class="star" data-value="2">★</span>
+                                    <span class="star" data-value="3">★</span>
+                                    <span class="star" data-value="4">★</span>
+                                    <span class="star" data-value="5">★</span>
+                                </div>
+                                <input type="hidden" id="korrektheitWert" value="0">
+                            </div>
+                            
+                            <div class="rating-item">
+                                <label>Sprachliche Mittel:</label>
+                                <div class="rating-stars" id="ratingSprachlich">
+                                    <span class="star" data-value="1">★</span>
+                                    <span class="star" data-value="2">★</span>
+                                    <span class="star" data-value="3">★</span>
+                                    <span class="star" data-value="4">★</span>
+                                    <span class="star" data-value="5">★</span>
+                                </div>
+                                <input type="hidden" id="sprachlichWert" value="0">
+                            </div>
+                            
+                            <div class="rating-item">
+                                <label>Gesamteindruck:</label>
+                                <div class="rating-stars" id="ratingGesamteindruck">
+                                    <span class="star" data-value="1">★</span>
+                                    <span class="star" data-value="2">★</span>
+                                    <span class="star" data-value="3">★</span>
+                                    <span class="star" data-value="4">★</span>
+                                    <span class="star" data-value="5">★</span>
+                                </div>
+                                <input type="hidden" id="gesamteindruckWert" value="0">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="comment"><i class="fas fa-comment"></i> Kommentar:</label>
+                            <textarea id="comment" class="form-control" rows="4" placeholder="Kommentar zur Bewertung..."></textarea>
+                        </div>
+                        
+                        <div style="display: flex; gap: 15px; margin-top: 25px;">
+                            <button class="button button-success" onclick="saveEvaluation()" style="flex: 1;">
+                                <i class="fas fa-save"></i> Bewertung speichern
+                            </button>
+                            <button class="button button-secondary" onclick="clearEvaluationForm()" style="flex: 1;">
+                                <i class="fas fa-undo"></i> Formular zurücksetzen
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Evaluation Message -->
+                    <div id="evalMessage" class="message" style="margin-top: 20px;"></div>
+                </div>
+            </div>
+            
+            <!-- Bewertungen Tab -->
+            <div id="evaluationList" class="tab-content">
+                <div class="tab-panel">
+                    <h2><i class="fas fa-clipboard-list"></i> Bewertungen</h2>
+                    
+                    <!-- Control Panel für Bewertungen -->
+                    <div class="control-panel">
+                        <div class="control-group">
+                            <label for="evaluationSearch"><i class="fas fa-search"></i> Suche:</label>
+                            <input type="text" id="evaluationSearch" class="search-control" 
+                                   placeholder="Suche nach Schüler, Lehrer, Typ, Urteil...">
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="dateFilter"><i class="fas fa-calendar"></i> Datum:</label>
+                            <select id="dateFilter" class="select-control">
+                                <option value="all">Alle Daten</option>
+                                <option value="today">Heute</option>
+                                <option value="week">Diese Woche</option>
+                                <option value="month">Dieser Monat</option>
+                                <option value="year">Dieses Jahr</option>
+                                <option value="custom">Benutzerdefiniert</option>
+                            </select>
+                        </div>
+                        
+                        <div class="control-group" id="customDateRange" style="display: none;">
+                            <input type="date" id="dateFrom" class="form-control">
+                            <span>bis</span>
+                            <input type="date" id="dateTo" class="form-control">
+                        </div>
+                        
+                        <button onclick="loadEvaluations()" class="button">
+                            <i class="fas fa-sync-alt"></i> Aktualisieren
+                        </button>
+                        
+                        <button onclick="exportEvaluations()" class="button button-success">
+                            <i class="fas fa-download"></i> Exportieren
+                        </button>
+                    </div>
+                    
+                    <!-- Messages -->
+                    <div id="evaluationMessage" class="message"></div>
+                    
+                    <!-- Loading Indicator -->
+                    <div id="evaluationsLoading" class="loading-spinner" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i> Lade Bewertungen...
+                    </div>
+                    
+                    <!-- No Data Message -->
+                    <div id="evaluationsNoData" class="no-data" style="display: none;">
+                        <i class="fas fa-clipboard fa-2x" style="margin-bottom: 10px;"></i>
+                        <p>Keine Bewertungen gefunden</p>
+                    </div>
+                    
+                    <!-- Evaluations Table -->
+                    <div id="evaluationsContainer" style="display: none;">
+                        <div class="table-container">
+                            <table class="activity-table" style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Schüler</th>
+                                        <th>Lehrer</th>
+                                        <th>Mandant</th>
+                                        <th>Bewertungsdatum</th>
+                                        <th>Typ</th>
+                                        <th>Gesamturteil</th>
+                                        <th>Erstellt am</th>
+                                        <th>Aktionen</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="evaluationsTableBody">
+                                    <!-- Bewertungen werden hier dynamisch geladen -->
+                                </tbody>
+                            </table>
+                            
+                            <!-- Pagination -->
+                            <div id="evaluationsPagination" style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center; display: none;">
+                                <div>
+                                    <span id="evaluationsInfo">Zeige 0-0 von 0 Bewertungen</span>
+                                </div>
+                                <div style="display: flex; gap: 10px;">
+                                    <button id="prevPage" class="button button-secondary" disabled>
+                                        <i class="fas fa-chevron-left"></i> Vorherige
+                                    </button>
+                                    <span id="pageNumbers" style="padding: 8px 16px; background: #f8f9fa; border-radius: 6px;"></span>
+                                    <button id="nextPage" class="button button-secondary" disabled>
+                                        Nächste <i class="fas fa-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Personen Tab -->
+            <div id="personen" class="tab-content">
+                <div class="tab-panel">
+                    <h2><i class="fas fa-users"></i> Personen Verwaltung</h2>
+                    
+                    <!-- Control Panel für Personen -->
+                    <div class="persons-control-panel">
+                        <div class="filter-buttons">
+                            <button class="filter-btn active" onclick="showAllPersons()">
+                                <i class="fas fa-users"></i> Alle Personen
+                            </button>
+                            <button class="filter-btn" onclick="showTeachersOnly()">
+                                <i class="fas fa-chalkboard-teacher"></i> Nur Lehrer
+                            </button>
+                            <button class="filter-btn" onclick="showStudentsOnly()">
+                                <i class="fas fa-user-graduate"></i> Nur Schüler
+                            </button>
+                            <button class="filter-btn" onclick="toggleActivePersons()">
+                                <i class="fas fa-eye"></i> Nur Aktive
+                            </button>
+                        </div>
+                        
+                        <div class="search-row">
+                            <div class="control-group" style="flex: 1;">
+                                <label for="searchPersons"><i class="fas fa-search"></i> Suche:</label>
+                                <input type="text" id="searchPersons" class="search-control" 
+                                       placeholder="Suche nach Name, E-Mail, Fachbereich...">
+                            </div>
+                            
+                            <div class="control-group">
+                                <label for="personCourseSearch"><i class="fas fa-book"></i> Lehrgang:</label>
+                                <select id="personCourseSearch" class="select-control" onchange="filterPersonsByCourse()">
+                                    <option value="">Alle Lehrgänge</option>
+                                </select>
+                            </div>
+                            
+                            <button onclick="searchPersons()" class="button">
+                                <i class="fas fa-search"></i> Suchen
+                            </button>
+                            <button onclick="clearPersonSearch()" class="button button-secondary">
+                                <i class="fas fa-times"></i> Zurücksetzen
+                            </button>
+                            <button onclick="openTeacherModal()" class="button button-success">
+                                <i class="fas fa-plus"></i> Neue Lehrperson
+                            </button>
+                            <button onclick="openStudentModal()" class="button button-info">
+                                <i class="fas fa-plus"></i> Neuer Schüler
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Personen Liste -->
+                    <div id="personListContainer" class="person-list-container">
+                        <div class="person-list-section">
+                            <h3><i class="fas fa-chalkboard-teacher"></i> Lehrpersonen</h3>
+                            <div id="teacherList" class="person-grid">
+                                <!-- Lehrer werden hier dynamisch geladen -->
+                            </div>
+                        </div>
+                        
+                        <div class="person-list-section">
+                            <h3><i class="fas fa-user-graduate"></i> Schüler/Teilnehmer</h3>
+                            <div id="studentList" class="person-grid">
+                                <!-- Schüler werden hier dynamisch geladen -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Kartenansicht Tab -->
+            <div id="mapView" class="tab-content">
+                <div class="tab-panel">
+                    <h2><i class="fas fa-map"></i> Kartenansicht</h2>
+                    <div class="map-container">
+                        <div id="map"></div>
+                        <div class="map-controls">
+                            <button class="map-control-btn" onclick="zoomIn()">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            <button class="map-control-btn" onclick="zoomOut()">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <button class="map-control-btn" onclick="resetView()">
+                                <i class="fas fa-crosshairs"></i>
+                            </button>
+                            <button class="map-control-btn" onclick="toggleClusters()">
+                                <i class="fas fa-layer-group"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Weitere Tabs (vereinfacht) -->
+            <div id="einsendeaufgabeLehrer" class="tab-content">
+                <div class="tab-panel">
+                    <h2><i class="fas fa-tasks"></i> Einsendeaufgabe & Lehrer</h2>
+                    <p>Inhalt für Einsendeaufgabe & Lehrer Management</p>
+                </div>
+            </div>
+            
+            <div id="dataView" class="tab-content">
+                <div class="tab-panel">
+                    <h2><i class="fas fa-database"></i> Datenübersicht</h2>
+                    <p>Inhalt für Datenübersicht</p>
+                </div>
+            </div>
+            
+            <div id="export" class="tab-content">
+                <div class="tab-panel">
+                    <h2><i class="fas fa-file-export"></i> Export</h2>
+                    <p>Inhalt für Export Funktionen</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Modal -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Bewertung löschen</h3>
+                <button class="modal-close" onclick="hideDeleteModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="deleteModalText">Sind Sie sicher, dass Sie diese Bewertung löschen möchten?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="button button-secondary" onclick="hideDeleteModal()">Abbrechen</button>
+                <button class="button button-danger" onclick="confirmDelete()">Löschen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Person Modal -->
+    <div id="personModal" class="modal">
+        <div class="modal-content person-modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="personModalTitle">Neue Person</h3>
+                <button class="modal-close" onclick="closePersonModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="personForm" onsubmit="savePerson(event)">
+                    <input type="hidden" id="personId" value="">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="personType">Personentyp:</label>
+                            <select id="personType" class="form-control" onchange="togglePersonFields()" required>
+                                <option value="">Bitte auswählen</option>
+                                <option value="teacher">Lehrperson</option>
+                                <option value="student">Schüler/Teilnehmer</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="personStatus">Status:</label>
+                            <select id="personStatus" class="form-control" required>
+                                <option value="active">Aktiv</option>
+                                <option value="inactive">Inaktiv</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="personName">Name:</label>
+                            <input type="text" id="personName" class="form-control" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="personEmail">E-Mail:</label>
+                            <input type="email" id="personEmail" class="form-control">
+                        </div>
+                    </div>
+                    
+                    <!-- Teacher specific fields -->
+                    <div id="teacherFields" style="display: none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="teacherSubject">Fachbereich:</label>
+                                <input type="text" id="teacherSubject" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Student specific fields -->
+                    <div id="studentFields" style="display: none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="studentCourse">Lehrgang/Kurs:</label>
+                                <input type="text" id="studentCourse" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="personNotes">Notizen:</label>
+                        <textarea id="personNotes" class="form-control" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button type="button" class="button button-secondary" onclick="closePersonModal()">Abbrechen</button>
+                        <button type="submit" class="button button-success">Speichern</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+    <script>
+        // ============================
+        // KONFIGURATION & KONSTANTEN
+        // ============================
+        const BASE_URL = 'http://localhost:5000';
+        
+        // API Endpoints
+        const API_ENDPOINTS = {
+            MANDANT: '/mandant',
+            ORG_UNIT_TREE: '/org_unit_tree',
+            ORG_UNIT: '/org_unit',
+            LOCATIONS: '/locations',
+            LEHR_EINSENDEAUFGABE_LEHRER: '/lehr_einsendeaufgabe_lehrer',
+            TEACHERS: '/teachers',
+            STUDENTS: '/students',
+            EVALUATIONS: '/evaluations',
+            PERSONS: '/persons'
+        };
+
+        // ============================
+        // GLOBALE VARIABLEN
+        // ============================
+        let mandants = [];
+        let orgUnitTreeData = [];
+        let selectedOrgUnits = new Set();
+        let allMapData = [];
+        let teachers = [];
+        let students = [];
+        let courses = [];
+        let currentEvaluations = [];
+        let schuelerList = [];
+        let lehrerList = [];
+        let map;
+        let markerCluster;
+        let customMarkers = [];
+        let selectedLocation = null;
+        let sidebarCollapsed = false;
+        let currentMapType = 'roadmap';
+        
+        // Lehr Einsendeaufgabe Lehrer Daten
+        let allLehrEinsendeaufgabeData = [];
+        let filteredLehrEinsendeaufgabeData = [];
+        let currentLehrEinsendeaufgabeOrgUnitId = '';
+        let selectedLehrEinsendeaufgabeRowData = null;
+        let selectedLehrEinsendeaufgabeRowElement = null;
+
+        // Für Bewertungen-Suche
+        let evaluationsSearchTerm = '';
+        let evaluationsDateFilter = 'all';
+        let evaluationsCustomFrom = '';
+        let evaluationsCustomTo = '';
+        let evaluationsCurrentPage = 1;
+        let evaluationsPageSize = 20;
+        let filteredEvaluations = [];
+        let evaluationToDelete = null;
+
+        // Für Personen-Verwaltung
+        let currentPersonFilter = 'all';
+        let showActivePersonsOnly = false;
+        let currentCourseFilter = '';
+        let currentMandant = 'default';
+
+        // ============================
+        // ALLGEMEINE HELPER FUNKTIONEN
+        // ============================
+        async function apiFetch(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${BASE_URL}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error(`API Fetch Error (${endpoint}):`, error);
+                throw error;
+            }
+        }
+        
+        function showMessage(text, type = 'info', elementId = 'message') {
+            const messageDiv = document.getElementById(elementId);
+            if (messageDiv) {
+                messageDiv.textContent = text;
+                messageDiv.className = `message ${type}`;
+                messageDiv.style.display = 'block';
+                
+                // Auto-hide after 5 seconds
+                setTimeout(() => {
+                    messageDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+        
+        function showSuccess(text, elementId = 'message') {
+            showMessage(text, 'success', elementId);
+        }
+        
+        function showError(text, elementId = 'message') {
+            showMessage(text, 'error', elementId);
+        }
+        
+        function showInfo(text, elementId = 'message') {
+            showMessage(text, 'info', elementId);
+        }
+        
+        function addActivityLog(action, details) {
+            const logs = JSON.parse(localStorage.getItem('activityLogs') || '[]');
+            logs.unshift({
+                time: new Date().toISOString(),
+                action: action,
+                details: details,
+                status: 'Erfolgreich'
+            });
+            
+            // Keep only last 50 entries
+            if (logs.length > 50) {
+                logs.pop();
+            }
+            
+            localStorage.setItem('activityLogs', JSON.stringify(logs));
+            updateActivityTable();
+        }
+        
+        function isValidCoordinate(coordinate) {
+            if (!coordinate) return false;
+            const coordPattern = /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/;
+            return coordPattern.test(coordinate);
+        }
+
+        // ============================
+        // BEWERTUNGEN FUNKTIONEN
+        // ============================
+        
+        async function loadEvaluations() {
+            document.getElementById('evaluationsLoading').style.display = 'block';
+            document.getElementById('evaluationsContainer').style.display = 'none';
+            document.getElementById('evaluationsNoData').style.display = 'none';
+            
+            try {
+                // API call oder Fallback-Daten
+                const data = await fetchEvaluationsData();
+                currentEvaluations = data;
+                
+                // Lade Schüler- und Lehrer-Daten für die Anzeige
+                await loadPersonDataForEvaluations();
+                
+                if (currentEvaluations.length === 0) {
+                    document.getElementById('evaluationsNoData').style.display = 'block';
+                } else {
+                    // Initialisiere Suchfunktion
+                    setupEvaluationsSearch();
+                    // Filtere Bewertungen
+                    filterEvaluations();
+                    document.getElementById('evaluationsContainer').style.display = 'block';
+                }
+                
+                document.getElementById('evaluationsLoading').style.display = 'none';
+                showSuccess(`${currentEvaluations.length} Bewertungen geladen`, 'evaluationMessage');
+                
+            } catch (error) {
+                console.error('Error loading evaluations:', error);
+                document.getElementById('evaluationsLoading').style.display = 'none';
+                document.getElementById('evaluationsNoData').style.display = 'block';
+                showError(`Fehler beim Laden: ${error.message}`, 'evaluationMessage');
+            }
+        }
+        
+        async function fetchEvaluationsData() {
+            try {
+                // Versuche API-Aufruf
+                return await apiFetch('/lehr-bewertung-schueler/getAll');
+            } catch (error) {
+                console.log('Using fallback evaluation data');
+                return getFallbackEvaluations();
+            }
+        }
+        
+        async function loadPersonDataForEvaluations() {
+            // Simuliere das Laden von Schüler- und Lehrer-Daten
+            schuelerList = [
+                { PK_KON_PERSON: '101', VORNAME: 'Max', NACHNAME: 'Mustermann' },
+                { PK_KON_PERSON: '102', VORNAME: 'Lisa', NACHNAME: 'Beispiel' },
+                { PK_KON_PERSON: '103', VORNAME: 'Tom', NACHNAME: 'Test' }
+            ];
+            
+            lehrerList = [
+                { PK_KON_PERSON: '201', VORNAME: 'Dr.', NACHNAME: 'Müller' },
+                { PK_KON_PERSON: '202', VORNAME: 'Frau', NACHNAME: 'Schmidt' },
+                { PK_KON_PERSON: '203', VORNAME: 'Herr', NACHNAME: 'Wagner' }
+            ];
+        }
+        
+        function getFallbackEvaluations() {
+            return [
+                {
+                    PK_LEHR_BEWERTUNG_SCHUELER: '1001',
+                    FK_KON_PERSON_SCHUELER: '101',
+                    FK_KON_PERSON_LEHRER: '201',
+                    FK_MDT_MANDANT: '1',
+                    DATUM_BEWERTUNG: '2024-01-15',
+                    FK_STD_BEW_BEWERTUNGSTYP: '1',
+                    GESAMTURTEIL: 'SEHR_GUT',
+                    CREATED_AT: '2024-01-15T10:30:00Z',
+                    INHALT_WERT: '5',
+                    KORREKTHEIT_WERT: '4',
+                    VERFUEGBARE_SPRACHLICHE_MITTEL_WERT: '5',
+                    GESAMTEINDRUCK_WERT: '4'
+                },
+                {
+                    PK_LEHR_BEWERTUNG_SCHUELER: '1002',
+                    FK_KON_PERSON_SCHUELER: '102',
+                    FK_KON_PERSON_LEHRER: '202',
+                    FK_MDT_MANDANT: '1',
+                    DATUM_BEWERTUNG: '2024-01-20',
+                    FK_STD_BEW_BEWERTUNGSTYP: '2',
+                    GESAMTURTEIL: 'GUT',
+                    CREATED_AT: '2024-01-20T14:45:00Z',
+                    INHALT_WERT: '4',
+                    KORREKTHEIT_WERT: '3',
+                    VERFUEGBARE_SPRACHLICHE_MITTEL_WERT: '4',
+                    GESAMTEINDRUCK_WERT: '3'
+                },
+                {
+                    PK_LEHR_BEWERTUNG_SCHUELER: '1003',
+                    FK_KON_PERSON_SCHUELER: '103',
+                    FK_KON_PERSON_LEHRER: '203',
+                    FK_MDT_MANDANT: '1',
+                    DATUM_BEWERTUNG: '2024-01-25',
+                    FK_STD_BEW_BEWERTUNGSTYP: '3',
+                    GESAMTURTEIL: 'BEFRIEDIGEND',
+                    CREATED_AT: '2024-01-25T09:15:00Z',
+                    INHALT_WERT: '3',
+                    KORREKTHEIT_WERT: '3',
+                    VERFUEGBARE_SPRACHLICHE_MITTEL_WERT: '4',
+                    GESAMTEINDRUCK_WERT: '3'
+                },
+                {
+                    PK_LEHR_BEWERTUNG_SCHUELER: '1004',
+                    FK_KON_PERSON_SCHUELER: '101',
+                    FK_KON_PERSON_LEHRER: '201',
+                    FK_MDT_MANDANT: '1',
+                    DATUM_BEWERTUNG: '2024-02-01',
+                    FK_STD_BEW_BEWERTUNGSTYP: '4',
+                    GESAMTURTEIL: 'AUSREICHEND',
+                    CREATED_AT: '2024-02-01T16:20:00Z',
+                    INHALT_WERT: '2',
+                    KORREKTHEIT_WERT: '3',
+                    VERFUEGBARE_SPRACHLICHE_MITTEL_WERT: '2',
+                    GESAMTEINDRUCK_WERT: '3'
+                },
+                {
+                    PK_LEHR_BEWERTUNG_SCHUELER: '1005',
+                    FK_KON_PERSON_SCHUELER: '102',
+                    FK_KON_PERSON_LEHRER: '202',
+                    FK_MDT_MANDANT: '1',
+                    DATUM_BEWERTUNG: '2024-02-05',
+                    FK_STD_BEW_BEWERTUNGSTYP: '5',
+                    GESAMTURTEIL: 'MANGELHAFT',
+                    CREATED_AT: '2024-02-05T11:10:00Z',
+                    INHALT_WERT: '1',
+                    KORREKTHEIT_WERT: '2',
+                    VERFUEGBARE_SPRACHLICHE_MITTEL_WERT: '1',
+                    GESAMTEINDRUCK_WERT: '2'
+                }
+            ];
+        }
+        
+        function setupEvaluationsSearch() {
+            // Such-Input Event Listener
+            const searchInput = document.getElementById('evaluationSearch');
+            if (searchInput) {
+                searchInput.addEventListener('input', function(e) {
+                    evaluationsSearchTerm = e.target.value.toLowerCase();
+                    filterEvaluations();
+                });
+            }
+            
+            // Datumsfilter Event Listener
+            const dateFilter = document.getElementById('dateFilter');
+            const customDateRange = document.getElementById('customDateRange');
+            const dateFrom = document.getElementById('dateFrom');
+            const dateTo = document.getElementById('dateTo');
+            
+            if (dateFilter) {
+                dateFilter.addEventListener('change', function() {
+                    evaluationsDateFilter = this.value;
+                    customDateRange.style.display = this.value === 'custom' ? 'flex' : 'none';
+                    
+                    if (this.value !== 'custom') {
+                        evaluationsCustomFrom = '';
+                        evaluationsCustomTo = '';
+                        if (dateFrom) dateFrom.value = '';
+                        if (dateTo) dateTo.value = '';
+                    }
+                    
+                    filterEvaluations();
+                });
+            }
+            
+            // Benutzerdefinierte Datumsbereichsfilter
+            if (dateFrom) {
+                dateFrom.addEventListener('change', function() {
+                    evaluationsCustomFrom = this.value;
+                    filterEvaluations();
+                });
+            }
+            
+            if (dateTo) {
+                dateTo.addEventListener('change', function() {
+                    evaluationsCustomTo = this.value;
+                    filterEvaluations();
+                });
+            }
+            
+            // Pagination Event Listener
+            const prevPageBtn = document.getElementById('prevPage');
+            const nextPageBtn = document.getElementById('nextPage');
+            
+            if (prevPageBtn) {
+                prevPageBtn.addEventListener('click', function() {
+                    if (evaluationsCurrentPage > 1) {
+                        evaluationsCurrentPage--;
+                        renderFilteredEvaluations();
+                    }
+                });
+            }
+            
+            if (nextPageBtn) {
+                nextPageBtn.addEventListener('click', function() {
+                    const totalPages = Math.ceil(filteredEvaluations.length / evaluationsPageSize);
+                    if (evaluationsCurrentPage < totalPages) {
+                        evaluationsCurrentPage++;
+                        renderFilteredEvaluations();
+                    }
+                });
+            }
+        }
+        
+        function filterEvaluations() {
+            if (!currentEvaluations || currentEvaluations.length === 0) {
+                filteredEvaluations = [];
+                renderFilteredEvaluations();
+                return;
+            }
+            
+            // Filter nach Suchbegriff
+            let filtered = currentEvaluations.filter(eval => {
+                const schueler = schuelerList.find(s => s.PK_KON_PERSON == eval.FK_KON_PERSON_SCHUELER);
+                const lehrer = lehrerList.find(l => l.PK_KON_PERSON == eval.FK_KON_PERSON_LEHRER);
+                
+                const schuelerName = schueler ? `${schueler.VORNAME} ${schueler.NACHNAME}`.toLowerCase() : '';
+                const lehrerName = lehrer ? `${lehrer.VORNAME} ${lehrer.NACHNAME}`.toLowerCase() : '';
+                
+                const typMap = {
+                    '1': 'Klassenarbeit',
+                    '2': 'Test',
+                    '3': 'Mündliche Prüfung',
+                    '4': 'Projekt',
+                    '5': 'Hausaufgabe'
+                };
+                
+                const urteilMap = {
+                    'SEHR_GUT': 'Sehr gut',
+                    'GUT': 'Gut',
+                    'BEFRIEDIGEND': 'Befriedigend',
+                    'AUSREICHEND': 'Ausreichend',
+                    'MANGELHAFT': 'Mangelhaft',
+                    'UNGENÜGEND': 'Ungenügend'
+                };
+                
+                const typ = (typMap[eval.FK_STD_BEW_BEWERTUNGSTYP] || '').toLowerCase();
+                const urteil = (urteilMap[eval.GESAMTURTEIL] || '').toLowerCase();
+                
+                const searchFields = [
+                    eval.PK_LEHR_BEWERTUNG_SCHUELER.toString(),
+                    schuelerName,
+                    lehrerName,
+                    typ,
+                    urteil,
+                    eval.FK_MDT_MANDANT.toString()
+                ];
+                
+                return searchFields.some(field => field.includes(evaluationsSearchTerm));
+            });
+            
+            // Filter nach Datum
+            filtered = filtered.filter(eval => {
+                if (!eval.DATUM_BEWERTUNG) return true;
+                
+                const evalDate = new Date(eval.DATUM_BEWERTUNG);
+                const today = new Date();
+                
+                switch(evaluationsDateFilter) {
+                    case 'today':
+                        return evalDate.toDateString() === today.toDateString();
+                    case 'week':
+                        const weekStart = new Date(today);
+                        weekStart.setDate(today.getDate() - today.getDay());
+                        weekStart.setHours(0, 0, 0, 0);
+                        return evalDate >= weekStart;
+                    case 'month':
+                        return evalDate.getMonth() === today.getMonth() && 
+                               evalDate.getFullYear() === today.getFullYear();
+                    case 'year':
+                        return evalDate.getFullYear() === today.getFullYear();
+                    case 'custom':
+                        if (evaluationsCustomFrom) {
+                            const fromDate = new Date(evaluationsCustomFrom);
+                            fromDate.setHours(0, 0, 0, 0);
+                            if (evalDate < fromDate) return false;
+                        }
+                        if (evaluationsCustomTo) {
+                            const toDate = new Date(evaluationsCustomTo);
+                            toDate.setHours(23, 59, 59, 999);
+                            if (evalDate > toDate) return false;
+                        }
+                        return true;
+                    default:
+                        return true;
+                }
+            });
+            
+            filteredEvaluations = filtered;
+            evaluationsCurrentPage = 1;
+            renderFilteredEvaluations();
+        }
+        
+        function renderFilteredEvaluations() {
+            const evaluationsTableBody = document.getElementById('evaluationsTableBody');
+            const evaluationsPagination = document.getElementById('evaluationsPagination');
+            const evaluationsInfo = document.getElementById('evaluationsInfo');
+            const prevPageBtn = document.getElementById('prevPage');
+            const nextPageBtn = document.getElementById('nextPage');
+            const pageNumbers = document.getElementById('pageNumbers');
+            
+            if (!filteredEvaluations || filteredEvaluations.length === 0) {
+                evaluationsTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="9" style="text-align: center; padding: 40px; color: #9ca3af; font-style: italic;">
+                            Keine Bewertungen gefunden
+                        </td>
+                    </tr>
+                `;
+                evaluationsPagination.style.display = 'none';
+                return;
+            }
+            
+            // Pagination berechnen
+            const totalItems = filteredEvaluations.length;
+            const totalPages = Math.ceil(totalItems / evaluationsPageSize);
+            const startIndex = (evaluationsCurrentPage - 1) * evaluationsPageSize;
+            const endIndex = Math.min(startIndex + evaluationsPageSize, totalItems);
+            const pageData = filteredEvaluations.slice(startIndex, endIndex);
+            
+            // Tabelle rendern
+            evaluationsTableBody.innerHTML = '';
+            
+            pageData.forEach(eval => {
+                const date = new Date(eval.DATUM_BEWERTUNG).toLocaleDateString('de-DE');
+                const created = new Date(eval.CREATED_AT).toLocaleDateString('de-DE');
+                
+                // Map bewertungstyp
+                const typMap = {
+                    '1': 'Klassenarbeit',
+                    '2': 'Test',
+                    '3': 'Mündliche Prüfung',
+                    '4': 'Projekt',
+                    '5': 'Hausaufgabe'
+                };
+                
+                // Map gesamturteil
+                const urteilMap = {
+                    'SEHR_GUT': 'Sehr gut',
+                    'GUT': 'Gut',
+                    'BEFRIEDIGEND': 'Befriedigend',
+                    'AUSREICHEND': 'Ausreichend',
+                    'MANGELHAFT': 'Mangelhaft',
+                    'UNGENÜGEND': 'Ungenügend'
+                };
+                
+                // Get names
+                const schueler = schuelerList.find(s => s.PK_KON_PERSON == eval.FK_KON_PERSON_SCHUELER);
+                const lehrer = lehrerList.find(l => l.PK_KON_PERSON == eval.FK_KON_PERSON_LEHRER);
+                
+                const schuelerName = schueler ? `${schueler.VORNAME} ${schueler.NACHNAME}` : `Schüler ID: ${eval.FK_KON_PERSON_SCHUELER}`;
+                const lehrerName = lehrer ? `${lehrer.VORNAME} ${lehrer.NACHNAME}` : `Lehrer ID: ${eval.FK_KON_PERSON_LEHRER}`;
+                
+                const typ = typMap[eval.FK_STD_BEW_BEWERTUNGSTYP] || eval.FK_STD_BEW_BEWERTUNGSTYP;
+                const urteil = urteilMap[eval.GESAMTURTEIL] || eval.GESAMTURTEIL;
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${eval.PK_LEHR_BEWERTUNG_SCHUELER}</td>
+                    <td>${schuelerName}</td>
+                    <td>${lehrerName}</td>
+                    <td>${eval.FK_MDT_MANDANT}</td>
+                    <td>${date}</td>
+                    <td>${typ}</td>
+                    <td>${urteil}</td>
+                    <td>${created}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="button btn-edit" data-id="${eval.PK_LEHR_BEWertung_SCHUELER}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="button button-danger btn-delete" data-id="${eval.PK_LEHR_BEWERTUNG_SCHUELER}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                
+                evaluationsTableBody.appendChild(row);
+            });
+            
+            // Pagination aktualisieren
+            evaluationsInfo.textContent = `Zeige ${startIndex + 1}-${endIndex} von ${totalItems} Bewertungen`;
+            pageNumbers.textContent = `Seite ${evaluationsCurrentPage} von ${totalPages}`;
+            
+            prevPageBtn.disabled = evaluationsCurrentPage <= 1;
+            nextPageBtn.disabled = evaluationsCurrentPage >= totalPages;
+            
+            evaluationsPagination.style.display = totalPages > 1 ? 'flex' : 'none';
+            
+            // Event Listener für Action-Buttons hinzufügen
+            addEvaluationActionListeners();
+        }
+        
+        function addEvaluationActionListeners() {
+            // Edit buttons
+            document.querySelectorAll('.btn-edit').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = this.dataset.id;
+                    editEvaluation(id);
+                });
+            });
+            
+            // Delete buttons
+            document.querySelectorAll('.btn-delete').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = this.dataset.id;
+                    showDeleteModal(id);
+                });
+            });
+        }
+        
+        function editEvaluation(id) {
+            const evaluation = currentEvaluations.find(e => e.PK_LEHR_BEWERTUNG_SCHUELER == id);
+            if (!evaluation) {
+                showError('Bewertung nicht gefunden', 'evaluationMessage');
+                return;
+            }
+            
+            // Wechsel zur Bewertungs-Erstellungsseite und fülle Formular
+            switchTab('studentEvaluation');
+            
+            // Nach kurzer Verzögerung Formular füllen
+            setTimeout(() => {
+                // Fülle die Formularfelder
+                document.getElementById('studentSelect').value = evaluation.FK_KON_PERSON_SCHUELER;
+                document.getElementById('teacherSelect').value = evaluation.FK_KON_PERSON_LEHRER;
+                document.getElementById('evaluationDate').value = evaluation.DATUM_BEWERTUNG.split('T')[0];
+                
+                // Setze Bewertungswerte
+                setRatingValue('inhalt', evaluation.INHALT_WERT);
+                setRatingValue('korrektheit', evaluation.KORREKTHEIT_WERT);
+                setRatingValue('sprachlich', evaluation.VERFUEGBARE_SPRACHLICHE_MITTEL_WERT);
+                setRatingValue('gesamteindruck', evaluation.GESAMTEINDRUCK_WERT);
+                
+                showInfo('Bewertung geladen. Bearbeiten Sie die Daten und speichern Sie die Änderungen.', 'evalMessage');
+            }, 500);
+        }
+        
+        function setRatingValue(type, value) {
+            if (!value) return;
+            
+            const hiddenInput = document.getElementById(`${type}Wert`);
+            const starsContainer = document.getElementById(`rating${type.charAt(0).toUpperCase() + type.slice(1)}`);
+            
+            if (hiddenInput && starsContainer) {
+                hiddenInput.value = value;
+                
+                // Highlight die entsprechenden Sterne
+                starsContainer.querySelectorAll('.star').forEach((star, index) => {
+                    if (index < value) {
+                        star.classList.add('active');
+                    } else {
+                        star.classList.remove('active');
+                    }
+                });
+            }
+        }
+        
+        function showDeleteModal(id) {
+            evaluationToDelete = id;
+            const evaluation = currentEvaluations.find(e => e.PK_LEHR_BEWERTUNG_SCHUELER == id);
+            
+            let evaluationText = `Bewertung ID: ${id}`;
+            if (evaluation) {
+                const schueler = schuelerList.find(s => s.PK_KON_PERSON == evaluation.FK_KON_PERSON_SCHUELER);
+                if (schueler) {
+                    evaluationText = `Bewertung von ${schueler.VORNAME} ${schueler.NACHNAME} (ID: ${id})`;
+                }
+            }
+            
+            document.getElementById('deleteModalText').textContent = 
+                `Sind Sie sicher, dass Sie die Bewertung "${evaluationText}" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.`;
+            document.getElementById('deleteModal').style.display = 'flex';
+        }
+        
+        function hideDeleteModal() {
+            document.getElementById('deleteModal').style.display = 'none';
+            evaluationToDelete = null;
+        }
+        
+        async function confirmDelete() {
+            if (!evaluationToDelete) return;
+            
+            try {
+                // In einer echten Anwendung: API DELETE Aufruf
+                // await fetch(`${BASE_URL}/lehr-bewertung-schueler/delete/${evaluationToDelete}`, { method: 'DELETE' });
+                
+                // Simuliere API-Aufruf
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Lokal entfernen
+                currentEvaluations = currentEvaluations.filter(e => e.PK_LEHR_BEWERTUNG_SCHUELER != evaluationToDelete);
+                
+                // Update gefilterte Liste
+                filterEvaluations();
+                
+                showSuccess(`Bewertung mit ID ${evaluationToDelete} wurde gelöscht`, 'evaluationMessage');
+                hideDeleteModal();
+                
+                addActivityLog('Bewertung gelöscht', `ID: ${evaluationToDelete}`);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showError(`Fehler beim Löschen: ${error.message}`, 'evaluationMessage');
+                hideDeleteModal();
+            }
+        }
+        
+        function exportEvaluations() {
+            const dataToExport = filteredEvaluations.length > 0 ? filteredEvaluations : currentEvaluations;
+            
+            if (!dataToExport || dataToExport.length === 0) {
+                showError('Keine Bewertungen zum Exportieren verfügbar', 'evaluationMessage');
+                return;
+            }
+            
+            // CSV erstellen
+            const headers = ['ID', 'Schüler', 'Lehrer', 'Mandant', 'Bewertungsdatum', 'Typ', 'Gesamturteil', 'Erstellt am'];
+            
+            const csvRows = [];
+            csvRows.push(headers.join(','));
+            
+            dataToExport.forEach(eval => {
+                const schueler = schuelerList.find(s => s.PK_KON_PERSON == eval.FK_KON_PERSON_SCHUELER);
+                const lehrer = lehrerList.find(l => l.PK_KON_PERSON == eval.FK_KON_PERSON_LEHRER);
+                
+                const schuelerName = schueler ? `${schueler.VORNAME} ${schueler.NACHNAME}` : `Schüler ID: ${eval.FK_KON_PERSON_SCHUELER}`;
+                const lehrerName = lehrer ? `${lehrer.VORNAME} ${lehrer.NACHNAME}` : `Lehrer ID: ${eval.FK_KON_PERSON_LEHRER}`;
+                
+                const typMap = {
+                    '1': 'Klassenarbeit',
+                    '2': 'Test',
+                    '3': 'Mündliche Prüfung',
+                    '4': 'Projekt',
+                    '5': 'Hausaufgabe'
+                };
+                
+                const urteilMap = {
+                    'SEHR_GUT': 'Sehr gut',
+                    'GUT': 'Gut',
+                    'BEFRIEDIGEND': 'Befriedigend',
+                    'AUSREICHEND': 'Ausreichend',
+                    'MANGELHAFT': 'Mangelhaft',
+                    'UNGENÜGEND': 'Ungenügend'
+                };
+                
+                const typ = typMap[eval.FK_STD_BEW_BEWERTUNGSTYP] || eval.FK_STD_BEW_BEWERTUNGSTYP;
+                const urteil = urteilMap[eval.GESAMTURTEIL] || eval.GESAMTURTEIL;
+                const date = new Date(eval.DATUM_BEWERTUNG).toLocaleDateString('de-DE');
+                const created = new Date(eval.CREATED_AT).toLocaleDateString('de-DE');
+                
+                const row = [
+                    eval.PK_LEHR_BEWERTUNG_SCHUELER,
+                    `"${schuelerName}"`,
+                    `"${lehrerName}"`,
+                    eval.FK_MDT_MANDANT,
+                    date,
+                    typ,
+                    urteil,
+                    created
+                ];
+                
+                csvRows.push(row.join(','));
+            });
+            
+            const csvString = csvRows.join('\n');
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `bewertungen_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showSuccess(`${dataToExport.length} Bewertungen exportiert`, 'evaluationMessage');
+            addActivityLog('Bewertungen exportiert', `${dataToExport.length} Einträge`);
+        }
+        
+        // ============================
+        // PERSONEN VERWALTUNG
+        // ============================
+        
+        function initPersonData() {
+            // Lade gespeicherte Personen-Daten
+            const savedTeachers = localStorage.getItem(`teachers_${currentMandant}`);
+            const savedStudents = localStorage.getItem(`students_${currentMandant}`);
+            
+            teachers = savedTeachers ? JSON.parse(savedTeachers) : getDefaultTeachers();
+            students = savedStudents ? JSON.parse(savedStudents) : getDefaultStudents();
+            courses = getDefaultCourses();
+            
+            // Initialisiere Dropdowns
+            updateTeacherDropdown();
+            updateStudentDropdown();
+            updateCourseDropdown();
+            updateCourseFilterDropdown();
+            
+            // Zeige Personen an
+            displayPersons();
+        }
+        
+        function getDefaultTeachers() {
+            return [
+                {
+                    id: 'teacher_1',
+                    name: 'Dr. Müller',
+                    email: 'dr.mueller@schule.de',
+                    subject: 'Mathematik',
+                    status: 'active',
+                    notes: 'Klassenlehrer 10a'
+                },
+                {
+                    id: 'teacher_2',
+                    name: 'Frau Schmidt',
+                    email: 'f.schmidt@schule.de',
+                    subject: 'Deutsch',
+                    status: 'active',
+                    notes: 'Fachbereichsleiterin Sprachen'
+                },
+                {
+                    id: 'teacher_3',
+                    name: 'Herr Wagner',
+                    email: 'h.wagner@schule.de',
+                    subject: 'Physik',
+                    status: 'inactive',
+                    notes: 'Im Ruhestand seit 2023'
+                },
+                {
+                    id: 'teacher_4',
+                    name: 'Frau Meyer',
+                    email: 'f.meyer@schule.de',
+                    subject: 'Englisch',
+                    status: 'active',
+                    notes: 'Austauschprogramm Koordinatorin'
+                },
+                {
+                    id: 'teacher_5',
+                    name: 'Herr Schulz',
+                    email: 'h.schulz@schule.de',
+                    subject: 'Geschichte',
+                    status: 'active',
+                    notes: ''
+                }
+            ];
+        }
+        
+        function getDefaultStudents() {
+            return [
+                {
+                    id: 'student_1',
+                    name: 'Max Mustermann',
+                    email: 'max.mustermann@student.de',
+                    course: 'Mathematik Leistungskurs',
+                    status: 'active',
+                    notes: 'Sehr gut in Analysis'
+                },
+                {
+                    id: 'student_2',
+                    name: 'Lisa Beispiel',
+                    email: 'lisa.beispiel@student.de',
+                    course: 'Deutsch Grundkurs',
+                    status: 'active',
+                    notes: 'Teilnahme an Literaturwettbewerb'
+                },
+                {
+                    id: 'student_3',
+                    name: 'Tom Test',
+                    email: 'tom.test@student.de',
+                    course: 'Physik Leistungskurs',
+                    status: 'active',
+                    notes: ''
+                },
+                {
+                    id: 'student_4',
+                    name: 'Anna Muster',
+                    email: 'anna.muster@student.de',
+                    course: 'Englisch Leistungskurs',
+                    status: 'inactive',
+                    notes: 'Ausgetreten 2023'
+                },
+                {
+                    id: 'student_5',
+                    name: 'Peter Probe',
+                    email: 'peter.probe@student.de',
+                    course: 'Geschichte Grundkurs',
+                    status: 'active',
+                    notes: 'Interesse an Archäologie'
+                },
+                {
+                    id: 'student_6',
+                    name: 'Sarah Sample',
+                    email: 'sarah.sample@student.de',
+                    course: 'Mathematik Grundkurs',
+                    status: 'active',
+                    notes: 'Braucht Unterstützung in Geometrie'
+                },
+                {
+                    id: 'student_7',
+                    name: 'David Demo',
+                    email: 'david.demo@student.de',
+                    course: 'Deutsch Leistungskurs',
+                    status: 'active',
+                    notes: ''
+                },
+                {
+                    id: 'student_8',
+                    name: 'Julia Jupyter',
+                    email: 'julia.jupyter@student.de',
+                    course: 'Physik Grundkurs',
+                    status: 'active',
+                    notes: 'Sehr experimentierfreudig'
+                }
+            ];
+        }
+        
+        function getDefaultCourses() {
+            return [
+                { id: 'course_1', name: 'Mathematik Leistungskurs', category: 'Naturwissenschaften', status: 'active' },
+                { id: 'course_2', name: 'Mathematik Grundkurs', category: 'Naturwissenschaften', status: 'active' },
+                { id: 'course_3', name: 'Deutsch Leistungskurs', category: 'Sprachen', status: 'active' },
+                { id: 'course_4', name: 'Deutsch Grundkurs', category: 'Sprachen', status: 'active' },
+                { id: 'course_5', name: 'Englisch Leistungskurs', category: 'Sprachen', status: 'active' },
+                { id: 'course_6', name: 'Englisch Grundkurs', category: 'Sprachen', status: 'active' },
+                { id: 'course_7', name: 'Physik Leistungskurs', category: 'Naturwissenschaften', status: 'active' },
+                { id: 'course_8', name: 'Physik Grundkurs', category: 'Naturwissenschaften', status: 'active' },
+                { id: 'course_9', name: 'Geschichte Leistungskurs', category: 'Gesellschaftswissenschaften', status: 'active' },
+                { id: 'course_10', name: 'Geschichte Grundkurs', category: 'Gesellschaftswissenschaften', status: 'active' }
+            ];
+        }
+        
+        function displayPersons() {
+            const teacherList = document.getElementById('teacherList');
+            const studentList = document.getElementById('studentList');
+            
+            // Filter anwenden
+            let filteredTeachers = teachers;
+            let filteredStudents = students;
+            
+            if (showActivePersonsOnly) {
+                filteredTeachers = teachers.filter(t => t.status !== 'inactive');
+                filteredStudents = students.filter(s => s.status !== 'inactive');
+            }
+            
+            if (currentPersonFilter === 'teachers') {
+                filteredStudents = [];
+            } else if (currentPersonFilter === 'students') {
+                filteredTeachers = [];
+            }
+            
+            if (currentCourseFilter) {
+                filteredStudents = filteredStudents.filter(s => 
+                    s.course && s.course.toLowerCase().includes(currentCourseFilter.toLowerCase())
+                );
+            }
+            
+            // Lehrer anzeigen
+            if (filteredTeachers.length === 0) {
+                teacherList.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 30px; color: #666;">
+                        <i class="fas fa-chalkboard-teacher fa-2x" style="margin-bottom: 15px; display: block;"></i>
+                        ${showActivePersonsOnly ? 'Keine aktiven Lehrpersonen vorhanden' : 'Keine Lehrpersonen vorhanden'}
+                    </div>
+                `;
+            } else {
+                teacherList.innerHTML = filteredTeachers.map(teacher => `
+                    <div class="person-card">
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                            <div style="width: 50px; height: 50px; border-radius: 50%; background: var(--secondary-color); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; font-weight: bold;">
+                                ${teacher.name.charAt(0)}
+                            </div>
+                            <div>
+                                <h3 style="color: var(--primary-color); margin-bottom: 5px;">${teacher.name}</h3>
+                                <div>
+                                    <span style="background: #d1ecf1; color: #0c5460; padding: 3px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: 600; margin-right: 5px;">
+                                        Lehrperson
+                                    </span>
+                                    ${teacher.status === 'inactive' ? 
+                                        '<span style="background: #f8d7da; color: #721c24; padding: 3px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: 600;">Inaktiv</span>' : 
+                                        '<span style="background: #d4edda; color: #155724; padding: 3px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: 600;">Aktiv</span>'}
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem;">
+                                <span style="color: #666;">Fachbereich:</span>
+                                <span style="color: var(--primary-color); font-weight: 500;">${teacher.subject || 'Allgemein'}</span>
+                            </div>
+                            ${teacher.email ? `
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem;">
+                                    <span style="color: #666;">E-Mail:</span>
+                                    <span style="color: var(--primary-color); font-weight: 500;">${teacher.email}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div style="margin-top: 20px; display: flex; gap: 10px;">
+                            <button class="button button-info" style="padding: 8px 15px; font-size: 0.9rem;" onclick="editPerson('teacher', '${teacher.id}')">
+                                <i class="fas fa-edit"></i> Bearbeiten
+                            </button>
+                            <button class="button" style="padding: 8px 15px; font-size: 0.9rem; background: ${teacher.status === 'inactive' ? 'var(--success-color)' : 'var(--warning-color)'};" onclick="togglePersonStatus('teacher', '${teacher.id}')">
+                                <i class="fas fa-power-off"></i> ${teacher.status === 'inactive' ? 'Aktivieren' : 'Deaktivieren'}
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            // Schüler anzeigen
+            if (filteredStudents.length === 0) {
+                studentList.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 30px; color: #666;">
+                        <i class="fas fa-user-graduate fa-2x" style="margin-bottom: 15px; display: block;"></i>
+                        ${showActivePersonsOnly ? 'Keine aktiven Schüler/Teilnehmer vorhanden' : 'Keine Schüler/Teilnehmer vorhanden'}
+                    </div>
+                `;
+            } else {
+                studentList.innerHTML = filteredStudents.map(student => `
+                    <div class="person-card">
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                            <div style="width: 50px; height: 50px; border-radius: 50%; background: var(--success-color); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; font-weight: bold;">
+                                ${student.name.charAt(0)}
+                            </div>
+                            <div>
+                                <h3 style="color: var(--primary-color); margin-bottom: 5px;">${student.name}</h3>
+                                <div>
+                                    <span style="background: #d4edda; color: #155724; padding: 3px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: 600; margin-right: 5px;">
+                                        Schüler/Teilnehmer
+                                    </span>
+                                    ${student.status === 'inactive' ? 
+                                        '<span style="background: #f8d7da; color: #721c24; padding: 3px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: 600;">Inaktiv</span>' : 
+                                        '<span style="background: #d4edda; color: #155724; padding: 3px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: 600;">Aktiv</span>'}
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem;">
+                                <span style="color: #666;">Kurs:</span>
+                                <span style="color: var(--primary-color); font-weight: 500;">${student.course || 'N/A'}</span>
+                            </div>
+                            ${student.email ? `
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem;">
+                                    <span style="color: #666;">E-Mail:</span>
+                                    <span style="color: var(--primary-color); font-weight: 500;">${student.email}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div style="margin-top: 20px; display: flex; gap: 10px;">
+                            <button class="button button-info" style="padding: 8px 15px; font-size: 0.9rem;" onclick="editPerson('student', '${student.id}')">
+                                <i class="fas fa-edit"></i> Bearbeiten
+                            </button>
+                            <button class="button" style="padding: 8px 15px; font-size: 0.9rem; background: ${student.status === 'inactive' ? 'var(--success-color)' : 'var(--warning-color)'};" onclick="togglePersonStatus('student', '${student.id}')">
+                                <i class="fas fa-power-off"></i> ${student.status === 'inactive' ? 'Aktivieren' : 'Deaktivieren'}
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            // Überschriften anpassen basierend auf Filter
+            if (currentPersonFilter === 'teachers') {
+                document.querySelector('#personListContainer h3:nth-of-type(2)').style.display = 'none';
+                studentList.style.display = 'none';
+            } else if (currentPersonFilter === 'students') {
+                document.querySelector('#personListContainer h3:nth-of-type(1)').style.display = 'none';
+                teacherList.style.display = 'none';
+            } else {
+                document.querySelector('#personListContainer h3:nth-of-type(1)').style.display = 'block';
+                document.querySelector('#personListContainer h3:nth-of-type(2)').style.display = 'block';
+                teacherList.style.display = 'grid';
+                studentList.style.display = 'grid';
+            }
+        }
+        
+        function searchPersons() {
+            const searchTerm = document.getElementById('searchPersons').value.toLowerCase();
+            
+            if (!searchTerm) {
+                displayPersons();
+                return;
+            }
+            
+            // Filter anwenden
+            let filteredTeachers = teachers;
+            let filteredStudents = students;
+            
+            if (showActivePersonsOnly) {
+                filteredTeachers = teachers.filter(t => t.status !== 'inactive');
+                filteredStudents = students.filter(s => s.status !== 'inactive');
+            }
+            
+            if (currentPersonFilter === 'teachers') {
+                filteredStudents = [];
+            } else if (currentPersonFilter === 'students') {
+                filteredTeachers = [];
+            }
+            
+            // Suche auf gefilterte Personen anwenden
+            filteredTeachers = filteredTeachers.filter(teacher => 
+                teacher.name.toLowerCase().includes(searchTerm) ||
+                (teacher.email && teacher.email.toLowerCase().includes(searchTerm)) ||
+                (teacher.subject && teacher.subject.toLowerCase().includes(searchTerm))
+            );
+            
+            filteredStudents = filteredStudents.filter(student => 
+                student.name.toLowerCase().includes(searchTerm) ||
+                (student.email && student.email.toLowerCase().includes(searchTerm)) ||
+                (student.course && student.course.toLowerCase().includes(searchTerm))
+            );
+            
+            const teacherList = document.getElementById('teacherList');
+            const studentList = document.getElementById('studentList');
+            
+            // Lehrer anzeigen
+            if (filteredTeachers.length === 0) {
+                teacherList.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 30px; color: #666;">
+                        <i class="fas fa-search fa-2x" style="margin-bottom: 15px; display: block;"></i>
+                        Keine passenden Lehrpersonen gefunden
+                    </div>
+                `;
+            } else {
+                teacherList.innerHTML = filteredTeachers.map(teacher => `
+                    <div class="person-card">
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                            <div style="width: 50px; height: 50px; border-radius: 50%; background: var(--secondary-color); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; font-weight: bold;">
+                                ${teacher.name.charAt(0)}
+                            </div>
+                            <div>
+                                <h3 style="color: var(--primary-color); margin-bottom: 5px;">${teacher.name}</h3>
+                                <div>
+                                    <span style="background: #d1ecf1; color: #0c5460; padding: 3px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: 600; margin-right: 5px;">
+                                        Lehrperson
+                                    </span>
+                                    ${teacher.status === 'inactive' ? 
+                                        '<span style="background: #f8d7da; color: #721c24; padding: 3px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: 600;">Inaktiv</span>' : 
+                                        '<span style="background: #d4edda; color: #155724; padding: 3px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: 600;">Aktiv</span>'}
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem;">
+                                <span style="color: #666;">Fachbereich:</span>
+                                <span style="color: var(--primary-color); font-weight: 500;">${teacher.subject || 'Allgemein'}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            // Schüler anzeigen
+            if (filteredStudents.length === 0) {
+                studentList.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 30px; color: #666;">
+                        <i class="fas fa-search fa-2x" style="margin-bottom: 15px; display: block;"></i>
+                        Keine passenden Schüler/Teilnehmer gefunden
+                    </div>
+                `;
+            } else {
+                studentList.innerHTML = filteredStudents.map(student => `
+                    <div class="person-card">
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                            <div style="width: 50px; height: 50px; border-radius: 50%; background: var(--success-color); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; font-weight: bold;">
+                                ${student.name.charAt(0)}
+                            </div>
+                            <div>
+                                <h3 style="color: var(--primary-color); margin-bottom: 5px;">${student.name}</h3>
+                                <div>
+                                    <span style="background: #d4edda; color: #155724; padding: 3px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: 600; margin-right: 5px;">
+                                        Schüler/Teilnehmer
+                                    </span>
+                                    ${student.status === 'inactive' ? 
+                                        '<span style="background: #f8d7da; color: #721c24; padding: 3px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: 600;">Inaktiv</span>' : 
+                                        '<span style="background: #d4edda; color: #155724; padding: 3px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: 600;">Aktiv</span>'}
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem;">
+                                <span style="color: #666;">Kurs:</span>
+                                <span style="color: var(--primary-color); font-weight: 500;">${student.course || 'N/A'}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        function clearPersonSearch() {
+            document.getElementById('searchPersons').value = '';
+            displayPersons();
+        }
+        
+        function showAllPersons() {
+            currentPersonFilter = 'all';
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            displayPersons();
+        }
+        
+        function showTeachersOnly() {
+            currentPersonFilter = 'teachers';
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            displayPersons();
+        }
+        
+        function showStudentsOnly() {
+            currentPersonFilter = 'students';
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            displayPersons();
+        }
+        
+        function toggleActivePersons() {
+            showActivePersonsOnly = !showActivePersonsOnly;
+            const btn = event.target.closest('.filter-btn');
+            if (btn) {
+                btn.classList.toggle('active');
+            }
+            displayPersons();
+        }
+        
+        function filterPersonsByCourse() {
+            currentCourseFilter = document.getElementById('personCourseSearch').value;
+            displayPersons();
+        }
+        
+        function openTeacherModal() {
+            openPersonModal();
+            document.getElementById('personType').value = 'teacher';
+            togglePersonFields();
+        }
+        
+        function openStudentModal() {
+            openPersonModal();
+            document.getElementById('personType').value = 'student';
+            togglePersonFields();
+        }
+        
+        function openPersonModal() {
+            document.getElementById('personModalTitle').textContent = 'Neue Person';
+            document.getElementById('personForm').reset();
+            document.getElementById('personId').value = '';
+            document.getElementById('personModal').style.display = 'block';
+        }
+        
+        function closePersonModal() {
+            document.getElementById('personModal').style.display = 'none';
+        }
+        
+        function togglePersonFields() {
+            const personType = document.getElementById('personType').value;
+            const teacherFields = document.getElementById('teacherFields');
+            const studentFields = document.getElementById('studentFields');
+            
+            if (personType === 'teacher') {
+                teacherFields.style.display = 'block';
+                studentFields.style.display = 'none';
+            } else if (personType === 'student') {
+                teacherFields.style.display = 'none';
+                studentFields.style.display = 'block';
+            } else {
+                teacherFields.style.display = 'none';
+                studentFields.style.display = 'none';
+            }
+        }
+        
+        function savePerson(event) {
+            event.preventDefault();
+            
+            const personId = document.getElementById('personId').value;
+            const personType = document.getElementById('personType').value;
+            const personName = document.getElementById('personName').value;
+            const personEmail = document.getElementById('personEmail').value;
+            const personStatus = document.getElementById('personStatus').value;
+            const personNotes = document.getElementById('personNotes').value;
+            
+            if (!personType || !personName) {
+                showAlert('error', 'Bitte füllen Sie alle erforderlichen Felder aus!');
+                return;
+            }
+            
+            if (personType === 'teacher') {
+                const teacherSubject = document.getElementById('teacherSubject').value;
+                
+                if (personId) {
+                    // Bearbeiten
+                    const index = teachers.findIndex(t => t.id === personId);
+                    if (index !== -1) {
+                        teachers[index] = {
+                            ...teachers[index],
+                            name: personName,
+                            email: personEmail,
+                            subject: teacherSubject,
+                            status: personStatus,
+                            notes: personNotes
+                        };
+                    }
+                    showSuccess(`Lehrperson "${personName}" wurde aktualisiert`);
+                } else {
+                    // Neu erstellen
+                    const newTeacher = {
+                        id: 'teacher_' + Date.now(),
+                        name: personName,
+                        email: personEmail,
+                        subject: teacherSubject,
+                        status: personStatus,
+                        notes: personNotes
+                    };
+                    
+                    teachers.push(newTeacher);
+                    showSuccess(`Lehrperson "${personName}" wurde hinzugefügt`);
+                }
+                
+                localStorage.setItem(`teachers_${currentMandant}`, JSON.stringify(teachers));
+                updateTeacherDropdown();
+                addActivityLog('Lehrperson aktualisiert', personName);
+                
+            } else if (personType === 'student') {
+                const studentCourse = document.getElementById('studentCourse').value;
+                
+                if (personId) {
+                    // Bearbeiten
+                    const index = students.findIndex(s => s.id === personId);
+                    if (index !== -1) {
+                        students[index] = {
+                            ...students[index],
+                            name: personName,
+                            email: personEmail,
+                            course: studentCourse,
+                            status: personStatus,
+                            notes: personNotes
+                        };
+                    }
+                    showSuccess(`Schüler/Teilnehmer "${personName}" wurde aktualisiert`);
+                } else {
+                    // Neu erstellen
+                    const newStudent = {
+                        id: 'student_' + Date.now(),
+                        name: personName,
+                        email: personEmail,
+                        course: studentCourse,
+                        status: personStatus,
+                        notes: personNotes
+                    };
+                    
+                    students.push(newStudent);
+                    showSuccess(`Schüler/Teilnehmer "${personName}" wurde hinzugefügt`);
+                }
+                
+                localStorage.setItem(`students_${currentMandant}`, JSON.stringify(students));
+                updateStudentDropdown();
+                addActivityLog('Schüler aktualisiert', personName);
+            }
+            
+            displayPersons();
+            closePersonModal();
+            updateCourseFilterDropdown();
+        }
+        
+        function editPerson(type, personId) {
+            let person;
+            if (type === 'teacher') {
+                person = teachers.find(t => t.id === personId);
+                if (person) {
+                    document.getElementById('personModalTitle').textContent = 'Lehrperson bearbeiten';
+                    document.getElementById('personType').value = 'teacher';
+                    document.getElementById('teacherSubject').value = person.subject || '';
+                }
+            } else {
+                person = students.find(s => s.id === personId);
+                if (person) {
+                    document.getElementById('personModalTitle').textContent = 'Schüler/Teilnehmer bearbeiten';
+                    document.getElementById('personType').value = 'student';
+                    document.getElementById('studentCourse').value = person.course || '';
+                }
+            }
+            
+            if (!person) return;
+            
+            document.getElementById('personId').value = person.id;
+            document.getElementById('personName').value = person.name;
+            document.getElementById('personEmail').value = person.email || '';
+            document.getElementById('personStatus').value = person.status || 'active';
+            document.getElementById('personNotes').value = person.notes || '';
+            
+            togglePersonFields();
+            document.getElementById('personModal').style.display = 'block';
+        }
+        
+        function togglePersonStatus(type, personId) {
+            let personList, listName;
+            if (type === 'teacher') {
+                personList = teachers;
+                listName = 'Lehrperson';
+            } else {
+                personList = students;
+                listName = 'Schüler/Teilnehmer';
+            }
+            
+            const index = personList.findIndex(p => p.id === personId);
+            if (index === -1) return;
+            
+            const person = personList[index];
+            const newStatus = person.status === 'inactive' ? 'active' : 'inactive';
+            
+            personList[index] = {
+                ...person,
+                status: newStatus
+            };
+            
+            if (type === 'teacher') {
+                localStorage.setItem(`teachers_${currentMandant}`, JSON.stringify(teachers));
+                updateTeacherDropdown();
+            } else {
+                localStorage.setItem(`students_${currentMandant}`, JSON.stringify(students));
+                updateStudentDropdown();
+            }
+            
+            displayPersons();
+            showSuccess(`${listName} "${person.name}" wurde ${newStatus === 'active' ? 'aktiviert' : 'deaktiviert'}`);
+            addActivityLog('Personenstatus geändert', `${person.name}: ${newStatus}`);
+        }
+        
+        function updateCourseFilterDropdown() {
+            const select = document.getElementById('personCourseSearch');
+            const uniqueCourses = [...new Set(students.map(s => s.course).filter(c => c))];
+            
+            select.innerHTML = '<option value="">Alle Lehrgänge</option>' + 
+                uniqueCourses.map(course => `<option value="${course}">${course}</option>`).join('');
+        }
+        
+        // ==================== DROPDOWN UPDATES ====================
+        function updateTeacherDropdown() {
+            const select = document.getElementById('teacherSelect');
+            const activeTeachers = teachers.filter(t => t.status !== 'inactive');
+            select.innerHTML = '<option value="">Lehrer auswählen...</option>' + 
+                activeTeachers.map(teacher => `<option value="${teacher.id}">${teacher.name} (${teacher.subject})</option>`).join('');
+        }
+        
+        function updateStudentDropdown() {
+            const select = document.getElementById('studentSelect');
+            const activeStudents = students.filter(s => s.status !== 'inactive');
+            select.innerHTML = '<option value="">Schüler auswählen...</option>' + 
+                activeStudents.map(student => `<option value="${student.id}">${student.name} (${student.course})</option>`).join('');
+        }
+        
+        function updateCourseDropdown() {
+            const select = document.getElementById('courseSelect');
+            const activeCourses = courses.filter(c => c.status === 'active');
+            select.innerHTML = '<option value="">Bitte auswählen</option>' + 
+                activeCourses.map(course => `<option value="${course.id}">${course.name} (${course.category})</option>`).join('');
+        }
+
+        // ============================
+        // TAB FUNKTIONALITÄT
+        // ============================
+        function switchTab(tabName) {
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach(t => t.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+            
+            const selectedTab = document.querySelector(`.tab[data-tab="${tabName}"]`);
+            const selectedContent = document.getElementById(tabName);
+            
+            if (selectedTab) selectedTab.classList.add('active');
+            if (selectedContent) selectedContent.classList.add('active');
+            
+            // Load data for specific tabs
+            switch(tabName) {
+                case 'evaluationList':
+                    loadEvaluations();
+                    break;
+                case 'personen':
+                    initPersonData();
+                    break;
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tab switching functionality
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const targetTab = tab.getAttribute('data-tab');
+                    switchTab(targetTab);
+                });
+            });
+            
+            // Initialize today's date in evaluation form
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('evaluationDate').value = today;
+            
+            // Set date range inputs to current month
+            const firstDay = new Date();
+            firstDay.setDate(1);
+            const lastDay = new Date(firstDay.getFullYear(), firstDay.getMonth() + 1, 0);
+            
+            document.getElementById('dateFrom').value = firstDay.toISOString().split('T')[0];
+            document.getElementById('dateTo').value = lastDay.toISOString().split('T')[0];
+            
+            // Initialize rating stars
+            initializeRatingStars();
+            
+            // Load initial data
+            updateDashboard();
+            
+            // Load initial org units for Lehr Einsendeaufgabe section
+            loadOrgUnitsForLehrEinsendeaufgabe();
+            
+            // Add some initial activity logs
+            addActivityLog('Anwendung gestartet', 'System initialisiert');
+        });
+        
+        // ============================
+        // BEWERTUNGSFORMULAR FUNKTIONEN
+        // ============================
+        function initializeRatingStars() {
+            ['Inhalt', 'Korrektheit', 'Sprachlich', 'Gesamteindruck'].forEach(category => {
+                const containerId = `rating${category}`;
+                const stars = document.querySelectorAll(`#${containerId} .star`);
+                
+                stars.forEach(star => {
+                    star.addEventListener('click', function() {
+                        const value = parseInt(this.getAttribute('data-value'));
+                        const container = this.parentElement;
+                        
+                        // Update stars visual
+                        container.querySelectorAll('.star').forEach((s, index) => {
+                            if (index < value) {
+                                s.classList.add('active');
+                            } else {
+                                s.classList.remove('active');
+                            }
+                        });
+                        
+                        // Update hidden input
+                        const inputId = `${category.toLowerCase()}Wert`;
+                        document.getElementById(inputId).value = value;
+                    });
+                });
+            });
+        }
+        
+        async function saveEvaluation() {
+            // Get form values
+            const studentId = document.getElementById('studentSelect').value;
+            const teacherId = document.getElementById('teacherSelect').value;
+            const date = document.getElementById('evaluationDate').value;
+            const subject = document.getElementById('subjectSelect').value;
+            const inhalt = document.getElementById('inhaltWert').value;
+            const korrektheit = document.getElementById('korrektheitWert').value;
+            const sprachlich = document.getElementById('sprachlichWert').value;
+            const gesamteindruck = document.getElementById('gesamteindruckWert').value;
+            const comment = document.getElementById('comment').value;
+            
+            // Validate
+            if (!studentId || !teacherId || !date || !subject) {
+                showError('Bitte füllen Sie alle Pflichtfelder aus', 'evalMessage');
+                return;
+            }
+            
+            // Create new evaluation ID
+            const newId = Math.max(...currentEvaluations.map(e => parseInt(e.PK_LEHR_BEWERTUNG_SCHUELER))) + 1;
+            
+            // Create evaluation object
+            const evaluation = {
+                PK_LEHR_BEWERTUNG_SCHUELER: newId.toString(),
+                FK_KON_PERSON_SCHUELER: studentId,
+                FK_KON_PERSON_LEHRER: teacherId,
+                FK_MDT_MANDANT: '1',
+                DATUM_BEWERTUNG: date + 'T00:00:00Z',
+                FK_STD_BEW_BEWERTUNGSTYP: subject === 'mathe' ? '1' : subject === 'deutsch' ? '2' : '3',
+                GESAMTURTEIL: getUrteilFromRating((parseInt(inhalt) + parseInt(korrektheit) + parseInt(sprachlich) + parseInt(gesamteindruck)) / 4),
+                CREATED_AT: new Date().toISOString(),
+                INHALT_WERT: inhalt,
+                KORREKTHEIT_WERT: korrektheit,
+                VERFUEGBARE_SPRACHLICHE_MITTEL_WERT: sprachlich,
+                GESAMTEINDRUCK_WERT: gesamteindruck
+            };
+            
+            // Add to current evaluations
+            currentEvaluations.push(evaluation);
+            
+            // Update filtered list
+            filterEvaluations();
+            
+            // Clear form
+            clearEvaluationForm();
+            
+            // Show success message
+            showSuccess(`Bewertung erfolgreich gespeichert (ID: ${newId})`, 'evalMessage');
+            
+            // Switch to evaluations tab
+            switchTab('evaluationList');
+            
+            // Update dashboard
+            updateDashboard();
+            
+            addActivityLog('Bewertung erstellt', `ID: ${newId} - Fach: ${subject}`);
+        }
+        
+        function getUrteilFromRating(rating) {
+            if (rating >= 4.5) return 'SEHR_GUT';
+            if (rating >= 3.5) return 'GUT';
+            if (rating >= 2.5) return 'BEFRIEDIGEND';
+            if (rating >= 1.5) return 'AUSREICHEND';
+            if (rating >= 1.0) return 'MANGELHAFT';
+            return 'UNGENÜGEND';
+        }
+        
+        function clearEvaluationForm() {
+            // Reset form
+            document.getElementById('studentSelect').value = '';
+            document.getElementById('teacherSelect').value = '';
+            document.getElementById('subjectSelect').value = '';
+            document.getElementById('comment').value = '';
+            
+            // Reset ratings
+            ['Inhalt', 'Korrektheit', 'Sprachlich', 'Gesamteindruck'].forEach(category => {
+                const container = document.getElementById(`rating${category}`);
+                container.querySelectorAll('.star').forEach(star => {
+                    star.classList.remove('active');
+                });
+                
+                const inputId = `${category.toLowerCase()}Wert`;
+                document.getElementById(inputId).value = '0';
+            });
+        }
+        
+        // ============================
+        // DASHBOARD FUNKTIONEN
+        // ============================
+        async function updateDashboard() {
+            try {
+                // Update statistics with current data
+                document.getElementById('statOrgUnits').textContent = '15';
+                document.getElementById('statSelectedOrgUnitsLabel').textContent = '0 ausgewählt';
+                document.getElementById('statLocations').textContent = '42';
+                document.getElementById('statLocationsWithCoords').textContent = '35';
+                document.getElementById('statLocationsWithoutCoords').textContent = '7';
+                document.getElementById('statTeachers').textContent = teachers.filter(t => t.status === 'active').length;
+                document.getElementById('statTeachersWithTasks').textContent = '89';
+                document.getElementById('statTeachersWithoutTasks').textContent = '38';
+                document.getElementById('statEvaluations').textContent = currentEvaluations.length;
+                
+                // Calculate average evaluation
+                if (currentEvaluations.length > 0) {
+                    const avgInhalt = calculateAverage(currentEvaluations, 'INHALT_WERT');
+                    const avgKorrektheit = calculateAverage(currentEvaluations, 'KORREKTHEIT_WERT');
+                    const avgSprachlich = calculateAverage(currentEvaluations, 'VERFUEGBARE_SPRACHLICHE_MITTEL_WERT');
+                    const avgGesamteindruck = calculateAverage(currentEvaluations, 'GESAMTEINDRUCK_WERT');
+                    
+                    const avgOverall = (avgInhalt + avgKorrektheit + avgSprachlich + avgGesamteindruck) / 4;
+                    document.getElementById('statAvgEvaluation').textContent = avgOverall.toFixed(1);
+                } else {
+                    document.getElementById('statAvgEvaluation').textContent = '0.0';
+                }
+                
+                // Update activity table
+                updateActivityTable();
+                
+            } catch (error) {
+                console.error('Error updating dashboard:', error);
+                updateDashboardWithDemoData();
+            }
+        }
+        
+        function calculateAverage(evaluations, field) {
+            const validValues = evaluations
+                .filter(e => e[field] !== null && e[field] !== undefined)
+                .map(e => parseFloat(e[field]));
+            
+            if (validValues.length === 0) return 0;
+            
+            const sum = validValues.reduce((acc, val) => acc + val, 0);
+            return sum / validValues.length;
+        }
+        
+        function updateDashboardWithDemoData() {
+            document.getElementById('statOrgUnits').textContent = '15';
+            document.getElementById('statSelectedOrgUnitsLabel').textContent = '0 ausgewählt';
+            document.getElementById('statLocations').textContent = '42';
+            document.getElementById('statLocationsWithCoords').textContent = '35';
+            document.getElementById('statLocationsWithoutCoords').textContent = '7';
+            document.getElementById('statTeachers').textContent = teachers.filter(t => t.status === 'active').length;
+            document.getElementById('statTeachersWithTasks').textContent = '89';
+            document.getElementById('statTeachersWithoutTasks').textContent = '38';
+            document.getElementById('statEvaluations').textContent = currentEvaluations.length;
+            document.getElementById('statAvgEvaluation').textContent = currentEvaluations.length > 0 ? '3.8' : '0.0';
+            
+            updateActivityTable();
+        }
+        
+        function updateActivityTable() {
+            const logs = JSON.parse(localStorage.getItem('activityLogs') || '[]');
+            const activityTableBody = document.getElementById('activityTableBody');
+            activityTableBody.innerHTML = '';
+            
+            if (logs.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td colspan="4" style="text-align: center; color: #9ca3af; font-style: italic;">
+                        Keine Aktivitäten aufgezeichnet
+                    </td>
+                `;
+                activityTableBody.appendChild(row);
+                return;
+            }
+            
+            // Display last 10 activities
+            logs.slice(0, 10).forEach(log => {
+                const time = new Date(log.time).toLocaleString('de-DE');
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${time}</td>
+                    <td>${log.action}</td>
+                    <td>${log.details}</td>
+                    <td><span class="status-badge">${log.status}</span></td>
+                `;
+                activityTableBody.appendChild(row);
+            });
+        }
+        
+        // ============================
+        // LEHR EINSENDEAUFGABE LEHRER FUNKTIONEN
+        // ============================
+        function loadOrgUnitsForLehrEinsendeaufgabe() {
+            // Simulierte Daten für Organisationseinheiten
+            const orgUnits = [
+                { id: '433', name: 'Organization Unit 1' },
+                { id: '283', name: 'Organization Unit 2' },
+                { id: '280', name: 'Organization Unit 3' }
+            ];
+            
+            const orgUnitSelect = document.getElementById('orgUnitSelect');
+            orgUnitSelect.innerHTML = '<option value="">-- Bitte Organisationseinheit auswählen --</option>';
+            
+            orgUnits.forEach(unit => {
+                const option = document.createElement('option');
+                option.value = unit.id;
+                option.textContent = `${unit.name} (ID: ${unit.id})`;
+                orgUnitSelect.appendChild(option);
+            });
+            
+            // Set default value for testing
+            orgUnitSelect.value = '433';
+            document.getElementById('submitOrgUnit').disabled = false;
+            currentLehrEinsendeaufgabeOrgUnitId = '433';
+        }
+        
+        // ============================
+        // KARTEN FUNKTIONEN
+        // ============================
+        function initializeMap() {
+            map = L.map('map').setView([51.1657, 10.4515], 6);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            markerCluster = L.markerClusterGroup();
+            map.addLayer(markerCluster);
+        }
+        
+        function zoomIn() {
+            map.zoomIn();
+        }
+        
+        function zoomOut() {
+            map.zoomOut();
+        }
+        
+        function resetView() {
+            map.setView([51.1657, 10.4515], 6);
+        }
+        
+        function toggleClusters() {
+            if (map.hasLayer(markerCluster)) {
+                map.removeLayer(markerCluster);
+            } else {
+                map.addLayer(markerCluster);
+            }
+        }
+        
+        // ============================
+        // INITIALISIERUNG
+        // ============================
+        // Initial load of evaluations
+        setTimeout(() => {
+            loadEvaluations();
+        }, 1000);
+    </script>
+</body>
+</html>

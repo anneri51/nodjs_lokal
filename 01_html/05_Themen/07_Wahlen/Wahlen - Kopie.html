@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wahlen Übersicht mit Dokumenten</title>
+    <style>
+        /* Your existing CSS remains mostly the same */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7f9;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #2c3e50, #1a2530);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+        }
+        
+        .search-box input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        .filter-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        button {
+            padding: 10px 15px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        .wahl-art-group {
+            margin-bottom: 25px;
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .group-header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .group-header h2 {
+            font-size: 1.4rem;
+        }
+        
+        .group-content {
+            display: none;
+            padding: 0;
+        }
+        
+        .group-content.active {
+            display: block;
+        }
+        
+        .jahr-group {
+            margin: 15px;
+            border: 1px solid #e0e0e0;
+            color: green;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        .jahr-header {
+            background-color: #ecf0f1;
+            padding: 12px 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+        }
+        
+        .jahr-content {
+            display: none;
+        }
+        
+        .jahr-content.active {
+            display: block;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        
+        tr {
+            cursor: pointer;
+        }
+        
+        tr:hover {
+            background-color: #f1f5f9;
+        }
+        
+        tr.active {
+            background-color: #e3f2fd;
+            border: 2px solid #3498db;
+        }
+        
+        .document-container {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .document-container.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .document-row {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .document-item {
+            flex: 1;
+            min-width: 300px;
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .document-item iframe {
+            width: 100%;
+            height: 400px;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            border: 1px solid #ddd;
+        }
+        
+        .document-title {
+            margin-top: 10px;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 1.1rem;
+        }
+        
+        .document-placeholder {
+            width: 100%;
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #eef2f5;
+            border-radius: 4px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2rem;
+            color: #7f8c8d;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #e74c3c;
+            font-size: 1.2rem;
+        }
+        
+        .summary {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .summary-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .summary-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .summary-label {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+        
+        .selection-info {
+            margin: 15px 0;
+            padding: 10px 15px;
+            background-color: #e3f2fd;
+            border-left: 4px solid #3498db;
+            border-radius: 4px;
+        }
+        
+        .download-btn {
+            margin-top: 10px;
+            padding: 8px 15px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .download-btn:hover {
+            background-color: #219653;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+            }
+            
+            .search-box {
+                width: 100%;
+            }
+            
+            th, td {
+                padding: 8px 10px;
+                font-size: 14px;
+            }
+            
+            .group-header h2 {
+                font-size: 1.2rem;
+            }
+            
+            .document-row {
+                flex-direction: column;
+            }
+            
+            .document-item iframe {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Wahlen Übersicht</h1>
+            <p>Daten gruppiert nach Wahlart und Jahr - Klicken Sie auf eine Zeile, um Dokumente anzuzeigen</p>
+        </header>
+        
+        <div class="summary">
+            <div class="summary-item">
+                <span class="summary-value" id="total-wahlen">0</span>
+                <span class="summary-label">Gesamte Wahlen</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-value" id="total-wahl-arten">0</span>
+                <span class="summary-label">Wahlarten</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-value" id="total-stimmen">0</span>
+                <span class="summary-label">Stimmen gesamt</span>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="Suche nach Bezeichnung, Region...">
+            </div>
+            <div class="filter-group">
+                <button id="expand-all">Alle öffnen</button>
+                <button id="collapse-all">Alle schließen</button>
+                <button id="clear-selection">Auswahl aufheben</button>
+            </div>
+        </div>
+        
+        <div id="wahlen-container">
+            <div class="loading">Lade Daten...</div>
+        </div>
+        
+        <div id="document-container" class="document-container">
+            <h3>Zugehörige Dokumente</h3>
+            <div id="selection-info" class="selection-info"></div>
+            <div class="document-row">
+                <div class="document-item">
+                    <div class="document-title">BILD</div>
+                    <div id="bild-placeholder" class="document-placeholder">Kein Dokument verfügbar</div>
+                    <iframe id="bild-iframe" style="display: none;"></iframe>
+                    <a id="bild-download" class="download-btn" style="display: none;" download>Download BILD</a>
+                </div>
+                <div class="document-item">
+                    <div class="document-title">BILD1</div>
+                    <div id="bild1-placeholder" class="document-placeholder">Kein Dokument verfügbar</div>
+                    <iframe id="bild1-iframe" style="display: none;"></iframe>
+                    <a id="bild1-download" class="download-btn" style="display: none;" download>Download BILD1</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const wahlenContainer = document.getElementById('wahlen-container');
+            const searchInput = document.getElementById('search-input');
+            const expandAllBtn = document.getElementById('expand-all');
+            const collapseAllBtn = document.getElementById('collapse-all');
+            const clearSelectionBtn = document.getElementById('clear-selection');
+            const totalWahlenElem = document.getElementById('total-wahlen');
+            const totalWahlArtenElem = document.getElementById('total-wahl-arten');
+            const totalStimmenElem = document.getElementById('total-stimmen');
+            const documentContainer = document.getElementById('document-container');
+            const bildIframe = document.getElementById('bild-iframe');
+            const bild1Iframe = document.getElementById('bild1-iframe');
+            const bildPlaceholder = document.getElementById('bild-placeholder');
+            const bild1Placeholder = document.getElementById('bild1-placeholder');
+            const bildDownload = document.getElementById('bild-download');
+            const bild1Download = document.getElementById('bild1-download');
+            const selectionInfo = document.getElementById('selection-info');
+            
+            let wahlenData = [];
+            let groupedData = {};
+            let selectedRow = null;
+            let objectUrls = []; // To store object URLs for cleanup
+            
+            // Fetch data from the web service
+            fetch('http://localhost:5000/wahlen')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Netzwerkantwort war nicht ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    wahlenData = data;
+                    processData(wahlenData);
+                })
+                .catch(error => {
+                    wahlenContainer.innerHTML = `
+                        <div class="error">
+                            <p>Fehler beim Laden der Daten: ${error.message}</p>
+                            <p>Stellen Sie sicher, dass der Webdienst unter http://localhost:5000/wahlen erreichbar ist.</p>
+                        </div>
+                    `;
+                    console.error('Fehler:', error);
+                });
+            
+            // Process and group the data
+            function processData(data) {
+                // Clean up any existing object URLs
+                cleanupObjectUrls();
+                
+                groupedData = {};
+                
+                // Group by FK_STD_WAHL_ART and then by year
+                data.forEach(wahl => {
+                    const wahlArt = wahl.FK_STD_WAHL_ART || 'Nicht zugeordnet';
+                    const wahlJahr = extractYear(wahl.WAHLDATUM) || 'Unbekanntes Jahr';
+                    
+                    if (!groupedData[wahlArt]) {
+                        groupedData[wahlArt] = {};
+                    }
+                    
+                    if (!groupedData[wahlArt][wahlJahr]) {
+                        groupedData[wahlArt][wahlJahr] = [];
+                    }
+                    
+                    groupedData[wahlArt][wahlJahr].push(wahl);
+                });
+                
+                renderData(groupedData);
+                updateSummary(data);
+            }
+            
+            // Extract year from date string
+            function extractYear(dateString) {
+                if (!dateString) return null;
+                
+                try {
+                    const date = new Date(dateString);
+                    return date.getFullYear().toString();
+                } catch (e) {
+                    // Try to extract year from string if Date parsing fails
+                    const yearMatch = dateString.match(/\b\d{4}\b/);
+                    return yearMatch ? yearMatch[0] : null;
+                }
+            }
+            
+            // Render the grouped data
+            function renderData(data) {
+                if (Object.keys(data).length === 0) {
+                    wahlenContainer.innerHTML = '<div class="loading">Keine Daten verfügbar</div>';
+                    return;
+                }
+                
+                let html = '';
+                
+                for (const [wahlArt, jahre] of Object.entries(data)) {
+                    html += `
+                        <div class="wahl-art-group">
+                            <div class="group-header">
+                                <h2>Wahlart: ${wahlArt}</h2>
+                                <span class="toggle-icon">▼</span>
+                            </div>
+                            <div class="group-content">
+                    `;
+                    
+                    for (const [jahr, wahlen] of Object.entries(jahre)) {
+                        html += `
+                            <div class="jahr-group">
+                                <div class="jahr-header">
+                                    <span>Jahr: ${jahr}</span>
+                                    <span class="toggle-icon">▼</span>
+                                </div>
+                                <div class="jahr-content">
+                                    <table>
+                                        <thead>
+                                            <tr>
+ <th>PK</th>
+                                                <th>Bezeichnung</th>
+                                                <th>Wahldatum</th>
+                                                <th>Region</th>
+                                                <th>Anzahl Stimmen</th>
+                                                <th>Wahlberechtigte</th>
+                                                <th>LINK</th>
+                                                <th>BILD</th>
+                                                <th>BILD1</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                        `;
+                        
+                        wahlen.forEach(wahl => {
+                            // Check if BILD and BILD1 contain binary data
+                            const hasBild = wahl.BILD && typeof wahl.BILD === 'object';
+                            const hasBild1 = wahl.BILD1 && typeof wahl.BILD1 === 'object';
+                            
+                            html += `
+                                <tr data-id="${wahl.ID || ''}" 
+                                    data-bez="${wahl.BEZEICHNUNG || ''}">
+  <td>${wahl.PK_WAHL_WAHL || '-'}</td>
+                                    <td>${wahl.BEZEICHNUNG || '-'}</td>
+                                    <td>${formatDate(wahl.WAHLDATUM)}</td>
+                                    <td>${wahl.REGION || '-'}</td>
+                                    <td>${wahl.ANZAHL_STIMMEN || '0'}</td>
+                                    <td>${wahl.ANZ_WAHLBERECHTIGTE || '0'}</td>
+                                    <td>${wahl.LINK_WAHLEN || '-'}</td>
+                                    <td>${hasBild ? 'Ja' : 'Nein'}</td>
+                                    <td>${hasBild1 ? 'Ja' : 'Nein'}</td>
+                                </tr>
+                            `;
+                        });
+                        
+                        html += `
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                wahlenContainer.innerHTML = html;
+                
+                // Add event listeners to group headers
+                document.querySelectorAll('.group-header').forEach(header => {
+                    header.addEventListener('click', function() {
+                        const content = this.nextElementSibling;
+                        const icon = this.querySelector('.toggle-icon');
+                        
+                        if (content.classList.contains('active')) {
+                            content.classList.remove('active');
+                            icon.textContent = '►';
+                        } else {
+                            content.classList.add('active');
+                            icon.textContent = '▼';
+                        }
+                    });
+                });
+                
+                // Add event listeners to year headers
+                document.querySelectorAll('.jahr-header').forEach(header => {
+                    header.addEventListener('click', function() {
+                        const content = this.nextElementSibling;
+                        const icon = this.querySelector('.toggle-icon');
+                        
+                        if (content.classList.contains('active')) {
+                            content.classList.remove('active');
+                            icon.textContent = '►';
+                        } else {
+                            content.classList.add('active');
+                            icon.textContent = '▼';
+                        }
+                    });
+                });
+                
+                // Add event listeners to table rows
+                document.querySelectorAll('#wahlen-container tr[data-id]').forEach((row, index) => {
+                    row.addEventListener('click', function() {
+                        // Remove active class from all rows
+                        document.querySelectorAll('#wahlen-container tr[data-id]').forEach(r => {
+                            r.classList.remove('active');
+                        });
+                        
+                        // Add active class to clicked row
+                        this.classList.add('active');
+                        selectedRow = this;
+                        
+                        // Find the corresponding data
+                        const rowIndex = Array.from(this.parentNode.children).indexOf(this);
+                        const table = this.closest('table');
+                        const tableIndex = Array.from(document.querySelectorAll('table')).indexOf(table);
+                        
+                        // Get all tables and find the correct data
+                        let currentTableIndex = 0;
+                        let wahlData = null;
+                        
+                        for (const [wahlArt, jahre] of Object.entries(groupedData)) {
+                            for (const [jahr, wahlen] of Object.entries(jahre)) {
+                                if (currentTableIndex === tableIndex) {
+                                    wahlData = wahlen[rowIndex];
+                                    break;
+                                }
+                                currentTableIndex++;
+                            }
+                            if (wahlData) break;
+                        }
+                        
+                        if (wahlData) {
+                            const bezeichnung = wahlData.BEZEICHNUNG || '';
+                            
+                            // Update selection info
+                            selectionInfo.textContent = `Ausgewählt: ${bezeichnung}`;
+                            
+                            // Show documents if available
+                            displayDocuments(wahlData.BILD, wahlData.BILD1);
+                        }
+                    });
+                });
+            }
+            
+            // Display PDF documents from blob data
+            function displayDocuments(bildData, bild1Data) {
+                // Clean up any existing object URLs
+                cleanupObjectUrls();
+                
+                // Reset display
+                bildIframe.style.display = 'none';
+                bild1Iframe.style.display = 'none';
+                bildDownload.style.display = 'none';
+                bild1Download.style.display = 'none';
+                bildPlaceholder.style.display = 'flex';
+                bild1Placeholder.style.display = 'flex';
+                
+                documentContainer.classList.add('active');
+                
+                // Display BILD if available
+                if (bildData && typeof bildData === 'object') {
+                    try {
+                        // Convert the blob data to a base64 URL
+                        const base64String = arrayBufferToBase64(bildData.data);
+                        const pdfUrl = `data:application/pdf;base64,${base64String}`;
+                        
+                        // Create object URL for the PDF
+                        const blob = base64ToBlob(base64String, 'application/pdf');
+                        const objectUrl = URL.createObjectURL(blob);
+                        objectUrls.push(objectUrl); // Store for cleanup
+                        
+                        // Display PDF in iframe
+                        bildIframe.src = objectUrl;
+                        bildIframe.style.display = 'block';
+                        bildPlaceholder.style.display = 'none';
+                        
+                        // Set up download link
+                        bildDownload.href = objectUrl;
+                        bildDownload.style.display = 'inline-block';
+                    } catch (error) {
+                        console.error('Fehler beim Konvertieren des BILD:', error);
+                        bildPlaceholder.textContent = 'Fehler beim Laden des Dokuments';
+                    }
+                } else {
+                    bildPlaceholder.textContent = 'Kein Dokument verfügbar';
+                }
+                
+                // Display BILD1 if available
+                if (bild1Data && typeof bild1Data === 'object') {
+                    try {
+                        // Convert the blob data to a base64 URL
+                        const base64String = arrayBufferToBase64(bild1Data.data);
+                        const pdfUrl = `data:application/pdf;base64,${base64String}`;
+                        
+                        // Create object URL for the PDF
+                        const blob = base64ToBlob(base64String, 'application/pdf');
+                        const objectUrl = URL.createObjectURL(blob);
+                        objectUrls.push(objectUrl); // Store for cleanup
+                        
+                        // Display PDF in iframe
+                        bild1Iframe.src = objectUrl;
+                        bild1Iframe.style.display = 'block';
+                        bild1Placeholder.style.display = 'none';
+                        
+                        // Set up download link
+                        bild1Download.href = objectUrl;
+                        bild1Download.style.display = 'inline-block';
+                    } catch (error) {
+                        console.error('Fehler beim Konvertieren des BILD1:', error);
+                        bild1Placeholder.textContent = 'Fehler beim Laden des Dokuments';
+                    }
+                } else {
+                    bild1Placeholder.textContent = 'Kein Dokument verfügbar';
+                }
+            }
+            
+            // Convert ArrayBuffer to Base64
+            function arrayBufferToBase64(buffer) {
+                let binary = '';
+                const bytes = new Uint8Array(buffer);
+                const len = bytes.byteLength;
+                
+                for (let i = 0; i < len; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                }
+                
+                return window.btoa(binary);
+            }
+            
+            // Convert Base64 to Blob
+            function base64ToBlob(base64, mimeType) {
+                const byteCharacters = atob(base64);
+                const byteNumbers = new Array(byteCharacters.length);
+                
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                
+                const byteArray = new Uint8Array(byteNumbers);
+                return new Blob([byteArray], {type: mimeType});
+            }
+            
+            // Clean up object URLs to prevent memory leaks
+            function cleanupObjectUrls() {
+                objectUrls.forEach(url => URL.revokeObjectURL(url));
+                objectUrls = [];
+            }
+            
+            // Update summary information
+            function updateSummary(data) {
+                totalWahlenElem.textContent = data.length;
+                totalWahlArtenElem.textContent = Object.keys(groupedData).length;
+                
+                const totalStimmen = data.reduce((sum, wahl) => {
+                    return sum + (parseInt(wahl.ANZAHL_STIMMEN) || 0);
+                }, 0);
+                
+                totalStimmenElem.textContent = totalStimmen.toLocaleString();
+            }
+            
+            // Format date for display
+            function formatDate(dateString) {
+                if (!dateString) return '-';
+                
+                try {
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString('de-DE');
+                } catch (e) {
+                    return dateString;
+                }
+            }
+            
+            // Search functionality
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                if (searchTerm === '') {
+                    processData(wahlenData);
+                    return;
+                }
+                
+                const filteredData = wahlenData.filter(wahl => {
+                    return (
+                        (wahl.BEZEICHNUNG && wahl.BEZEICHNUNG.toLowerCase().includes(searchTerm)) ||
+                        (wahl.REGION && wahl.REGION.toLowerCase().includes(searchTerm)) ||
+                        (wahl.COMM && wahl.COMM.toLowerCase().includes(searchTerm))
+                    );
+                });
+                
+                processData(filteredData);
+            });
+            
+            // Expand all groups
+            expandAllBtn.addEventListener('click', function() {
+                document.querySelectorAll('.group-content').forEach(content => {
+                    content.classList.add('active');
+                });
+                document.querySelectorAll('.jahr-content').forEach(content => {
+                    content.classList.add('active');
+                });
+                document.querySelectorAll('.toggle-icon').forEach(icon => {
+                    icon.textContent = '▼';
+                });
+            });
+            
+            // Collapse all groups
+            collapseAllBtn.addEventListener('click', function() {
+                document.querySelectorAll('.group-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.querySelectorAll('.jahr-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.querySelectorAll('.toggle-icon').forEach(icon => {
+                    icon.textContent = '►';
+                });
+            });
+            
+            // Clear selection
+            clearSelectionBtn.addEventListener('click', function() {
+                if (selectedRow) {
+                    selectedRow.classList.remove('active');
+                    selectedRow = null;
+                }
+                documentContainer.classList.remove('active');
+                selectionInfo.textContent = '';
+                cleanupObjectUrls();
+            });
+        });
+    </script>
+</body>
+</html>

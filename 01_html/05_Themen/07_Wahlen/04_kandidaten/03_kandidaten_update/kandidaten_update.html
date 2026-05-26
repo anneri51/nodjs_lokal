@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Wahl Kandidaten Manager - Alle Zeilen sichtbar, nur Markierung ändert sich</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background: #eef2f7;
+            margin: 0;
+            padding: 24px;
+            color: #1a2c3e;
+        }
+
+        .dashboard {
+            display: flex;
+            gap: 28px;
+            flex-wrap: wrap;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .left-panel {
+            flex: 2;
+            min-width: 320px;
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.05);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .right-panel {
+            flex: 1.4;
+            min-width: 380px;
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.05);
+            padding: 28px;
+            height: fit-content;
+            position: sticky;
+            top: 24px;
+            border: 1px solid rgba(44,124,182,0.15);
+        }
+
+        .tree-container {
+            padding: 16px 20px 12px 20px;
+            border-bottom: 1px solid #e9edf2;
+            background: #fefefe;
+            max-height: 360px;
+            overflow-y: auto;
+        }
+
+        .tree-node {
+            font-size: 0.9rem;
+            user-select: none;
+        }
+
+        .tree-node-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: 14px;
+            transition: all 0.15s ease;
+        }
+
+        .tree-node-header:hover {
+            background: #eaf1fb;
+        }
+
+        .tree-toggle {
+            width: 24px;
+            font-weight: bold;
+            color: #2c7cb6;
+            font-size: 0.9rem;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .tree-label {
+            font-weight: 500;
+        }
+
+        .tree-label.selected {
+            background: #d4e2fc;
+            padding: 3px 12px;
+            border-radius: 40px;
+            font-weight: 600;
+            color: #0056b3;
+        }
+
+        .children {
+            margin-left: 28px;
+            padding-left: 8px;
+            border-left: 1px dashed #cbdbe2;
+        }
+
+        .wahl-filter-area {
+            padding: 16px 20px;
+            background: #ffffff;
+            border-bottom: 1px solid #eef2f8;
+        }
+
+        .searchable-select {
+            position: relative;
+            width: 100%;
+        }
+
+        .searchable-select-input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #cfe0ed;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            background: white;
+            cursor: pointer;
+        }
+
+        .searchable-select-input:focus {
+            outline: none;
+            border-color: #2c7cb6;
+            box-shadow: 0 0 0 3px rgba(44,124,182,0.2);
+        }
+
+        .searchable-select-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #d9e2ec;
+            border-radius: 20px;
+            max-height: 260px;
+            overflow-y: auto;
+            z-index: 1100;
+            display: none;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+        }
+
+        .searchable-select-dropdown.show {
+            display: block;
+        }
+
+        .searchable-select-option {
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: background 0.1s;
+            font-size: 0.85rem;
+        }
+
+        .searchable-select-option:hover {
+            background: #eef2fa;
+        }
+
+        .search-area {
+            padding: 16px 20px;
+            background: white;
+            border-bottom: 1px solid #eef2f8;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        .search-group {
+            flex: 1;
+            min-width: 110px;
+        }
+
+        .search-group label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            color: #5f7f9e;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .search-group input {
+            width: 100%;
+            padding: 9px 14px;
+            border: 1px solid #cfdfed;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            background: #fefefe;
+        }
+
+        button {
+            background: #2c7cb6;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: 0.2s;
+        }
+
+        button.secondary {
+            background: #e9eff5;
+            color: #1e4663;
+            border: 1px solid #cbdae6;
+        }
+
+        .table-wrapper {
+            padding: 8px 20px 20px 20px;
+            overflow-x: auto;
+            flex: 1;
+        }
+
+        .party-group {
+            margin-bottom: 24px;
+            border-radius: 20px;
+            background: white;
+            border: 1px solid #e2eaf1;
+            overflow: hidden;
+        }
+
+        .party-group-header {
+            background: #fafcff;
+            padding: 12px 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            border-bottom: 1px solid #e2eaf1;
+        }
+
+        .party-group-header:hover {
+            background: #f1f6fd;
+        }
+
+        .party-group-toggle {
+            font-size: 1rem;
+            width: 24px;
+        }
+
+        .party-group-title {
+            font-size: 1rem;
+            color: #1f4e79;
+        }
+
+        .party-group-badge {
+            background: #2c7cb6;
+            color: white;
+            padding: 2px 12px;
+            border-radius: 40px;
+            font-size: 0.7rem;
+        }
+
+        .party-group-content.collapsed {
+            display: none;
+        }
+
+        .candidates-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        .candidates-table th {
+            text-align: left;
+            padding: 12px 10px;
+            background: #fafcff;
+            font-weight: 600;
+            color: #1f5680;
+            border-bottom: 2px solid #e2eaf1;
+            cursor: pointer;
+            user-select: none;
+            position: sticky;
+            top: 0;
+            background: #fafcff;
+        }
+
+        .candidates-table th:hover {
+            background: #eef3fc;
+        }
+
+        .candidates-table th.sort-asc::after {
+            content: " ▲";
+            font-size: 0.7rem;
+        }
+
+        .candidates-table th.sort-desc::after {
+            content: " ▼";
+            font-size: 0.7rem;
+        }
+
+        .candidates-table td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #ecf3f8;
+            vertical-align: middle;
+        }
+
+        .candidates-table tr {
+            transition: background 0.1s;
+            cursor: pointer;
+        }
+
+        .candidates-table tr:hover td {
+            background: #f0f7fe;
+        }
+
+        /* DEUTLICHE MARKIERUNG der ausgewählten Zeile */
+        .candidates-table tr.selected-row {
+            background: linear-gradient(90deg, #d4e8fc 0%, #e2effb 100%) !important;
+            border-left: 4px solid #2c7cb6;
+            box-shadow: inset 0 0 0 1px rgba(44,124,182,0.3);
+            font-weight: 500;
+        }
+
+        .candidates-table tr.selected-row td {
+            background: transparent !important;
+            font-weight: 500;
+        }
+
+        .candidates-table tr.selected-row td:first-child {
+            border-left: 4px solid #2c7cb6;
+            padding-left: 6px;
+        }
+
+        .edit-row-btn {
+            background: #2c7cb6;
+            color: white;
+            border: none;
+            padding: 5px 14px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+
+        .edit-row-btn:hover {
+            background: #1a5d8a;
+            transform: scale(0.97);
+        }
+
+        .form-grid-2cols {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px 24px;
+            margin-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 0;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.7rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: #1f4e79;
+            letter-spacing: 0.3px;
+        }
+
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1px solid #cbdde9;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            background: #ffffff;
+            font-family: inherit;
+            transition: 0.2s;
+        }
+
+        .form-group input:focus, .form-group textarea:focus {
+            border-color: #2c7cb6;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(44,124,182,0.1);
+        }
+
+        .form-group input[readonly] {
+            background: #f4f9ff;
+            border-color: #d9e2ec;
+            color: #3a5c7c;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 14px;
+            margin-top: 28px;
+            justify-content: flex-end;
+        }
+
+        .message {
+            margin-top: 18px;
+            padding: 10px 14px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            background: #eef3fc;
+            color: #1f6392;
+            border-left: 3px solid #2c7cb6;
+        }
+
+        .toast-message {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f2f3e;
+            color: white;
+            padding: 12px 28px;
+            border-radius: 60px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            z-index: 1200;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            backdrop-filter: blur(8px);
+            background: rgba(30, 50, 70, 0.95);
+            border-left: 5px solid #2c7cb6;
+            pointer-events: none;
+            animation: fadeSlide 0.2s ease;
+        }
+
+        @keyframes fadeSlide {
+            from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
+        h3 {
+            font-size: 1.2rem;
+            margin-top: 0;
+            margin-bottom: 22px;
+            font-weight: 650;
+            border-left: 5px solid #2c7cb6;
+            padding-left: 16px;
+        }
+
+        .badge-level {
+            font-size: 0.65rem;
+            background: #e9f0f5;
+            padding: 2px 8px;
+            border-radius: 40px;
+            margin-left: 8px;
+        }
+        
+        .info-hint {
+            font-size: 0.7rem;
+            color: #4f7ea3;
+            margin-top: 16px;
+            text-align: center;
+            border-top: 1px solid #e2edf5;
+            padding-top: 14px;
+        }
+
+        .stats-bar {
+            padding: 12px 20px;
+            background: #f8fafd;
+            border-bottom: 1px solid #e2eaf1;
+            font-size: 0.8rem;
+            color: #2c7cb6;
+            font-weight: 500;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .selected-info {
+            background: #d4e2fc;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <div class="left-panel">
+        <div style="padding: 20px 20px 0 20px;">
+            <h2 style="margin:0; font-size:1.4rem;">🗳️ Wahl Kandidaten Manager</h2>
+            <p style="font-size:0.75rem; color:#54728c; margin-top:5px;">Alle Zeilen immer sichtbar · Nur Markierung ändert sich bei Auswahl</p>
+        </div>
+        
+        <div class="wahl-filter-area">
+            <div class="wahl-filter-group">
+                <label>📌 Filter nach Wahl (reduziert die Anzeige)</label>
+                <div class="searchable-select" id="wahlSearchableSelect">
+                    <input type="text" class="searchable-select-input" id="wahlSelectInput" placeholder="Alle Wahls anzeigen..." autocomplete="off">
+                    <div class="searchable-select-dropdown" id="wahlSelectDropdown"></div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 12px;">
+                <button id="clearWahlFilterBtn" class="secondary">🗑️ Wahl-Filter löschen</button>
+            </div>
+        </div>
+
+        <div class="tree-container" id="treeViewContainer">
+            <div style="text-align:center; padding:20px;">Lade Struktur...</div>
+        </div>
+
+        <div class="search-area">
+            <div class="search-group"><label>Vorname</label><input type="text" id="searchVorname" placeholder="z.B. Anna" autocomplete="off"></div>
+            <div class="search-group"><label>Nachname</label><input type="text" id="searchNachname" placeholder="z.B. Schmidt"></div>
+            <div class="search-group"><label>Platz</label><input type="text" id="searchPlatz" placeholder="Nummer"></div>
+            <button id="applySearchBtn">🔍 Filtern</button>
+            <button id="resetSearchBtn" class="secondary">✖️ Zurücksetzen</button>
+        </div>
+
+        <div class="stats-bar" id="statsBar">
+            <span>📊 Alle Kandidaten werden angezeigt</span>
+            <span id="selectedInfo" class="selected-info">⚡ Kein Kandidat ausgewählt</span>
+        </div>
+
+        <div class="table-wrapper">
+            <h3 style="margin:0 0 12px 0;">📋 Alle Kandidaten <span style="font-weight:normal;">(Klick auf Zeile = Auswahl + Formular befüllen)</span></h3>
+            <div id="groupedTableContainer"></div>
+        </div>
+    </div>
+
+    <div class="right-panel">
+        <h3>✏️ Kandidat bearbeiten (2‑spaltig)</h3>
+        <div id="updateFormMessage" class="message" style="display:none;"></div>
+        <form id="candidateForm">
+            <div class="form-grid-2cols">
+                <div class="form-group">
+                    <label>🆔 ID (PK_WAHL_KANDIDATEN)</label>
+                    <input type="text" id="editId" readonly>
+                </div>
+                <div class="form-group">
+                    <label>🏛️ Partei-ID</label>
+                    <input type="text" id="editParteiId" readonly>
+                </div>
+                <div class="form-group">
+                    <label>📛 Vorname *</label>
+                    <input type="text" id="editVorname" placeholder="Vorname">
+                </div>
+                <div class="form-group">
+                    <label>📛 Nachname *</label>
+                    <input type="text" id="editNachname" placeholder="Nachname">
+                </div>
+                <div class="form-group">
+                    <label>🔢 Listenplatz</label>
+                    <input type="number" id="editPlatz" placeholder="z.B. 1, 2">
+                </div>
+                <div class="form-group">
+                    <label>🗳️ Wahl-ID</label>
+                    <input type="text" id="editWahlId" readonly>
+                </div>
+                <div class="form-group">
+                    <label>📍 Kreis-ID</label>
+                    <input type="text" id="editKreisId" readonly>
+                </div>
+                <div class="form-group">
+                    <label>💬 Kommentar</label>
+                    <textarea id="editComm" placeholder="Notiz / Info" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit">💾 Änderungen speichern</button>
+                <button type="button" id="clearFormBtn" class="secondary">🗑️ Abbrechen</button>
+            </div>
+        </form>
+        <div class="info-hint">
+            ✅ Klick auf Tabellen-Zeile → Zeile wird blau markiert<br>
+            ✅ Formular wird sofort mit allen Daten befüllt<br>
+            ✅ Alle Kandidaten bleiben sichtbar (nur Filter reduzieren die Liste)<br>
+            ✅ Auswahl eines Kandidaten filtert NICHT die Tabelle
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = "http://localhost:5000";
+    const KANDIDATEN_ENDPOINT = "/wahl_kandidaten";
+    
+    let allCandidates = [];
+    let activeTreeFilters = { wahlId: null, kreisId: null, parteiId: null }; // KEIN kandidatId mehr für Filter!
+    let independentWahlFilter = null;
+    let sortColumn = 'NACHNAME';
+    let sortDirection = 'asc';
+    let collapsedGroups = new Set();
+    let currentSelectedCandidateId = null; // Nur für Markierung, NICHT für Filter!
+    
+    // DOM Elemente
+    const treeContainer = document.getElementById("treeViewContainer");
+    const groupedContainer = document.getElementById("groupedTableContainer");
+    const searchVorname = document.getElementById("searchVorname");
+    const searchNachname = document.getElementById("searchNachname");
+    const searchPlatz = document.getElementById("searchPlatz");
+    const applyBtn = document.getElementById("applySearchBtn");
+    const resetSearchBtn = document.getElementById("resetSearchBtn");
+    const clearWahlFilterBtn = document.getElementById("clearWahlFilterBtn");
+    const selectedInfoSpan = document.getElementById("selectedInfo");
+    const statsBar = document.getElementById("statsBar");
+    
+    const editId = document.getElementById("editId");
+    const editVorname = document.getElementById("editVorname");
+    const editNachname = document.getElementById("editNachname");
+    const editPlatz = document.getElementById("editPlatz");
+    const editComm = document.getElementById("editComm");
+    const editWahlId = document.getElementById("editWahlId");
+    const editKreisId = document.getElementById("editKreisId");
+    const editParteiId = document.getElementById("editParteiId");
+    const updateFormMessage = document.getElementById("updateFormMessage");
+    const wahlSelectInput = document.getElementById("wahlSelectInput");
+    const wahlSelectDropdown = document.getElementById("wahlSelectDropdown");
+    
+    function showToastMessage(id, fullName) {
+        const existingToast = document.querySelector('.toast-message');
+        if(existingToast) existingToast.remove();
+        const toast = document.createElement('div');
+        toast.className = 'toast-message';
+        toast.innerHTML = `🆔 Kandidat ID: ${id} • ${fullName} ausgewählt ✨`;
+        document.body.appendChild(toast);
+        setTimeout(() => { if(toast && toast.remove) toast.remove(); }, 2800);
+    }
+    
+    function showFormMessage(msg, isError = false) {
+        updateFormMessage.textContent = msg;
+        updateFormMessage.style.display = "block";
+        updateFormMessage.style.backgroundColor = isError ? "#ffefed" : "#e2f3e4";
+        updateFormMessage.style.color = isError ? "#b13e3e" : "#1f7042";
+        updateFormMessage.style.borderLeftColor = isError ? "#d9534f" : "#2c7cb6";
+        setTimeout(() => {
+            if(updateFormMessage) updateFormMessage.style.display = "none";
+        }, 3400);
+    }
+    
+    function updateSelectedInfo(candidate) {
+        if (candidate) {
+            currentSelectedCandidateId = candidate.PK_WAHL_KANDIDATEN;
+            selectedInfoSpan.innerHTML = `✅ Ausgewählt: ${candidate.VORNAME || ''} ${candidate.NACHNAME || ''} (ID: ${candidate.PK_WAHL_KANDIDATEN})`;
+            selectedInfoSpan.style.background = "#2c7cb6";
+            selectedInfoSpan.style.color = "white";
+        } else {
+            currentSelectedCandidateId = null;
+            selectedInfoSpan.innerHTML = `⚡ Kein Kandidat ausgewählt`;
+            selectedInfoSpan.style.background = "#d4e2fc";
+            selectedInfoSpan.style.color = "#1f4e79";
+        }
+        // Tabelle neu rendern, um die Markierung zu aktualisieren
+        renderGroupedTable(getFilteredCandidates());
+    }
+    
+    function populateForm(candidate, showIdToast = true) {
+        if (!candidate) {
+            showFormMessage("Fehler: Kein Kandidat ausgewählt", true);
+            return;
+        }
+        
+        const candidateId = candidate.PK_WAHL_KANDIDATEN;
+        
+        editId.value = candidateId;
+        editVorname.value = candidate.VORNAME || '';
+        editNachname.value = candidate.NACHNAME || '';
+        
+        if (candidate.PLATZ !== undefined && candidate.PLATZ !== null && candidate.PLATZ !== -1) {
+            editPlatz.value = candidate.PLATZ;
+        } else {
+            editPlatz.value = '';
+        }
+        
+        editComm.value = candidate.COMM || '';
+        editWahlId.value = (candidate.FK_WAHL_WAHL !== undefined && candidate.FK_WAHL_WAHL !== null) ? candidate.FK_WAHL_WAHL : '';
+        editKreisId.value = (candidate.FK_WAHL_STIMM_KREIS !== undefined && candidate.FK_WAHL_STIMM_KREIS !== null) ? candidate.FK_WAHL_STIMM_KREIS : '';
+        editParteiId.value = (candidate.FK_WAHL_PARTEI !== undefined && candidate.FK_WAHL_PARTEI !== null) ? candidate.FK_WAHL_PARTEI : '';
+        
+        updateSelectedInfo(candidate);
+        
+        if(showIdToast) {
+            const fullName = `${candidate.VORNAME || ''} ${candidate.NACHNAME || ''}`.trim() || 'Kandidat';
+            showToastMessage(candidateId, fullName);
+        }
+        
+        updateFormMessage.style.display = "block";
+        updateFormMessage.textContent = `✏️ ID ${candidateId} geladen – ${candidate.VORNAME || ''} ${candidate.NACHNAME || ''}`;
+        updateFormMessage.style.backgroundColor = "#e8f0fe";
+        updateFormMessage.style.color = "#0056b3";
+        setTimeout(() => {
+            if (updateFormMessage.textContent && updateFormMessage.textContent.includes("geladen")) 
+                updateFormMessage.style.display = "none";
+        }, 2000);
+    }
+    
+    function findCandidateById(id) {
+        const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+        return allCandidates.find(c => Number(c.PK_WAHL_KANDIDATEN) === Number(numericId));
+    }
+    
+    function handleRowClick(event, candidateId) {
+        event.stopPropagation();
+        
+        if (!candidateId && candidateId !== 0) {
+            showFormMessage("Fehler: Keine Kandidaten-ID gefunden", true);
+            return;
+        }
+        
+        const candidate = findCandidateById(candidateId);
+        
+        if (candidate) {
+            populateForm(candidate, true);
+            // Aktualisiere Baum-Markierung (optional, ohne Filterung)
+            activeTreeFilters = { 
+                wahlId: candidate.FK_WAHL_WAHL, 
+                kreisId: candidate.FK_WAHL_STIMM_KREIS, 
+                parteiId: candidate.FK_WAHL_PARTEI
+            };
+            renderTree();
+            // WICHTIG: Kein applyAllFilters() hier, da wir die Tabelle nicht filtern wollen!
+            // Nur die Markierung in der Tabelle aktualisieren
+            renderGroupedTable(getFilteredCandidates());
+        } else {
+            showFormMessage(`Fehler: Kandidat mit ID ${candidateId} nicht gefunden`, true);
+        }
+    }
+    
+    async function fetchCandidates() {
+        try {
+            const response = await fetch(`${API_BASE}${KANDIDATEN_ENDPOINT}`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            allCandidates = Array.isArray(data) ? data : [];
+            
+            allCandidates.forEach(c => {
+                c.WAHL_DISP = c.WAHL_NAME || `Wahl ${c.FK_WAHL_WAHL ?? '?'}`;
+                c.KREIS_DISP = c.KREIS_NAME || `Kreis ${c.FK_WAHL_STIMM_KREIS ?? '?'}`;
+                c.PARTEI_DISP = c.PARTEI_NAME || `Partei ${c.FK_WAHL_PARTEI ?? '?'}`;
+                if (c.COMM === undefined) c.COMM = '';
+                if (c.PLATZ === null || c.PLATZ === undefined) c.PLATZ = -1;
+            });
+            
+            statsBar.querySelector('span:first-child').innerHTML = `📊 ${allCandidates.length} Kandidaten geladen`;
+            buildTreeAndRender();
+            populateWahlDropdown();
+            applyAllFilters(); // Hier werden nur Filter (Wahl, Text) angewendet, nicht die Auswahl
+        } catch (err) {
+            console.error(err);
+            treeContainer.innerHTML = `<div style="color:#c7362b; padding:12px;">⚠️ Server nicht erreichbar: ${err.message}<br>Verwende Demo-Daten</div>`;
+            generateDemoData();
+            buildTreeAndRender();
+            populateWahlDropdown();
+            applyAllFilters();
+        }
+    }
+    
+    function generateDemoData() {
+        allCandidates = [];
+        const parties = [{id:101, name:"CDU"},{id:102, name:"SPD"},{id:103, name:"Grüne"},{id:104, name:"FDP"},{id:105, name:"Linke"}];
+        const wahlen = [{id:1, name:"Bundestagswahl 2025"},{id:2, name:"Landtagswahl Bayern"},{id:3, name:"Kommunalwahl 2026"}];
+        const kreise = [{id:501, name:"Berlin-Mitte"},{id:502, name:"München Süd"},{id:503, name:"Hamburg-Nord"},{id:504, name:"Köln Zentrum"}];
+        
+        for(let i=1; i<=28; i++) {
+            const party = parties[i % parties.length];
+            const wahl = wahlen[i % wahlen.length];
+            const kreis = kreise[i % kreise.length];
+            const candidateId = 30000 + i;
+            allCandidates.push({
+                PK_WAHL_KANDIDATEN: candidateId,
+                VORNAME: `Vorname${i}`,
+                NACHNAME: `Nachname${i}`,
+                PLATZ: i,
+                COMM: `Kommentar zu Kandidat ${i} - wichtige Notiz`,
+                FK_WAHL_WAHL: wahl.id,
+                WAHL_NAME: wahl.name,
+                FK_WAHL_STIMM_KREIS: kreis.id,
+                KREIS_NAME: kreis.name,
+                FK_WAHL_PARTEI: party.id,
+                PARTEI_NAME: party.name,
+                WAHL_DISP: wahl.name,
+                KREIS_DISP: kreis.name,
+                PARTEI_DISP: party.name
+            });
+        }
+        
+        // Speziell für ID 31628
+        allCandidates.push({
+            PK_WAHL_KANDIDATEN: 31628,
+            VORNAME: "Hans",
+            NACHNAME: "Meier",
+            PLATZ: 5,
+            COMM: "Spezieller Kandidat mit ID 31628",
+            FK_WAHL_WAHL: 1,
+            WAHL_NAME: "Bundestagswahl 2025",
+            FK_WAHL_STIMM_KREIS: 501,
+            KREIS_NAME: "Berlin-Mitte",
+            FK_WAHL_PARTEI: 101,
+            PARTEI_NAME: "CDU",
+            WAHL_DISP: "Bundestagswahl 2025",
+            KREIS_DISP: "Berlin-Mitte",
+            PARTEI_DISP: "CDU"
+        });
+        
+        statsBar.querySelector('span:first-child').innerHTML = `📊 ${allCandidates.length} Kandidaten (Demo-Daten)`;
+    }
+    
+    function populateWahlDropdown() {
+        const wahlMap = new Map();
+        allCandidates.forEach(c => {
+            const wahlId = c.FK_WAHL_WAHL;
+            if (!wahlMap.has(wahlId)) wahlMap.set(wahlId, { id: wahlId, name: c.WAHL_DISP });
+        });
+        const wahlen = Array.from(wahlMap.values()).sort((a,b) => (a.name || '').localeCompare(b.name || ''));
+        function renderDropdown(filterText = '') {
+            const filtered = wahlen.filter(w => w.name.toLowerCase().includes(filterText.toLowerCase()));
+            if (filtered.length === 0) { wahlSelectDropdown.innerHTML = '<div class="searchable-select-option">Keine Wahls</div>'; return; }
+            let html = '';
+            filtered.forEach(w => {
+                html += `<div class="searchable-select-option" data-wahl-id="${w.id}" data-wahl-name="${escapeHtml(w.name)}">${escapeHtml(w.name)}</div>`;
+            });
+            wahlSelectDropdown.innerHTML = html;
+            document.querySelectorAll('#wahlSelectDropdown .searchable-select-option').forEach(opt => {
+                opt.addEventListener('click', () => {
+                    const wahlId = parseInt(opt.getAttribute('data-wahl-id'));
+                    const wahlName = opt.getAttribute('data-wahl-name');
+                    independentWahlFilter = wahlId;
+                    wahlSelectInput.value = wahlName;
+                    wahlSelectDropdown.classList.remove('show');
+                    activeTreeFilters = { wahlId: null, kreisId: null, parteiId: null };
+                    renderTree();
+                    applyAllFilters();
+                });
+            });
+        }
+        wahlSelectInput.addEventListener('click', (e) => { e.stopPropagation(); wahlSelectDropdown.classList.toggle('show'); renderDropdown(wahlSelectInput.value); });
+        wahlSelectInput.addEventListener('input', (e) => { renderDropdown(e.target.value); wahlSelectDropdown.classList.add('show'); });
+        document.addEventListener('click', (e) => { if (!wahlSelectInput.contains(e.target) && !wahlSelectDropdown.contains(e.target)) wahlSelectDropdown.classList.remove('show'); });
+        wahlSelectInput.value = independentWahlFilter === null ? 'Alle Wahls anzeigen' : (wahlen.find(w=>w.id===independentWahlFilter)?.name || 'Alle Wahls anzeigen');
+        renderDropdown('');
+    }
+    
+    function buildTreeStructure() {
+        const wahlMap = new Map();
+        for (const cand of allCandidates) {
+            const wahlId = cand.FK_WAHL_WAHL;
+            if (!wahlMap.has(wahlId)) wahlMap.set(wahlId, { id: wahlId, name: cand.WAHL_DISP, kreiseMap: new Map() });
+            const wahlNode = wahlMap.get(wahlId);
+            const kreisId = cand.FK_WAHL_STIMM_KREIS;
+            if (!wahlNode.kreiseMap.has(kreisId)) wahlNode.kreiseMap.set(kreisId, { id: kreisId, name: cand.KREIS_DISP, parteienMap: new Map() });
+            const kreisNode = wahlNode.kreiseMap.get(kreisId);
+            const parteiId = cand.FK_WAHL_PARTEI;
+            if (!kreisNode.parteienMap.has(parteiId)) kreisNode.parteienMap.set(parteiId, { id: parteiId, name: cand.PARTEI_DISP, kandidaten: [] });
+            kreisNode.parteienMap.get(parteiId).kandidaten.push(cand);
+        }
+        return wahlMap;
+    }
+    
+    function renderTree() {
+        const wahlMap = buildTreeStructure();
+        if (wahlMap.size === 0) { treeContainer.innerHTML = `<div>Keine Daten</div>`; return; }
+        let html = `<div class="tree-node">`;
+        for (const [wahlId, wahl] of wahlMap.entries()) {
+            const isSelected = (activeTreeFilters.wahlId === wahlId && !activeTreeFilters.kreisId);
+            html += `<div><div class="tree-node-header" data-level="wahl" data-wahl-id="${wahlId}">
+                        <span class="tree-toggle" data-toggle="wahl-${wahlId}">▶</span>
+                        <span class="tree-label ${isSelected ? 'selected' : ''}">🗳️ ${escapeHtml(wahl.name)}</span>
+                        <span class="badge-level">Wahl</span>
+                    </div>
+                    <div class="children" id="wahl-children-${wahlId}" style="display:none;">`;
+            for (const [kreisId, kreis] of wahl.kreiseMap.entries()) {
+                const isKreisSelected = (activeTreeFilters.wahlId === wahlId && activeTreeFilters.kreisId === kreisId && !activeTreeFilters.parteiId);
+                html += `<div><div class="tree-node-header" data-level="kreis" data-wahl-id="${wahlId}" data-kreis-id="${kreisId}">
+                            <span class="tree-toggle" data-toggle="kreis-${wahlId}-${kreisId}">▶</span>
+                            <span class="tree-label ${isKreisSelected ? 'selected' : ''}">📍 ${escapeHtml(kreis.name)}</span>
+                            <span class="badge-level">Kreis</span>
+                        </div>
+                        <div class="children" id="kreis-children-${wahlId}-${kreisId}" style="display:none;">`;
+                for (const [parteiId, partei] of kreis.parteienMap.entries()) {
+                    const isParteiSelected = (activeTreeFilters.wahlId === wahlId && activeTreeFilters.kreisId === kreisId && activeTreeFilters.parteiId === parteiId);
+                    html += `<div><div class="tree-node-header" data-level="partei" data-wahl-id="${wahlId}" data-kreis-id="${kreisId}" data-partei-id="${parteiId}">
+                                <span class="tree-toggle" data-toggle="partei-${wahlId}-${kreisId}-${parteiId}">▶</span>
+                                <span class="tree-label ${isParteiSelected ? 'selected' : ''}">🏛️ ${escapeHtml(partei.name)}</span>
+                                <span class="badge-level">Partei</span>
+                            </div>
+                            <div class="children" id="partei-children-${wahlId}-${kreisId}-${parteiId}" style="display:none;">`;
+                    for (const kand of partei.kandidaten) {
+                        html += `<div><div class="tree-node-header" data-level="kandidat" data-kandidat-id="${kand.PK_WAHL_KANDIDATEN}">
+                                    <span class="tree-toggle" style="visibility:hidden;">•</span>
+                                    <span class="tree-label">👤 ${escapeHtml(kand.VORNAME || '')} ${escapeHtml(kand.NACHNAME || '')}</span>
+                                </div></div>`;
+                    }
+                    html += `</div></div>`;
+                }
+                html += `</div></div>`;
+            }
+            html += `</div></div>`;
+        }
+        html += `</div>`;
+        treeContainer.innerHTML = html;
+        
+        document.querySelectorAll('.tree-toggle').forEach(toggle => {
+            toggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const targetId = toggle.getAttribute('data-toggle');
+                let childDiv = document.getElementById(`wahl-children-${targetId.replace('wahl-', '')}`) ||
+                               document.getElementById(`kreis-children-${targetId.replace('kreis-', '').split('-')[0]}-${targetId.replace('kreis-', '').split('-')[1]}`) ||
+                               document.getElementById(`partei-children-${targetId.replace('partei-', '').split('-')[0]}-${targetId.replace('partei-', '').split('-')[1]}-${targetId.replace('partei-', '').split('-')[2]}`);
+                if (childDiv) {
+                    const isVisible = childDiv.style.display !== 'none';
+                    childDiv.style.display = isVisible ? 'none' : 'block';
+                    toggle.textContent = isVisible ? '▶' : '▼';
+                }
+            });
+        });
+        
+        document.querySelectorAll('.tree-node-header').forEach(header => {
+            header.addEventListener('click', (e) => {
+                const level = header.getAttribute('data-level');
+                const wahlId = header.getAttribute('data-wahl-id') ? parseInt(header.getAttribute('data-wahl-id')) : null;
+                const kreisId = header.getAttribute('data-kreis-id') ? parseInt(header.getAttribute('data-kreis-id')) : null;
+                const parteiId = header.getAttribute('data-partei-id') ? parseInt(header.getAttribute('data-partei-id')) : null;
+                const kandidatId = header.getAttribute('data-kandidat-id') ? parseInt(header.getAttribute('data-kandidat-id')) : null;
+                
+                if (level === 'wahl') activeTreeFilters = { wahlId, kreisId: null, parteiId: null };
+                else if (level === 'kreis') activeTreeFilters = { wahlId, kreisId, parteiId: null };
+                else if (level === 'partei') activeTreeFilters = { wahlId, kreisId, parteiId };
+                else if (level === 'kandidat') {
+                    const cand = findCandidateById(kandidatId);
+                    if (cand) populateForm(cand, true);
+                    // Baum-Filter NICHT ändern bei Klick auf Kandidat
+                }
+                independentWahlFilter = null;
+                wahlSelectInput.value = 'Alle Wahls anzeigen';
+                renderTree();
+                applyAllFilters(); // Nur Filter anwenden, nicht die Auswahl
+            });
+        });
+    }
+    
+    function sortCandidates(candidates) {
+        return [...candidates].sort((a, b) => {
+            let valA, valB;
+            switch(sortColumn) {
+                case 'PLATZ':
+                    valA = (a.PLATZ !== undefined && a.PLATZ !== null && a.PLATZ !== -1) ? a.PLATZ : 999999;
+                    valB = (b.PLATZ !== undefined && b.PLATZ !== null && b.PLATZ !== -1) ? b.PLATZ : 999999;
+                    return sortDirection === 'asc' ? valA - valB : valB - valA;
+                case 'PK_WAHL_KANDIDATEN':
+                    valA = Number(a.PK_WAHL_KANDIDATEN) || 0; 
+                    valB = Number(b.PK_WAHL_KANDIDATEN) || 0;
+                    return sortDirection === 'asc' ? valA - valB : valB - valA;
+                default:
+                    valA = (a[sortColumn] || '').toLowerCase(); 
+                    valB = (b[sortColumn] || '').toLowerCase();
+                    const comp = String(valA).localeCompare(String(valB));
+                    return sortDirection === 'asc' ? comp : -comp;
+            }
+        });
+    }
+    
+    function getFilteredCandidates() {
+        let filtered = [...allCandidates];
+        
+        // Wahl-Filter (optional)
+        if (independentWahlFilter !== null) {
+            filtered = filtered.filter(c => c.FK_WAHL_WAHL === independentWahlFilter);
+        }
+        
+        // Baum-Filter (für Wahl/Kreis/Partei - NICHT für Kandidat!)
+        if (activeTreeFilters.parteiId !== null) {
+            filtered = filtered.filter(c => c.FK_WAHL_PARTEI === activeTreeFilters.parteiId && 
+                                           c.FK_WAHL_WAHL === activeTreeFilters.wahlId && 
+                                           c.FK_WAHL_STIMM_KREIS === activeTreeFilters.kreisId);
+        } else if (activeTreeFilters.kreisId !== null) {
+            filtered = filtered.filter(c => c.FK_WAHL_WAHL === activeTreeFilters.wahlId && 
+                                           c.FK_WAHL_STIMM_KREIS === activeTreeFilters.kreisId);
+        } else if (activeTreeFilters.wahlId !== null) {
+            filtered = filtered.filter(c => c.FK_WAHL_WAHL === activeTreeFilters.wahlId);
+        }
+        
+        // Text-Filter
+        const vorname = searchVorname.value.trim().toLowerCase();
+        const nachname = searchNachname.value.trim().toLowerCase();
+        const platzRaw = searchPlatz.value.trim();
+        
+        filtered = filtered.filter(c => {
+            if (vorname && !(c.VORNAME || '').toLowerCase().includes(vorname)) return false;
+            if (nachname && !(c.NACHNAME || '').toLowerCase().includes(nachname)) return false;
+            if (platzRaw) { 
+                const num = parseInt(platzRaw); 
+                if (!isNaN(num) && c.PLATZ !== num && (c.PLATZ !== -1 || num !== -1)) return false; 
+            }
+            return true;
+        });
+        
+        return sortCandidates(filtered);
+    }
+    
+    function renderGroupedTable(candidates) {
+        const groups = new Map();
+        candidates.forEach(c => { 
+            const partyId = c.FK_WAHL_PARTEI; 
+            if (!groups.has(partyId)) groups.set(partyId, { id: partyId, name: c.PARTEI_DISP, candidates: [] }); 
+            groups.get(partyId).candidates.push(c); 
+        });
+        
+        if (groups.size === 0) { 
+            groupedContainer.innerHTML = '<div style="padding:28px; text-align:center;">🔍 Keine Kandidaten gefunden</div>'; 
+            return; 
+        }
+        
+        let html = '';
+        for (const [partyId, group] of groups.entries()) {
+            const isCollapsed = collapsedGroups.has(partyId);
+            html += `<div class="party-group">
+                        <div class="party-group-header" data-party-id="${partyId}">
+                            <span class="party-group-toggle">${isCollapsed ? '▶' : '▼'}</span>
+                            <span class="party-group-title">🏛️ ${escapeHtml(group.name)}</span>
+                            <span class="party-group-badge">${group.candidates.length}</span>
+                        </div>
+                        <div class="party-group-content ${isCollapsed ? 'collapsed' : ''}">
+                            <table class="candidates-table">
+                                <thead>
+                                    <tr>
+                                        <th data-sort="PK_WAHL_KANDIDATEN" class="${sortColumn === 'PK_WAHL_KANDIDATEN' ? (sortDirection === 'asc' ? 'sort-asc' : 'sort-desc') : ''}">ID</th>
+                                        <th data-sort="VORNAME" class="${sortColumn === 'VORNAME' ? (sortDirection === 'asc' ? 'sort-asc' : 'sort-desc') : ''}">Vorname</th>
+                                        <th data-sort="NACHNAME" class="${sortColumn === 'NACHNAME' ? (sortDirection === 'asc' ? 'sort-asc' : 'sort-desc') : ''}">Nachname</th>
+                                        <th data-sort="PLATZ" class="${sortColumn === 'PLATZ' ? (sortDirection === 'asc' ? 'sort-asc' : 'sort-desc') : ''}">Platz</th>
+                                        <th>Wahl</th>
+                                        <th>Kreis</th>
+                                        <th>Kommentar</th>
+                                        <th>Aktion</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+            for (const cand of group.candidates) {
+                // Prüfe ob dieser Kandidat der aktuell ausgewählte ist (NUR für Markierung!)
+                const isSelected = (currentSelectedCandidateId !== null && Number(currentSelectedCandidateId) === Number(cand.PK_WAHL_KANDIDATEN));
+                const displayPlatz = (cand.PLATZ !== null && cand.PLATZ !== -1) ? cand.PLATZ : '—';
+                html += `<tr data-kandidat-id="${cand.PK_WAHL_KANDIDATEN}" class="${isSelected ? 'selected-row' : ''}">
+                            <td>${cand.PK_WAHL_KANDIDATEN}</td>
+                            <td>${escapeHtml(cand.VORNAME || '')}</td>
+                            <td>${escapeHtml(cand.NACHNAME || '')}</td>
+                            <td>${displayPlatz}</td>
+                            <td>${escapeHtml(cand.WAHL_DISP)}</td>
+                            <td>${escapeHtml(cand.KREIS_DISP)}</td>
+                            <td style="max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(cand.COMM || '')}">${escapeHtml((cand.COMM || '').substring(0, 28))}</td>
+                            <td><button type="button" class="edit-row-btn" data-id="${cand.PK_WAHL_KANDIDATEN}">✏️ Bearb.</button></td>
+                        </tr>`;
+            }
+            html += `</tbody>
+                    </table>
+                </div>
+            </div>`;
+        }
+        groupedContainer.innerHTML = html;
+        
+        // Event-Listener für Tabellen-Zeilen
+        document.querySelectorAll('.candidates-table tbody tr').forEach(row => {
+            const kandId = row.getAttribute('data-kandidat-id');
+            if (kandId) {
+                row.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('edit-row-btn')) return;
+                    handleRowClick(e, kandId);
+                });
+            }
+        });
+        
+        // Event-Listener für Bearbeiten-Buttons
+        document.querySelectorAll('.edit-row-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const kandId = btn.getAttribute('data-id');
+                if (kandId) handleRowClick(e, kandId);
+            });
+        });
+        
+        // Sortier-Header
+        document.querySelectorAll('.candidates-table th[data-sort]').forEach(th => {
+            th.addEventListener('click', () => {
+                const column = th.getAttribute('data-sort');
+                if (sortColumn === column) sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                else { sortColumn = column; sortDirection = 'asc'; }
+                applyAllFilters();
+            });
+        });
+        
+        // Gruppen-Header
+        document.querySelectorAll('.party-group-header').forEach(header => {
+            header.addEventListener('click', (e) => {
+                const partyId = parseInt(header.getAttribute('data-party-id'));
+                collapsedGroups.has(partyId) ? collapsedGroups.delete(partyId) : collapsedGroups.add(partyId);
+                renderGroupedTable(getFilteredCandidates());
+            });
+        });
+    }
+    
+    async function updateCandidate(id, payload) {
+        try {
+            const response = await fetch(`${API_BASE}/wahl_kandidaten/update/${id}`, { 
+                method: 'PUT', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(payload) 
+            });
+            if (!response.ok) { 
+                const errData = await response.json().catch(()=>({})); 
+                throw new Error(errData.error || `HTTP ${response.status}`); 
+            }
+            const updated = await response.json();
+            showFormMessage(`✅ Kandidat ${id} aktualisiert.`, false);
+            await fetchCandidates();
+            applyAllFilters();
+            if (updated) populateForm(updated, false);
+        } catch (err) { 
+            showFormMessage(`❌ Fehler: ${err.message}`, true); 
+        }
+    }
+    
+    function applyAllFilters() { 
+        const filtered = getFilteredCandidates(); 
+        renderGroupedTable(filtered);
+        
+        // Aktualisiere Statistik-Anzeige
+        const filterActive = independentWahlFilter !== null || 
+                            activeTreeFilters.wahlId !== null ||
+                            searchVorname.value || 
+                            searchNachname.value || 
+                            searchPlatz.value;
+        
+        if (filterActive) {
+            statsBar.querySelector('span:first-child').innerHTML = `📊 ${filtered.length} / ${allCandidates.length} Kandidaten (gefiltert)`;
+        } else {
+            statsBar.querySelector('span:first-child').innerHTML = `📊 Alle ${allCandidates.length} Kandidaten werden angezeigt`;
+        }
+    }
+    
+    function resetAllFilters() { 
+        searchVorname.value = ''; 
+        searchNachname.value = ''; 
+        searchPlatz.value = ''; 
+        independentWahlFilter = null; 
+        wahlSelectInput.value = 'Alle Wahls anzeigen'; 
+        activeTreeFilters = { wahlId: null, kreisId: null, parteiId: null }; 
+        sortColumn = 'NACHNAME'; 
+        sortDirection = 'asc'; 
+        collapsedGroups.clear(); 
+        renderTree(); 
+        applyAllFilters(); 
+    }
+    
+    function clearForm() { 
+        editId.value = ''; 
+        editVorname.value = ''; 
+        editNachname.value = ''; 
+        editPlatz.value = ''; 
+        editComm.value = ''; 
+        editWahlId.value = ''; 
+        editKreisId.value = ''; 
+        editParteiId.value = ''; 
+        updateFormMessage.style.display = 'none';
+        currentSelectedCandidateId = null;
+        updateSelectedInfo(null);
+    }
+    
+    function buildTreeAndRender() { renderTree(); }
+    
+    document.getElementById("candidateForm").addEventListener("submit", async (e) => { 
+        e.preventDefault(); 
+        const id = editId.value; 
+        if (!id) { 
+            showFormMessage("Kein Kandidat ausgewählt – bitte in Tabelle klicken", true); 
+            return; 
+        } 
+        const payload = { 
+            VORNAME: editVorname.value, 
+            NACHNAME: editNachname.value, 
+            PLATZ: editPlatz.value ? parseInt(editPlatz.value) : null, 
+            COMM: editComm.value 
+        }; 
+        await updateCandidate(parseInt(id), payload); 
+    });
+    
+    document.getElementById("clearFormBtn").addEventListener("click", clearForm);
+    applyBtn.addEventListener("click", applyAllFilters);
+    resetSearchBtn.addEventListener("click", resetAllFilters);
+    clearWahlFilterBtn.addEventListener("click", () => { 
+        independentWahlFilter = null; 
+        wahlSelectInput.value = 'Alle Wahls anzeigen'; 
+        activeTreeFilters = { wahlId: null, kreisId: null, parteiId: null }; 
+        renderTree(); 
+        applyAllFilters(); 
+    });
+    
+    function escapeHtml(str) { 
+        if(!str) return ''; 
+        return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); 
+    }
+    
+    fetchCandidates();
+</script>
+</body>
+</html>

@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flugzeug Reservierungen & Buchungen</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f1f1f1;
+            margin-right: 5px;
+            border-radius: 5px 5px 0 0;
+        }
+        .tab.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+            background-color: white;
+            border-radius: 0 5px 5px 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .form-section, .list-section {
+            flex: 1;
+            min-width: 300px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px 0;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button.secondary {
+            background-color: #2196F3;
+        }
+        button.danger {
+            background-color: #f44336;
+        }
+        input, select, textarea {
+            padding: 8px;
+            margin: 5px 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        .status-active {
+            background-color: #4CAF50;
+        }
+        .status-cancelled {
+            background-color: #f44336;
+        }
+        .status-completed {
+            background-color: #2196F3;
+        }
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            margin-top: 20px;
+        }
+        .calendar-header {
+            font-weight: bold;
+            text-align: center;
+            padding: 5px;
+            background-color: #f2f2f2;
+        }
+        .calendar-day {
+            border: 1px solid #ddd;
+            padding: 5px;
+            min-height: 80px;
+        }
+        .event {
+            font-size: 12px;
+            padding: 2px;
+            margin: 2px 0;
+            border-radius: 3px;
+            background-color: #e3f2fd;
+        }
+        .filter-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        .filter-controls label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Flugzeug Reservierungen & Buchungen</h1>
+    
+    <div class="tabs">
+        <div class="tab active" data-tab="reservations">Reservierungen</div>
+        <div class="tab" data-tab="bookings">Buchungen</div>
+    </div>
+    
+    <!-- Reservierungen Tab -->
+    <div id="reservations" class="tab-content active">
+        <div class="container">
+            <div class="form-section">
+                <h2>Neue Reservierung</h2>
+                <select id="reservationAircraft">
+                    <option value="">Flugzeug auswählen</option>
+                </select>
+                <select id="reservationCustomer">
+                    <option value="">Kunde auswählen</option>
+                </select>
+                <input type="datetime-local" id="reservationStart">
+                <input type="datetime-local" id="reservationEnd">
+                <select id="reservationStartAirport">
+                    <option value="">Startflugplatz</option>
+                </select>
+                <select id="reservationEndAirport">
+                    <option value="">Zielflugplatz</option>
+                </select>
+                <input type="text" id="reservationPurpose" placeholder="Zweck der Reservierung">
+                <button onclick="addReservation()">Reservierung anlegen</button>
+            </div>
+            
+            <div class="list-section">
+                <h2>Reservierungen</h2>
+                <div class="filter-controls">
+                    <input type="month" id="reservationMonth" onchange="loadReservations()">
+                    <label><input type="checkbox" id="showActiveReservations" checked onchange="loadReservations()"> Aktiv</label>
+                    <label><input type="checkbox" id="showCancelledReservations" onchange="loadReservations()"> Storniert</label>
+                </div>
+                <table id="reservationTable">
+                    <thead>
+                        <tr>
+                            <th>Flugzeug</th>
+                            <th>Kunde</th>
+                            <th>Start</th>
+                            <th>Ende</th>
+                            <th>Status</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div>
+            <h2>Reservierungskalender</h2>
+            <div id="reservationCalendar" class="calendar"></div>
+        </div>
+    </div>
+    
+    <!-- Buchungen Tab -->
+    <div id="bookings" class="tab-content">
+        <div class="container">
+            <div class="form-section">
+                <h2>Neue Buchung</h2>
+                <select id="bookingAircraft">
+                    <option value="">Flugzeug auswählen</option>
+                </select>
+                <select id="bookingCustomer">
+                    <option value="">Kunde auswählen</option>
+                </select>
+                <select id="bookingPilot">
+                    <option value="">Pilot auswählen</option>
+                </select>
+                <input type="datetime-local" id="bookingStart">
+                <input type="datetime-local" id="bookingEnd">
+                <select id="bookingStartAirport">
+                    <option value="">Startflugplatz</option>
+                </select>
+                <select id="bookingEndAirport">
+                    <option value="">Zielflugplatz</option>
+                </select>
+                <input type="number" id="bookingFlightHours" placeholder="Geplante Flugstunden" step="0.1" min="0">
+                <input type="text" id="bookingPurpose" placeholder="Zweck der Buchung">
+                <button onclick="addBooking()">Buchung anlegen</button>
+            </div>
+            
+            <div class="list-section">
+                <h2>Buchungen</h2>
+                <div class="filter-controls">
+                    <input type="month" id="bookingMonth" onchange="loadBookings()">
+                    <label><input type="checkbox" id="showActiveBookings" checked onchange="loadBookings()"> Aktiv</label>
+                    <label><input type="checkbox" id="showCancelledBookings" onchange="loadBookings()"> Storniert</label>
+                    <label><input type="checkbox" id="showCompletedBookings" onchange="loadBookings()"> Abgeschlossen</label>
+                </div>
+                <table id="bookingTable">
+                    <thead>
+                        <tr>
+                            <th>Flugzeug</th>
+                            <th>Kunde</th>
+                            <th>Pilot</th>
+                            <th>Start</th>
+                            <th>Ende</th>
+                            <th>Flugstunden</th>
+                            <th>Status</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Datenstrukturen
+        let aircrafts = [
+            {id: "1", registration: "D-ABCD", type: "Cessna 172", status: "available"},
+            {id: "2", registration: "D-EFGH", type: "Piper PA-28", status: "available"}
+        ];
+        
+        let customers = [
+            {id: "1", name: "Max Mustermann", license: "PPL(A)"},
+            {id: "2", name: "Erika Musterfrau", license: "CPL(A)"}
+        ];
+        
+        let pilots = [
+            {id: "1", name: "Hans Pilot", license: "ATPL"},
+            {id: "2", name: "Anna Flieger", license: "CPL"}
+        ];
+        
+        let airports = [
+            {id: "1", code: "EDDM", name: "München"},
+            {id: "2", code: "EDDF", name: "Frankfurt"}
+        ];
+        
+        let reservations = [];
+        let bookings = [];
+        
+        // Initialisierung
+        window.onload = function() {
+            // Tab-Funktionalität
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    this.classList.add('active');
+                    document.getElementById(this.dataset.tab).classList.add('active');
+                });
+            });
+            
+            // Dropdowns füllen
+            updateDropdown('reservationAircraft', aircrafts, 'registration', 'type');
+            updateDropdown('bookingAircraft', aircrafts, 'registration', 'type');
+            updateDropdown('reservationCustomer', customers, 'name', 'license');
+            updateDropdown('bookingCustomer', customers, 'name', 'license');
+            updateDropdown('bookingPilot', pilots, 'name', 'license');
+            updateDropdown('reservationStartAirport', airports, 'code', 'name');
+            updateDropdown('reservationEndAirport', airports, 'code', 'name');
+            updateDropdown('bookingStartAirport', airports, 'code', 'name');
+            updateDropdown('bookingEndAirport', airports, 'code', 'name');
+            
+            // Aktuelle Zeiten setzen
+            const now = new Date();
+            document.getElementById('reservationStart').value = formatDateTimeLocal(now);
+            document.getElementById('reservationEnd').value = formatDateTimeLocal(new Date(now.getTime() + 3600000));
+            document.getElementById('bookingStart').value = formatDateTimeLocal(now);
+            document.getElementById('bookingEnd').value = formatDateTimeLocal(new Date(now.getTime() + 3600000));
+            
+            // Daten laden
+            loadReservations();
+            loadBookings();
+            updateReservationCalendar();
+        };
+        
+        // Hilfsfunktionen
+        function formatDateTimeLocal(date) {
+            return date.toISOString().slice(0, 16);
+        }
+        
+        function updateDropdown(id, items, primaryField, secondaryField) {
+            const dropdown = document.getElementById(id);
+            dropdown.innerHTML = `<option value="">${dropdown.getAttribute('placeholder') || 'Bitte wählen'}</option>`;
+            
+            items.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = `${item[primaryField]}${secondaryField ? ` (${item[secondaryField]})` : ''}`;
+                dropdown.appendChild(option);
+            });
+        }
+        
+        // Reservierungsfunktionen
+        function addReservation() {
+            const aircraftId = document.getElementById('reservationAircraft').value;
+            const customerId = document.getElementById('reservationCustomer').value;
+            const start = document.getElementById('reservationStart').value;
+            const end = document.getElementById('reservationEnd').value;
+            const startAirportId = document.getElementById('reservationStartAirport').value;
+            const endAirportId = document.getElementById('reservationEndAirport').value;
+            const purpose = document.getElementById('reservationPurpose').value;
+            
+            if (!aircraftId || !customerId || !start || !end) {
+                alert('Bitte alle Pflichtfelder ausfüllen!');
+                return;
+            }
+            
+            const aircraft = aircrafts.find(a => a.id === aircraftId);
+            const customer = customers.find(c => c.id === customerId);
+            const startAirport = airports.find(a => a.id === startAirportId);
+            const endAirport = airports.find(a => a.id === endAirportId);
+            
+            // Verfügbarkeit prüfen
+            const isAvailable = checkAvailability(aircraftId, start, end);
+            if (!isAvailable) {
+                alert('Das Flugzeug ist in diesem Zeitraum nicht verfügbar!');
+                return;
+            }
+            
+            const newReservation = {
+                id: Date.now().toString(),
+                aircraftId,
+                aircraftRegistration: aircraft.registration,
+                aircraftType: aircraft.type,
+                customerId,
+                customerName: customer.name,
+                start,
+                end,
+                startAirport: startAirport ? `${startAirport.code} - ${startAirport.name}` : '',
+                endAirport: endAirport ? `${endAirport.code} - ${endAirport.name}` : '',
+                purpose,
+                status: 'active',
+                createdAt: new Date().toISOString()
+            };
+            
+            reservations.push(newReservation);
+            aircraft.status = 'reserved';
+            
+            // UI aktualisieren
+            loadReservations();
+            updateReservationCalendar();
+            
+            // Formular zurücksetzen
+            document.getElementById('reservationPurpose').value = '';
+        }
+        
+        function checkAvailability(aircraftId, start, end) {
+            const startDate = new Date(start);
+            const endDate = new Date(end);
+            
+            // Prüfe Reservierungen
+            const reservationConflict = reservations.some(r => 
+                r.aircraftId === aircraftId && 
+                r.status === 'active' &&
+                ((new Date(r.start) <= endDate && new Date(r.end) >= startDate))
+            );
+            
+            // Prüfe Buchungen
+            const bookingConflict = bookings.some(b => 
+                b.aircraftId === aircraftId && 
+                b.status === 'active' &&
+                ((new Date(b.startDate) <= endDate && new Date(b.endDate) >= startDate))
+            );
+            
+            return !reservationConflict && !bookingConflict;
+        }
+        
+        function loadReservations() {
+            const month = document.getElementById('reservationMonth').value;
+            const showActive = document.getElementById('showActiveReservations').checked;
+            const showCancelled = document.getElementById('showCancelledReservations').checked;
+            
+            let filtered = reservations;
+            
+            // Filter nach Monat
+            if (month) {
+                filtered = filterByMonth(reservations, month, 'start');
+            }
+            
+            // Filter nach Status
+            filtered = filtered.filter(r => 
+                (showActive && r.status === 'active') || 
+                (showCancelled && r.status === 'cancelled')
+            );
+            
+            const table = document.getElementById('reservationTable').getElementsByTagName('tbody')[0];
+            table.innerHTML = '';
+            
+            filtered.forEach(res => {
+                const row = table.insertRow();
+                row.innerHTML = `
+                    <td>${res.aircraftRegistration} (${res.aircraftType})</td>
+                    <td>${res.customerName}</td>
+                    <td>${new Date(res.start).toLocaleString()}</td>
+                    <td>${new Date(res.end).toLocaleString()}</td>
+                    <td><span class="status-indicator status-${res.status}"></span> ${res.status}</td>
+                    <td>
+                        ${res.status === 'active' ? `
+                            <button onclick="cancelReservation('${res.id}')">Stornieren</button>
+                            <button class="secondary" onclick="convertToBooking('${res.id}')">Zu Buchung</button>
+                        ` : ''}
+                    </td>
+                `;
+            });
+        }
+        
+        function cancelReservation(id) {
+            if (confirm('Reservierung wirklich stornieren?')) {
+                const index = reservations.findIndex(r => r.id === id);
+                if (index !== -1) {
+                    reservations[index].status = 'cancelled';
+                    const aircraft = aircrafts.find(a => a.id === reservations[index].aircraftId);
+                    if (aircraft) aircraft.status = 'available';
+                    
+                    loadReservations();
+                    updateReservationCalendar();
+                }
+            }
+        }
+        
+        function convertToBooking(reservationId) {
+            const reservation = reservations.find(r => r.id === reservationId);
+            if (!reservation) return;
+            
+            // Formular mit Reservierungsdaten vorfüllen
+            document.getElementById('bookingAircraft').value = reservation.aircraftId;
+            document.getElementById('bookingCustomer').value = reservation.customerId;
+            document.getElementById('bookingStart').value = reservation.start.slice(0, 16);
+            document.getElementById('bookingEnd').value = reservation.end.slice(0, 16);
+            
+            if (reservation.startAirport) {
+                const airportCode = reservation.startAirport.split(' - ')[0];
+                const airport = airports.find(a => a.code === airportCode);
+                if (airport) document.getElementById('bookingStartAirport').value = airport.id;
+            }
+            
+            if (reservation.endAirport) {
+                const airportCode = reservation.endAirport.split(' - ')[0];
+                const airport = airports.find(a => a.code === airportCode);
+                if (airport) document.getElementById('bookingEndAirport').value = airport.id;
+            }
+            
+            document.getElementById('bookingPurpose').value = reservation.purpose || '';
+            
+            // Zum Buchungen-Tab wechseln
+            document.querySelector('.tab[data-tab="bookings"]').click();
+        }
+        
+        function updateReservationCalendar() {
+            const calendar = document.getElementById('reservationCalendar');
+            calendar.innerHTML = '';
+            
+            // Kalender-Header (Wochentage)
+            ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].forEach(day => {
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-header';
+                dayElement.textContent = day;
+                calendar.appendChild(dayElement);
+            });
+            
+            // Kalendertage (vereinfachte Darstellung)
+            for (let i = 0; i < 35; i++) {
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                dayElement.textContent = i < 31 ? i + 1 : '';
+                
+                // Events für diesen Tag finden
+                const dayReservations = reservations.filter(r => {
+                    if (r.status !== 'active') return false;
+                    const date = new Date(r.start);
+                    return date.getDate() === (i + 1) && date.getMonth() === new Date().getMonth();
+                });
+                
+                dayReservations.forEach(res => {
+                    const event = document.createElement('div');
+                    event.className = 'event';
+                    event.textContent = `${res.aircraftRegistration} (${res.customerName})`;
+                    dayElement.appendChild(event);
+                });
+                
+                calendar.appendChild(dayElement);
+            }
+        }
+        
+        // Buchungsfunktionen
+        function addBooking() {
+            const aircraftId = document.getElementById('bookingAircraft').value;
+            const customerId = document.getElementById('bookingCustomer').value;
+            const pilotId = document.getElementById('bookingPilot').value;
+            const start = document.getElementById('bookingStart').value;
+            const end = document.getElementById('bookingEnd').value;
+            const startAirportId = document.getElementById('bookingStartAirport').value;
+            const endAirportId = document.getElementById('bookingEndAirport').value;
+            const flightHours = parseFloat(document.getElementById('bookingFlightHours').value) || 0;
+            const purpose = document.getElementById('bookingPurpose').value;
+            
+            if (!aircraftId || !customerId || !pilotId || !start || !end) {
+                alert('Bitte alle Pflichtfelder ausfüllen!');
+                return;
+            }
+            
+            const aircraft = aircrafts.find(a => a.id === aircraftId);
+            const customer = customers.find(c => c.id === customerId);
+            const pilot = pilots.find(p => p.id === pilotId);
+            const startAirport = airports.find(a => a.id === startAirportId);
+            const endAirport = airports.find(a => a.id === endAirportId);
+            
+            // Verfügbarkeit prüfen
+            const isAvailable = checkAvailability(aircraftId, start, end);
+            if (!isAvailable) {
+                alert('Das Flugzeug ist in diesem Zeitraum nicht verfügbar!');
+                return;
+            }
+            
+            const newBooking = {
+                id: Date.now().toString(),
+                aircraftId,
+                aircraftRegistration: aircraft.registration,
+                aircraftType: aircraft.type,
+                customerId,
+                customerName: customer.name,
+                pilotId,
+                pilotName: pilot.name,
+                startDate: start,
+                endDate: end,
+                startAirport: startAirport ? `${startAirport.code} - ${startAirport.name}` : '',
+                endAirport: endAirport ? `${endAirport.code} - ${endAirport.name}` : '',
+                plannedFlightHours: flightHours,
+                actualFlightHours: null,
+                purpose,
+                status: 'active',
+                createdAt: new Date().toISOString()
+            };
+            
+            bookings.push(newBooking);
+            aircraft.status = 'in-use';
+            
+            // UI aktualisieren
+            loadBookings();
+            
+            // Formular zurücksetzen
+            document.getElementById('bookingFlightHours').value = '';
+            document.getElementById('bookingPurpose').value = '';
+        }
+        
+        function loadBookings() {
+            const month = document.getElementById('bookingMonth').value;
+            const showActive = document.getElementById('showActiveBookings').checked;
+            const showCancelled = document.getElementById('showCancelledBookings').checked;
+            const showCompleted = document.getElementById('showCompletedBookings').checked;
+            
+            let filtered = bookings;
+            
+            // Filter nach Monat
+            if (month) {
+                filtered = filterByMonth(bookings, month, 'startDate');
+            }
+            
+            // Filter nach Status
+            filtered = filtered.filter(b => 
+                (showActive && b.status === 'active') || 
+                (showCancelled && b.status === 'cancelled') ||
+                (showCompleted && b.status === 'completed')
+            );
+            
+            const table = document.getElementById('bookingTable').getElementsByTagName('tbody')[0];
+            table.innerHTML = '';
+            
+            filtered.forEach(booking => {
+                const row = table.insertRow();
+                row.innerHTML = `
+                    <td>${booking.aircraftRegistration} (${booking.aircraftType})</td>
+                    <td>${booking.customerName}</td>
+                    <td>${booking.pilotName}</td>
+                    <td>${new Date(booking.startDate).toLocaleString()}</td>
+                    <td>${new Date(booking.endDate).toLocaleString()}</td>
+                    <td>${booking.actualFlightHours !== null ? booking.actualFlightHours : booking.plannedFlightHours}</td>
+                    <td><span class="status-indicator status-${booking.status}"></span> ${booking.status}</td>
+                    <td>
+                        ${booking.status === 'active' ? `
+                            <button onclick="completeBooking('${booking.id}')">Abschließen</button>
+                            <button class="danger" onclick="cancelBooking('${booking.id}')">Stornieren</button>
+                        ` : ''}
+                        ${booking.status === 'completed' ? 'Abgeschlossen' : ''}
+                        ${booking.status === 'cancelled' ? 'Storniert' : ''}
+                    </td>
+                `;
+            });
+        }
+        
+        function completeBooking(id) {
+            const booking = bookings.find(b => b.id === id);
+            if (!booking) return;
+            
+            const actualHours = parseFloat(prompt("Tatsächliche Flugstunden:", booking.plannedFlightHours || "0")) || 0;
+            
+            const index = bookings.findIndex(b => b.id === id);
+            if (index !== -1) {
+                bookings[index].status = 'completed';
+                bookings[index].actualFlightHours = actualHours;
+                
+                const aircraft = aircrafts.find(a => a.id === bookings[index].aircraftId);
+                if (aircraft) aircraft.status = 'available';
+                
+                loadBookings();
+            }
+        }
+        
+        function cancelBooking(id) {
+            if (confirm('Buchung wirklich stornieren?')) {
+                const index = bookings.findIndex(b => b.id === id);
+                if (index !== -1) {
+                    bookings[index].status = 'cancelled';
+                    
+                    const aircraft = aircrafts.find(a => a.id === bookings[index].aircraftId);
+                    if (aircraft) aircraft.status = 'available';
+                    
+                    loadBookings();
+                }
+            }
+        }
+        
+        // Hilfsfunktion zum Filtern nach Monat
+        function filterByMonth(items, monthString, dateField) {
+            const [year, month] = monthString.split('-').map(Number);
+            return items.filter(item => {
+                const date = new Date(item[dateField]);
+                return date.getFullYear() === year && 
+                       date.getMonth() === month - 1;
+            });
+        }
+    </script>
+</body>
+</html>

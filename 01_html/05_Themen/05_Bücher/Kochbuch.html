@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Belege Browser</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            height: 100vh;
+        }
+        #tree-container {
+            width: 40%;
+            overflow-y: auto;
+            padding-right: 20px;
+            border-right: 1px solid #ccc;
+        }
+        #details-container {
+            width: 60%;
+            padding-left: 20px;
+            overflow-y: auto;
+        }
+        .tree-item {
+            cursor: pointer;
+            padding: 5px;
+            margin-left: 20px;
+        }
+        .tree-item:hover {
+            background-color: #f0f0f0;
+        }
+        .tree-item-parent {
+            font-weight: bold;
+        }
+        .tree-item-leaf {
+            color: #666;
+        }
+        .beleg-details {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .beleg-image {
+            max-width: 100%;
+            max-height: 300px;
+            margin-top: 10px;
+            border: 1px solid #eee;
+        }
+        .loading {
+            color: #999;
+            font-style: italic;
+        }
+        .error {
+            color: red;
+        }
+        .collapsed::before {
+            content: "+ ";
+        }
+        .expanded::before {
+            content: "- ";
+        }
+    </style>
+</head>
+<body>
+    <div id="tree-container">
+        <h2>Belege Struktur</h2>
+        <div id="belege-tree"></div>
+    </div>
+    <div id="details-container">
+        <h2>Beleg Details</h2>
+        <div id="beleg-details">
+            <p>Wählen Sie einen Beleg aus, um Details anzuzeigen.</p>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let belegeData = [];
+        let treeStructure = {};
+        
+        // DOM elements
+        const treeContainer = document.getElementById('belege-tree');
+        const detailsContainer = document.getElementById('beleg-details');
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Fetch belege data
+                const response = await fetch('http://localhost:5000/belege');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                belegeData = await response.json();
+                
+                // Filter belege where FK_MEDIA_BUCH is not null
+                belegeData = belegeData.filter(beleg => beleg.FK_MEDIA_BUCH !== null);
+                
+                // Build tree structure
+                buildTreeStructure();
+                
+                // Render tree
+                renderTree();
+                
+            } catch (error) {
+                console.error('Error fetching belege data:', error);
+                treeContainer.innerHTML = `<p class="error">Fehler beim Laden der Belege: ${error.message}</p>`;
+            }
+        });
+        
+        // Build the tree structure from belege data
+        function buildTreeStructure() {
+            treeStructure = {};
+            
+            // First level: FK_MEDIA_BUCH
+            belegeData.forEach(beleg => {
+                const buchId = beleg.FK_MEDIA_BUCH;
+                const ordnerId = beleg.FK_ABL_ORDNER_PAGE;
+                const seiteId = beleg.FK_MEDIA_BUCH_SEITE;
+                
+                if (!treeStructure[buchId]) {
+                    treeStructure[buchId] = {
+                        id: buchId,
+                        name: `Buch ${buchId}`,
+                        ordner: {}
+                    };
+                }
+                
+                if (ordnerId && !treeStructure[buchId].ordner[ordnerId]) {
+                    treeStructure[buchId].ordner[ordnerId] = {
+                        id: ordnerId,
+                        name: `Ordner ${ordnerId}`,
+                        seiten: {}
+                    };
+                }
+                
+                if (seiteId && ordnerId && !treeStructure[buchId].ordner[ordnerId].seiten[seiteId]) {
+                    treeStructure[buchId].ordner[ordnerId].seiten[seiteId] = {
+                        id: seiteId,
+                        name: `Seite ${seiteId}`,
+                        belege: []
+                    };
+                }
+                
+                if (seiteId && ordnerId) {
+                    treeStructure[buchId].ordner[ordnerId].seiten[seiteId].belege.push(beleg);
+                }
+            });
+        }
+        
+        // Render the tree structure
+        function renderTree() {
+            treeContainer.innerHTML = '';
+            
+            for (const buchId in treeStructure) {
+                const buch = treeStructure[buchId];
+                
+                const buchElement = document.createElement('div');
+                buchElement.className = 'tree-item tree-item-parent collapsed';
+                buchElement.textContent = buch.name;
+                buchElement.dataset.id = buch.id;
+                buchElement.dataset.type = 'buch';
+                
+                const ordnerContainer = document.createElement('div');
+                ordnerContainer.className = 'tree-children';
+                ordnerContainer.style.display = 'none';
+                
+                for (const ordnerId in buch.ordner) {
+                    const ordner = buch.ordner[ordnerId];
+                    
+                    const ordnerElement = document.createElement('div');
+                    ordnerElement.className = 'tree-item tree-item-parent collapsed';
+                    ordnerElement.textContent = ordner.name;
+                    ordnerElement.dataset.id = ordner.id;
+                    ordnerElement.dataset.type = 'ordner';
+                    ordnerElement.dataset.parentId = buch.id;
+                    
+                    const seitenContainer = document.createElement('div');
+                    seitenContainer.className = 'tree-children';
+                    seitenContainer.style.display = 'none';
+                    
+                    for (const seiteId in ordner.seiten) {
+                        const seite = ordner.seiten[seiteId];
+                        
+                        const seiteElement = document.createElement('div');
+                        seiteElement.className = 'tree-item tree-item-parent collapsed';
+                        seiteElement.textContent = seite.name;
+                        seiteElement.dataset.id = seite.id;
+                        seiteElement.dataset.type = 'seite';
+                        seiteElement.dataset.parentId = ordner.id;
+                        
+                        const belegeContainer = document.createElement('div');
+                        belegeContainer.className = 'tree-children';
+                        belegeContainer.style.display = 'none';
+                        
+                        seite.belege.forEach(beleg => {
+                            const belegElement = document.createElement('div');
+                            belegElement.className = 'tree-item tree-item-leaf';
+                            belegElement.textContent = beleg.BEZEICHNUNG || `Beleg ${beleg.PK_INP_BELEGE_ALL}`;
+                            belegElement.dataset.id = beleg.PK_INP_BELEGE_ALL;
+                            belegElement.dataset.type = 'beleg';
+                            belegElement.dataset.parentId = seite.id;
+                            
+                            belegElement.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                showBelegDetails(beleg);
+                            });
+                            
+                            belegeContainer.appendChild(belegElement);
+                        });
+                        
+                        seiteElement.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            toggleChildren(seiteElement, belegeContainer);
+                        });
+                        
+                        seiteElement.appendChild(belegeContainer);
+                        seitenContainer.appendChild(seiteElement);
+                    }
+                    
+                    ordnerElement.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        toggleChildren(ordnerElement, seitenContainer);
+                    });
+                    
+                    ordnerElement.appendChild(seitenContainer);
+                    ordnerContainer.appendChild(ordnerElement);
+                }
+                
+                buchElement.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleChildren(buchElement, ordnerContainer);
+                });
+                
+                buchElement.appendChild(ordnerContainer);
+                treeContainer.appendChild(buchElement);
+            }
+        }
+        
+        // Toggle display of child elements
+        function toggleChildren(parentElement, childrenContainer) {
+            const isCollapsed = childrenContainer.style.display === 'none';
+            childrenContainer.style.display = isCollapsed ? 'block' : 'none';
+            
+            if (isCollapsed) {
+                parentElement.classList.remove('collapsed');
+                parentElement.classList.add('expanded');
+            } else {
+                parentElement.classList.remove('expanded');
+                parentElement.classList.add('collapsed');
+            }
+        }
+        
+        // Show details for a selected beleg
+        async function showBelegDetails(beleg) {
+            detailsContainer.innerHTML = '<p class="loading">Lade Belegdetails...</p>';
+            
+            try {
+                // Fetch images for this beleg
+                const response = await fetch(`http://localhost:5000/beleg/bild/${beleg.PK_INP_BELEGE_ALL}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const images = await response.json();
+                
+                // Create HTML for beleg details
+                let html = `
+                    <div class="beleg-details">
+                        <h3>${beleg.BEZEICHNUNG || `Beleg ${beleg.PK_INP_BELEGE_ALL}`}</h3>
+                        <p><strong>ID:</strong> ${beleg.PK_INP_BELEGE_ALL}</p>
+                        <p><strong>Buch:</strong> ${beleg.FK_MEDIA_BUCH}</p>
+                        <p><strong>Ordner:</strong> ${beleg.FK_ABL_ORDNER_PAGE || 'N/A'}</p>
+                        <p><strong>Seite:</strong> ${beleg.FK_MEDIA_BUCH_SEITE || 'N/A'}</p>
+                `;
+                
+                // Add images if available
+                if (images && images.length > 0) {
+                    html += `<h4>Bilder:</h4>`;
+                    images.forEach(image => {
+                        html += `
+                            <div>
+                                <img src="http://localhost:5000/beleg/bild/${beleg.PK_INP_BELEGE_ALL}/${image}" 
+                                     alt="Beleg Bild" class="beleg-image">
+                            </div>
+                        `;
+                    });
+                } else {
+                    html += `<p>Keine Bilder verfügbar</p>`;
+                }
+                
+                html += `</div>`;
+                detailsContainer.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Error fetching beleg details:', error);
+                detailsContainer.innerHTML = `
+                    <div class="beleg-details">
+                        <h3>${beleg.BEZEICHNUNG || `Beleg ${beleg.PK_INP_BELEGE_ALL}`}</h3>
+                        <p class="error">Fehler beim Laden der Belegdetails: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1580 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kandidaten & Personen · Vollständige Integration mit allen Spalten</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .app-container { max-width: 2200px; margin: 0 auto; }
+
+        .tabs {
+            display: flex; gap: 10px; margin-bottom: 20px; background: white; padding: 10px;
+            border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); flex-wrap: wrap;
+        }
+        .tab {
+            padding: 12px 30px; border: none; border-radius: 8px; font-size: 1.1em;
+            font-weight: 600; cursor: pointer; transition: all 0.3s; background: #f0f0f0; color: #666;
+        }
+        .tab:hover { background: #e0e0e0; transform: translateY(-2px); }
+        .tab.active {
+            background: linear-gradient(135deg, #3498db, #2980b9); color: white;
+            box-shadow: 0 5px 15px rgba(52,152,219,0.3);
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .kpi-dashboard {
+            display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;
+        }
+        .kpi-card {
+            background: white; border-radius: 12px; padding: 20px 25px; flex: 1;
+            min-width: 180px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-left: 5px solid;
+            transition: transform 0.2s;
+        }
+        .kpi-card:hover { transform: translateY(-3px); }
+        .kpi-card.person { border-left-color: #3498db; }
+        .kpi-card.candidate { border-left-color: #e67e22; }
+        .kpi-card.profession { border-left-color: #27ae60; }
+        .kpi-card.relation { border-left-color: #9b59b6; }
+        .kpi-label {
+            font-size: 0.9em; text-transform: uppercase; color: #7f8c8d;
+            letter-spacing: 0.5px; margin-bottom: 8px;
+        }
+        .kpi-value {
+            font-size: 2.2em; font-weight: 700; color: #2c3e50; line-height: 1.2;
+        }
+        .kpi-sub {
+            font-size: 0.8em; color: #7f8c8d; margin-top: 5px;
+        }
+
+        .selection-info-compact {
+            background: linear-gradient(135deg, #f6f9fc 0%, #e6f0f9 100%);
+            border-radius: 50px; padding: 12px 25px; margin-bottom: 25px;
+            display: flex; gap: 30px; flex-wrap: wrap;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            border: 1px solid rgba(52,152,219,0.2);
+        }
+        .selection-item-compact {
+            display: flex; align-items: center; gap: 10px; font-size: 0.95em;
+        }
+        .selection-label-compact {
+            font-weight: 600; color: #2c3e50; background: rgba(255,255,255,0.6);
+            padding: 4px 12px; border-radius: 30px;
+        }
+        .selection-value-compact {
+            color: #2c3e50; font-weight: 500;
+        }
+        .selection-value-compact strong { color: #2980b9; font-weight: 700; }
+
+        .three-column-container {
+            display: flex; gap: 20px; background: white; border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 20px; min-height: calc(100vh - 280px);
+        }
+        .column {
+            flex: 1; background: #f8f9fa; border-radius: 10px; padding: 20px;
+            display: flex; flex-direction: column; height: calc(100vh - 320px);
+        }
+        .column.wide-column { flex: 1.8; }
+        .column-header {
+            color: #2c3e50; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 3px solid;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .column-header.person-header { border-bottom-color: #3498db; }
+        .column-header.candidate-header { border-bottom-color: #e67e22; }
+        .column-header.profession-header { border-bottom-color: #27ae60; }
+        .column-header.relation-header { border-bottom-color: #9b59b6; }
+
+        .column-search {
+            margin-bottom: 15px; display: flex; gap: 5px;
+        }
+        .column-search input {
+            flex: 1; padding: 8px 12px; border: 2px solid #ddd; border-radius: 25px;
+            font-size: 0.9em; outline: none;
+        }
+        .column-search input:focus { border-color: #3498db; }
+        .search-clear {
+            background: #f0f0f0; border: none; border-radius: 50%; width: 32px; height: 32px;
+            cursor: pointer; font-weight: bold; color: #555;
+        }
+
+        .table-container {
+            flex: 1; overflow-y: auto; border-radius: 8px; background: white;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .data-table {
+            width: 100%; border-collapse: collapse; font-size: 0.85em;
+        }
+        .data-table th {
+            position: sticky; top: 0; background: #2c3e50; color: white; padding: 10px;
+            text-align: left; font-weight: 600; z-index: 5;
+        }
+        .data-table td { padding: 8px 10px; border-bottom: 1px solid #e0e0e0; }
+        .data-table tbody tr { cursor: pointer; transition: background-color 0.2s; }
+        .data-table tbody tr:hover { background-color: #f0f7ff; }
+        .data-table tbody tr.selected {
+            background-color: #e3f2fd; border-left: 4px solid;
+        }
+        .person-row.selected { border-left-color: #3498db; }
+        .candidate-row.selected { border-left-color: #e67e22; }
+        .profession-row.selected { border-left-color: #27ae60; }
+
+        .btn-small {
+            padding: 4px 8px; border: none; border-radius: 4px; font-size: 0.75em;
+            cursor: pointer; background: #f0f0f0; color: #666;
+        }
+        .btn-small.primary { background: #3498db; color: white; }
+        .btn-small.success { background: #27ae60; color: white; }
+        .btn-small.warning { background: #f39c12; color: white; }
+        .btn-small.info { background: #00bcd4; color: white; }
+        .btn-small.danger { background: #e74c3c; color: white; }
+        .btn-select {
+            background: #9b59b6; color: white; padding: 3px 10px; border-radius: 20px;
+            border: none; font-size: 0.7em; font-weight: bold; cursor: pointer;
+        }
+        .load-btn {
+            background: #6c757d; color: white; padding: 8px; width: 100%; border: none;
+            border-radius: 25px; margin-bottom: 10px; cursor: pointer; font-weight: 600;
+        }
+        .load-btn.person { background: #3498db; }
+        .load-btn.candidate { background: #e67e22; }
+        .load-btn.profession { background: #27ae60; }
+        .load-btn.relation { background: #9b59b6; }
+
+        .election-filter-container {
+            background: #e8f4fd; padding: 15px 20px; border-radius: 10px; margin-bottom: 20px;
+            display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+        }
+        .filter-btn {
+            padding: 10px 25px; background: #3498db; color: white; border: none;
+            border-radius: 8px; cursor: pointer; font-weight: 600;
+        }
+
+        .message { padding: 15px; border-radius: 8px; margin: 15px 0; display: none; }
+        .message-success { background: #d4edda; border-left: 4px solid #28a745; }
+        .message-error { background: #f8d7da; border-left: 4px solid #dc3545; }
+        .message-info { background: #d1ecf1; border-left: 4px solid #17a2b8; }
+        .spinner { border: 3px solid #f3f3f3; border-top: 3px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .modal {
+            display: none; position: fixed; z-index: 1000; left: 0; top: 0;
+            width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: #fefefe; margin: 5% auto; padding: 20px;
+            border: 1px solid #888; border-radius: 10px; width: 90%; max-width: 1200px;
+            max-height: 80vh; overflow-y: auto;
+        }
+        .close {
+            color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;
+        }
+        .close:hover { color: black; }
+
+        .edit-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 15px; padding: 15px; background: white; border-radius: 8px;
+            margin-bottom: 15px; max-height: 600px; overflow-y: auto;
+        }
+        .edit-field {
+            display: flex; flex-direction: column; gap: 5px;
+        }
+        .edit-field label {
+            font-weight: 600; color: #2c3e50; font-size: 0.85em; text-transform: uppercase;
+        }
+        .edit-field input, .edit-field select, .edit-field textarea {
+            padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;
+            font-size: 0.9em; transition: border-color 0.2s;
+        }
+        .edit-field input:focus, .edit-field select:focus, .edit-field textarea:focus {
+            border-color: #3498db; outline: none;
+        }
+        .edit-field textarea { min-height: 60px; resize: vertical; }
+        .edit-field input:disabled { background-color: #f5f5f5; cursor: not-allowed; }
+
+        .profession-multiselect {
+            max-height: 300px; overflow-y: auto; border: 2px solid #e0e0e0;
+            border-radius: 8px; padding: 10px; background: white;
+        }
+        .profession-item {
+            display: flex; align-items: center; gap: 10px; padding: 8px;
+            border-bottom: 1px solid #f0f0f0; cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .profession-item:hover { background-color: #f0f7ff; }
+        .profession-item.selected { background-color: #e3f2fd; }
+        .profession-item input[type="checkbox"] {
+            width: 18px; height: 18px; cursor: pointer;
+        }
+        .profession-name { flex: 1; font-weight: 500; }
+        .profession-count { color: #7f8c8d; font-size: 0.85em; }
+
+        .selected-professions {
+            background: #e8f5e9; border-radius: 8px; padding: 15px; margin-top: 15px;
+        }
+        .selected-profession-tag {
+            display: inline-block; background: #27ae60; color: white;
+            padding: 5px 12px; border-radius: 20px; margin: 0 5px 5px 0;
+            font-size: 0.85em; cursor: pointer; transition: background-color 0.2s;
+        }
+        .selected-profession-tag:hover { background: #c0392b; }
+
+        .button-group {
+            display: flex; gap: 10px; margin: 15px 0; flex-wrap: wrap;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+        .stats-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .stats-card h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #9b59b6;
+        }
+        .stats-card h4 {
+            color: #555;
+            margin: 15px 0 10px 0;
+        }
+        .gender-stats {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .gender-item {
+            text-align: center;
+            padding: 15px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            flex: 1;
+        }
+        .gender-count {
+            font-size: 2.5em;
+            font-weight: bold;
+        }
+        .gender-label {
+            font-size: 1.1em;
+            color: #666;
+            margin-top: 5px;
+        }
+        .gender-male { color: #3498db; }
+        .gender-female { color: #e84393; }
+        .gender-other { color: #f39c12; }
+        
+        .bar-container {
+            margin: 10px 0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .bar-item {
+            margin: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .bar-label {
+            min-width: 180px;
+            font-size: 0.85em;
+            font-weight: 500;
+            color: #555;
+            word-break: break-word;
+        }
+        .bar-value {
+            min-width: 50px;
+            font-size: 0.85em;
+            font-weight: bold;
+            color: #2c3e50;
+            text-align: right;
+        }
+        .bar-wrapper {
+            flex: 1;
+            background-color: #e0e0e0;
+            border-radius: 14px;
+            overflow: hidden;
+            height: 28px;
+        }
+        .bar {
+            height: 100%;
+            background: linear-gradient(90deg, #3498db, #9b59b6);
+            border-radius: 14px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-size: 0.75em;
+            font-weight: bold;
+        }
+        .stats-summary {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .summary-item {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            flex: 1;
+            min-width: 120px;
+        }
+        .summary-number {
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+        .summary-label {
+            font-size: 0.85em;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        .debug-panel {
+            background: #2c3e50; color: white; padding: 10px; border-radius: 5px;
+            font-family: monospace; font-size: 12px; margin-top: 10px;
+            max-height: 100px; overflow-y: auto;
+        }
+
+        .field-info {
+            background: #e8f4fd; padding: 15px; border-radius: 8px; margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+
+        .beruf-allg-section {
+            background: #fff3e0; border-radius: 8px; padding: 15px; margin: 15px 0;
+            border-left: 4px solid #ff9800;
+        }
+        .beruf-allg-value {
+            font-size: 1.2em; font-weight: bold; color: #e65100; margin: 10px 0;
+            padding: 10px; background: white; border-radius: 4px;
+        }
+
+        .documentation-panel {
+            background: #f8f9fa; border-radius: 10px; padding: 20px;
+            margin-top: 20px; border-left: 4px solid #3498db;
+        }
+        .doc-section {
+            margin: 15px 0; padding: 10px; background: white; border-radius: 8px;
+        }
+        .doc-endpoint {
+            font-family: monospace; background: #2c3e50; color: #00ff9d;
+            padding: 5px 10px; border-radius: 4px; display: inline-block;
+            margin: 5px 0;
+        }
+        .doc-method {
+            display: inline-block; padding: 3px 8px; border-radius: 4px;
+            font-weight: bold; margin-right: 10px;
+        }
+        .doc-method.get { background: #61affe; color: white; }
+        .doc-method.post { background: #49cc90; color: white; }
+        .doc-method.put { background: #fca130; color: white; }
+
+        .column-details {
+            font-size: 0.8em;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        .groups-container {
+            margin-top: 20px;
+        }
+        
+        .group-item {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+        
+        .group-header {
+            padding: 12px 15px;
+            background-color: #f8f9fa;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.3s;
+        }
+        
+        .group-header:hover {
+            background-color: #e9ecef;
+        }
+        
+        .group-header h4 {
+            margin: 0;
+            font-size: 14px;
+            color: #333;
+        }
+        
+        .group-id {
+            color: #666;
+            font-size: 12px;
+            font-family: monospace;
+            background-color: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        
+        .group-content {
+            padding: 15px;
+            background-color: white;
+            border-top: 1px solid #ddd;
+        }
+        
+        .person-item {
+            padding: 8px;
+            cursor: pointer;
+            border-left: 3px solid #3498db;
+            margin-bottom: 5px;
+            background-color: #f8f9fa;
+            transition: background-color 0.2s;
+        }
+        
+        .person-item:hover {
+            background-color: #e3f2fd;
+        }
+        
+        .delete-group-relation-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        
+        .delete-group-relation-btn:hover:not(:disabled) {
+            background: #d32f2f;
+        }
+        
+        .search-container {
+            margin-bottom: 15px;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            font-size: 0.9em;
+        }
+        
+        .search-input:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        .loading .spinner {
+            margin: 0 auto 10px;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px dashed #ddd;
+        }
+        
+        .hidden { display: none; }
+        .btn-block { width: 100%; margin-bottom: 5px; }
+        
+        .person-form {
+            padding: 20px;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .form-group {
+            flex: 1;
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .form-group input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        
+        .form-group input[type="number"]::-webkit-inner-spin-button,
+        .form-group input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .candidate-edit-section {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('dashboard')">📊 Dashboard</button>
+        <button class="tab" onclick="switchTab('update')">✏️ Kandidat updaten</button>
+        <button class="tab" onclick="switchTab('multiselect')">🔀 Berufe Multiselect</button> 
+        <button class="tab" onclick="switchTab('groupAdmin')">🏷️ Gruppen Admin</button>
+        <button class="tab" onclick="switchTab('personen')">👤 Personen</button>
+        <button class="tab" onclick="switchTab('groups')">👥 Gruppen</button>
+        <button class="tab" onclick="switchTab('relations')">🔗 V_WAHL_KANDIDATEN_BERUF</button>
+        <button class="tab" onclick="switchTab('statistiken')">📈 Statistiken</button>
+        <button class="tab" onclick="switchTab('documentation')">📚 API Docs</button>
+    </div>
+
+    <div class="debug-panel" id="debugPanel">
+        Debug: App initialisiert...
+    </div>
+
+    <div class="kpi-dashboard">
+        <div class="kpi-card person">
+            <div class="kpi-label">👥 Personen</div>
+            <div class="kpi-value" id="kpiPersons">0</div>
+            <div class="kpi-sub" id="kpiPersonsStatus">geladen</div>
+        </div>
+        <div class="kpi-card candidate">
+            <div class="kpi-label">🗳️ Kandidaten</div>
+            <div class="kpi-value" id="kpiCandidates">0</div>
+            <div class="kpi-sub" id="kpiCandidatesStatus">geladen</div>
+        </div>
+        <div class="kpi-card profession">
+            <div class="kpi-label">💼 Berufe</div>
+            <div class="kpi-value" id="kpiProfessions">0</div>
+            <div class="kpi-sub" id="kpiProfessionsStatus">geladen</div>
+        </div>
+        <div class="kpi-card relation">
+            <div class="kpi-label">🔗 View-Einträge</div>
+            <div class="kpi-value" id="kpiViewEntries">0</div>
+            <div class="kpi-sub" id="kpiViewStatus">für Selektion</div>
+        </div>
+    </div>
+
+    <div id="selectionInfoCompact" class="selection-info-compact">
+        <div class="selection-item-compact">
+            <span class="selection-label-compact">👤 Person</span>
+            <span class="selection-value-compact" id="compactPersonDisplay"><strong>-</strong> (nicht ausgewählt)</span>
+        </div>
+        <div class="selection-item-compact">
+            <span class="selection-label-compact">🗳️ Kandidat</span>
+            <span class="selection-value-compact" id="compactCandidateDisplay"><strong>-</strong> (nicht ausgewählt)</span>
+        </div>
+        <div class="selection-item-compact">
+            <span class="selection-label-compact">💼 Ausgewählte Berufe</span>
+            <span class="selection-value-compact" id="compactProfessionsDisplay">-</span>
+        </div>
+    </div>
+
+    <div id="dashboardTab" class="tab-content active">
+        <div class="election-filter-container">
+            <label>🗳️ WAHL (FK_WAHL_WAHL):</label>
+            <select id="electionSelect">
+                <option value="50">Stadtratswahl 2020 (ID:50)</option>
+                <option value="51">Landtagswahl 2021 (ID:51)</option>
+                <option value="52">Europawahl 2024 (ID:52)</option>
+            </select>
+            <button class="filter-btn" onclick="applyElectionFilter()">Filter setzen</button>
+        </div>
+        <div id="messageContainer" class="message"></div>
+
+        <div class="three-column-container">
+            <div class="column">
+                <div class="column-header person-header"><h3>👥 Personen</h3><span id="personCount">0</span></div>
+                <div class="column-search">
+                    <input type="text" id="personSearch" placeholder="Suche ..." oninput="filterPersons()">
+                    <button class="search-clear" onclick="clearSearch('person')">✕</button>
+                </div>
+                <button class="load-btn person" onclick="loadPersons()">🔁 Personen laden</button>
+                <div class="table-container">
+                    <table class="data-table" id="personTable">
+                        <thead> <th>ID</th><th>Name</th><th>Beruf</th><th>Geb.jahr</th><th>Auswahl</th> </thead>
+                        <tbody id="personTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="column">
+                <div class="column-header candidate-header"><h3>🗳️ Kandidaten</h3><span id="candidateCount">0</span></div>
+                <div class="column-search">
+                    <input type="text" id="candidateSearch" placeholder="Suche ..." oninput="filterCandidates()">
+                    <button class="search-clear" onclick="clearSearch('candidate')">✕</button>
+                </div>
+                <button class="load-btn candidate" onclick="loadCandidates()">🔁 Kandidaten laden</button>
+                <div class="table-container">
+                    <table class="data-table" id="candidateTable">
+                        <thead> <th>ID</th><th>Name</th><th>Partei</th><th>FK_PERS</th><th>FK_WAHL</th><th>BERUF_ALLG</th><th>Auswahl</th> </thead>
+                        <tbody id="candidateTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: Kandidat updaten - Complete with all fields -->
+    <div id="updateTab" class="tab-content">
+        <div class="three-column-container">
+            <div class="column" style="flex:1.2;">
+                <div class="column-header person-header"><h3>👤 ausgewählte Person</h3></div>
+                <div style="background:white; padding:15px; border-radius:8px;">
+                    <p><strong>ID:</strong> <span id="upPersonId">-</span></p>
+                    <p><strong>Name:</strong> <span id="upPersonName">-</span></p>
+                    <p><strong>Beruf:</strong> <span id="upPersonBeruf">-</span></p>
+                </div>
+                
+                <div class="column-header candidate-header" style="margin-top:20px;">
+                    <h3>📋 Update-Info</h3>
+                </div>
+                <div class="field-info">
+                    <p><strong>Kandidat-ID:</strong> <span id="upCandidateId">-</span></p>
+                    <p><strong>Name:</strong> <span id="upCandidateName">-</span></p>
+                    <p><strong>BERUF_ALLG aktuell:</strong> <span id="upCandidateBerufAllg">-</span></p>
+                    <p><strong>Zuletzt geändert:</strong> <span id="upModifiedAt">-</span></p>
+                </div>
+            </div>
+            <div class="column wide-column">
+                <div class="column-header candidate-header">
+                    <h3>📝 ALLE KANDIDATEN-FELDER EDITIERBAR</h3>
+                    <button class="btn-small success" onclick="saveAllCandidateFields()">💾 ALLE ÄNDERUNGEN SPEICHERN</button>
+                </div>
+                <div id="candidateEditFields" class="edit-grid"></div>
+                <div id="updateResult" style="margin-top:8px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="statistikenTab" class="tab-content">
+        <div class="stats-container">
+            <div class="stats-card">
+                <h3>👥 Personen Statistiken</h3>
+                <div class="stats-summary">
+                    <div class="summary-item"><div class="summary-number" id="totalPersons">0</div><div class="summary-label">Gesamt Personen</div></div>
+                    <div class="summary-item"><div class="summary-number" id="totalCandidates">0</div><div class="summary-label">Gesamt Kandidaten</div></div>
+                </div>
+                <h4>📊 Geschlechterverteilung (Personen)</h4>
+                <div class="gender-stats">
+                    <div class="gender-item"><div class="gender-count gender-male" id="maleCount">0</div><div class="gender-label">Männlich</div></div>
+                    <div class="gender-item"><div class="gender-count gender-female" id="femaleCount">0</div><div class="gender-label">Weiblich</div></div>
+                    <div class="gender-item"><div class="gender-count gender-other" id="otherCount">0</div><div class="gender-label">Unbekannt</div></div>
+                </div>
+                <h4>📅 Geburtsjahr Verteilung</h4>
+                <div class="bar-container" id="birthYearStats"></div>
+ <h4>📅 Sterbejahr Verteilung</h4>
+                <div class="bar-container" id="stoYearStats"></div>
+            </div>
+            
+            <div class="stats-card">
+                <h3>🗳️ Kandidaten Statistiken</h3>
+                <h4>🏛️ Parteien Verteilung</h4>
+                <div class="bar-container" id="partyStats"></div>
+                <h4>💼 Berufe Verteilung (aus Kandidaten)</h4>
+                <div class="bar-container" id="professionStats"></div>
+            </div>
+            
+            <div class="stats-card">
+                <h3>🔗 Personen-Beruf Relationen</h3>
+                <div class="stats-summary">
+                    <div class="summary-item"><div class="summary-number" id="totalRelations">0</div><div class="summary-label">Gesamt Relationen</div></div>
+                    <div class="summary-item"><div class="summary-number" id="uniqueBerufeCount">0</div><div class="summary-label">Einzigartige Berufe</div></div>
+                </div>
+                <h4>💼 Berufe nach Häufigkeit (aus /rel_person_beruf)</h4>
+                <div class="bar-container" id="personBerufStats"></div>
+                <button class="btn-small primary btn-block" onclick="loadPersonBerufStatistics()" style="margin-top:15px;">🔄 Berufs-Statistik laden</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="multiselectTab" class="tab-content">
+        <div class="three-column-container">
+            <div class="column">
+                <div class="column-header profession-header"><h3>🔀 Berufe Multiselect</h3></div>
+                <div class="column-search">
+                    <input type="text" id="multiselectSearch" placeholder="Berufe filtern..." oninput="filterMultiselectProfessions()">
+                </div>
+                <div class="profession-multiselect" id="professionMultiselect"></div>
+                <div class="button-group">
+                    <button class="btn-small success" onclick="selectAllProfessions()">Alle auswählen</button>
+                    <button class="btn-small warning" onclick="deselectAllProfessions()">Alle abwählen</button>
+                </div>
+            </div>
+            <div class="column">
+                <div class="column-header candidate-header"><h3>📋 Ausgewählte Berufe</h3></div>
+                <div class="selected-professions" id="selectedProfessionsList">
+                    <p>Keine Berufe ausgewählt</p>
+                </div>
+                <div class="button-group">
+                    <button class="btn-small primary" onclick="assignSelectedProfessionsToPerson()">👤 Person zuweisen</button>
+                    <button class="btn-small primary" onclick="assignSelectedProfessionsToCandidate()">🗳️ Kandidat zuweisen</button>
+                    <button class="btn-small info" onclick="updateBerufAllgFromSelected()">📋 BERUF_ALLG aktualisieren</button>
+                </div>
+                <div class="button-group" style="margin-top: 10px;">
+                    <button class="btn-small success" onclick="insertSelectedProfessionsAsRelations()">🔗 Als Person-Beruf Relationen einfügen</button>
+                    <button class="btn-small warning" onclick="insertCombinedProfessionsAsRelations()">🔄 Kombinierte Berufe einfügen</button>
+                </div>
+                <div id="multiselectResult" style="margin-top:15px;"></div>
+            </div>
+            <div class="column">
+                <div class="column-header person-header"><h3>👥 Betroffene Person/Kandidat</h3></div>
+                <div style="background:white; padding:15px; border-radius:8px;">
+                    <p><strong>Ausgewählte Person:</strong> <span id="msPersonName">-</span></p>
+                    <p><strong>Derzeitiger Beruf:</strong> <span id="msPersonBeruf">-</span></p>
+                    <hr>
+                    <p><strong>Ausgewählter Kandidat:</strong> <span id="msCandidateName">-</span></p>
+                    <p><strong>Derzeitiger Beruf:</strong> <span id="msCandidateBeruf">-</span></p>
+                    <p><strong>BERUF_ALLG:</strong> <span id="msCandidateBerufAllg">-</span></p>
+                </div>
+                <div>
+                    <div class="column-header profession-header"><h3>💼 Berufe</h3><span id="professionCount">0</span></div>
+                    <div class="column-search">
+                        <input type="text" id="professionSearch" placeholder="Suche ..." oninput="filterProfessions()">
+                        <button class="search-clear" onclick="clearSearch('profession')">✕</button>
+                    </div>
+                    <button class="load-btn profession" onclick="loadProfessions()">🔁 Berufe laden</button>
+                    <div class="table-container">
+                        <table class="data-table" id="professionTable">
+                            <thead> <th>Beruf</th><th>Anzahl</th><th>Auswahl</th> </thead>
+                            <tbody id="professionTableBody"></tbody>
+                           </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="relationsTab" class="tab-content">
+        <div class="three-column-container" style="flex-direction: column; height: auto;">
+            <div class="column" style="width: 100%; height: auto; margin-bottom: 20px;">
+                <div class="column-header relation-header">
+                    <h3>🔍 View: V_WAHL_KANDIDATEN_BERUF - Alle Spalten</h3>
+                    <div>
+                        <button class="btn-small primary" onclick="loadViewDataForSelected()">Aktuelle Auswahl laden</button>
+                        <button class="btn-small info" onclick="showAllViewColumns()">Spaltenbeschreibung anzeigen</button>
+                    </div>
+                </div>
+                <div class="button-group">
+                    <button class="btn-small" onclick="loadViewDataForCandidate()" id="loadForCandidateBtn">📋 Für ausgewählten Kandidaten laden</button>
+                    <button class="btn-small" onclick="loadViewDataForPerson()" id="loadForPersonBtn">📋 Für ausgewählte Person laden</button>
+                    <button class="btn-small success" onclick="combineBerufAllgFromView()">🔄 BERUF_ALLG aus View kombinieren</button>
+                    <button class="btn-small warning" onclick="exportViewData()">📥 Daten exportieren (JSON)</button>
+                </div>
+                <div class="column-search" style="margin-top: 15px;">
+                    <input type="text" id="viewSearch" placeholder="In View-Daten suchen..." oninput="filterViewData()">
+                    <button class="search-clear" onclick="clearViewSearch()">✕</button>
+                </div>
+                <div class="table-container" style="max-height: 500px;">
+                    <table class="data-table" id="viewDataTable">
+                        <thead id="viewTableHeader"><tr><th>PK_WAHL_KANDIDATEN</th><th>FK_KON_PERSON</th><th>PK_WORK_BERUF</th><th>BERUF</th><th>beruf_allg_single</th><th>BERUF_ALLG</th><th>VORNAME</th><th>NACHNAME</th><th>PARTEI</th><th>Weitere</th></tr></thead>
+                        <tbody id="viewDataTableBody"><tr><td colspan="10">Bitte einen Kandidaten oder eine Person auswählen</td></tr></tbody>
+                    </table>
+                </div>
+                <div class="column-details" id="viewDataStats">Keine Daten geladen</div>
+            </div>
+            <div class="column" style="width: 100%; height: auto;">
+                <div class="column-header person-header"><h3>📊 Kombinierte BERUF_ALLG Werte</h3></div>
+                <div style="background:white; padding:15px; border-radius:8px;">
+                    <div class="beruf-allg-section"><h4>Aus beruf_allg_single kombinierte Werte:</h4><div id="combinedBerufAllgDisplay" class="beruf-allg-value">-</div><button class="btn-small primary" onclick="copyCombinedToBerufAllg()">📋 In BERUF_ALLG übernehmen</button><button class="btn-small success" onclick="saveCombinedToDatabase()">💾 In DB speichern</button></div>
+                    <div id="viewDataDetail" style="margin-top: 15px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="groupAdminTab" class="tab-content">
+        <div class="three-column-container">
+            <div class="column">
+                <div class="column-header relation-header"><h3>🏷️ Person zu Gruppe (POST /add_person_group_rel)</h3></div>
+                <div class="form-group"><label>Gruppen ID</label><input type="number" id="adminGroupId" placeholder="Gruppen ID"></div>
+                <div class="form-group"><label>Person ID</label><input type="number" id="adminPersonId" placeholder="Person ID"></div>
+                <button class="btn-small primary" onclick="addPersonToGroupViaAPI()">➕ Hinzufügen</button>
+                <div id="groupAdminMsg" style="margin-top:15px;"></div>
+            </div>
+            <div class="column">
+                <div class="column-header candidate-header"><h3>📋 Alle Gruppen</h3></div>
+                <div id="allGroupsList" class="groups-container"></div>
+                <button class="btn-small info btn-block" onclick="loadAllGroups()" style="margin-top:10px;">Gruppen laden</button>
+            </div>
+            <div class="column">
+                <div class="column-header profession-header"><h3>📋 Gruppenmitglieder</h3></div>
+                <div class="form-group"><label>Gruppen ID</label><input type="number" id="viewGroupId" placeholder="Gruppen ID"><button class="btn-small info btn-block" onclick="loadGroupMembers()" style="margin-top:5px;">Mitglieder laden</button></div>
+                <div id="groupMembersList" class="groups-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="personenTab" class="tab-content">
+        <div class="three-column-container" style="min-height: 800px;">
+            <div class="column" style="flex:1;"><div class="column-header person-header"><h3>👥 Personengruppen</h3></div><div class="search-container"><input type="text" id="personGroupSearch" class="search-input" placeholder="Gruppen durchsuchen..."></div><div id="groupsAlertContainer"></div><div id="groupsLoadingIndicator" class="loading" style="display: none;"><div class="spinner"></div><p>Personengruppen werden geladen...</p></div><div id="treeContainer" class="groups-container"></div><div id="noGroupsResults" class="no-results hidden"><p>Keine Personengruppen gefunden</p></div></div>
+            <div class="column" style="flex:1.2;"><div class="column-header person-header"><h3>📝 Personendaten</h3></div><div style="display: flex; gap: 10px; margin-bottom: 15px;"><button class="btn-small primary" onclick="showPersonSearchTab()">Person suchen</button><button class="btn-small success" onclick="showPersonInsertTab()">Person einfügen</button><button class="btn-small warning" onclick="showPersonUpdateTab()">Person aktualisieren</button></div>
+                <div id="personSearchSection"><div class="form-group"><label for="searchPersonId">Person ID (PK_KON_PERSON)</label><input type="number" id="searchPersonId" placeholder="Geben Sie die Person ID ein"></div><button class="btn-small primary btn-block" onclick="searchPersonById()">Person suchen</button><div style="margin-top:20px;"><h4>Nach Namen suchen</h4><div class="form-row"><div class="form-group"><input type="text" id="searchVorname" placeholder="Vorname"></div><div class="form-group"><input type="text" id="searchNachname" placeholder="Nachname"></div></div><button class="btn-small info btn-block" onclick="searchPersonsByName()">Personen suchen</button><div id="nameSearchResults" class="groups-container" style="margin-top:15px; max-height:300px; overflow-y:auto;"></div></div></div>
+                <div id="personInsertSection" style="display:none;"><form id="insertPersonForm" class="person-form"><div class="form-group"><label for="insertTITEL">Titel</label><input type="text" id="insertTITEL"></div><div class="form-row"><div class="form-group"><label for="insertVORNAME">Vorname *</label><input type="text" id="insertVORNAME" required></div><div class="form-group"><label for="insertNACHNAME">Nachname *</label><input type="text" id="insertNACHNAME" required></div></div><div class="form-group"><label for="insertFK_STD_KON_PERSON_GESCHLECHT">Geschlecht ID</label><input type="number" id="insertFK_STD_KON_PERSON_GESCHLECHT"></div><div class="form-row"><div class="form-group"><label for="insertGEBURTSJAHR">Geburtsjahr</label><input type="number" id="insertGEBURTSJAHR" min="1000" max="9999"></div><div class="form-group"><label for="insertSTERBEJAHR">Sterbejahr</label><input type="number" id="insertSTERBEJAHR" min="1000" max="9999"></div></div><div class="form-row"><div class="form-group"><label for="insertGEBURTSNAME">Geburtsname</label><input type="text" id="insertGEBURTSNAME"></div><div class="form-group"><label for="insertRUFNAME">Rufname</label><input type="text" id="insertRUFNAME"></div></div><div class="form-group"><label for="insertBESCHREIBUNG">Beschreibung</label><textarea id="insertBESCHREIBUNG"></textarea></div><div class="form-group"><label for="insertBEMERKUNG">Bemerkung</label><textarea id="insertBEMERKUNG"></textarea></div><div class="form-actions"><button type="button" class="btn-small success" onclick="insertPerson()">Person einfügen</button><button type="button" class="btn-small" onclick="clearPersonForm()">Zurücksetzen</button></div></form></div>
+                <div id="personUpdateSection" style="display:none;"><form id="updatePersonForm" class="person-form"><div class="form-group"><label for="updatePersonId">Person ID *</label><input type="number" id="updatePersonId" readonly></div><div class="form-row"><div class="form-group"><label for="updateTITEL">Titel</label><input type="text" id="updateTITEL"></div><div class="form-group"><label for="updateADELSTITEL">Adelstitel</label><input type="text" id="updateADELSTITEL"></div></div><div class="form-row"><div class="form-group"><label for="updateVORNAME">Vorname</label><input type="text" id="updateVORNAME"></div><div class="form-group"><label for="updateNACHNAME">Nachname</label><input type="text" id="updateNACHNAME"></div></div><div class="form-row"><div class="form-group"><label for="updateGEBURTSJAHR">Geburtsjahr</label><input type="number" id="updateGEBURTSJAHR" min="1000" max="9999"></div><div class="form-group"><label for="updateSTERBEJAHR">Sterbejahr</label><input type="number" id="updateSTERBEJAHR" min="1000" max="9999"></div></div><div class="form-row"><div class="form-group"><label for="updateGEBURTSNAME">Geburtsname</label><input type="text" id="updateGEBURTSNAME"></div><div class="form-group"><label for="updateRUFNAME">Rufname</label><input type="text" id="updateRUFNAME"></div></div><div class="form-group"><label for="updateFK_STD_KON_PERSON_GESCHLECHT">Geschlecht ID</label><input type="number" id="updateFK_STD_KON_PERSON_GESCHLECHT"></div><div class="form-group"><label for="updateBESCHREIBUNG">Beschreibung</label><textarea id="updateBESCHREIBUNG"></textarea></div><div class="form-group"><label for="updateBEMERKUNG">Bemerkung</label><textarea id="updateBEMERKUNG"></textarea></div><div class="form-actions"><button type="button" class="btn-small success" onclick="updatePerson()">Person aktualisieren</button><button type="button" class="btn-small danger" onclick="deleteCurrentPerson()">Person löschen</button></div></form></div>
+                <div id="personAlertContainer" class="message" style="margin-top:15px;"></div>
+            </div>
+            <div class="column" style="flex:1.5; overflow-y:auto;"><div class="column-header person-header"><h3>📋 Personendetails</h3></div><div id="personDetailsContainer" style="background:white; padding:15px; border-radius:8px; margin-bottom:15px;"><p>Wählen Sie eine Person aus, um Details anzuzeigen.</p></div><div id="personGroupsContainer" class="groups-container"></div><div id="personBerufeContainer"><h4>Berufe</h4><div class="table-container" style="max-height:200px;"><table class="data-table"><thead><tr><th>Beruf</th><th>Relation ID</th><th>Aktion</th></tr></thead><tbody id="personBerufeBody"></tbody></table></div></div><div id="personKandidatenContainer"><h4>Kandidaturen</h4><div class="table-container" style="max-height:200px;"><table class="data-table"><thead><tr><th>Kandidat ID</th><th>Wahl ID</th><th>Listenplatz</th><th>Partei</th></tr></thead><tbody id="personKandidatenBody"></tbody></table></div></div></div>
+        </div>
+    </div>
+
+    <div id="groupsTab" class="tab-content">
+        <div class="three-column-container">
+            <div class="column"><div class="column-header person-header"><h3>👥 Gruppe definieren</h3></div><div class="group-add-section"><p><strong>Ausgewählte Person:</strong> <span id="groupPersonName">-</span></p><p><strong>Ausgewählte Berufe:</strong> <span id="groupProfessionsList">-</span></p><div class="group-input"><input type="text" id="groupNameInput" placeholder="Gruppenname"><button class="btn-small success" onclick="addPersonToGroup()">➕ Zu Gruppe</button></div></div><div id="groupActionMsg" style="margin-top:15px;"></div></div>
+            <div class="column"><div class="column-header candidate-header"><h3>📋 Gruppenmitglieder</h3></div><div class="table-container"><table class="data-table"><thead><tr><th>Gruppe</th><th>Person</th><th>Berufe</th></tr></thead><tbody id="groupMembersTableBody"></tbody></table></div></div>
+            <div class="column"><div class="column-header profession-header"><h3>➕ verfügbare Berufe</h3></div><button class="load-btn profession" onclick="loadProfessions()">Berufe laden</button><div class="table-container"><table class="data-table"><thead><tr><th>Beruf</th><th>Anzahl</th></tr></thead><tbody id="availableProfessionsList"></tbody></table></div></div>
+        </div>
+    </div>
+
+    <div id="documentationTab" class="tab-content"><div class="documentation-panel"><h2>📚 Verwendete Webservices</h2><p>Base URL: <code>http://localhost:5000</code></p><div class="doc-section"><h3>👥 Personen</h3><div><span class="doc-method get">GET</span> <span class="doc-endpoint">/persons</span> - Alle Personen abrufen</div><div><span class="doc-method get">GET</span> <span class="doc-endpoint">/person/{id}</span> - Einzelne Person abrufen</div><div><span class="doc-method post">POST</span> <span class="doc-endpoint">/person/insert</span> - Person einfügen</div><div><span class="doc-method post">POST</span> <span class="doc-endpoint">/update-person</span> - Person aktualisieren</div><div><span class="doc-method delete">DELETE</span> <span class="doc-endpoint">/person/delete/{id}</span> - Person löschen</div></div><div class="doc-section"><h3>👥 Personengruppen</h3><div><span class="doc-method get">GET</span> <span class="doc-endpoint">/kon_person_group</span> - Alle Gruppen abrufen</div><div><span class="doc-method post">POST</span> <span class="doc-endpoint">/add_person_group_rel</span> - Person zu Gruppe hinzufügen</div><div><span class="doc-method delete">DELETE</span> <span class="doc-endpoint">/person_group_rel/delete/{id}</span> - Person aus Gruppe entfernen</div></div><div class="doc-section"><h3>🗳️ Kandidaten</h3><div><span class="doc-method get">GET</span> <span class="doc-endpoint">/wahl_kandidaten</span> - Alle Kandidaten abrufen</div><div><span class="doc-method put">PUT</span> <span class="doc-endpoint">/wahl_kandidaten/update/:id</span> - Kandidaten aktualisieren</div></div><div class="doc-section"><h3>💼 Berufe</h3><div><span class="doc-method get">GET</span> <span class="doc-endpoint">/berufe</span> - Alle Berufe abrufen</div></div><div class="doc-section"><h3>🔍 V_WAHL_KANDIDATEN_BERUF</h3><div><span class="doc-method get">GET</span> <span class="doc-endpoint">/wahl_kandidaten_berufe/select_kand/:id</span> - Für Kandidaten</div><div><span class="doc-method get">GET</span> <span class="doc-endpoint">/wahl_kandidaten_berufe/select_person/:id</span> - Für Person</div></div></div></div>
+</div>
+
+<div id="columnModal" class="modal"><div class="modal-content"><span class="close" onclick="document.getElementById('columnModal').style.display='none'">&times;</span><h3>📋 Alle Spalten von V_WAHL_KANDIDATEN_BERUF</h3><table class="data-table"><thead><tr><th>Spaltenname</th><th>Beschreibung</th></tr></thead><tbody><tr><td>PK_WAHL_KANDIDATEN</td><td>Primärschlüssel Kandidat</td></tr><tr><td>beruf_allg_single</td><td>Allgemeiner Beruf (einzeln)</td></tr><tr><td>BERUF_ALLG</td><td>Allgemeine Berufe (kommasepariert)</td></tr></tbody></table></div></div>
+
+<div id="deletePersonModal" class="modal"><div class="modal-content" style="max-width:500px;"><h3 style="color:#e74c3c;">Person löschen bestätigen</h3><p>Möchten Sie die Person <strong id="deletePersonName">[Name]</strong> (ID: <strong id="deletePersonId">[ID]</strong>) wirklich löschen?</p><p><strong>Diese Aktion kann nicht rückgängig gemacht werden!</strong></p><div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;"><button class="btn-small danger" onclick="confirmDeletePerson()">Ja, löschen</button><button class="btn-small" onclick="closeDeleteModal()">Abbrechen</button></div></div></div>
+
+<script>
+    const API_BASE = 'http://localhost:5000';
+    const API_BASE_URL = 'http://localhost:5000';
+    let persons = [], candidates = [], professions = [];
+    let selectedPerson = null, selectedCandidate = null;
+    let selectedProfessions = [];
+    let groupStore = [];
+    let viewData = [], filteredViewData = [];
+    let currentPersonDetails = null;
+    let allPersons = [];
+    let personGroups = [];
+    let filteredPersons = [];
+    let filteredCandidates = [];
+    let filteredProfessions = [];
+    let multiselectSearchTerm = '';
+    let deletePersonId = null;
+
+    // Complete list of all candidate fields
+    const CANDIDATE_FIELDS = [
+        'FK_KON_PERSON', 'PK_WAHL_KANDIDATEN', 'FK_WAHL_WAHL', 'FK_WAHL_PARTEI',
+        'CREATED_BY', 'CREATED_AT', 'MODIFIED_BY', 'MODIFIED_AT',
+        'FK_ADR_ORT', 'PARTEI_LANG', 'PLATZ', 'VORNAME', 'NACHNAME',
+        'ORT', 'LANDKREIS', 'COMM', 'FK_WAHL_STIMM_BEZIRK', 'FK_WAHL_STIMM_KREIS',
+        'FK_MDT_MANDANT', 'LANDESVERBAND', 'KREISVERBAND', 'FK_STD_WAHL_ART',
+        'BEZEICHNUNG', 'PARTEI_KURZ', 'pers_vorname', 'pers_nachname',
+        'STIMMBEZIRK', 'STIMMKREIS', 'fk_wahl_stimm_zettel', 'BERUF',
+        'wahlkreis', 'Wahlkreis-Nummer', 'Wahl-Id', 'gruppenschluessel',
+        'Gruppe-Name', 'Gruppe-Zusatzbezeichnung', 'Gruppe-Kurzname',
+        'Wahlvorschlag-Zulassungsstatus', 'Wahlvorschlag-Art', 'Wahlvorschlag-Stimmzettelposition',
+        'Wahlvorschlag-Name', 'Wahlvorschlag-Zusatzbezeichnung', 'Wahlvorschlag-Kurzname',
+        'Kandidatur-Art', 'Kandidatur-Listenposition-Stimmzettel', 'Kandidatur-Titel',
+        'Kandidatur-Namensbestandteile', 'Kandidatur-Rufname', 'Kandidatur-Geschlecht',
+        'Kandidatur-Geburtsort', 'Kandidatur-Anschrift-Ort', 'Kandidatur-Anschrift-Postleitzahl',
+        'wahlkreisnummer', 'geschlecht', 'geschlecht1', 'pers_geburtsjahr',
+        'BERUF_ALLG', 'PK_KON_PERSON', 'GEBURTSJAHR', 'STERBEJAHR', 'BEMERKUNG',
+        'FK_ADR_GEBURTSORT', 'FK_ADR_STERBEORT', 'FK_POL_STAATSANGEHOERIGKEIT_GEBURT',
+        'FK_POL_STAATSANGEHOERIGKEIT_TODESTAG', 'PK_ADR_ORT', 'PK_ADR_LAND',
+        'LAND', 'so_pk_adr_ort', 'so_ort', 'so_pk_adr_land', 'so_land',
+        'GEBURTSDATUM', 'STERBEDATUM', 'FK_STD_KON_PERSON_GESCHLECHT', 'BESCHREIBUNG',
+        'GEBURTSNAME', 'TITEL', 'ADELSTITEL', 'RUFNAME', 'NR_AHNENTAFEL_TEMP',
+        'FK_PERSON_OLD', 'PERSON_BILD', 'USER_NAME', 'DUPLIKAT_OK_DATE',
+        'FK_KON_DUPLIKAT_NR', 'FK_KON_DUPLIKAT_CNT', 'FLG_KON_PERSON_GESTORBEN',
+        'VALID', 'VALID_FROM', 'VALID_TO', 'KUENSTLERNAME', 'LINK', 'LINK1',
+        'VATERSNAME', 'PASSWORD', 'GEBURTSORT'
+    ];
+
+    function debug(msg, d=null){ let dp=document.getElementById('debugPanel'); dp.innerHTML='Debug: '+msg+(d?JSON.stringify(d).substring(0,200):''); console.log(msg,d); }
+    function showMessage(txt,type,container='messageContainer'){ let m=document.getElementById(container); if(m){ m.className=`message message-${type}`; m.textContent=txt; m.style.display='block'; setTimeout(()=>m.style.display='none',5000); } }
+    function showPersonAlert(message, type) {
+        const container = document.getElementById('personAlertContainer');
+        container.className = `message message-${type}`;
+        container.textContent = message;
+        container.style.display = 'block';
+        setTimeout(() => container.style.display = 'none', 3000);
+    }
+
+    function getPersonId(p){ return p.PK_KON_PERSON||p.id||p.person_id; }
+    function getPersonName(p){ return `${p.VORNAME||''} ${p.NACHNAME||''}`.trim()||'Unbekannt'; }
+    function getCandidateId(c){ return c.PK_WAHL_KANDIDATEN||c.id; }
+    function getCandidateName(c){ return `${c.VORNAME||''} ${c.NACHNAME||''}`.trim()||'Unbekannt'; }
+    function getCandidateBerufAllg(c){ return `${c.BERUF_ALLG} ${c.COMM}`||c.beruf_allg||'-'; }
+
+    function cleanNumericValue(value) {
+        if (value === undefined || value === null || value === '') {
+            return null;
+        }
+        const num = Number(value);
+        return isNaN(num) ? null : num;
+    }
+
+    function cleanStringValue(value) {
+        if (value === undefined || value === null) {
+            return null;
+        }
+        return String(value).trim() || null;
+    }
+
+    async function loadPersons(){ let r=await fetch(`${API_BASE}/persons`); let d=await r.json(); persons=Array.isArray(d)?d:(d.data||[]); allPersons=[...persons]; filteredPersons=[...persons]; displayPersonsTable(); updateKPIs(); }
+    async function loadCandidates(){ let r=await fetch(`${API_BASE}/wahl_kandidaten`); let d=await r.json(); let all=Array.isArray(d)?d:(d.data||[]); candidates=all; filteredCandidates=[...candidates]; displayCandidatesTable(); updateKPIs(); }
+    async function loadProfessions(){ let r=await fetch(`${API_BASE}/berufe`); let d=await r.json(); professions=Array.isArray(d)?d:(d.data||[]); filteredProfessions=[...professions]; displayProfessionsTable(); renderProfessionMultiselect(); updateKPIs(); }
+    
+    function displayPersonsTable(){ let tbody=document.getElementById('personTableBody'); if(!filteredPersons.length){tbody.innerHTML='<tr><td colspan="5">keine Personen</td></tr>';return;} tbody.innerHTML=filteredPersons.map(p=>`<tr class="${selectedPerson&&getPersonId(selectedPerson)==getPersonId(p)?'selected person-row':'person-row'}" onclick="selectPersonRow(${getPersonId(p)})"><td>${getPersonId(p)}</td><td>${getPersonName(p)}</td><td>${p.BERUF||'-'}</td><td>${p.BESCHREIBUNG||'-'}</td><td>${p.BEMERKUNG||'-'}</td><td>${p.GEBURTSJAHR||'-'}</td><td><button class="btn-select" onclick="event.stopPropagation();selectPersonRow(${getPersonId(p)})">🔘 auswählen</button></td></tr>`).join(''); }
+    
+    function displayCandidatesTable(){ 
+        let tbody=document.getElementById('candidateTableBody'); 
+        if(!filteredCandidates.length){tbody.innerHTML='<tr><td colspan="7">keine Kandidaten</td></tr>';return;} 
+        tbody.innerHTML=filteredCandidates.map(c=>`<tr class="${selectedCandidate&&getCandidateId(selectedCandidate)==getCandidateId(c)?'selected candidate-row':'candidate-row'}" onclick="selectCandidateRow(${getCandidateId(c)})"><td>${getCandidateId(c)}</td><td>${getCandidateName(c)}</td><td>${c.COMM||'-'}</td><td>${c.FK_KON_PERSON||'-'}</td><td>${c.FK_WAHL_WAHL||'-'}</td><td>${c.FK_WAHL_PARTEI||'-'}</td><td>${c.BERUF_ALLG||'-'}</td><td>${c.PLATZ||'-'}</td><td>${c.COMM||'-'}</td><td><button class="btn-select" onclick="event.stopPropagation();selectCandidateRow(${getCandidateId(c)})">🔘 auswählen</button></td></tr>`).join(''); 
+    }
+    
+    // Fix displayProfessionsTable function
+function displayProfessionsTable() { 
+    let tbody = document.getElementById('professionTableBody'); 
+    if(!filteredProfessions.length) {
+        tbody.innerHTML='<tr><td colspan="3">keine Berufe</td></tr>';
+        return;
+    } 
+    
+    tbody.innerHTML = filteredProfessions.map(p => {
+        let name = getProfessionName(p);
+        if (!name) return '';
+
+        let escapedName = name.replace(/'/g, "\\'");
+        let sel = selectedProfessions.some(sp => isSameProfession(sp, p));
+        
+        return `<tr class="${sel ? 'selected profession-row' : 'profession-row'}" onclick="toggleProfession('${escapedName}')">
+                    <td>${escapeHtml(name)}</td>
+                    <td>${p.anzahl || p.count || 0}</td>
+                    <td><button class="btn-select" onclick="event.stopPropagation();toggleProfession('${escapedName}')">🔘 auswählen</button></td>
+                </tr>`;
+    }).filter(row => row !== '').join('');
+}
+
+    
+    function updateKPIs(){ document.getElementById('kpiPersons').innerText=persons.length; document.getElementById('kpiCandidates').innerText=candidates.length; document.getElementById('kpiProfessions').innerText=professions.length; document.getElementById('kpiViewEntries').innerText=viewData.length; }
+    
+    function selectPersonRow(id){ selectedPerson=persons.find(p=>getPersonId(p)==id); displayPersonsTable(); displayCandidatesTable(); updateCompactSelectionInfo(); updateUpdateTabContents(); updateMultiselectTabContents(); if(id) loadPersonDetails(id); }
+    
+    function selectCandidateRow(id){ selectedCandidate=candidates.find(c=>getCandidateId(c)==id); displayCandidatesTable(); updateCompactSelectionInfo(); updateUpdateTabContents(); updateMultiselectTabContents(); loadViewDataForSelected(); }
+    
+function updateCompactSelectionInfo() { 
+    document.getElementById('compactPersonDisplay').innerHTML = selectedPerson ? 
+        `<strong>${escapeHtml(getPersonName(selectedPerson))}</strong> (ID:${getPersonId(selectedPerson)})` : 
+        '<strong>-</strong> (nicht ausgewählt)'; 
+    
+    document.getElementById('compactCandidateDisplay').innerHTML = selectedCandidate ? 
+        `<strong>${escapeHtml(getCandidateName(selectedCandidate))}</strong> (ID:${getCandidateId(selectedCandidate)})` : 
+        '<strong>-</strong> (nicht ausgewählt)'; 
+    
+    let profNames = selectedProfessions.map(p => getProfessionName(p)).filter(n => n);
+    document.getElementById('compactProfessionsDisplay').innerText = profNames.join(', ').substring(0, 50) || '-'; 
+}
+
+    
+    function updateUpdateTabContents(){ 
+        if(selectedPerson){
+            document.getElementById('upPersonId').innerText=getPersonId(selectedPerson);
+            document.getElementById('upPersonName').innerText=getPersonName(selectedPerson);
+            document.getElementById('upPersonBeruf').innerText=selectedPerson.BERUF||'-';
+        } else {
+            document.getElementById('upPersonId').innerText='-';
+            document.getElementById('upPersonName').innerText='-';
+            document.getElementById('upPersonBeruf').innerText='-';
+        } 
+        if(selectedCandidate){
+            document.getElementById('upCandidateId').innerText=getCandidateId(selectedCandidate);
+            document.getElementById('upCandidateName').innerText=getCandidateName(selectedCandidate);
+            document.getElementById('upCandidateBerufAllg').innerText=getCandidateBerufAllg(selectedCandidate);
+            document.getElementById('upModifiedAt').innerText=selectedCandidate.MODIFIED_AT||'-';
+        } else {
+            document.getElementById('upCandidateId').innerText='-';
+            document.getElementById('upCandidateName').innerText='-';
+            document.getElementById('upCandidateBerufAllg').innerText='-';
+            document.getElementById('upModifiedAt').innerText='-';
+        } 
+        renderCandidateEditFields(); 
+    }
+    
+function renderCandidateEditFields(){ 
+    let container = document.getElementById('candidateEditFields'); 
+    if(!selectedCandidate){
+        container.innerHTML='<div style="text-align:center;padding:50px;">Bitte einen Kandidaten auswählen</div>';
+        return;
+    } 
+    
+    // Fields that are read-only (should not be edited)
+    const READONLY_FIELDS = [
+        'PK_WAHL_KANDIDATEN', 'CREATED_BY', 'CREATED_AT', 
+        'MODIFIED_BY', 'MODIFIED_AT', 'VALID', 'VALID_FROM', 'VALID_TO'
+    ];
+    
+    // Fields to display (prioritize important fields)
+    const IMPORTANT_FIELDS = [
+        'FK_KON_PERSON', 'VORNAME', 'NACHNAME', 'BERUF_ALLG', 'BERUF',
+        'FK_WAHL_WAHL', 'FK_WAHL_PARTEI', 'PARTEI_LANG', 'PARTEI_KURZ',
+        'PLATZ', 'COMM', 'FK_MDT_MANDANT'
+    ];
+    
+    // Get all fields and sort: important first, then alphabetically
+    const allFields = Object.keys(selectedCandidate);
+    const sortedFields = [
+        ...IMPORTANT_FIELDS.filter(f => allFields.includes(f)),
+        ...allFields.filter(f => !IMPORTANT_FIELDS.includes(f) && !READONLY_FIELDS.includes(f)).sort()
+    ];
+    
+    let html = ''; 
+    
+    sortedFields.forEach(k => {
+        const v = selectedCandidate[k];
+        const isReadonly = READONLY_FIELDS.includes(k);
+        
+        // Skip null/empty fields that are not important
+        if (!IMPORTANT_FIELDS.includes(k) && (v === null || v === undefined || v === '')) {
+            return;
+        }
+        
+        const displayValue = (v === null || v === undefined) ? '' : v;
+        const fieldId = `field_${k.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        
+        html += `<div class="edit-field">
+                    <label>${k}</label>
+                    <textarea id="${fieldId}" 
+                              onchange="updateCandidateField('${k.replace(/'/g, "\\'")}', this.value)"
+                              ${isReadonly ? 'disabled' : ''}>${escapeHtml(String(displayValue))}</textarea>
+                </div>`;
+    }); 
+    
+    container.innerHTML = html; 
+}
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+    
+window.updateCandidateField = function(k, v) { 
+    if(selectedCandidate && !['PK_WAHL_KANDIDATEN', 'CREATED_BY', 'CREATED_AT', 'MODIFIED_BY', 'MODIFIED_AT'].includes(k)) {
+        // Handle numeric fields
+        const numericFields = ['FK_WAHL_WAHL', 'FK_WAHL_PARTEI', 'PLATZ', 'FK_WAHL_STIMM_BEZIRK', 
+                               'FK_WAHL_STIMM_KREIS', 'FK_MDT_MANDANT', 'FK_STD_WAHL_ART', 'FK_KON_PERSON'];
+        
+        if (numericFields.includes(k)) {
+            const num = parseInt(v);
+            selectedCandidate[k] = isNaN(num) ? null : num;
+        } else {
+            selectedCandidate[k] = v === '' ? null : v;
+        }
+        debug(`Field ${k} updated to:`, selectedCandidate[k]);
+    }
+};
+
+    window.saveAllCandidateFields = async function() {
+    if (!selectedCandidate) {
+        showMessage('Kein Kandidat ausgewählt', 'error', 'updateResult');
+        return;
+    }
+    
+    const candidateId = getCandidateId(selectedCandidate);
+    const payload = {};
+    
+    // Fields that should NOT be sent (database-managed or read-only)
+    const EXCLUDED_FIELDS = [
+        'PK_WAHL_KANDIDATEN',     // Primary key, not updatable
+        'CREATED_BY',             // Set by database on insert
+        'CREATED_AT',             // Set by database on insert
+        'MODIFIED_BY',            // Should be set by database trigger
+        'MODIFIED_AT',            // Should be set by database trigger
+        'VALID',                  // System field
+        'VALID_FROM',             // System field
+        'VALID_TO',               // System field
+        // Also exclude any duplicate field names that might conflict
+        'modified_at',            // Case-sensitive duplicate
+        'modified_by'             // Case-sensitive duplicate
+    ];
+    
+    // Fields that are allowed to be updated
+    const ALLOWED_FIELDS = [
+        'FK_KON_PERSON', 'FK_WAHL_WAHL', 'FK_WAHL_PARTEI',
+        'FK_ADR_ORT', 'PARTEI_LANG', 'PLATZ', 'VORNAME', 'NACHNAME',
+        'ORT', 'LANDKREIS', 'COMM', 'FK_WAHL_STIMM_BEZIRK', 'FK_WAHL_STIMM_KREIS',
+        'FK_MDT_MANDANT', 'LANDESVERBAND', 'KREISVERBAND', 'BERUF', 'BERUF_ALLG',
+        'FK_STD_WAHL_ART', 'BEZEICHNUNG', 'PARTEI_KURZ', 'STIMMBEZIRK', 'STIMMKREIS',
+        'fk_wahl_stimm_zettel', 'wahlkreis', 'wahlkreisnummer', 'geschlecht',
+        'geschlecht1', 'pers_geburtsjahr', 'pers_vorname', 'pers_nachname'
+    ];
+    
+    // Process fields - only include allowed fields and exclude null/undefined
+    for (const field of ALLOWED_FIELDS) {
+        if (selectedCandidate[field] !== undefined && 
+            selectedCandidate[field] !== null && 
+            selectedCandidate[field] !== '') {
+            
+            let value = selectedCandidate[field];
+            
+            // Handle numeric fields
+            if (['FK_WAHL_WAHL', 'FK_WAHL_PARTEI', 'PLATZ', 'FK_WAHL_STIMM_BEZIRK', 
+                 'FK_WAHL_STIMM_KREIS', 'FK_MDT_MANDANT', 'FK_STD_WAHL_ART', 'FK_KON_PERSON'].includes(field)) {
+                value = parseInt(value);
+                if (isNaN(value)) continue;
+            }
+            
+            payload[field] = value;
+        }
+    }
+    
+    debug('Sending payload with ' + Object.keys(payload).length + ' fields:', payload);
+    
+    if (Object.keys(payload).length === 0) {
+        showMessage('Keine gültigen Felder zum Speichern', 'warning', 'updateResult');
+        return;
+    }
+    
+    try {
+        const res = await fetch(`${API_BASE_URL}/wahl_kandidaten/update/${candidateId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        const responseText = await res.text();
+        debug('Server response:', responseText);
+        
+        if (res.ok) {
+            showMessage(`✅ Änderungen erfolgreich gespeichert (${Object.keys(payload).length} Felder)`, 'success', 'updateResult');
+            await loadCandidates();
+            selectedCandidate = candidates.find(c => getCandidateId(c) == candidateId);
+            renderCandidateEditFields();
+        } else {
+            showMessage(`Fehler ${res.status}: ${responseText.substring(0, 200)}`, 'error', 'updateResult');
+        }
+    } catch (err) {
+        showMessage(`Netzwerkfehler: ${err.message}`, 'error', 'updateResult');
+        debug('Network error:', err);
+    }
+};
+    
+    function createBarChart(data, maxValue) {
+        if (!data.length) return '<div class="no-results">Keine Daten</div>';
+        const actualMax = maxValue || Math.max(...data.map(d => d.count), 1);
+        return data.map(item => `
+            <div class="bar-item">
+                <div class="bar-label" title="${item.label}">${item.label.length > 30 ? item.label.substring(0,30)+'...' : item.label}</div>
+                <div class="bar-value">${item.count}</div>
+                <div class="bar-wrapper"><div class="bar" style="width: ${(item.count / actualMax) * 100}%">${Math.round((item.count / actualMax) * 100)}%</div></div>
+            </div>
+        `).join('');
+    }
+
+    async function loadPersonBerufStatistics() {
+        try {
+            const res = await fetch(`${API_BASE}/rel_person_beruf`);
+            const data = await res.json();
+            const relations = Array.isArray(data) ? data : (data.data || []);
+            document.getElementById('totalRelations').innerText = relations.length;
+            
+            const berufCounts = {};
+            relations.forEach(rel => {
+                const berufName = rel.BERUF || rel.beruf_name || 'Unbekannt';
+                berufCounts[berufName] = (berufCounts[berufName] || 0) + 1;
+            });
+            
+            const sortedBerufe = Object.entries(berufCounts).map(([label, count]) => ({ label, count })).sort((a,b) => b.count - a.count);
+            document.getElementById('uniqueBerufeCount').innerText = sortedBerufe.length;
+            const maxCount = sortedBerufe[0]?.count || 1;
+            document.getElementById('personBerufStats').innerHTML = createBarChart(sortedBerufe, maxCount);
+        } catch(e) { console.error('Fehler beim Laden der Berufsstatistik:', e); document.getElementById('personBerufStats').innerHTML = '<div class="no-results">Fehler beim Laden</div>'; }
+    }
+
+    async function loadStatistics() {
+        if (persons.length === 0) await loadPersons();
+        if (candidates.length === 0) await loadCandidates();
+        
+        document.getElementById('totalPersons').innerText = persons.length;
+        document.getElementById('totalCandidates').innerText = candidates.length;
+        
+        const malePersons = persons.filter(p => p.FK_STD_KON_PERSON_GESCHLECHT == 1).length;
+        const femalePersons = persons.filter(p => p.FK_STD_KON_PERSON_GESCHLECHT == 2).length;
+        const otherPersons = persons.length - malePersons - femalePersons;
+        document.getElementById('maleCount').innerText = malePersons;
+        document.getElementById('femaleCount').innerText = femalePersons;
+        document.getElementById('otherCount').innerText = otherPersons;
+        
+        const partyCounts = {};
+        candidates.forEach(cand => { 
+            const party = cand.PARTEI_LANG || cand.PARTEI_KURZ || 'Unbekannt'; 
+            partyCounts[party] = (partyCounts[party] || 0) + 1; 
+        });
+        const sortedParties = Object.entries(partyCounts).map(([label, count]) => ({ label, count })).sort((a,b) => b.count - a.count);
+        const maxParty = sortedParties[0]?.count || 1;
+        document.getElementById('partyStats').innerHTML = createBarChart(sortedParties, maxParty);
+        
+        const birthYears = {};
+        persons.forEach(p => { 
+            if (p.GEBURTSJAHR && p.GEBURTSJAHR > 1900) { 
+                const decade = Math.floor(p.GEBURTSJAHR / 10) * 10; 
+                birthYears[decade] = (birthYears[decade] || 0) + 1; 
+            } 
+        });
+
+  const stoYears = {};
+        persons.forEach(p => { 
+            if (p.STERBEJAHR && p.STERBEJAHR > 1900) { 
+                const decade = Math.floor(p.STERBEJAHR / 10) * 10; 
+                stoYears[decade] = (stoYears[decade] || 0) + 1; 
+            } 
+        });
+        const sortedYears = Object.entries(birthYears).map(([label, count]) => ({ label: `${label}-${parseInt(label)+9}`, count })).sort((a,b) => parseInt(a.label) - parseInt(b.label));
+        const maxYear = Math.max(...Object.values(birthYears), 1);
+        document.getElementById('birthYearStats').innerHTML = createBarChart(sortedYears, maxYear);
+
+   const sortedYears1 = Object.entries(stoYears).map(([label, count]) => ({ label: `${label}-${parseInt(label)+9}`, count })).sort((a,b) => parseInt(a.label) - parseInt(b.label));
+        const maxYear1 = Math.max(...Object.values(stoYears), 1);
+        document.getElementById('stoYearStats').innerHTML = createBarChart(sortedYears1, maxYear1);
+        
+        const professionCounts = {};
+        candidates.forEach(cand => {
+            if (cand.BERUF_ALLG) {
+                cand.BERUF_ALLG.split(',').forEach(p => { 
+                    const prof = p.trim(); 
+                    if(prof && prof !== '-') professionCounts[prof] = (professionCounts[prof] || 0) + 1; 
+                });
+            }
+        });
+        const sortedProfessions = Object.entries(professionCounts).map(([label, count]) => ({ label, count })).sort((a,b) => b.count - a.count).slice(0, 15);
+        const maxProf = sortedProfessions[0]?.count || 1;
+        document.getElementById('professionStats').innerHTML = createBarChart(sortedProfessions, maxProf);
+        
+        await loadPersonBerufStatistics();
+    }
+
+// Fix toggleProfession function
+window.toggleProfession = function(name) {
+    if (!name) return;
+    
+    // Find the profession object that matches the name
+    let prof = professions.find(p => {
+        let pName = getProfessionName(p);
+        return pName === name;
+    });
+    
+    if (!prof) return;
+    
+    // Check if already selected
+    let idx = selectedProfessions.findIndex(p => isSameProfession(p, prof));
+    
+    if (idx === -1) {
+        selectedProfessions.push(prof);
+    } else {
+        selectedProfessions.splice(idx, 1);
+    }
+    
+    renderProfessionMultiselect();
+    displayProfessionsTable();
+    updateSelectedProfessionsDisplay();
+    updateCompactSelectionInfo();
+};
+    
+// Fix renderProfessionMultiselect function
+function renderProfessionMultiselect() { 
+    let container = document.getElementById('professionMultiselect'); 
+    if(!container) return; 
+    
+    let filtered = professions; 
+    if(multiselectSearchTerm) { 
+        filtered = professions.filter(p => {
+            const professionValues = [
+                p.BERUF,
+                p.BERUF_MAENNLICH,
+                p.BERUF_WEIBLICH,
+                p.name,
+                p.beruf
+            ].filter(Boolean);
+            
+            return professionValues.some(value => 
+                value && value.toLowerCase().includes(multiselectSearchTerm.toLowerCase())
+            );
+        });
+    }
+    
+    container.innerHTML = filtered.map(p => {
+        let name = getProfessionName(p);
+        if (!name) return '';
+        let escapedName = name.replace(/'/g, "\\'");
+        let sel = selectedProfessions.some(sp => isSameProfession(sp, p));
+        
+        return `<div class="profession-item ${sel ? 'selected' : ''}" onclick="toggleProfession('${escapedName}')">
+                    <input type="checkbox" ${sel ? 'checked' : ''} onchange="toggleProfession('${escapedName}')" onclick="event.stopPropagation()">
+                    <span class="profession-name">${escapeHtml(name)}</span>
+                    <span class="profession-count">(${p.anzahl || p.count || 0})</span>
+                </div>`;
+    }).filter(row => row !== '').join('');
+}
+
+    
+
+// Fix updateSelectedProfessionsDisplay function
+function updateSelectedProfessionsDisplay() { 
+    let c = document.getElementById('selectedProfessionsList'); 
+    if(!c) return; 
+    if(!selectedProfessions.length) {
+        c.innerHTML = '<p>Keine Berufe ausgewählt</p>';
+        return;
+    } 
+    c.innerHTML = '<div>' + selectedProfessions.map(p => {
+        let name = getProfessionName(p);
+        if(!name) return ''; 
+        return `<span class="selected-profession-tag" onclick="toggleProfession('${name.replace(/'/g,"\\'")}')">${escapeHtml(name)} ✕</span>`;
+    }).filter(t => t).join('') + '</div>'; 
+}
+    
+    window.filterMultiselectProfessions=function(){ multiselectSearchTerm=document.getElementById('multiselectSearch').value.trim().toLowerCase(); renderProfessionMultiselect(); };
+
+window.assignSelectedProfessionsToPerson = function() { 
+    if(!selectedPerson) {
+        showMessage('Keine Person ausgewählt', 'error', 'multiselectResult');
+        return;
+    } 
+    let berufe = selectedProfessions.map(p => getProfessionName(p)).filter(n => n).join(', '); 
+    selectedPerson.BERUF = berufe; 
+    displayPersonsTable(); 
+    showMessage(`Berufe zugewiesen: ${berufe}`, 'success', 'multiselectResult'); 
+};
+
+  // Fix assignSelectedProfessionsToCandidate function
+window.assignSelectedProfessionsToCandidate = function() { 
+    if(!selectedCandidate) {
+        showMessage('Kein Kandidat ausgewählt', 'error', 'multiselectResult');
+        return;
+    } 
+    let berufe = selectedProfessions.map(p => getProfessionName(p)).filter(n => n).join(', '); 
+    selectedCandidate.BERUF = berufe; 
+    displayCandidatesTable(); 
+    showMessage(`Berufe zugewiesen: ${berufe}`, 'success', 'multiselectResult'); 
+};
+
+
+ window.updateBerufAllgFromSelected = function() { 
+    if(!selectedCandidate) {
+        showMessage('Kein Kandidat ausgewählt', 'error', 'multiselectResult');
+        return;
+    } 
+    let berufe = selectedProfessions.map(p => getProfessionName(p)).filter(n => n).join(', '); 
+    selectedCandidate.BERUF_ALLG = berufe; 
+    displayCandidatesTable(); 
+    showMessage(`BERUF_ALLG aktualisiert: "${berufe}"`, 'success', 'multiselectResult'); 
+};
+
+
+    window.insertSelectedProfessionsAsRelations=async function(){ if(!selectedPerson)return; let pid=getPersonId(selectedPerson); for(let p of selectedProfessions){ let bid=p.PK_WORK_BERUF||p.id; if(bid) await fetch(`${API_BASE}/rel_person_beruf/insert`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({FK_KON_PERSON:pid,FK_WORK_BERUF:bid})}); } showMessage('Relationen eingefügt','success','multiselectResult'); if(currentPersonDetails&&currentPersonDetails.PK_KON_PERSON==pid) fetchPersonBerufe(pid); };
+    window.insertCombinedProfessionsAsRelations=async function(){ if(!selectedPerson||!selectedCandidate){showMessage('Person und Kandidat nötig','error','multiselectResult');return;} let res=await fetch(`http://localhost:5000/wahl_kandidat_person_beruf/insert`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fkKonPerson:getPersonId(selectedPerson),pkWahlKandidat:getCandidateId(selectedCandidate)})}); let data=await res.json(); showMessage(data.message||'OK','success','multiselectResult'); };
+    
+    async function loadViewData(type,id){ let endpoint=type==='kand'?`http://localhost:5000/wahl_kandidaten_berufe/select_kand/${id}`:`http://localhost:5000/wahl_kandidaten_berufe/select_person/${id}`; let r=await fetch(endpoint); let d=await r.json(); viewData=Array.isArray(d)?d:[]; filteredViewData=[...viewData]; displayViewData(); combineBerufAllgFromView(); updateKPIs(); }
+    
+    function displayViewData(){ let tbody=document.getElementById('viewDataTableBody'); if(!filteredViewData.length){tbody.innerHTML='<td colspan="10">Keine Daten</td>';return;} tbody.innerHTML=filteredViewData.map(i=>`<tr><td>${i.PK_WAHL_KANDIDATEN||'-'}</td><td>${i.FK_KON_PERSON||'-'}</td><td>${i.VORNAME||'-'}</td><td>${i.NACHAME||'-'}</td><td>${i.PK_WORK_BERUF||'-'}</td><td>${i.BERUF||'-'}</td><td><strong>${i.beruf_allg_single||'-'}</strong></td><td>${i.BERUF_ALLG||'-'}</td><td>${i.COMM||'-'}</td><td>${i.VORNAME||'-'}</td><td>${i.NACHNAME||'-'}</td><td>${i.COMM||'-'}</td><td>${i.PARTEI_KURZ||'-'}</td></tr>`).join(''); }
+    
+    window.combineBerufAllgFromView=function(){ let singles=viewData.map(i=>i.beruf_allg_single).filter(Boolean); let unique=[...new Set(singles)]; let combined=unique.join(', '); document.getElementById('combinedBerufAllgDisplay').innerText=combined||'(keine)'; document.getElementById('viewDataDetail').innerHTML=`<p>Unique beruf_allg_single: ${combined||'-'}</p>`; return combined; };
+    window.copyCombinedToBerufAllg=function(){ if(!selectedCandidate){showMessage('Kein Kandidat','error');return;} let val=document.getElementById('combinedBerufAllgDisplay').innerText; if(val!=='-'){selectedCandidate.BERUF_ALLG=val; displayCandidatesTable(); showMessage('BERUF_ALLG aktualisiert','success');} };
+    window.saveCombinedToDatabase=function(){ if(!selectedCandidate){showMessage('Kein Kandidat','error');return;} let val=document.getElementById('combinedBerufAllgDisplay').innerText; if(val!=='-'){selectedCandidate.BERUF_ALLG=val; saveAllCandidateFields();} };
+    window.loadViewDataForSelected=async function(){ if(selectedCandidate) await loadViewData('kand',getCandidateId(selectedCandidate)); else if(selectedPerson) await loadViewData('person',getPersonId(selectedPerson)); else showMessage('Bitte Kandidat/Person wählen','error'); };
+    window.loadViewDataForCandidate=async function(){ if(selectedCandidate) await loadViewData('kand',getCandidateId(selectedCandidate)); };
+    window.loadViewDataForPerson=async function(){ if(selectedPerson) await loadViewData('person',getPersonId(selectedPerson)); };
+    window.filterViewData=function(){ let term=document.getElementById('viewSearch').value.trim().toLowerCase(); filteredViewData=term?viewData.filter(i=>Object.values(i).some(v=>v&&v.toString().toLowerCase().includes(term))):[...viewData]; displayViewData(); };
+    window.clearViewSearch=function(){ document.getElementById('viewSearch').value=''; filteredViewData=[...viewData]; displayViewData(); };
+    window.exportViewData=function(){ let dataStr=JSON.stringify(viewData,null,2); let uri='data:application/json;charset=utf-8,'+encodeURIComponent(dataStr); let a=document.createElement('a'); a.href=uri; a.download=`view_${new Date().toISOString()}.json`; a.click(); };
+    window.showAllViewColumns=function(){ document.getElementById('columnModal').style.display='block'; };
+    window.showItemDetails=function(str){ try{ let item=JSON.parse(str); let details='<h4>Details</h4><table class="data-table">'; for(let [k,v] of Object.entries(item)) details+=`<tr><th>${k}</th><td>${v||'-'}</td></tr>`; details+='</table>'; let modal=document.getElementById('columnModal'); let content=modal.querySelector('.modal-content'); content.innerHTML=`<span class="close" onclick="document.getElementById('columnModal').style.display='none'">&times;</span><h3>Eintrag Details</h3>${details}`; modal.style.display='block'; }catch(e){alert('Fehler');} };
+    window.addPersonToGroup=function(){ if(!selectedPerson){alert('keine Person');return;} let groupName=document.getElementById('groupNameInput').value.trim(); if(!groupName){alert('Gruppenname');return;} groupStore.push({groupName,personName:getPersonName(selectedPerson),personId:getPersonId(selectedPerson),
+berufe:selectedProfessions.map(p=>p.BERUF||p.BERUF_MAENNLICH||p.BERUF_WEIBLICH).filter(n=>n).join(', ')}
+); document.getElementById('groupMembersTableBody').innerHTML=groupStore.map(g=>`<tr><td>${g.groupName}</td><td>${g.personName}</td><td>${g.berufe}</td></tr>`).join(''); document.getElementById('groupNameInput').value=''; document.getElementById('groupActionMsg').innerHTML=`<span style="color:green;">${getPersonName(selectedPerson)} → ${groupName}</span>`; };
+    
+function updateMultiselectTabContents() { 
+    document.getElementById('msPersonName').innerText = selectedPerson ? getPersonName(selectedPerson) : '-'; 
+    document.getElementById('msPersonBeruf').innerText = selectedPerson ? (selectedPerson.BERUF || '-') : '-'; 
+    document.getElementById('msCandidateName').innerText = selectedCandidate ? getCandidateName(selectedCandidate) : '-'; 
+    document.getElementById('msCandidateBerufAllg').innerText = selectedCandidate ? getCandidateBerufAllg(selectedCandidate) : '-'; 
+}
+   
+function updateGroupsTabContents() { 
+    document.getElementById('groupPersonName').innerHTML = selectedPerson ? 
+        escapeHtml(getPersonName(selectedPerson)) : '-'; 
+    document.getElementById('groupProfessionsList').innerText = selectedProfessions.map(p => getProfessionName(p)).filter(n => n).join(', ') || '-'; 
+}
+    
+    window.switchTab=function(name){ 
+        document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); 
+        document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active')); 
+        document.getElementById(name+'Tab').classList.add('active'); 
+        if(name==='update')updateUpdateTabContents(); 
+        if(name==='multiselect'){updateMultiselectTabContents();renderProfessionMultiselect();} 
+        if(name==='relations'&&(selectedCandidate||selectedPerson))loadViewDataForSelected(); 
+        if(name==='groups')updateGroupsTabContents(); 
+        if(name==='personen'){loadPersonGroups();showPersonSearchTab();} 
+        if(name==='groupAdmin'){loadAllGroups();}
+        if(name==='statistiken'){loadStatistics();}
+    };
+    window.applyElectionFilter=function(){ let sel=document.getElementById('electionSelect').value; if(sel) loadCandidates(); };
+    window.filterPersons=function(){ let term=document.getElementById('personSearch').value.toLowerCase(); filteredPersons=term?persons.filter(p=>getPersonName(p).toLowerCase().includes(term)||(p.PK_KON_PERSON||'').includes(term)||(p.BERUF||'').toLowerCase().includes(term)):[...persons]; displayPersonsTable(); };
+    window.filterCandidates=function(){ let term=document.getElementById('candidateSearch').value.toLowerCase(); filteredCandidates=term?candidates.filter(c=>getCandidateName(c).toLowerCase().includes(term)||(c.PK_WAHL_KANDIDATEN||'').includes(term)||(c.BERUF_ALLG||'').toLowerCase().includes(term)||(c.COMM||'').toLowerCase().includes(term)):[...candidates]; displayCandidatesTable(); };
+
+// Fix filterProfessions function
+window.filterProfessions = function() { 
+    let term = document.getElementById('professionSearch').value.toLowerCase(); 
+    filteredProfessions = term ? professions.filter(p => {
+        let name = getProfessionName(p);
+        return name && name.toLowerCase().includes(term);
+    }) : [...professions]; 
+    displayProfessionsTable(); 
+};
+
+
+window.clearSearch=function(col){ if(col==='person'){document.getElementById('personSearch').value='';filterPersons();} if(col==='candidate'){document.getElementById('candidateSearch').value='';filterCandidates();} if(col==='profession'){document.getElementById('professionSearch').value='';filterProfessions();} };
+    
+
+// Fix selectAllProfessions function
+window.selectAllProfessions = function() { 
+    selectedProfessions = [...professions]; 
+    renderProfessionMultiselect(); 
+    displayProfessionsTable(); 
+    updateSelectedProfessionsDisplay(); 
+    updateCompactSelectionInfo(); 
+};
+
+
+    window.deselectAllProfessions=function(){ selectedProfessions=[]; renderProfessionMultiselect(); displayProfessionsTable(); updateSelectedProfessionsDisplay(); updateCompactSelectionInfo(); };
+    
+    async function loadPersonGroups(){ let r=await fetch(`${API_BASE}/kon_person_group`); let g=await r.json(); personGroups=Array.isArray(g)?g:[]; let container=document.getElementById('treeContainer'); container.innerHTML=personGroups.map(gr=>`<div class="group-item"><div class="group-header" data-gid="${gr.PK_KON_PERSON_GROUP}"><h4>${gr.PERSON_GROUP_NAME||'Gruppe'}</h4><span class="group-id">ID:${gr.PK_KON_PERSON_GROUP}</span></div><div class="group-content" id="group-${gr.PK_KON_PERSON_GROUP}" style="display:none;"></div></div>`).join(''); document.querySelectorAll('.group-header').forEach(h=>{h.addEventListener('click',async()=>{let id=h.getAttribute('data-gid');let c=document.getElementById(`group-${id}`);if(c.style.display==='block')c.style.display='none';else{c.style.display='block';if(!c.hasAttribute('data-loaded')){let r=await fetch(`${API_BASE}/person_person_group/${id}`);let m=await r.json();let members = Array.isArray(m) ? m : (m.data || []);c.innerHTML=members.map(p=>`<div class="person-item" onclick="selectPersonFromGroup(${p.PK_KON_PERSON})">${p.VORNAME||''} ${p.NACHNAME||''} (ID:${p.PK_KON_PERSON})</div>`).join('')||'<div>Keine Mitglieder</div>';c.setAttribute('data-loaded','true');}}});}); }
+    window.selectPersonFromGroup=function(id){ document.getElementById('searchPersonId').value=id; searchPersonById(); let p=persons.find(p=>getPersonId(p)==id); if(p) selectPersonRow(id); };
+    window.showPersonSearchTab=function(){ document.getElementById('personSearchSection').style.display='block'; document.getElementById('personInsertSection').style.display='none'; document.getElementById('personUpdateSection').style.display='none'; };
+    window.showPersonInsertTab=function(){ document.getElementById('personSearchSection').style.display='none'; document.getElementById('personInsertSection').style.display='block'; document.getElementById('personUpdateSection').style.display='none'; clearPersonForm(); };
+    window.showPersonUpdateTab=function(){ if(!currentPersonDetails){showPersonAlert('Bitte Person auswählen','warning');showPersonSearchTab();return;} document.getElementById('personSearchSection').style.display='none'; document.getElementById('personInsertSection').style.display='none'; document.getElementById('personUpdateSection').style.display='block'; fillUpdateForm(); };
+    function clearPersonForm(){ ['insertTITEL','insertVORNAME','insertNACHNAME','insertFK_STD_KON_PERSON_GESCHLECHT','insertGEBURTSJAHR','insertSTERBEJAHR','insertGEBURTSNAME','insertRUFNAME','insertBESCHREIBUNG','insertBEMERKUNG'].forEach(id=>{let e=document.getElementById(id);if(e)e.value='';}); }
+    async function searchPersonById(){ let id=document.getElementById('searchPersonId').value; if(id) await loadPersonDetails(id); }
+    async function searchPersonsByName(){ let v=document.getElementById('searchVorname').value.trim(),n=document.getElementById('searchNachname').value.trim(); if(!v&&!n)return; let r=await fetch(`${API_BASE}/persons`); let all=await r.json(); let filtered=all.filter(p=>(!v||(p.VORNAME||'').toLowerCase().includes(v.toLowerCase()))&&(!n||(p.NACHNAME||'').toLowerCase().includes(n.toLowerCase()))); document.getElementById('nameSearchResults').innerHTML=filtered.map(p=>`<div class="person-item" onclick="loadPersonDetails(${p.PK_KON_PERSON})"><strong>${p.NACHNAME||''}, ${p.VORNAME||''}</strong> (ID:${p.PK_KON_PERSON})</div>`).join('')||'<div>Keine Personen gefunden</div>'; }
+    async function loadPersonDetails(id){ let r=await fetch(`${API_BASE}/person/${id}`); let d=await r.json(); currentPersonDetails=d[0]||d; displayPersonDetails(currentPersonDetails); fetchPersonBerufe(id); fetchPersonKandidaten(id); fetchPersonGroupsSingle(id); showPersonUpdateTab(); }
+    function displayPersonDetails(p){ let container=document.getElementById('personDetailsContainer'); container.innerHTML=`<div><strong>${p.VORNAME||''} ${p.NACHNAME||''}</strong> (ID:${p.PK_KON_PERSON})<br>Geb:${p.GEBURTSJAHR||'-'} Gest:${p.STERBEJAHR||'-'}<br>${p.BESCHREIBUNG||''}</div>`; }
+    function fillUpdateForm(){ if(!currentPersonDetails)return; document.getElementById('updatePersonId').value=currentPersonDetails.PK_KON_PERSON||''; document.getElementById('updateTITEL').value=currentPersonDetails.TITEL||''; document.getElementById('updateADELSTITEL').value=currentPersonDetails.ADELSTITEL||''; document.getElementById('updateVORNAME').value=currentPersonDetails.VORNAME||''; document.getElementById('updateNACHNAME').value=currentPersonDetails.NACHNAME||''; document.getElementById('updateGEBURTSJAHR').value=currentPersonDetails.GEBURTSJAHR||''; document.getElementById('updateSTERBEJAHR').value=currentPersonDetails.STERBEJAHR||''; document.getElementById('updateGEBURTSNAME').value=currentPersonDetails.GEBURTSNAME||''; document.getElementById('updateRUFNAME').value=currentPersonDetails.RUFNAME||''; document.getElementById('updateFK_STD_KON_PERSON_GESCHLECHT').value=currentPersonDetails.FK_STD_KON_PERSON_GESCHLECHT||''; document.getElementById('updateBESCHREIBUNG').value=currentPersonDetails.BESCHREIBUNG||''; document.getElementById('updateBEMERKUNG').value=currentPersonDetails.BEMERKUNG||''; }
+    async function insertPerson(){ 
+        let data={
+            TITEL: cleanStringValue(document.getElementById('insertTITEL').value),
+            VORNAME: cleanStringValue(document.getElementById('insertVORNAME').value),
+            NACHNAME: cleanStringValue(document.getElementById('insertNACHNAME').value),
+            FK_STD_KON_PERSON_GESCHLECHT: cleanNumericValue(document.getElementById('insertFK_STD_KON_PERSON_GESCHLECHT').value),
+            GEBURTSJAHR: cleanNumericValue(document.getElementById('insertGEBURTSJAHR').value),
+            STERBEJAHR: cleanNumericValue(document.getElementById('insertSTERBEJAHR').value),
+            GEBURTSNAME: cleanStringValue(document.getElementById('insertGEBURTSNAME').value),
+            RUFNAME: cleanStringValue(document.getElementById('insertRUFNAME').value),
+            BESCHREIBUNG: cleanStringValue(document.getElementById('insertBESCHREIBUNG').value),
+            BEMERKUNG: cleanStringValue(document.getElementById('insertBEMERKUNG').value)
+        }; 
+        if(!data.VORNAME||!data.NACHNAME){showPersonAlert('Vorname/Nachname erforderlich','error');return;} 
+        let r=await fetch(`${API_BASE}/person/insert`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); 
+        let res=await r.json(); 
+        if(res.status==='success'){showPersonAlert('Person erfolgreich eingefügt','success');clearPersonForm();if(res.insertedPerson && res.insertedPerson[0]) loadPersonDetails(res.insertedPerson[0].PK_KON_PERSON);loadPersons();}else showPersonAlert('Fehler beim Einfügen: '+(res.message||'Unbekannt'),'error'); 
+    }
+    async function updatePerson(){ 
+        let id=document.getElementById('updatePersonId').value; 
+        let data={
+            id: parseInt(id),
+            TITEL: cleanStringValue(document.getElementById('updateTITEL').value),
+            ADELSTITEL: cleanStringValue(document.getElementById('updateADELSTITEL').value),
+            VORNAME: cleanStringValue(document.getElementById('updateVORNAME').value),
+            NACHNAME: cleanStringValue(document.getElementById('updateNACHNAME').value),
+            GEBURTSJAHR: cleanNumericValue(document.getElementById('updateGEBURTSJAHR').value),
+            STERBEJAHR: cleanNumericValue(document.getElementById('updateSTERBEJAHR').value),
+            GEBURTSNAME: cleanStringValue(document.getElementById('updateGEBURTSNAME').value),
+            RUFNAME: cleanStringValue(document.getElementById('updateRUFNAME').value),
+            FK_STD_KON_PERSON_GESCHLECHT: cleanNumericValue(document.getElementById('updateFK_STD_KON_PERSON_GESCHLECHT').value),
+            BESCHREIBUNG: cleanStringValue(document.getElementById('updateBESCHREIBUNG').value),
+            BEMERKUNG: cleanStringValue(document.getElementById('updateBEMERKUNG').value)
+        }; 
+        
+        Object.keys(data).forEach(key => {
+            if (data[key] === null || data[key] === undefined) {
+                delete data[key];
+            }
+        });
+        
+        let r=await fetch(`${API_BASE}/update-person`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); 
+        let res=await r.json(); 
+        if(res.status==='success'||res.PK_KON_PERSON){showPersonAlert('Person aktualisiert','success');loadPersonDetails(id);loadPersons();} else showPersonAlert('Fehler: '+(res.message||'Unbekannt'),'error'); 
+    }
+// Helper function to get profession name from a profession object
+function getProfessionName(prof) {
+    if (!prof) return null;
+    // Try different field names in order of preference
+    return prof.BERUF || prof.BERUF_MAENNLICH || prof.BERUF_WEIBLICH || prof.name || prof.beruf;
+}
+// Helper function to check if two profession objects are equal
+function isSameProfession(prof1, prof2) {
+    const name1 = getProfessionName(prof1);
+    const name2 = getProfessionName(prof2);
+    if (!name1 || !name2) return false;
+    return name1 === name2;
+}
+    window.deleteCurrentPerson=function(){ if(currentPersonDetails){deletePersonId=currentPersonDetails.PK_KON_PERSON; let deletePersonName=getPersonName(currentPersonDetails); document.getElementById('deletePersonName').innerText=deletePersonName; document.getElementById('deletePersonId').innerText=deletePersonId; document.getElementById('deletePersonModal').style.display='block';} };
+    window.closeDeleteModal=function(){ document.getElementById('deletePersonModal').style.display='none'; deletePersonId=null; };
+    window.confirmDeletePerson=async function(){ if(!deletePersonId)return; let r=await fetch(`${API_BASE}/person/delete/${deletePersonId}`,{method:'DELETE'}); let res=await r.json(); if(res.status==='success'){showPersonAlert('Person gelöscht','success');closeDeleteModal();currentPersonDetails=null;document.getElementById('personDetailsContainer').innerHTML='<p>Wählen Sie eine Person aus, um Details anzuzeigen.</p>';document.getElementById('personGroupsContainer').innerHTML='';document.getElementById('personBerufeBody').innerHTML='';document.getElementById('personKandidatenBody').innerHTML='';loadPersons();loadPersonGroups();showPersonSearchTab();}else showPersonAlert('Fehler beim Löschen: '+(res.message||'Unbekannt'),'error'); };
+    async function fetchPersonBerufe(id){ let r=await fetch(`${API_BASE}/person_beruf/${id}`); let b=await r.json(); let berufe = Array.isArray(b) ? b : (b.data || []); document.getElementById('personBerufeBody').innerHTML=berufe.map(ber=>`<tr><td>${ber.BERUF||'-'}</td><td>${ber.PK_REL_KON_PERSON_BERUF||'-'}</td><td><button class="btn-small danger" onclick="deletePersonBerufRelation(${ber.PK_REL_KON_PERSON_BERUF},${id},${ber.PK_WORK_BERUF})">Löschen</button></td></tr>`).join('')||'<tr><td colspan="3">Keine Berufe</td></tr>'; }
+    async function fetchPersonKandidaten(id){ let r=await fetch(`${API_BASE}/kand/${id}`); let k=await r.json(); let kandidaten = Array.isArray(k) ? k : (k.data || []); document.getElementById('personKandidatenBody').innerHTML=kandidaten.map(kand=>`<tr><td>${kand.PK_WAHL_KANDIDATEN||'-'}</td><td>${kand.FK_WAHL_WAHL||'-'}</td><td>${kand.PLATZ||'-'}</td><td>${kand.PARTEI_KURZ||'-'}</td><td>${kand.BERUF_ALLG||'-'}</td><td>${kand.BERUF||'-'}</td><td>${kand.COMM||'-'}</td></tr>`).join('')||'<tr><td colspan="4">Keine Kandidaturen</td></tr>'; }
+    async function fetchPersonGroupsSingle(id){ let r=await fetch(`${API_BASE}/person_group/${id}`); let g=await r.json(); let groups = Array.isArray(g) ? g : (g.data || []); document.getElementById('personGroupsContainer').innerHTML=groups.map(gr=>`<div class="group-item"><div class="group-header"><h4>${gr.PERSON_GROUP_NAME||'Gruppe'}</h4><span>ID:${gr.PK_KON_PERSON_GROUP}</span></div><div class="group-content"><button class="delete-group-relation-btn" onclick="deletePersonGroupRelation(${gr.PK_REL_KON_PERSON_PERSON_GROUP})">Zuordnung löschen</button></div></div>`).join('')||'<div>Keine Gruppen</div>'; }
+    async function deletePersonGroupRelation(relId){ if(confirm('Möchten Sie diese Zuordnung wirklich löschen?')){ await fetch(`${API_BASE}/person_group_rel/delete/${relId}`,{method:'DELETE'}); if(currentPersonDetails) fetchPersonGroupsSingle(currentPersonDetails.PK_KON_PERSON); } }
+    async function deletePersonBerufRelation(relId,personId,berufId){ if(confirm('Möchten Sie diese Berufszuordnung wirklich löschen?')){ await fetch(`${API_BASE}/person_beruf_rel/delete`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:relId,fk_kon_person:personId,fk_work_beruf:berufId})}); fetchPersonBerufe(personId); } }
+    window.addPersonToGroupViaAPI=async function(){ let gid=document.getElementById('adminGroupId').value; let pid=document.getElementById('adminPersonId').value; if(!gid||!pid){showMessage('Gruppen ID und Person ID benötigt','error','groupAdminMsg');return;} try{ let r=await fetch(`${API_BASE}/add_person_group_rel`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({FK_KON_PERSON_GROUP:parseInt(gid),FK_KON_PERSON:parseInt(pid)})}); if(r.ok) showMessage('Person erfolgreich zur Gruppe hinzugefügt','success','groupAdminMsg'); else showMessage('Fehler beim Hinzufügen','error','groupAdminMsg'); }catch(e){ showMessage(e.message,'error','groupAdminMsg'); } };
+    window.loadAllGroups=async function(){ try{ let r=await fetch(`${API_BASE}/kon_person_group`); let g=await r.json(); let groups = Array.isArray(g) ? g : (g.data || []); document.getElementById('allGroupsList').innerHTML=groups.map(gr=>`<div class="group-item"><div class="group-header">${gr.PERSON_GROUP_NAME||'Gruppe'} (ID:${gr.PK_KON_PERSON_GROUP})</div></div>`).join('')||'<div>Keine Gruppen gefunden</div>'; }catch(e){ console.error(e); showMessage('Fehler beim Laden der Gruppen','error','groupAdminMsg'); } };
+    window.loadGroupMembers=async function(){ let gid=document.getElementById('viewGroupId').value; if(!gid) { showMessage('Bitte eine Gruppen ID eingeben','warning','groupAdminMsg'); return; } try{ let r=await fetch(`${API_BASE}/person_person_group/${gid}`); let m=await r.json(); let members = Array.isArray(m) ? m : (m.data || []); document.getElementById('groupMembersList').innerHTML=members.map(p=>`<div class="person-item">${p.VORNAME||''} ${p.NACHNAME||''} (ID:${p.PK_KON_PERSON})</div>`).join('')||'<div>Keine Mitglieder in dieser Gruppe</div>'; }catch(e){ showMessage('Fehler beim Laden der Mitglieder','error','groupAdminMsg'); } };
+    
+    document.addEventListener('DOMContentLoaded',()=>{ 
+        loadPersons(); 
+        loadCandidates(); 
+        loadProfessions(); 
+        loadAllGroups(); 
+        debug('App bereit mit ' + CANDIDATE_FIELDS.length + ' Kandidatenfeldern'); 
+    });
+</script>
+</body>
+</html>

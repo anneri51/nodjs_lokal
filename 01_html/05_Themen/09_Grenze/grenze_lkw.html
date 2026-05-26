@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LKW Grenze · Mit FK_LOC_LOCATION</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+        body {
+            background: #f2f5f9;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .card {
+            max-width: 1500px;
+            width: 100%;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 20px 40px -10px rgba(0,20,40,0.25);
+            overflow: hidden;
+            border: 1px solid #e9eef2;
+        }
+        .header {
+            background: #0b2a3c;
+            color: white;
+            padding: 24px 28px;
+        }
+        .header h1 {
+            margin: 0;
+            font-weight: 500;
+            font-size: 1.8rem;
+            letter-spacing: -0.3px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .header h1 span {
+            background: #1f4b6e;
+            padding: 4px 14px;
+            border-radius: 40px;
+            font-size: 1rem;
+            font-weight: 400;
+            color: #d3e5f5;
+        }
+        .toolbar {
+            padding: 20px 28px 8px 28px;
+            background: white;
+            border-bottom: 1px solid #dee7ed;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .refresh-btn {
+            background: #3a5c7c;
+            color: white;
+            border: none;
+            font-weight: 500;
+            font-size: 1rem;
+            padding: 10px 22px;
+            border-radius: 60px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: 0.15s;
+            border: 1px solid #4d7eb3;
+        }
+        .refresh-btn:hover {
+            background: #2c4a6b;
+        }
+        .endpoint-badge {
+            display: flex;
+            gap: 12px;
+            background: #edf3f8;
+            padding: 8px 18px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #1e3f5a;
+        }
+        .endpoint-badge code {
+            background: #d6e2eb;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-weight: 600;
+            color: #0b2a3c;
+        }
+        .charts-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px 28px 10px 28px;
+            background: white;
+        }
+        .chart-container {
+            background: white;
+        }
+        .chart-wrapper {
+            background: #f8fafd;
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid #dee7ed;
+            height: 100%;
+        }
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .chart-title {
+            font-weight: 600;
+            color: #1c3d5e;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .chart-stats {
+            background: #e5eff9;
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            color: #1f5090;
+        }
+        .no-data-chart {
+            text-align: center;
+            padding: 40px;
+            color: #6b7f90;
+            font-style: italic;
+        }
+        .form-container {
+            padding: 20px 28px;
+            background: #f8fafd;
+            border-bottom: 1px solid #dee7ed;
+        }
+        .form-title {
+            font-weight: 600;
+            color: #1c3d5e;
+            margin-bottom: 16px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .form-group label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #4a627a;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .form-group input, .form-group select {
+            padding: 10px 12px;
+            border: 1px solid #cbd7e4;
+            border-radius: 14px;
+            font-size: 0.9rem;
+            background: white;
+            transition: 0.1s;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #3f88c5;
+            box-shadow: 0 0 0 3px rgba(63,136,197,0.15);
+        }
+        .form-group input[type="datetime-local"] {
+            font-family: monospace;
+        }
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 8px;
+        }
+        .submit-btn {
+            background: #1a6f5c;
+            color: white;
+            border: none;
+            font-weight: 500;
+            padding: 10px 24px;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: 0.15s;
+            border: 1px solid #208e75;
+        }
+        .submit-btn:hover {
+            background: #0e5b4b;
+        }
+        .reset-btn {
+            background: #e5eef7;
+            color: #2c4a6b;
+            border: none;
+            font-weight: 500;
+            padding: 10px 24px;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: 0.15s;
+            border: 1px solid #b8cde0;
+        }
+        .reset-btn:hover {
+            background: #d3e2f0;
+        }
+        .table-container {
+            padding: 8px 28px 28px 28px;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 18px;
+            box-shadow: 0 5px 15px -8px rgba(0,0,0,0.1);
+            font-size: 0.9rem;
+        }
+        th {
+            text-align: left;
+            padding: 16px 12px;
+            background: #f8fafd;
+            color: #1c3d5e;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            border-bottom: 2px solid #cbd7e4;
+            white-space: nowrap;
+        }
+        td {
+            padding: 16px 12px;
+            border-bottom: 1px solid #e2eaf1;
+            color: #1d2e3f;
+            vertical-align: middle;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        .btn-group {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            border: none;
+            background: transparent;
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: 30px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: 0.1s;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+        .btn-update {
+            background: #e5f0ff;
+            color: #1f5090;
+            border-color: #b8d1f0;
+        }
+        .btn-update:hover {
+            background: #d0e3ff;
+            border-color: #7da2d1;
+        }
+        .btn-delete {
+            background: #feeaea;
+            color: #b13e3e;
+            border-color: #f5c2c2;
+        }
+        .btn-delete:hover {
+            background: #ffd6d6;
+            border-color: #e08b8b;
+        }
+        .status-badge {
+            font-size: 0.8rem;
+            background: #eaf1f9;
+            padding: 4px 8px;
+            border-radius: 50px;
+            color: #34597a;
+            white-space: nowrap;
+        }
+        .null-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: #f0f0f0;
+            color: #666;
+            font-style: italic;
+        }
+        .value-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .value-1 {
+            background: #e1f5e8;
+            color: #1d6f4c;
+        }
+        .value-0 {
+            background: #fee9e9;
+            color: #b13e3e;
+        }
+        .toast-panel {
+            background: #253544;
+            color: #eff8ff;
+            padding: 12px 28px;
+            font-size: 0.9rem;
+            display: flex;
+            gap: 24px;
+            align-items: center;
+            border-top: 1px solid #3e4f5e;
+        }
+        .toast-panel .method {
+            font-family: 'Courier New', monospace;
+            background: #1f2e3a;
+            padding: 4px 10px;
+            border-radius: 30px;
+            color: #b5d9ff;
+        }
+        .log {
+            color: #c0d3e3;
+            word-break: break-word;
+            flex: 1;
+        }
+        .clear-log {
+            background: #3f5566;
+            border: none;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .clear-log:hover {
+            background: #536e83;
+        }
+        .icon {
+            font-size: 1.1rem;
+            line-height: 1;
+        }
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 8px 16px;
+            border-radius: 8px;
+            margin: 8px 28px 0 28px;
+            font-size: 0.9rem;
+        }
+        .success-message {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 8px 16px;
+            border-radius: 8px;
+            margin: 8px 28px 0 28px;
+            font-size: 0.9rem;
+        }
+        .date-cell {
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+        .fk-cell {
+            font-family: monospace;
+            font-weight: 600;
+            color: #1f5090;
+        }
+        .chart-legend {
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
+            justify-content: center;
+            font-size: 0.85rem;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+        .required-field {
+            border-left: 3px solid #1a6f5c !important;
+        }
+        .optional-field {
+            border-left: 3px solid #9e9e9e !important;
+        }
+    </style>
+    <!-- Chart.js for visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="card">
+        <div class="header">
+            <h1>
+                🚛 grenze/lkw
+                <span>mit FK_LOC_LOCATION · localhost:5000</span>
+            </h1>
+        </div>
+        <div class="toolbar">
+            <div style="display: flex; gap: 12px;">
+                <button class="refresh-btn" id="refreshBtn">
+                    <span class="icon">🔄</span> Aktualisieren
+                </button>
+            </div>
+            <div class="endpoint-badge">
+                <code>http://localhost:5000/grenze_lkw/all</code>
+                <code>/insert</code>
+                <code>/update</code>
+                <code>/delete</code>
+            </div>
+        </div>
+
+        <!-- Two Charts Row -->
+        <div class="charts-row">
+            <!-- Chart 1: Daily Counts -->
+            <div class="chart-container">
+                <div class="chart-wrapper">
+                    <div class="chart-header">
+                        <div class="chart-title">
+                            <span class="icon">📊</span> Einträge pro Tag
+                        </div>
+                        <div class="chart-stats" id="chartStats">
+                            Gesamt: 0 Einträge
+                        </div>
+                    </div>
+                    <div style="position: relative; height: 250px; width: 100%;">
+                        <canvas id="dailyChart"></canvas>
+                    </div>
+                    <div id="chartNoData" class="no-data-chart" style="display: none;">
+                        Keine Daten für Diagramm verfügbar
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart 2: Parking/Driveway split by BUS -->
+            <div class="chart-container">
+                <div class="chart-wrapper">
+                    <div class="chart-header">
+                        <div class="chart-title">
+                            <span class="icon">🅿️</span> Parkplätze & Durchfahrten (aufgeteilt nach BUS)
+                        </div>
+                        <div class="chart-stats" id="parkingStats">
+                            Nach BUS-Werten
+                        </div>
+                    </div>
+                    <div style="position: relative; height: 250px; width: 100%;">
+                        <canvas id="parkingChart"></canvas>
+                    </div>
+                    <div class="chart-legend" id="parkingLegend">
+                        <div class="legend-item"><span class="legend-color" style="background: #4caf50;"></span> BUS = 1</div>
+                        <div class="legend-item"><span class="legend-color" style="background: #f44336;"></span> BUS = 0</div>
+                        <div class="legend-item"><span class="legend-color" style="background: #9e9e9e;"></span> BUS = NULL</div>
+                    </div>
+                    <div id="parkingNoData" class="no-data-chart" style="display: none;">
+                        Keine Daten für Diagramm verfügbar
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Insert Form with FK_LOC_LOCATION -->
+        <div class="form-container">
+            <div class="form-title">
+                <span class="icon">📝</span> Neuen LKW-Eintrag anlegen (DATUM wird automatisch auf jetzt gesetzt)
+            </div>
+            <form id="insertForm" class="form-grid">
+                <div class="form-group">
+                    <label for="fk_loc_location">FK_LOC_LOCATION *</label>
+                    <input type="number" id="fk_loc_location" name="fk_loc_location" placeholder="z.B. 1, 2, 3" value="1" class="required-field" required>
+                </div>
+                <div class="form-group">
+                    <label for="beschriftung">BESCHRIFTUNG *</label>
+                    <input type="text" id="beschriftung" name="beschriftung" placeholder='z.B. "WABERERs"' class="required-field" required>
+                </div>
+                <!-- PK_GRENZE_LKW is optional since it's set by database -->
+                <div class="form-group">
+                    <label for="pk_grenze_lkw">PK_GRENZE_LKW (optional)</label>
+                    <input type="text" id="pk_grenze_lkw" name="pk_grenze_lkw" placeholder="Wird von DB vergeben" class="optional-field" value="">
+                </div>
+                <div class="form-group">
+                    <label for="parkplatz_links">PARKPLATZ_LINKS</label>
+                    <select id="parkplatz_links" name="parkplatz_links" class="optional-field">
+                        <option value="">NULL (leer)</option>
+                        <option value="1" selected>1 (Ja)</option>
+                        <option value="0">0 (Nein)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="parkplatz_rechts">PARKPLATZ_RECHTS</label>
+                    <select id="parkplatz_rechts" name="parkplatz_rechts" class="optional-field">
+                        <option value="" selected>NULL (leer)</option>
+                        <option value="1">1 (Ja)</option>
+                        <option value="0">0 (Nein)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="durchfahrt_rechts">DURCHFAHRT_RECHTS</label>
+                    <select id="durchfahrt_rechts" name="durchfahrt_rechts" class="optional-field">
+                        <option value="">NULL (leer)</option>
+                        <option value="1">1 (Ja)</option>
+                        <option value="0">0 (Nein)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="durchfahrt_links">DURCHFAHRT_LINKS</label>
+                    <select id="durchfahrt_links" name="durchfahrt_links" class="optional-field">
+                        <option value="">NULL (leer)</option>
+                        <option value="1">1 (Ja)</option>
+                        <option value="0">0 (Nein)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="datum">DATUM *</label>
+                    <input type="datetime-local" id="datum" name="datum" class="required-field" required>
+                </div>
+                <div class="form-group">
+                    <label for="durchleuchtung">DURCHLEUCHTUNG</label>
+                    <select id="durchleuchtung" name="durchleuchtung" class="optional-field">
+                        <option value="" selected>NULL (leer)</option>
+                        <option value="1">1 (Ja)</option>
+                        <option value="0">0 (Nein)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="bus">BUS</label>
+                    <select id="bus" name="bus" class="optional-field">
+                        <option value="" selected>NULL (leer)</option>
+                        <option value="1">1 (Ja)</option>
+                        <option value="0">0 (Nein)</option>
+                    </select>
+                </div>
+            </form>
+            <div class="form-actions">
+                <button type="button" class="reset-btn" id="resetFormBtn">
+                    <span class="icon">↩️</span> Zurücksetzen
+                </button>
+                <button type="button" class="submit-btn" id="submitFormBtn">
+                    <span class="icon">➕</span> Eintrag einfügen
+                </button>
+            </div>
+        </div>
+
+        <!-- Messages container -->
+        <div id="messagesContainer"></div>
+
+        <!-- main table with FK_LOC_LOCATION -->
+        <div class="table-container">
+            <table id="lkwTable">
+                <thead>
+                    <tr>
+                        <th>FK_LOC_LOCATION</th>
+                        <th>BESCHRIFTUNG</th>
+                        <th>PK_GRENZE_LKW</th>
+                        <th>PARKPLATZ_LINKS</th>
+                        <th>PARKPLATZ_RECHTS</th>
+                        <th>DURCHFAHRT_RECHTS</th>
+                        <th>DURCHFAHRT_LINKS</th>
+                        <th>DATUM</th>
+                        <th>DURCHLEUCHTUNG</th>
+                        <th>BUS</th>
+                        <th style="min-width: 120px;">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr>
+                        <td colspan="11" style="text-align: center; padding: 40px; color: #6b7f90;">
+                            Lade Daten von http://localhost:5000...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- live log panel -->
+        <div class="toast-panel" id="logPanel">
+            <span class="method">🌐 fetch</span>
+            <span class="log" id="liveLog">Bereit. Verbunden mit localhost:5000</span>
+            <button class="clear-log" id="clearLogBtn">löschen</button>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // Configuration
+            const BASE_URL = 'http://localhost:5000';
+            const ENDPOINTS = {
+                ALL: '/grenze_lkw/all',
+                INSERT: '/grenze_lkw/insert',
+                UPDATE: '/grenze_lkw/update',
+                DELETE: '/grenze_lkw/delete'
+            };
+
+            // State
+            let lkwData = [];
+            let isLoading = false;
+            let dailyChart = null;
+            let parkingChart = null;
+
+            // DOM elements
+            const tbody = document.getElementById('tableBody');
+            const liveLogSpan = document.getElementById('liveLog');
+            const refreshBtn = document.getElementById('refreshBtn');
+            const clearLogBtn = document.getElementById('clearLogBtn');
+            const messagesContainer = document.getElementById('messagesContainer');
+            const chartStats = document.getElementById('chartStats');
+            const chartNoData = document.getElementById('chartNoData');
+            const parkingNoData = document.getElementById('parkingNoData');
+            
+            // Form elements
+            const insertForm = document.getElementById('insertForm');
+            const fkLocLocationInput = document.getElementById('fk_loc_location');
+            const beschriftungInput = document.getElementById('beschriftung');
+            const pkGrenzeLkwInput = document.getElementById('pk_grenze_lkw');
+            const parkplatzLinksSelect = document.getElementById('parkplatz_links');
+            const parkplatzRechtsSelect = document.getElementById('parkplatz_rechts');
+            const durchfahrtRechtsSelect = document.getElementById('durchfahrt_rechts');
+            const durchfahrtLinksSelect = document.getElementById('durchfahrt_links');
+            const datumInput = document.getElementById('datum');
+            const durchleuchtungSelect = document.getElementById('durchleuchtung');
+            const busSelect = document.getElementById('bus');
+            const submitBtn = document.getElementById('submitFormBtn');
+            const resetBtn = document.getElementById('resetFormBtn');
+
+            // Helper: set datetime-local to current date/time (local)
+            function setCurrentDateTime() {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                // Format: YYYY-MM-DDTHH:mm
+                datumInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+            }
+
+            // Initialize form with current datetime
+            setCurrentDateTime();
+
+            // Reset form to default values (like the example data)
+            function resetForm() {
+                fkLocLocationInput.value = '1';
+                beschriftungInput.value = '';
+                pkGrenzeLkwInput.value = ''; // Leave empty - DB will set it
+                parkplatzLinksSelect.value = '1'; // Default to 1 for first parking
+                parkplatzRechtsSelect.value = ''; // Default to NULL
+                durchfahrtRechtsSelect.value = ''; // Default to NULL
+                durchfahrtLinksSelect.value = ''; // Default to NULL
+                setCurrentDateTime(); // Set to now
+                durchleuchtungSelect.value = ''; // Default to NULL
+                busSelect.value = ''; // Default to NULL
+            }
+
+            // Helper: show message
+            function showMessage(text, type = 'error') {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
+                messageDiv.textContent = text;
+                messagesContainer.innerHTML = ''; // Clear previous messages
+                messagesContainer.appendChild(messageDiv);
+                
+                setTimeout(() => {
+                    if (messageDiv.parentNode === messagesContainer) {
+                        messagesContainer.innerHTML = '';
+                    }
+                }, 5000);
+            }
+
+            // Helper: log to panel
+            function log(message, method = 'FETCH', isError = false) {
+                const prefix = isError ? '❌' : '✅';
+                liveLogSpan.innerHTML = `${prefix} ${method} ${message}`;
+                console.log(`[${method}]`, message);
+            }
+
+            // Helper: set loading state
+            function setLoading(loading) {
+                isLoading = loading;
+                const table = document.getElementById('lkwTable');
+                if (loading) {
+                    table.classList.add('loading');
+                } else {
+                    table.classList.remove('loading');
+                }
+            }
+
+            // Helper: escape HTML
+            function escapeHtml(unsafe) {
+                if (!unsafe) return unsafe;
+                return String(unsafe)
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+
+            // Helper: format date for display
+            function formatDate(dateString) {
+                if (!dateString) return '-';
+                try {
+                    const date = new Date(dateString);
+                    return date.toLocaleString('de-DE', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                } catch (e) {
+                    return dateString;
+                }
+            }
+
+            // Helper: format date to YYYY-MM-DD for grouping
+            function formatDateToYMD(dateString) {
+                if (!dateString) return 'Unknown';
+                try {
+                    const date = new Date(dateString);
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                } catch (e) {
+                    return 'Unknown';
+                }
+            }
+
+            // Helper: format null/value for display
+            function formatValue(value) {
+                if (value === null || value === undefined || value === '') {
+                    return '<span class="null-badge">NULL</span>';
+                }
+                if (value === 1 || value === '1' || value === true) {
+                    return '<span class="value-badge value-1">1</span>';
+                }
+                if (value === 0 || value === '0' || value === false) {
+                    return '<span class="value-badge value-0">0</span>';
+                }
+                return escapeHtml(value);
+            }
+
+            // Helper: normalize value for counting (0, 1, or null)
+            function normalizeValue(value) {
+                if (value === null || value === undefined || value === '') return null;
+                if (value === 1 || value === '1' || value === true) return 1;
+                if (value === 0 || value === '0' || value === false) return 0;
+                return null;
+            }
+
+            // Update daily chart
+            function updateDailyChart() {
+                const ctx = document.getElementById('dailyChart').getContext('2d');
+                
+                if (lkwData.length === 0) {
+                    document.getElementById('dailyChart').style.display = 'none';
+                    chartNoData.style.display = 'block';
+                    chartStats.textContent = 'Gesamt: 0 Einträge';
+                    return;
+                }
+
+                document.getElementById('dailyChart').style.display = 'block';
+                chartNoData.style.display = 'none';
+
+                // Group by date (YYYY-MM-DD)
+                const dailyCounts = {};
+                lkwData.forEach(item => {
+                    if (item.DATUM) {
+                        const dateKey = formatDateToYMD(item.DATUM);
+                        dailyCounts[dateKey] = (dailyCounts[dateKey] || 0) + 1;
+                    }
+                });
+
+                // Sort dates
+                const sortedDates = Object.keys(dailyCounts).sort();
+                const labels = sortedDates.map(date => {
+                    const [year, month, day] = date.split('-');
+                    return `${day}.${month}.${year}`;
+                });
+                const counts = sortedDates.map(date => dailyCounts[date]);
+
+                // Update stats
+                const total = lkwData.length;
+                const avgPerDay = (total / sortedDates.length).toFixed(1);
+                chartStats.innerHTML = `Gesamt: ${total} Einträge · ⌀ ${avgPerDay} pro Tag`;
+
+                // Destroy old chart if exists
+                if (dailyChart) {
+                    dailyChart.destroy();
+                }
+
+                // Create new chart
+                dailyChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Anzahl Einträge',
+                            data: counts,
+                            backgroundColor: 'rgba(31, 80, 144, 0.7)',
+                            borderColor: 'rgb(31, 80, 144)',
+                            borderWidth: 1,
+                            borderRadius: 8,
+                            barPercentage: 0.6,
+                            categoryPercentage: 0.8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => {
+                                        return `${context.raw} Eintrag${context.raw !== 1 ? 'üge' : ''}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { stepSize: 1, precision: 0 },
+                                grid: { color: 'rgba(0,0,0,0.05)' }
+                            },
+                            x: { grid: { display: false } }
+                        },
+                        onClick: (event, elements) => {
+                            if (elements.length > 0) {
+                                const index = elements[0].index;
+                                const date = sortedDates[index];
+                                showMessage(`Tag: ${labels[index]} · ${counts[index]} Einträge`, 'success');
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Update parking chart (PARKPLATZ_LINKS, PARKPLATZ_RECHTS, DURCHFAHRT_RECHTS, DURCHFAHRT_LINKS split by BUS)
+            function updateParkingChart() {
+                const ctx = document.getElementById('parkingChart').getContext('2d');
+                
+                if (lkwData.length === 0) {
+                    document.getElementById('parkingChart').style.display = 'none';
+                    parkingNoData.style.display = 'block';
+                    return;
+                }
+
+                document.getElementById('parkingChart').style.display = 'block';
+                parkingNoData.style.display = 'none';
+
+                // Categories to analyze
+                const categories = [
+                    'PARKPLATZ_LINKS',
+                    'PARKPLATZ_RECHTS', 
+                    'DURCHFAHRT_RECHTS',
+                    'DURCHFAHRT_LINKS'
+                ];
+
+                // BUS values: null, 0, 1
+                const busValues = [null, 0, 1];
+                const busLabels = ['BUS = NULL', 'BUS = 0', 'BUS = 1'];
+                const busColors = ['#9e9e9e', '#f44336', '#4caf50'];
+
+                // Prepare datasets
+                const datasets = busValues.map((busVal, index) => {
+                    // Count for each category where BUS matches
+                    const data = categories.map(category => {
+                        return lkwData.filter(item => {
+                            const itemBus = normalizeValue(item.BUS);
+                            const itemCategory = normalizeValue(item[category]);
+                            // Match BUS value and category has any value (can be 0 or 1, but not null for counting)
+                            return itemBus === busVal && itemCategory !== null;
+                        }).length;
+                    });
+                    
+                    return {
+                        label: busLabels[index],
+                        data: data,
+                        backgroundColor: busColors[index],
+                        borderRadius: 6,
+                        barPercentage: 0.7,
+                        categoryPercentage: 0.8
+                    };
+                });
+
+                // Destroy old chart if exists
+                if (parkingChart) {
+                    parkingChart.destroy();
+                }
+
+                // Create new chart
+                parkingChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: categories.map(cat => cat.replace(/_/g, ' ')),
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }, // We have custom legend
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => {
+                                        return `${context.dataset.label}: ${context.raw} Eintrag${context.raw !== 1 ? 'e' : ''}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { stepSize: 1, precision: 0 },
+                                grid: { color: 'rgba(0,0,0,0.05)' }
+                            },
+                            x: { 
+                                grid: { display: false },
+                                ticks: {
+                                    maxRotation: 45,
+                                    minRotation: 45
+                                }
+                            }
+                        },
+                        onClick: (event, elements) => {
+                            if (elements.length > 0) {
+                                const element = elements[0];
+                                const category = categories[element.index].replace(/_/g, ' ');
+                                const busLabel = busLabels[element.datasetIndex];
+                                const count = datasets[element.datasetIndex].data[element.index];
+                                showMessage(`${category}: ${count} Einträge (${busLabel})`, 'success');
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Fetch all records from /grenze_lkw/all
+            async function fetchAllRecords() {
+                setLoading(true);
+                try {
+                    log(`Fetching from ${ENDPOINTS.ALL}...`, 'GET');
+                    
+                    const response = await fetch(`${BASE_URL}${ENDPOINTS.ALL}`, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                        mode: 'cors'
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    
+                    lkwData = Array.isArray(data) ? data : [];
+                    
+                    log(`${lkwData.length} Datensätze empfangen`, 'GET');
+                    renderTable();
+                    updateDailyChart();
+                    updateParkingChart();
+                    
+                } catch (error) {
+                    log(`Fehler: ${error.message}`, 'GET', true);
+                    showMessage(`Fehler beim Laden: ${error.message}. Stellen Sie sicher, dass der Server unter ${BASE_URL} läuft.`);
+                    
+                    tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; padding: 40px; color: #c62828;">
+                        ❌ Fehler beim Laden: ${error.message}<br>
+                        <small>Läuft der Server unter ${BASE_URL}?</small>
+                    </td></tr>`;
+                    
+                    document.getElementById('dailyChart').style.display = 'none';
+                    document.getElementById('parkingChart').style.display = 'none';
+                    chartNoData.style.display = 'block';
+                    parkingNoData.style.display = 'block';
+                    chartStats.textContent = 'Gesamt: 0 Einträge';
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            // Insert new record via /grenze_lkw/insert
+            async function insertRecord(record) {
+                setLoading(true);
+                try {
+                    log(`Einfügen: ${JSON.stringify(record)}`, 'POST');
+                    
+                    const response = await fetch(`${BASE_URL}${ENDPOINTS.INSERT}`, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                        mode: 'cors',
+                        body: JSON.stringify(record)
+                    });
+
+                    const responseData = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(responseData.message || `HTTP error! status: ${response.status}`);
+                    }
+
+                    log(`Einfügen erfolgreich: ${JSON.stringify(responseData)}`, 'POST');
+                    showMessage('Datensatz erfolgreich eingefügt!', 'success');
+                    
+                    resetForm();
+                    await fetchAllRecords();
+                    
+                } catch (error) {
+                    log(`Fehler beim Einfügen: ${error.message}`, 'POST', true);
+                    showMessage(`Fehler beim Einfügen: ${error.message}`);
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            // Update record via /grenze_lkw/update
+            async function updateRecord(id, updatedFields) {
+                setLoading(true);
+                try {
+                    const payload = { id, ...updatedFields };
+                    log(`Aktualisieren: ${JSON.stringify(payload)}`, 'PUT');
+                    
+                    const response = await fetch(`${BASE_URL}${ENDPOINTS.UPDATE}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                        mode: 'cors',
+                        body: JSON.stringify(payload)
+                    });
+
+                    const responseData = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(responseData.message || `HTTP error! status: ${response.status}`);
+                    }
+
+                    log(`Aktualisierung erfolgreich: ${JSON.stringify(responseData)}`, 'PUT');
+                    showMessage(`Datensatz #${id} erfolgreich aktualisiert!`, 'success');
+                    
+                    await fetchAllRecords();
+                    
+                } catch (error) {
+                    log(`Fehler bei Aktualisierung: ${error.message}`, 'PUT', true);
+                    showMessage(`Fehler bei Aktualisierung: ${error.message}`);
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            // Delete record via /grenze_lkw/delete
+            async function deleteRecord(id) {
+                setLoading(true);
+                try {
+                    log(`Lösche ID: ${id}`, 'DELETE');
+                    
+                    const response = await fetch(`${BASE_URL}${ENDPOINTS.DELETE}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                        mode: 'cors',
+                        body: JSON.stringify({ id })
+                    });
+
+                    const responseData = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(responseData.message || `HTTP error! status: ${response.status}`);
+                    }
+
+                    log(`Löschen erfolgreich: ${JSON.stringify(responseData)}`, 'DELETE');
+                    showMessage(`Datensatz #${id} erfolgreich gelöscht!`, 'success');
+                    
+                    await fetchAllRecords();
+                    
+                } catch (error) {
+                    log(`Fehler beim Löschen: ${error.message}`, 'DELETE', true);
+                    showMessage(`Fehler beim Löschen: ${error.message}`);
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            // Render table with all columns including FK_LOC_LOCATION
+            function renderTable() {
+                if (!tbody) return;
+                
+                if (lkwData.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; color:#6b7f90; padding:32px;">
+                        📭 Keine Datensätze gefunden — Formular ausfüllen und "Eintrag einfügen" klicken
+                    </td></tr>`;
+                    return;
+                }
+
+                let html = '';
+                lkwData.forEach(item => {
+                    // Handle different possible ID field names
+                    const id = item.id || item.ID || item._id || item.PK_GRENZE_LKW;
+                    
+                    html += `<tr data-id="${escapeHtml(id)}">
+                        <td class="fk-cell"><strong>${escapeHtml(item.FK_LOC_LOCATION !== undefined ? item.FK_LOC_LOCATION : '')}</strong></td>
+                        <td><strong>${escapeHtml(item.BESCHRIFTUNG || '')}</strong></td>
+                        <td><span class="status-badge">${escapeHtml(item.PK_GRENZE_LKW || id || '')}</span></td>
+                        <td>${formatValue(item.PARKPLATZ_LINKS)}</td>
+                        <td>${formatValue(item.PARKPLATZ_RECHTS)}</td>
+                        <td>${formatValue(item.DURCHFAHRT_RECHTS)}</td>
+                        <td>${formatValue(item.DURCHFAHRT_LINKS)}</td>
+                        <td class="date-cell">${escapeHtml(formatDate(item.DATUM))}</td>
+                        <td>${formatValue(item.DURCHLEUCHTUNG)}</td>
+                        <td>${formatValue(item.BUS)}</td>
+                        <td>
+                            <div class="btn-group">
+                                <button class="btn btn-update update-row" data-id="${escapeHtml(id)}"><span class="icon">🔄</span> edit</button>
+                                <button class="btn btn-delete delete-row" data-id="${escapeHtml(id)}"><span class="icon">🗑️</span> del</button>
+                            </div>
+                        </td>
+                    </tr>`;
+                });
+                tbody.innerHTML = html;
+            }
+
+            // Event handlers for update/delete
+            tbody.addEventListener('click', async (e) => {
+                const updateBtn = e.target.closest('.update-row');
+                const deleteBtn = e.target.closest('.delete-row');
+
+                if (updateBtn) {
+                    const row = updateBtn.closest('tr');
+                    if (!row) return;
+                    
+                    const id = updateBtn.getAttribute('data-id');
+                    if (!id) return;
+
+                    const record = lkwData.find(item => {
+                        const itemId = item.id || item.ID || item._id || item.PK_GRENZE_LKW;
+                        return String(itemId) === String(id);
+                    });
+                    
+                    if (!record) {
+                        showMessage('Datensatz nicht gefunden', 'error');
+                        return;
+                    }
+
+                    const updatedJson = prompt('Datensatz bearbeiten (JSON-Format):', JSON.stringify(record, null, 2));
+                    if (!updatedJson) return;
+                    
+                    try {
+                        const updatedRecord = JSON.parse(updatedJson);
+                        await updateRecord(id, updatedRecord);
+                    } catch (error) {
+                        showMessage('Ungültiges JSON-Format', 'error');
+                    }
+                }
+
+                if (deleteBtn) {
+                    const id = deleteBtn.getAttribute('data-id');
+                    if (!id) return;
+
+                    if (confirm(`Sind Sie sicher, dass Sie den Datensatz #${id} löschen möchten?`)) {
+                        await deleteRecord(id);
+                    }
+                }
+            });
+
+            // Submit form handler
+            submitBtn.addEventListener('click', async () => {
+                // Validate required fields (PK_GRENZE_LKW is optional now)
+                if (!fkLocLocationInput.value.trim()) {
+                    showMessage('Bitte geben Sie eine FK_LOC_LOCATION ein', 'error');
+                    fkLocLocationInput.focus();
+                    return;
+                }
+                if (!beschriftungInput.value.trim()) {
+                    showMessage('Bitte geben Sie eine BESCHRIFTUNG ein', 'error');
+                    beschriftungInput.focus();
+                    return;
+                }
+
+                // Helper to convert select value to null/1/0
+                function getSelectValue(select) {
+                    const val = select.value;
+                    if (val === '') return null;
+                    if (val === '1') return 1;
+                    if (val === '0') return 0;
+                    return null;
+                }
+
+                // Collect form data with proper null/1/0 values
+                const newRecord = {
+                    FK_LOC_LOCATION: parseInt(fkLocLocationInput.value.trim(), 10) || 1,
+                    BESCHRIFTUNG: beschriftungInput.value.trim(),
+                    // PK_GRENZE_LKW is optional - only include if provided
+                    ...(pkGrenzeLkwInput.value.trim() && { pk_grenze_lkw: pkGrenzeLkwInput.value.trim() }),
+                    PARKPLATZ_LINKS: getSelectValue(parkplatzLinksSelect),
+                    PARKPLATZ_RECHTS: getSelectValue(parkplatzRechtsSelect),
+                    DURCHFAHRT_RECHTS: getSelectValue(durchfahrtRechtsSelect),
+                    DURCHFAHRT_LINKS: getSelectValue(durchfahrtLinksSelect),
+                    DATUM: new Date(datumInput.value).toISOString(),
+                    DURCHLEUCHTUNG: getSelectValue(durchleuchtungSelect),
+                    BUS: getSelectValue(busSelect)
+                };
+
+                await insertRecord(newRecord);
+            });
+
+            // Reset form handler
+            resetBtn.addEventListener('click', resetForm);
+
+            // Refresh button handler
+            refreshBtn.addEventListener('click', () => {
+                fetchAllRecords();
+            });
+
+            // Clear log
+            clearLogBtn.addEventListener('click', () => {
+                liveLogSpan.innerHTML = 'Log gelöscht.';
+            });
+
+            // Initial load
+            fetchAllRecords();
+
+            // Auto-refresh every 30 seconds
+            setInterval(() => {
+                if (!isLoading) {
+                    fetchAllRecords();
+                }
+            }, 30000);
+
+        })();
+    </script>
+</body>
+</html>

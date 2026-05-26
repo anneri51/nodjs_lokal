@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wahlverwaltung · Personen · Kandidaten · Parteien · Detailansicht</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #1a1e2c;
+            padding: 24px;
+            color: #e2e8f0;
+        }
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 500;
+            margin-bottom: 28px;
+            color: #b7c9e2;
+            border-bottom: 2px solid #3a4c6b;
+            padding-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        h1 span {
+            background: #2d3b4f;
+            color: #cfdeff;
+            padding: 6px 18px;
+            border-radius: 40px;
+            font-size: 1rem;
+            font-family: monospace;
+        }
+
+        /* Nachrichten */
+        #message {
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            margin-bottom: 1.8rem;
+            font-weight: 500;
+            background: #272e3e;
+            border-left: 6px solid #3f8aff;
+            color: #cfdeff;
+        }
+        .success { background: #1e3b2e; border-left-color: #2ecc71; color: #b7e3c0; }
+        .error { background: #3e2a2a; border-left-color: #e74c3c; color: #fbb5b5; }
+        .loading { background: #253544; border-left-color: #f39c12; }
+
+        /* Toolbar */
+        .toolbar {
+            background: #272a37;
+            border-radius: 40px;
+            padding: 16px 28px;
+            margin-bottom: 28px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.5);
+            border: 1px solid #3f4559;
+        }
+        .load-btn {
+            background: #3166b0;
+            border: none;
+            color: white;
+            font-weight: 600;
+            font-size: 0.95rem;
+            padding: 12px 24px;
+            border-radius: 40px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: 0.2s;
+            border: 1px solid #4880d0;
+        }
+        .load-btn:hover { background: #3f7ac0; transform: translateY(-2px); }
+        .load-btn.partei { background: #8b5cf6; border-color: #a78bfa; }
+        .load-btn.person { background: #059669; border-color: #34d399; }
+        .load-btn.kandidat { background: #2563eb; border-color: #60a5fa; }
+        .load-btn:disabled { opacity: 0.5; pointer-events: none; }
+
+        .status-badge {
+            display: flex;
+            gap: 24px;
+            margin-left: 10px;
+            font-size: 0.85rem;
+        }
+        .status-badge span { display: flex; align-items: center; gap: 6px; }
+        .status-dot {
+            width: 12px; height: 12px; border-radius: 50%; background: #4e5569;
+            display: inline-block;
+        }
+        .status-dot.loaded { background: #2ecc71; box-shadow: 0 0 10px #2ecc71; }
+        .status-dot.missing { background: #dc2626; box-shadow: 0 0 10px #dc2626; }
+        .connection-status {
+            background: #2f3545; padding: 6px 18px; border-radius: 40px;
+            border: 1px solid #515b73; font-size: 0.85rem;
+            margin-left: auto;
+        }
+        .connection-status.connected { background: #1f3b2c; border-color: #2ecc71; }
+        .connection-status.disconnected { background: #4a2f2f; border-color: #ef4444; }
+
+        /* Hauptgrid: 2 Spalten (links Parteien / rechts zwei untereinander) */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 2.2fr;
+            gap: 28px;
+            margin-top: 12px;
+        }
+
+        /* Linke Spalte – Parteien mit JSON-Detail */
+        .left-column {
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+        }
+
+        /* Karten */
+        .card {
+            background: #262b37;
+            border-radius: 28px;
+            overflow: hidden;
+            border: 1px solid #3d4459;
+            box-shadow: 0 20px 30px -10px black;
+        }
+        .card-header {
+            padding: 20px 24px;
+            background: #1f2532;
+            border-bottom: 2px solid #3d4b62;
+            font-size: 1.3rem;
+            font-weight: 500;
+            display: flex;
+            justify-content: space-between;
+            color: #bdd0ec;
+        }
+        .card-header .badge {
+            background: #2d3b5a; padding: 4px 18px; border-radius: 40px; font-size: 0.9rem;
+        }
+        .card-content { padding: 20px; }
+
+        /* Filterbereich */
+        .filter-row {
+            display: flex;
+            gap: 16px;
+            padding: 12px 16px;
+            background: #1d222e;
+            border-radius: 40px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+        }
+        .filter-item {
+            flex: 1;
+            min-width: 150px;
+        }
+        .filter-item label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: #8f9bb3;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .filter-item input, .filter-item select {
+            width: 100%;
+            background: #131824;
+            border: 1px solid #404b60;
+            padding: 10px 16px;
+            border-radius: 30px;
+            color: white;
+            font-size: 0.9rem;
+        }
+        .btn-sm {
+            background: #394153;
+            border: none;
+            color: white;
+            padding: 0 20px;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            height: 40px;
+            align-self: flex-end;
+        }
+        .btn-sm.primary { background: #2563eb; }
+
+        /* Tabellen */
+        .table-wrapper {
+            max-height: 350px;
+            overflow-y: auto;
+            border-radius: 20px;
+            border: 1px solid #384153;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        th {
+            text-align: left;
+            padding: 14px 10px;
+            background: #1b212e;
+            color: #98a9c7;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            border-bottom: 2px solid #384668;
+        }
+        td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #313a4b;
+            color: #cfdcf0;
+        }
+        tr { cursor: pointer; }
+        tr:hover td { background: #2d364b; }
+        tr.selected { background: #1e3b5c; border-left: 4px solid #3f8aff; }
+        tr.selected td:first-child { padding-left: 6px; }
+
+        /* JSON-Detailansicht (wie gewünscht) */
+        .json-detail {
+            background: #111622;
+            border-radius: 24px;
+            padding: 16px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            border: 1px solid #2d364b;
+        }
+        .json-line {
+            display: flex;
+            border-bottom: 1px dashed #2c3348;
+            padding: 6px 4px;
+        }
+        .json-key {
+            color: #7aa9ff;
+            min-width: 170px;
+            font-weight: 500;
+        }
+        .json-value { color: #c3e0ff; word-break: break-word; }
+        .json-null { color: #8f9bb3; font-style: italic; }
+        .json-number { color: #ffb86b; }
+        .json-string { color: #b7dc9c; }
+
+        /* Rechte Spalte: Personen + Kandidaten */
+        .right-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+        }
+
+        /* Kandidaten-Formular */
+        .form-card {
+            margin-top: 16px;
+            border-radius: 24px;
+            background: #1f2532;
+            border: 2px solid #2d3f60;
+        }
+        .form-card.editing { border-color: #fbbf24; background: #2a2c35; }
+        .form-header {
+            padding: 16px 24px;
+            background: #151d2c;
+            border-radius: 22px 22px 0 0;
+            font-weight: 600;
+            color: #b7ceff;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px,1fr));
+            gap: 16px;
+            padding: 20px;
+        }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label {
+            font-size: 0.65rem; font-weight: 700; color: #9aabca; margin-bottom: 3px;
+            text-transform: uppercase;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            background: #131b28;
+            border: 1px solid #31415c;
+            padding: 8px 12px; border-radius: 30px; color: white;
+        }
+        .form-actions {
+            grid-column: 1/-1;
+            display: flex;
+            gap: 16px;
+            padding: 0 20px 20px 20px;
+        }
+        button[type="submit"] { background: #10b981; border: none; padding: 10px 24px; border-radius: 40px; font-weight: 700; color: white; }
+        button[type="button"] { background: #4b5565; border: none; padding: 10px 24px; border-radius: 40px; color: white; }
+
+        .selected-info {
+            background: #1e3248; margin: 10px 0; padding: 12px 20px; border-radius: 40px;
+            display: flex; align-items: center; gap: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗳️ Wahl-Kandidaten & Parteien <span>vollständig mit JSON-Detail</span></h1>
+        <div id="message"></div>
+
+        <!-- Toolbar mit Ladebuttons -->
+        <div class="toolbar">
+            <button class="load-btn partei" onclick="loadParteien()" id="loadParteiBtn"><span>📋</span>Parteien</button>
+            <button class="load-btn person" onclick="loadPersonenListe1()" id="loadPerson1Btn"><span>👤</span>Personen 1</button>
+            <button class="load-btn person" onclick="loadPersonenListe2()" id="loadPerson2Btn"><span>👥</span>Personen 2</button>
+            <button class="load-btn kandidat" onclick="loadKandidatenListe()" id="loadKandidatBtn"><span>📌</span>Kandidaten</button>
+            <div class="status-badge">
+                <span><span class="status-dot missing" id="parteiStatus"></span> Parteien</span>
+                <span><span class="status-dot missing" id="person1Status"></span> Pers1</span>
+                <span><span class="status-dot missing" id="person2Status"></span> Pers2</span>
+                <span><span class="status-dot missing" id="kandidatStatus"></span> Kandidaten</span>
+            </div>
+            <div class="connection-status" id="connectionStatus">🔌 prüfen…</div>
+        </div>
+
+        <!-- Hauptgrid: Links Parteien + JSON-Detail / Rechts Personen + Kandidaten -->
+        <div class="main-grid">
+            <!-- LINKS: Parteien-Tabelle + JSON-Detailansicht -->
+            <div class="left-column">
+                <!-- Parteien-Tabelle (suchbar) -->
+                <div class="card">
+                    <div class="card-header"><span>🏛️ Parteien</span> <span class="badge" id="parteiCount">0</span></div>
+                    <div class="card-content">
+                        <div class="filter-row">
+                            <div class="filter-item">
+                                <label>Suche (Name/Kürzel)</label>
+                                <input type="text" id="filterParteiName" placeholder="Filtern..." onkeyup="filterParteien()">
+                            </div>
+                            <button class="btn-sm" onclick="resetParteiFilters()">Reset</button>
+                        </div>
+                        <div class="table-wrapper">
+                            <table id="parteiTable">
+                                <thead><tr><th>PK_WAHL_PARTEI</th><th>Kürzel</th><th>Name</th><th>Mandant</th></tr></thead>
+                                <tbody id="parteiTableBody"><tr><td colspan="4" style="text-align:center; padding:30px;">Bitte Parteien laden</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- JSON-Detailansicht (wie in der Aufgabenstellung) -->
+                <div class="card">
+                    <div class="card-header"><span>🔍 Detail (JSON-Format)</span> <span class="badge" id="selectedId">keine</span></div>
+                    <div class="card-content" style="padding-top:0;">
+                        <div id="jsonDetailContainer" class="json-detail">
+                            <div style="color:#8f9bb3; text-align:center; padding:20px;">← Partei in Tabelle anklicken</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RECHTS: Personen + Kandidaten -->
+            <div class="right-stack">
+                <!-- PERSONEN -->
+                <div class="card">
+                    <div class="card-header"><span>👥 Personen</span> <span class="badge" id="personCount">0</span></div>
+                    <div class="card-content">
+                        <div class="filter-row">
+                            <div class="filter-item"><label>Vorname</label><input type="text" id="filterPersonVorname" onkeyup="filterPersons()"></div>
+                            <div class="filter-item"><label>Nachname</label><input type="text" id="filterPersonNachname" onkeyup="filterPersons()"></div>
+                            <div class="filter-item"><label>Ort</label><input type="text" id="filterPersonOrt" onkeyup="filterPersons()"></div>
+                            <button class="btn-sm" onclick="resetPersonFilters()">Reset</button>
+                        </div>
+                        <div class="table-wrapper" style="max-height:250px;">
+                            <table id="personTable">
+                                <thead><tr><th>ID</th><th>Vorname</th><th>Nachname</th><th>Ort</th><th>Geburt</th><th>Aktion</th></tr></thead>
+                                <tbody id="personTableBody"><tr><td colspan="6">Bitte Personen laden</td></tr></tbody>
+                            </table>
+                        </div>
+                        <!-- Mini-Formular Person (Demo) -->
+                        <div style="margin-top:16px;">
+                            <form onsubmit="handlePersonSubmit(event)" style="display:flex; gap:8px;">
+                                <input type="text" id="personVorname" placeholder="Vorname" style="flex:1; background:#131b28; border:1px solid #3f4a62; border-radius:30px; padding:8px 15px; color:white;">
+                                <input type="text" id="personNachname" placeholder="Nachname" style="flex:1; background:#131b28; border:1px solid #3f4a62; border-radius:30px; padding:8px 15px; color:white;">
+                                <button type="submit" class="btn-sm primary">➕ Demo</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KANDIDATEN -->
+                <div class="card">
+                    <div class="card-header"><span>📋 Kandidaten (Klick = Update)</span> <span class="badge" id="kandidatCount">0</span></div>
+                    <div class="card-content">
+                        <!-- Filter -->
+                        <div class="filter-row">
+                            <div class="filter-item"><label>Vorname</label><input type="text" id="filterKandidatVorname" onkeyup="filterKandidaten()"></div>
+                            <div class="filter-item"><label>Nachname</label><input type="text" id="filterKandidatNachname" onkeyup="filterKandidaten()"></div>
+                            <div class="filter-item"><label>Wahl</label><select id="filterKandidatWahl" onchange="filterKandidaten()"><option value="">Alle</option></select></div>
+                            <div class="filter-item"><label>Partei</label><select id="filterKandidatPartei" onchange="filterKandidaten()"><option value="">Alle</option></select></div>
+                            <button class="btn-sm" onclick="resetKandidatFilters()">Reset</button>
+                        </div>
+
+                        <!-- Auswahl-Anzeige -->
+                        <div id="selectedKandidatInfo" class="selected-info" style="display:none;">
+                            <span>✏️ <span id="selectedKandidatName"></span></span>
+                            <button class="btn-sm primary" onclick="editSelectedKandidat()">Bearbeiten</button>
+                            <button class="btn-sm" onclick="clearKandidatSelection()">×</button>
+                        </div>
+
+                        <!-- Tabelle Kandidaten -->
+                        <div class="table-wrapper" style="max-height:250px;">
+                            <table id="kandidatTable">
+                                <thead><tr><th>ID</th><th>Vorname</th><th>Nachname</th><th>Wahl</th><th>Partei</th><th></th></tr></thead>
+                                <tbody id="kandidatTableBody"><tr><td colspan="6">Bitte Kandidaten laden</td></tr></tbody>
+                            </table>
+                        </div>
+
+                        <!-- Kandidaten-Formular (PUT) -->
+                        <div id="kandidatForm" class="form-card" style="margin-top:20px;">
+                            <div class="form-header" id="kandidatFormTitle">➕ Neuen Kandidaten</div>
+                            <form id="kandidatInsertForm" onsubmit="handleKandidatSubmit(event)">
+                                <input type="hidden" id="kandidatId">
+                                <div class="form-grid">
+                                    <div class="form-group"><label>Person (FK)</label><input type="number" id="kandidatPerson" step="any"></div>
+                                    <div class="form-group"><label>Wahl (FK)*</label><input type="number" id="kandidatWahl" required step="any"></div>
+                                    <div class="form-group"><label>Partei (FK)*</label><input type="number" id="kandidatPartei" required step="any"></div>
+ <div class="form-group"><label>Partei (FK)*</label><select id="kandidatPartei_list"  >
+<option value="2">CSU (2) - 100 - Wahlvorschlag Nr. 01 - 100-180</option>
+<option value="4">Freie Wähler (4) - 200 - Wahlvorschlag Nr. 02 - 200-180</option>
+<option value="5">Afd (5) - 300 - Wahlvorschlag Nr. 03 - 300-180</option>
+<option value="111">Grüne (111) - 400 - Wahlvorschlag Nr. 04 - 400-180</option>
+<option value="6">Spd (6) - 500 - Wahlvorschlag Nr. 05 - 500-180</option>
+<option value="10">Ödp (10) - 600 - Wahlvorschlag Nr. 06 - 600-180</option>
+<option value="7">FDP (7) - 700 - Wahlvorschlag Nr. 07 - 700-180</option>
+
+<option value="8">Linke (8) - 800 - Wahlvorschlag Nr. 08 - 800-180</option>
+<option value="23">Volt (23) - 900 - Wahlvorschlag Nr. 09 - 900-180</option>
+<option value="11">Die Partei (11) - 1000 - Wahlvorschlag Nr. 10 - 1000-180</option>
+<option value="572">Rosa Liste (572) - 1100 - Wahlvorschlag Nr. 11 - 1100-180</option>
+<option value="571">München Liste (571) - 1200 - Wahlvorschlag Nr. 12 - 1200-180</option>
+<option value="9">Bayern Partei (9) - 1300 - Wahlvorschlag Nr. 13 - 1300-180</option>
+<option value="570">BK (570) - 1400 - Wahlvorschlag Nr. 14 - 1400-180</option>
+</select></div>
+                                    <div class="form-group"><label>LfdNr</label><input type="number" id="kandidatLfdNr" step="any"></div>
+                                    <div class="form-group"><label>Platz</label><input type="number" id="kandidatPlatz" step="any"></div>
+                                    <div class="form-group"><label>Stimmbezirk</label><input type="number" id="kandidatStimmbezirk" step="any"></div>
+                                    <div class="form-group"><label>Mandant</label><input type="number" id="kandidatMandant" value="1" step="any"></div>
+                                    <div class="form-group"><label>Vorname</label><input type="text" id="kandidatVorname"></div>
+                                    <div class="form-group"><label>Nachname</label><input type="text" id="kandidatNachname"></div>
+                                    <div class="form-group"><label>Beruf</label><input type="text" id="kandidatBeruf"></div>
+                                    <div class="form-group"><label>Beruf allg</label><input type="text" id="kandidatBerufAllg"></div>
+                                    <div class="form-group"><label>Geburtsjahr</label><input type="number" id="kandidatGeburtsjahr" step="any"></div>
+                                    <div class="form-group"><label>Ort</label><input type="text" id="kandidatOrt"></div>
+                                    <div class="form-group"><label>Landkreis</label><input type="text" id="kandidatLandkreis"></div>
+                                    <div class="form-group"><label>COMM</label><textarea id="kandidatComm" rows="2"></textarea></div>
+                                </div>
+                                <div class="form-actions">
+                                    <button type="submit" id="kandidatSubmitBtn">Speichern (PUT)</button>
+                                    <button type="button" onclick="resetKandidatForm()">Abbrechen</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const WS_BASE_URL = 'http://localhost:5000';
+
+            // ---------- Globale Daten ----------
+            let allPersons = [];
+            let filteredPersons = [];
+            let allKandidaten = [];
+            let filteredKandidaten = [];
+            let allParteien = [];
+            let filteredParteien = [];
+
+            // Ladezustände
+            let person1Loaded = false, person2Loaded = false, kandidatLoaded = false, parteienLoaded = false;
+            let selectedKandidatId = null;
+            let selectedPartei = null; // aktuell ausgewählte Partei (für JSON-Detail)
+
+            // UI-Elemente
+            const msgDiv = document.getElementById('message');
+            function showMessage(text, type) {
+                msgDiv.innerHTML = text;
+                msgDiv.className = type;
+                if (type !== 'loading') setTimeout(() => { msgDiv.innerHTML = ''; msgDiv.className = ''; }, 4000);
+            }
+
+            // Verbindungstest
+            async function testConnection() {
+                const el = document.getElementById('connectionStatus');
+                try {
+                    const r = await fetch(`${WS_BASE_URL}/kon_person`, { method: 'HEAD' });
+                    if (r.ok) { el.innerHTML = '✅ verbunden'; el.className = 'connection-status connected'; return true; }
+                    throw new Error();
+                } catch { 
+                    el.innerHTML = '❌ nicht verbunden'; 
+                    el.className = 'connection-status disconnected'; 
+                    return false;
+                }
+            }
+
+            // ---------- PARTEIEN (mit JSON-Detailansicht) ----------
+            window.loadParteien = async function() {
+                const btn = document.getElementById('loadParteiBtn');
+                const status = document.getElementById('parteiStatus');
+                btn.disabled = true; btn.innerHTML = '<span>⏳</span> lädt…';
+                showMessage('Lade Parteien …', 'loading');
+                try {
+                    const res = await fetch(`${WS_BASE_URL}/wahl/parteien`);
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    let data = await res.json();
+                    allParteien = Array.isArray(data) ? data : [];
+                    filteredParteien = [...allParteien];
+                    renderParteiTable();
+                    document.getElementById('parteiCount').innerText = allParteien.length;
+                    parteienLoaded = true;
+                    status.className = 'status-dot loaded';
+                    if (allParteien.length > 0) {
+                        selectPartei(allParteien[0]); // erste automatisch auswählen
+                    }
+                    showMessage(`${allParteien.length} Parteien geladen`, 'success');
+                } catch (err) {
+                    showMessage('Fehler: ' + err.message, 'error');
+                    status.className = 'status-dot missing';
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>📋</span>Parteien';
+                }
+            };
+
+            function renderParteiTable() {
+                const tbody = document.getElementById('parteiTableBody');
+                if (!filteredParteien.length) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Keine Parteien</td></tr>';
+                    return;
+                }
+                let html = '';
+                filteredParteien.forEach(p => {
+                    const id = p.PK_WAHL_PARTEI ?? '';
+                    const kurz = p.PARTEI_KURZ ?? p.KUERZEL ?? '—';
+                    const lang = p.PARTEI_LANG ?? p.NAME ?? '—';
+                    const mandant = p.FK_MDT_MANDANT ?? 'null';
+                    const selectedClass = (selectedPartei && selectedPartei.PK_WAHL_PARTEI == id) ? 'selected' : '';
+                    html += `<tr class="${selectedClass}" onclick="selectParteiById('${id}')">
+                        <td><strong>${id}</strong></td>
+                        <td>${kurz}</td>
+                        <td>${lang.substring(0,30)}${lang.length>30?'…':''}</td>
+                        <td>${mandant}</td>
+                    </tr>`;
+                });
+                tbody.innerHTML = html;
+            }
+
+            window.selectParteiById = function(id) {
+                const partei = allParteien.find(p => p.PK_WAHL_PARTEI == id);
+                if (partei) selectPartei(partei);
+            };
+
+            function selectPartei(partei) {
+                selectedPartei = partei;
+                document.getElementById('selectedId').innerText = `ID: ${partei.PK_WAHL_PARTEI ?? '?'}`;
+                renderParteiTable();
+                renderJsonDetail(partei);
+            }
+
+            // JSON-Detailansicht exakt wie gewünscht (key/value)
+            function renderJsonDetail(partei) {
+                const container = document.getElementById('jsonDetailContainer');
+                if (!partei) {
+                    container.innerHTML = '<div style="color:#8f9bb3; text-align:center;">Keine Partei ausgewählt</div>';
+                    return;
+                }
+                let html = '';
+                for (const [key, value] of Object.entries(partei)) {
+                    let valueClass = 'json-value';
+                    let formattedValue = '';
+                    if (value === null || value === undefined) {
+                        formattedValue = '<span class="json-null">null</span>';
+                    } else if (typeof value === 'string') {
+                        formattedValue = `<span class="json-string">"${escapeHtml(value)}"</span>`;
+                    } else if (typeof value === 'number') {
+                        formattedValue = `<span class="json-number">${value}</span>`;
+                    } else {
+                        formattedValue = `<span>${escapeHtml(String(value))}</span>`;
+                    }
+                    html += `<div class="json-line">
+                        <div class="json-key">${escapeHtml(key)}</div>
+                        <div class="json-value">${formattedValue}</div>
+                    </div>`;
+                }
+                container.innerHTML = html;
+            }
+
+            window.filterParteien = function() {
+                const search = document.getElementById('filterParteiName').value.toLowerCase();
+                filteredParteien = allParteien.filter(p => 
+                    (p.PARTEI_KURZ?.toLowerCase() + p.PARTEI_LANG?.toLowerCase() + p.KUERZEL?.toLowerCase() + p.NAME?.toLowerCase()).includes(search)
+                );
+                renderParteiTable();
+            };
+            window.resetParteiFilters = function() {
+                document.getElementById('filterParteiName').value = '';
+                filteredParteien = [...allParteien];
+                renderParteiTable();
+            };
+
+            // ---------- PERSONEN ----------
+            async function loadPersonenBase(url, flag, statusId, btnId, btnLabel) {
+                const btn = document.getElementById(btnId);
+                const status = document.getElementById(statusId);
+                btn.disabled = true; btn.innerHTML = '<span>⏳</span> lädt…';
+                try {
+                    const res = await fetch(url);
+                    if (!res.ok) throw new Error();
+                    const list = await res.json();
+                    list.forEach(p => { if (!allPersons.some(ex => ex.PK_KON_PERSON === p.PK_KON_PERSON)) allPersons.push(p); });
+                    filteredPersons = [...allPersons];
+                    renderPersonTable();
+                    document.getElementById('personCount').innerText = allPersons.length;
+                    status.className = 'status-dot loaded';
+                    if (flag === 1) person1Loaded = true; else person2Loaded = true;
+                    showMessage(`${list.length} Personen geladen`, 'success');
+                } catch {
+                    status.className = 'status-dot missing';
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = btnLabel;
+                }
+            }
+            window.loadPersonenListe1 = () => loadPersonenBase(`${WS_BASE_URL}/kon_person`, 1, 'person1Status', 'loadPerson1Btn', '<span>👤</span>Personen 1');
+            window.loadPersonenListe2 = () => loadPersonenBase(`${WS_BASE_URL}/kon_person?list=2`, 2, 'person2Status', 'loadPerson2Btn', '<span>👥</span>Personen 2');
+
+            function renderPersonTable() {
+                const tbody = document.getElementById('personTableBody');
+                if (!filteredPersons.length) { tbody.innerHTML = '<tr><td colspan="6">Keine Personen</td></tr>'; return; }
+                tbody.innerHTML = filteredPersons.map(p => `<tr onclick="selectPerson(${p.PK_KON_PERSON})">
+                    <td>${p.PK_KON_PERSON||''}</td><td>${p.VORNAME||''}</td><td>${p.NACHNAME||''}</td>
+                    <td>${p.ORT||''}</td><td>${p.GEBURTSDATUM||''}</td>
+                    <td><button class="btn-sm" style="padding:4px 8px;" onclick="event.stopPropagation();selectPerson(${p.PK_KON_PERSON})">übernehmen</button></td>
+                </tr>`).join('');
+            }
+            window.selectPerson = function(id) {
+                const p = allPersons.find(p => p.PK_KON_PERSON == id);
+                if (!p) return;
+                document.getElementById('kandidatPerson').value = id;
+                document.getElementById('kandidatVorname').value = p.VORNAME || '';
+                document.getElementById('kandidatNachname').value = p.NACHNAME || '';
+                document.getElementById('kandidatOrt').value = p.ORT || '';
+                document.getElementById('kandidatBeruf').value = p.BERUF || '';
+                showMessage('Person ins Formular übernommen', 'success');
+            };
+            window.filterPersons = function() {
+                const v = document.getElementById('filterPersonVorname').value.toLowerCase();
+                const n = document.getElementById('filterPersonNachname').value.toLowerCase();
+                const o = document.getElementById('filterPersonOrt').value.toLowerCase();
+                filteredPersons = allPersons.filter(p => 
+                    (!v || (p.VORNAME||'').toLowerCase().includes(v)) &&
+                    (!n || (p.NACHNAME||'').toLowerCase().includes(n)) &&
+                    (!o || (p.ORT||'').toLowerCase().includes(o))
+                );
+                renderPersonTable();
+            };
+            window.resetPersonFilters = function() {
+                document.getElementById('filterPersonVorname').value = '';
+                document.getElementById('filterPersonNachname').value = '';
+                document.getElementById('filterPersonOrt').value = '';
+                filteredPersons = [...allPersons];
+                renderPersonTable();
+            };
+            window.handlePersonSubmit = function(e) {
+                e.preventDefault();
+                showMessage('Person (Demo) – nicht gespeichert', 'success');
+            };
+
+            // ---------- KANDIDATEN ----------
+            window.loadKandidatenListe = async function() {
+                const btn = document.getElementById('loadKandidatBtn');
+                const status = document.getElementById('kandidatStatus');
+                btn.disabled = true; btn.innerHTML = '<span>⏳</span> lädt…';
+                showMessage('Lade Kandidaten …', 'loading');
+                try {
+                    const res = await fetch(`${WS_BASE_URL}/wahl_kand/1/`);
+                    if (!res.ok) throw new Error();
+                    let kandidaten = await res.json();
+                    kandidaten = kandidaten.map(k => {
+                        const per = allPersons.find(p => p.PK_KON_PERSON === k.FK_KON_PERSON);
+                        if (per) { k.VORNAME = per.VORNAME; k.NACHNAME = per.NACHNAME; }
+                        return k;
+                    });
+                    allKandidaten = kandidaten;
+                    filteredKandidaten = [...allKandidaten];
+                    renderKandidatTable();
+                    updateKandidatFilterOptions();
+                    document.getElementById('kandidatCount').innerText = allKandidaten.length;
+                    kandidatLoaded = true;
+                    status.className = 'status-dot loaded';
+                    showMessage(`${kandidaten.length} Kandidaten`, 'success');
+                } catch {
+                    status.className = 'status-dot missing';
+                    showMessage('Fehler Kandidaten', 'error');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>📌</span>Kandidaten';
+                }
+            };
+
+            function renderKandidatTable() {
+                const tbody = document.getElementById('kandidatTableBody');
+                if (!filteredKandidaten.length) { tbody.innerHTML = '<tr><td colspan="6">Keine Kandidaten</td></tr>'; return; }
+                tbody.innerHTML = filteredKandidaten.map(k => `<tr onclick="selectKandidat(${k.PK_WAHL_KANDIDATEN})" class="${selectedKandidatId === k.PK_WAHL_KANDIDATEN ? 'selected' : ''}">
+                    <td>${k.PK_WAHL_KANDIDATEN||''}</td><td>${k.VORNAME||''}</td><td>${k.NACHNAME||''}</td>
+                    <td>${k.FK_WAHL_WAHL||''}</td><td>${k.FK_WAHL_PARTEI||''}</td>
+                    <td><button class="btn-sm" style="padding:4px 8px;" onclick="event.stopPropagation();selectKandidat(${k.PK_WAHL_KANDIDATEN})">edit</button></td>
+                </tr>`).join('');
+            }
+
+            window.selectKandidat = function(id) {
+                const k = allKandidaten.find(k => k.PK_WAHL_KANDIDATEN == id);
+                if (!k) return;
+                selectedKandidatId = id;
+                document.getElementById('kandidatId').value = k.PK_WAHL_KANDIDATEN || '';
+                document.getElementById('kandidatPerson').value = k.FK_KON_PERSON || '';
+                document.getElementById('kandidatWahl').value = k.FK_WAHL_WAHL || '';
+                document.getElementById('kandidatPartei').value = k.FK_WAHL_PARTEI || '';
+                document.getElementById('kandidatLfdNr').value = k.LFD_NR || '';
+                document.getElementById('kandidatPlatz').value = k.PLATZ || '';
+                document.getElementById('kandidatStimmbezirk').value = k.FK_WAHL_STIMM_BEZIRK || '';
+                document.getElementById('kandidatMandant').value = k.FK_MDT_MANDANT || 1;
+                document.getElementById('kandidatVorname').value = k.VORNAME || '';
+                document.getElementById('kandidatNachname').value = k.NACHNAME || '';
+                document.getElementById('kandidatBeruf').value = k.BERUF || '';
+                document.getElementById('kandidatBerufAllg').value = k.BERUF_ALLG || '';
+                document.getElementById('kandidatGeburtsjahr').value = k.GEBURTSJAHR || '';
+                document.getElementById('kandidatOrt').value = k.ORT || '';
+                document.getElementById('kandidatLandkreis').value = k.LANDKREIS || '';
+                document.getElementById('kandidatComm').value = k.COMM || '';
+
+                document.getElementById('kandidatFormTitle').innerText = `✏️ Kandidat bearbeiten (ID: ${id})`;
+                document.getElementById('kandidatSubmitBtn').innerText = 'Aktualisieren (PUT)';
+                document.getElementById('kandidatForm').classList.add('editing');
+                document.getElementById('selectedKandidatName').innerText = `${k.VORNAME||''} ${k.NACHNAME||''} (ID:${id})`;
+                document.getElementById('selectedKandidatInfo').style.display = 'flex';
+                renderKandidatTable();
+            };
+
+            window.editSelectedKandidat = function() { if (selectedKandidatId) selectKandidat(selectedKandidatId); };
+            window.clearKandidatSelection = function() { selectedKandidatId = null; document.getElementById('selectedKandidatInfo').style.display = 'none'; resetKandidatForm(); renderKandidatTable(); };
+
+            async function handleKandidatSubmit(e) {
+                e.preventDefault();
+                const kid = document.getElementById('kandidatId').value;
+                if (!kid) { showMessage('Neuanlage nicht implementiert – nur PUT', 'error'); return; }
+                const payload = {
+                    FK_WAHL_WAHL: document.getElementById('kandidatWahl').value,
+                    FK_WAHL_PARTEI: document.getElementById('kandidatPartei').value,
+                    FK_KON_PERSON: document.getElementById('kandidatPerson').value || null,
+                    LFD_NR: document.getElementById('kandidatLfdNr').value || null,
+                    PLATZ: document.getElementById('kandidatPlatz').value || null,
+                    FK_WAHL_STIMM_BEZIRK: document.getElementById('kandidatStimmbezirk').value || null,
+                    FK_MDT_MANDANT: document.getElementById('kandidatMandant').value || 1,
+                    VORNAME: document.getElementById('kandidatVorname').value || null,
+                    NACHNAME: document.getElementById('kandidatNachname').value || null,
+                    BERUF: document.getElementById('kandidatBeruf').value || null,
+                    BERUF_ALLG: document.getElementById('kandidatBerufAllg').value || null,
+                    GEBURTSJAHR: document.getElementById('kandidatGeburtsjahr').value || null,
+                    ORT: document.getElementById('kandidatOrt').value || null,
+                    LANDKREIS: document.getElementById('kandidatLandkreis').value || null,
+                    COMM: document.getElementById('kandidatComm').value || null
+                };
+                if (!payload.FK_WAHL_WAHL || !payload.FK_WAHL_PARTEI) { showMessage('Wahl und Partei Pflicht', 'error'); return; }
+                try {
+                    showMessage('Sende Update …', 'loading');
+                    const res = await fetch(`${WS_BASE_URL}/wahl_kandidaten/update/${kid}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    const updated = await res.json();
+                    const idx = allKandidaten.findIndex(k => k.PK_WAHL_KANDIDATEN == kid);
+                    if (idx !== -1) allKandidaten[idx] = updated;
+                    filteredKandidaten = [...allKandidaten];
+                    renderKandidatTable();
+                    clearKandidatSelection();
+                    showMessage('Kandidat aktualisiert', 'success');
+                } catch (err) { showMessage('Fehler: ' + err.message, 'error'); }
+            }
+
+            function resetKandidatForm() {
+                document.getElementById('kandidatId').value = '';
+                document.getElementById('kandidatPerson').value = '';
+                document.getElementById('kandidatWahl').value = '';
+                document.getElementById('kandidatPartei').value = '';
+                document.getElementById('kandidatLfdNr').value = '';
+                document.getElementById('kandidatPlatz').value = '';
+                document.getElementById('kandidatStimmbezirk').value = '';
+                document.getElementById('kandidatMandant').value = '1';
+                document.getElementById('kandidatVorname').value = '';
+                document.getElementById('kandidatNachname').value = '';
+                document.getElementById('kandidatBeruf').value = '';
+                document.getElementById('kandidatBerufAllg').value = '';
+                document.getElementById('kandidatGeburtsjahr').value = '';
+                document.getElementById('kandidatOrt').value = '';
+                document.getElementById('kandidatLandkreis').value = '';
+                document.getElementById('kandidatComm').value = '';
+                document.getElementById('kandidatFormTitle').innerText = '➕ Neuen Kandidaten';
+                document.getElementById('kandidatSubmitBtn').innerText = 'Speichern (PUT)';
+                document.getElementById('kandidatForm').classList.remove('editing');
+            }
+
+            window.filterKandidaten = function() {
+                const v = document.getElementById('filterKandidatVorname').value.toLowerCase();
+                const n = document.getElementById('filterKandidatNachname').value.toLowerCase();
+                const w = document.getElementById('filterKandidatWahl').value;
+                const p = document.getElementById('filterKandidatPartei').value;
+                filteredKandidaten = allKandidaten.filter(k => 
+                    (!v || (k.VORNAME||'').toLowerCase().includes(v)) &&
+                    (!n || (k.NACHNAME||'').toLowerCase().includes(n)) &&
+                    (!w || k.FK_WAHL_WAHL == w) &&
+                    (!p || k.FK_WAHL_PARTEI == p)
+                );
+                renderKandidatTable();
+            };
+            window.resetKandidatFilters = function() {
+                document.getElementById('filterKandidatVorname').value = '';
+                document.getElementById('filterKandidatNachname').value = '';
+                document.getElementById('filterKandidatWahl').value = '';
+                document.getElementById('filterKandidatPartei').value = '';
+                filteredKandidaten = [...allKandidaten];
+                renderKandidatTable();
+            };
+            function updateKandidatFilterOptions() {
+                const wahlSet = new Set(allKandidaten.map(k=>k.FK_WAHL_WAHL).filter(v=>v));
+                const parteiSet = new Set(allKandidaten.map(k=>k.FK_WAHL_PARTEI).filter(v=>v));
+                const wahlSel = document.getElementById('filterKandidatWahl');
+                const parteiSel = document.getElementById('filterKandidatPartei');
+                wahlSel.innerHTML = '<option value="">Alle</option>';
+                parteiSel.innerHTML = '<option value="">Alle</option>';
+                [...wahlSet].sort().forEach(v => { let o = document.createElement('option'); o.value=v; o.textContent=v; wahlSel.appendChild(o); });
+                [...parteiSet].sort().forEach(v => { let o = document.createElement('option'); o.value=v; o.textContent=v; parteiSel.appendChild(o); });
+            }
+
+            function escapeHtml(unsafe) {
+                return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+            }
+
+            // Initialisierung
+            document.addEventListener('DOMContentLoaded', () => {
+                ['partei','person1','person2','kandidat'].forEach(id => {
+                    const el = document.getElementById(id+'Status');
+                    if(el) el.className = 'status-dot missing';
+                });
+                testConnection();
+                window.handleKandidatSubmit = handleKandidatSubmit;
+                window.resetKandidatForm = resetKandidatForm;
+            });
+        })();
+    </script>
+</body>
+</html>
