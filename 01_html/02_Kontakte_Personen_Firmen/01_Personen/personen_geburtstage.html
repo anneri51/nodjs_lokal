@@ -3,480 +3,259 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Geburtstage · Quartale · Porträts · Sterbejahr-Balken (verbessert)</title>
+    <title>Geburtstage & Gruppen · erweiterter Kalender · Webservice</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            background: linear-gradient(145deg, #f5f7fc 0%, #eef2f8 100%);
-            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            padding: 2rem 1.5rem;
-            color: #1a2634;
-        }
-
-        .container {
-            max-width: 1500px;
-            margin: 0 auto;
-        }
-
-        .header {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-            align-items: baseline;
-            margin-bottom: 1.5rem;
-            gap: 1rem;
-            border-bottom: 2px solid rgba(59, 130, 246, 0.2);
-            padding-bottom: 1rem;
-        }
-
-        h1 {
-            font-size: 1.9rem;
-            font-weight: 700;
+        /* ---------- Basis-Layout (erste App) ---------- */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background: #f0f2f5; color: #1e293b; }
+        .app-header {
             background: linear-gradient(135deg, #1e3c72, #2b4f8c);
-            background-clip: text;
-            -webkit-background-clip: text;
-            color: transparent;
-            letter-spacing: -0.3px;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        h1::before {
-            content: "🎂";
-            font-size: 2rem;
-            background: none;
-            color: #f59e0b;
-        }
-
-        .stats {
-            font-size: 0.85rem;
-            background: #eef2ff;
-            padding: 0.25rem 0.9rem;
-            border-radius: 30px;
-            color: #1e40af;
-            font-weight: 500;
-        }
-
-        .special-days {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1.2rem;
-            margin-bottom: 2rem;
-        }
-        .special-card {
-            flex: 1;
-            background: white;
-            border-radius: 1.4rem;
-            overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-            border: 1px solid #eef2f9;
-        }
-        .special-header {
-            background: #fef2e8;
-            padding: 0.7rem 1.2rem;
-            font-weight: 700;
-            font-size: 1rem;
-            border-bottom: 2px solid #ffd8b5;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: #7c2d12;
-        }
-        .special-list {
-            padding: 0.2rem 0;
-            max-height: 260px;
-            overflow-y: auto;
-        }
-        .person-avatar-small {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            object-fit: cover;
-            background: #eef2ff;
-            border: 1px solid #e2e8f0;
-        }
-        .week-person {
-            display: flex;
-            align-items: center;
-            gap: 0.8rem;
-            padding: 0.7rem 1.2rem;
-            border-bottom: 1px solid #f1f5f9;
-            flex-wrap: wrap;
-        }
-        .person-detail {
-            flex: 1;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: baseline;
-            gap: 0.5rem;
-        }
-        .person-name {
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-        .date-badge {
-            font-size: 0.7rem;
-            background: #f1f5f9;
-            padding: 0.2rem 0.6rem;
-            border-radius: 30px;
-            font-family: monospace;
-        }
-        .empty-special {
-            padding: 1rem;
-            text-align: center;
-            color: #94a3b8;
-            font-size: 0.85rem;
-        }
-
-        .weeks-panel {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .week-card {
-            flex: 1;
-            background: white;
-            border-radius: 1.4rem;
-            overflow: hidden;
-            border: 1px solid #eef2f9;
-        }
-        .week-header {
-            background: #f8fafd;
-            padding: 0.7rem 1.2rem;
-            font-weight: 700;
-            border-bottom: 2px solid #e2edff;
-        }
-        .week-list {
-            max-height: 280px;
-            overflow-y: auto;
-        }
-
-        .timeline-collapsible {
-            background: white;
-            border-radius: 2rem;
-            margin-bottom: 2rem;
-            border: 1px solid #e9edf2;
-        }
-        .timeline-collapsible summary {
-            padding: 1rem 1.4rem;
-            font-weight: 600;
-            font-size: 0.9rem;
-            color: #2c3e66;
-            cursor: pointer;
-            list-style: none;
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-            border-radius: 2rem;
-            background: #ffffff;
-            user-select: none;
-        }
-        .timeline-collapsible summary::-webkit-details-marker {
-            display: none;
-        }
-        .timeline-collapsible summary::before {
-            content: "▶";
-            font-size: 0.8rem;
-            transition: transform 0.2s;
-            display: inline-block;
-            color: #3b82f6;
-        }
-        .timeline-collapsible[open] summary::before {
-            transform: rotate(90deg);
-        }
-        .timeline-content {
-            padding: 0 1.2rem 1.2rem 1.2rem;
-            border-top: 1px solid #eef2f8;
-        }
-        .year-nav {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 1rem;
-            align-items: center;
-        }
-        .year-nav-btn {
-            background: #eef2ff;
-            border: none;
-            padding: 0.4rem 1rem;
-            border-radius: 40px;
-            font-weight: 600;
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: 0.15s;
-            color: #1e40af;
-        }
-        .year-nav-btn:hover {
-            background: #dbeafe;
-            transform: translateY(-1px);
-        }
-        .year-chips {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.6rem;
-            align-items: center;
-            margin-top: 0.5rem;
-        }
-        .chip {
-            background: #f1f5f9;
-            padding: 0.4rem 1rem;
-            border-radius: 40px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            color: #1e293b;
-            border: 1px solid transparent;
-        }
-        .chip.active {
-            background: #3b82f6;
             color: white;
-            box-shadow: 0 2px 6px rgba(59,130,246,0.3);
-        }
-        .chip.all-chip {
-            background: #e6f0ff;
-            border: 1px solid #bfdbfe;
-        }
-        .chip:hover:not(.active) {
-            background: #e2e8f0;
-        }
-
-        .quarters-container {
-            display: flex;
-            flex-direction: column;
-            gap: 2rem;
-        }
-        .quarter-row {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1.2rem;
-        }
-        .month-card {
-            background: white;
-            border-radius: 1.4rem;
-            overflow: hidden;
-            border: 1px solid #eef2f8;
-        }
-        .month-card.current-month {
-            box-shadow: 0 0 0 2px #f59e0b, 0 4px 12px rgba(245,158,11,0.2);
-            border-color: #fbbf24;
-        }
-        .month-header {
-            background: #fafcff;
-            padding: 0.8rem 1rem;
-            border-bottom: 2px solid #e2edff;
+            padding: 1rem 2rem;
             display: flex;
             justify-content: space-between;
-        }
-        .month-name {
-            font-size: 1.3rem;
-            font-weight: 700;
-        }
-        .birthday-list {
-            padding: 0;
-            max-height: 420px;
-            overflow-y: auto;
-        }
-        .birthday-item {
-            display: flex;
             align-items: center;
-            gap: 0.8rem;
-            padding: 0.7rem 1rem;
-            border-bottom: 1px solid #f0f4fa;
-        }
-        .birthday-item.today-birthday {
-            background: #fffbeb;
-            border-left: 4px solid #f59e0b;
-        }
-        .person-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            object-fit: cover;
-            background: #eef2ff;
-            border: 1px solid #cbd5e1;
-            flex-shrink: 0;
-        }
-        .person-info {
-            flex: 1;
-            display: flex;
             flex-wrap: wrap;
-            align-items: baseline;
-            gap: 0.5rem;
+            gap: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
-        .full-name {
-            font-weight: 700;
-            font-size: 0.95rem;
-        }
-        .birth-date {
-            font-family: monospace;
-            font-size: 0.75rem;
-            background: #f1f5f9;
-            padding: 0.2rem 0.6rem;
-            border-radius: 30px;
-        }
-        .gender-badge {
-            font-size: 0.7rem;
-            background: #f8fafc;
-            padding: 0.15rem 0.6rem;
+        .logo { font-size: 1.5rem; font-weight: bold; }
+        .logo span { color: #ffd966; }
+        .refresh-all {
+            background: #ff9800;
+            border: none;
+            padding: 0.5rem 1.2rem;
             border-radius: 40px;
-        }
-        .empty-month {
-            padding: 1.5rem;
-            text-align: center;
-            color: #94a3b8;
-        }
-        footer {
-            margin-top: 3rem;
-            text-align: center;
-            font-size: 0.7rem;
-            color: #6c86a3;
-        }
-        /* BALKENDIAGRAMM STYLES */
-        .stats-charts-section {
-            background: white;
-            border-radius: 1.8rem;
-            margin: 1.8rem 0 2rem 0;
-            padding: 1.2rem 1.2rem 1.8rem 1.2rem;
-            border: 1px solid #eef2f8;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
-        }
-        .stats-charts-section h3 {
-            font-size: 1.4rem;
-            font-weight: 700;
+            font-weight: bold;
+            cursor: pointer;
             color: #1e293b;
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-            margin-bottom: 1rem;
-            padding-left: 0.2rem;
+            transition: 0.2s;
         }
-        .charts-container {
-            overflow-x: auto;
-            margin: 0.5rem 0 1rem;
-            background: #fefefe;
-            border-radius: 1.2rem;
-            padding: 0.5rem 0;
-        }
-        canvas#birthDeathChart {
-            display: block;
-            margin: 0 auto;
-            background: #ffffff;
-            border-radius: 1rem;
-        }
-        .chart-legend {
-            display: flex;
-            justify-content: center;
-            gap: 2rem;
-            margin-top: 1rem;
-            font-size: 0.85rem;
-            font-weight: 500;
-        }
-        .legend-birth {
-            display: inline-block;
-            width: 20px;
-            height: 14px;
-            background: #3b82f6;
-            border-radius: 4px;
-            margin-right: 0.4rem;
-            vertical-align: middle;
-        }
-        .legend-death {
-            display: inline-block;
-            width: 20px;
-            height: 14px;
-            background: #dc2626;
-            border-radius: 4px;
-            margin-right: 0.4rem;
-            vertical-align: middle;
-        }
-        @media (max-width: 850px) {
-            body { padding: 1rem; }
-            .quarter-row { grid-template-columns: 1fr; }
-            .special-days { flex-direction: column; }
-            .weeks-panel { flex-direction: column; }
-        }
-        .spinner { display: inline-block; width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top: 3px solid #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .status-card { background: white; border-radius: 1.5rem; padding: 2rem; text-align: center; }
-        button.retry { background: #3b82f6; border: none; padding: 0.5rem 1.2rem; border-radius: 40px; color: white; cursor: pointer; }
+        .refresh-all:hover { background: #f57c00; transform: scale(1.02); }
+        .container { display: flex; max-width: 1600px; margin: 1.5rem auto; gap: 1.5rem; padding: 0 1rem; }
+        .sidebar { width: 280px; background: white; border-radius: 1.5rem; padding: 1.2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.05); height: fit-content; }
+        .main-content { flex: 1; }
+        .section-title { font-size: 1.3rem; margin: 1rem 0 0.8rem 0; padding-bottom: 0.3rem; border-bottom: 3px solid #4caf50; display: inline-block; }
+        .group-list { list-style: none; margin-top: 1rem; }
+        .group-item { padding: 0.6rem 1rem; background: #f8fafc; margin-bottom: 0.5rem; border-left: 4px solid #4caf50; border-radius: 12px; cursor: pointer; transition: 0.2s; }
+        .group-item:hover { background: #e9f5e9; transform: translateX(4px); }
+        .group-item.active { background: #4caf50; color: white; }
+        .search-box { position: relative; margin: 0.8rem 0; }
+        .search-box input { width: 100%; padding: 0.6rem 1rem 0.6rem 2.2rem; border-radius: 40px; border: 1px solid #ccc; }
+        .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #777; }
+        .all-button { background: #4caf50; color: white; border: none; padding: 0.5rem 1rem; border-radius: 40px; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 1rem; }
+        .person-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.2rem; margin: 1rem 0; }
+        .person-card { background: white; border-radius: 1.2rem; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); cursor: pointer; transition: 0.2s; border: 2px solid transparent; }
+        .person-card.selected { border-color: #4caf50; background: #f1f9f0; }
+        .card-header { background: #2c3e50; color: white; padding: 0.8rem; position: relative; min-height: 90px; }
+        .person-image { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; position: absolute; right: 12px; top: 12px; border: 2px solid white; background: #5f6c7a; }
+        .person-name { font-size: 1rem; font-weight: bold; padding-right: 70px; }
+        .person-details { padding: 0.8rem; }
+        .detail-row { margin-bottom: 0.3rem; display: flex; font-size: 0.85rem; }
+        .detail-label { font-weight: bold; width: 80px; }
+        button { background: #2c3e50; color: white; border: none; padding: 0.3rem 0.8rem; border-radius: 40px; cursor: pointer; font-size: 0.8rem; }
+        .pagination { display: flex; justify-content: center; gap: 0.5rem; margin: 1rem 0; flex-wrap: wrap; }
+        .selection-section { background: white; border-radius: 1.2rem; padding: 1rem; margin-bottom: 1.5rem; }
+        .group-select { width: 100%; padding: 0.5rem; border-radius: 40px; margin: 0.5rem 0; }
+        .tab-nav { display: flex; gap: 0.5rem; border-bottom: 1px solid #ddd; margin-bottom: 1.2rem; flex-wrap: wrap; }
+        .tab-btn { background: none; border: none; padding: 0.5rem 1.2rem; font-weight: bold; cursor: pointer; color: #5f6c7a; border-bottom: 2px solid transparent; }
+        .tab-btn.active { color: #4caf50; border-bottom-color: #4caf50; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+        
+        /* ---------- NEUE KALENDER-STYLES (aus zweitem Code) ---------- */
+        .special-days { display: flex; flex-wrap: wrap; gap: 1.2rem; margin-bottom: 2rem; }
+        .special-card { flex: 1; background: white; border-radius: 1.4rem; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #eef2f9; }
+        .special-header { background: #fef2e8; padding: 0.7rem 1.2rem; font-weight: 700; border-bottom: 2px solid #ffd8b5; display: flex; align-items: center; gap: 0.5rem; color: #7c2d12; }
+        .special-list { padding: 0.2rem 0; max-height: 260px; overflow-y: auto; }
+        .person-avatar-small { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #eef2ff; border: 1px solid #e2e8f0; }
+        .week-person { display: flex; align-items: center; gap: 0.8rem; padding: 0.7rem 1.2rem; border-bottom: 1px solid #f1f5f9; flex-wrap: wrap; }
+        .person-detail { flex: 1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; }
+        .person-name { font-weight: 600; font-size: 0.9rem; }
+        .date-badge { font-size: 0.7rem; background: #f1f5f9; padding: 0.2rem 0.6rem; border-radius: 30px; font-family: monospace; }
+        .empty-special { padding: 1rem; text-align: center; color: #94a3b8; font-size: 0.85rem; }
+        .weeks-panel { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 2rem; }
+        .week-card { flex: 1; background: white; border-radius: 1.4rem; overflow: hidden; border: 1px solid #eef2f9; }
+        .week-header { background: #f8fafd; padding: 0.7rem 1.2rem; font-weight: 700; border-bottom: 2px solid #e2edff; }
+        .week-list { max-height: 280px; overflow-y: auto; }
+        .timeline-collapsible { background: white; border-radius: 2rem; margin-bottom: 2rem; border: 1px solid #e9edf2; }
+        .timeline-collapsible summary { padding: 1rem 1.4rem; font-weight: 600; font-size: 0.9rem; color: #2c3e66; cursor: pointer; list-style: none; display: flex; align-items: center; gap: 0.6rem; border-radius: 2rem; background: #ffffff; user-select: none; }
+        .timeline-collapsible summary::-webkit-details-marker { display: none; }
+        .timeline-collapsible summary::before { content: "▶"; font-size: 0.8rem; transition: transform 0.2s; display: inline-block; color: #3b82f6; }
+        .timeline-collapsible[open] summary::before { transform: rotate(90deg); }
+        .timeline-content { padding: 0 1.2rem 1.2rem 1.2rem; border-top: 1px solid #eef2f8; }
+        .year-nav { display: flex; gap: 1rem; margin-bottom: 1rem; align-items: center; }
+        .year-nav-btn { background: #eef2ff; border: none; padding: 0.4rem 1rem; border-radius: 40px; font-weight: 600; font-size: 0.8rem; cursor: pointer; transition: 0.15s; color: #1e40af; }
+        .year-nav-btn:hover { background: #dbeafe; transform: translateY(-1px); }
+        .year-chips { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin-top: 0.5rem; }
+        .chip { background: #f1f5f9; padding: 0.4rem 1rem; border-radius: 40px; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.2s; color: #1e293b; border: 1px solid transparent; }
+        .chip.active { background: #3b82f6; color: white; box-shadow: 0 2px 6px rgba(59,130,246,0.3); }
+        .chip.all-chip { background: #e6f0ff; border: 1px solid #bfdbfe; }
+        .quarters-container { display: flex; flex-direction: column; gap: 2rem; }
+        .quarter-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; }
+        .month-card { background: white; border-radius: 1.4rem; overflow: hidden; border: 1px solid #eef2f8; }
+        .month-card.current-month { box-shadow: 0 0 0 2px #f59e0b, 0 4px 12px rgba(245,158,11,0.2); border-color: #fbbf24; }
+        .month-header { background: #fafcff; padding: 0.8rem 1rem; border-bottom: 2px solid #e2edff; display: flex; justify-content: space-between; }
+        .month-name { font-size: 1.3rem; font-weight: 700; }
+        .birthday-list { padding: 0; max-height: 420px; overflow-y: auto; }
+        .birthday-item { display: flex; align-items: center; gap: 0.8rem; padding: 0.7rem 1rem; border-bottom: 1px solid #f0f4fa; }
+        .birthday-item.today-birthday { background: #fffbeb; border-left: 4px solid #f59e0b; }
+        .person-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #eef2ff; border: 1px solid #cbd5e1; flex-shrink: 0; }
+        .person-info { flex: 1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; }
+        .full-name { font-weight: 700; font-size: 0.95rem; }
+        .birth-date { font-family: monospace; font-size: 0.75rem; background: #f1f5f9; padding: 0.2rem 0.6rem; border-radius: 30px; }
+        .gender-badge { font-size: 0.7rem; background: #f8fafc; padding: 0.15rem 0.6rem; border-radius: 40px; }
+        .empty-month { padding: 1.5rem; text-align: center; color: #94a3b8; }
+        .stats-charts-section { background: white; border-radius: 1.8rem; margin: 1.8rem 0 2rem 0; padding: 1.2rem 1.2rem 1.8rem 1.2rem; border: 1px solid #eef2f8; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
+        .stats-charts-section h3 { font-size: 1.3rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem; }
+        .charts-container { overflow-x: auto; margin: 0.5rem 0 1rem; background: #fefefe; border-radius: 1.2rem; padding: 0.5rem 0; }
+        canvas#birthDeathChart { display: block; margin: 0 auto; background: #ffffff; border-radius: 1rem; max-width: 100%; height: auto; }
+        .chart-legend { display: flex; justify-content: center; gap: 2rem; margin-top: 1rem; font-size: 0.85rem; font-weight: 500; }
+        .legend-birth { display: inline-block; width: 20px; height: 14px; background: #3b82f6; border-radius: 4px; margin-right: 0.4rem; vertical-align: middle; }
+        .legend-death { display: inline-block; width: 20px; height: 14px; background: #dc2626; border-radius: 4px; margin-right: 0.4rem; vertical-align: middle; }
+        
+        /* andere bestehende Tabellen etc. */
+        .person-group-table, .relations-table, .birthday-table { width: 100%; border-collapse: collapse; background: white; border-radius: 1rem; overflow: auto; }
+        .person-group-table th, .relations-table th, .birthday-table th,
+        .person-group-table td, .relations-table td, .birthday-table td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; vertical-align: middle; }
+        .table-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #e2e8f0; }
+        .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; width: 90%; max-width: 650px; border-radius: 1.5rem; padding: 1.5rem; max-height: 90vh; overflow-y: auto; }
+        .detail-modal-grid { display: grid; gap: 0.8rem; margin: 1rem 0; }
+        .detail-field { background: #f8fafc; padding: 0.5rem; border-radius: 12px; }
+        .detail-field strong { display: inline-block; width: 120px; }
+        .group-badge { display: inline-block; background: #eef2ff; padding: 0.2rem 0.7rem; border-radius: 30px; margin: 0.2rem; }
+        .person-detail-img { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 0.5rem; }
+        .info-message { background: #e3f2fd; padding: 1rem; border-radius: 1rem; margin: 1rem 0; text-align: center; color: #0d47a1; }
+        @media (max-width: 900px) { .quarter-row { grid-template-columns: 1fr; } }
+        @media (max-width: 800px) { .container { flex-direction: column; } .sidebar { width: auto; } }
     </style>
 </head>
 <body>
-<div class="container">
-    <div class="header">
-        <h1>📅 Geburtstage · Quartale · Porträts</h1>
-        <div class="stats" id="statsCount">– Personen</div>
-    </div>
-    <div id="dynamicContent"><div class="status-card"><div class="spinner"></div><p>Lade Geburts- & Sterbedaten von localhost:5000/kon_person ...</p></div></div>
-    <footer>🎂 Bilder via /person/bild/{id} · Navigation mit ← Vorjahr / Nächstes Jahr →<br>✅ Zeitzonen-sicher: Geburts- und Sterbedaten immer nackte Jahreszahlen · Balkendiagramm: Geburten / Sterbefälle pro Jahr (basierend auf GEBURTSJAHR/GEBURTSDATUM und STERBEJAHR/STERBEDATUM)</footer>
+<div class="app-header">
+    <div class="logo">Geburtstage & <span>Gruppen</span></div>
+    <div><button id="globalRefreshBtn" class="refresh-all">🔄 Alle Daten neu laden (vom Webservice)</button></div>
 </div>
+<div class="container">
+    <div class="sidebar">
+        <h2 class="section-title">Personengruppen</h2>
+        <button class="all-button" id="allPersonsBtn">👥 Alle Personen</button>
+        <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="groupSearch" placeholder="Gruppen filtern..."></div>
+        <ul class="group-list" id="groupList"><li>Lade Gruppen...</li></ul>
+        <hr style="margin:1rem 0">
+        <div class="selection-section">
+            <strong>📌 Zuordnung erstellen</strong>
+            <select id="targetGroupSelect" class="group-select"><option value="">Gruppe wählen...</option></select>
+            <div>Ausgewählt: <span id="selectedCount">0</span></div>
+            <div id="selectedPersonsList" style="font-size:0.8rem; max-height:100px; overflow:auto;"></div>
+            <button id="createRelationBtn" style="background:#2196f3; margin-top:0.5rem;" disabled>Zuordnung speichern</button>
+            <button id="clearSelectionBtn" style="background:#f44336; margin-top:0.5rem;" disabled>Auswahl löschen</button>
+            <div id="relationStatus" style="font-size:0.8rem;"></div>
+        </div>
+    </div>
+    <div class="main-content">
+        <div class="tab-nav">
+            <button class="tab-btn active" data-tab="persons">📋 Personen & Gruppen</button>
+            <button class="tab-btn" data-tab="calendar">🎂 Geburtstagskalender</button>
+            <button class="tab-btn" data-tab="birthTable">📊 Geburtstagstabelle</button>
+            <button class="tab-btn" data-tab="relations">🔗 Alle Zuordnungen</button>
+            <button class="tab-btn" data-tab="groupRelations">👥 Person-Gruppen</button>
+        </div>
+        <div id="tab-persons" class="tab-pane active">
+            <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="personSearch" placeholder="Person suchen (Name, ID)..."></div>
+            <div id="personListContainer"><div class="loading-spinner">Lade Personen...</div></div>
+            <div id="paginationControls" class="pagination"></div>
+        </div>
+        <div id="tab-calendar" class="tab-pane">
+            <div style="background:white; border-radius:1rem; padding:0.8rem; margin-bottom:1rem;">
+                <label>👥 Gruppe filtern: </label>
+                <select id="calendarGroupFilter" class="group-select" style="width:auto; display:inline-block;"></select>
+            </div>
+            <div id="enhancedCalendarView"><div class="loading-spinner">Kalender wird geladen...</div></div>
+        </div>
+        <div id="tab-birthTable" class="tab-pane">
+            <div style="background:white; border-radius:1rem; padding:0.8rem; margin-bottom:1rem;">
+                <label>👥 Gruppe filtern: </label><select id="birthTableGroupFilter" class="group-select" style="width:auto; display:inline-block;"></select>
+                <div class="search-box" style="margin-top:0.5rem;">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="birthTableSearch" placeholder="Suchen in Name, ID, Geburtsdatum, Sterbedatum...">
+                </div>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="birthday-table">
+                    <thead><tr><th>Bild</th><th data-sort="pk" style="cursor:pointer">ID ↕</th><th data-sort="vorname" style="cursor:pointer">Vorname ↕</th><th data-sort="nachname" style="cursor:pointer">Nachname ↕</th><th data-sort="birthdate" style="cursor:pointer">Geburtsdatum ↕</th><th>Sterbedatum</th><th>Gruppen</th></tr></thead>
+                    <tbody id="birthTableBody"><tr><td colspan="7">Lade Daten...</td></tr></tbody>
+                </table>
+            </div>
+            <div id="birthTablePagination" class="pagination"></div>
+        </div>
+        <div id="tab-relations" class="tab-pane">
+            <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="relationSearch" placeholder="Person oder Organisation durchsuchen..."></div>
+            <div id="relationsTableContainer"><div class="loading-spinner">Lade Relationen...</div></div>
+        </div>
+        <div id="tab-groupRelations" class="tab-pane">
+            <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="personGroupSearch" placeholder="Person oder Gruppe durchsuchen..."></div>
+            <div id="personGroupTableContainer"><div class="loading-spinner">Lade Zuordnungen...</div></div>
+            <div id="personGroupPaginationControls" class="pagination"></div>
+        </div>
+    </div>
+</div>
+<div id="personDetailModal" class="modal-overlay"><div class="modal-content"><h2 id="detailModalTitle">Personendetails</h2><div id="detailModalBody"></div><button id="closeDetailModalBtn">Schließen</button></div></div>
+<div id="groupModal" class="modal-overlay"><div class="modal-content"><div id="modalPersonName"></div><button id="closeModalBtn">Schließen</button></div></div>
 
 <script>
-    const API_URL = 'http://localhost:5000/kon_person';
-    let allPersons = [];            // für Kalender (muss vollständiges Geburtsdatum haben)
-    let currentFilterYear = 'all';   
+    // ---------- API Endpoints (wie erste App) ----------
+    const API_PERSON = "http://localhost:5000/kon_person";
+    const API_GROUP = "http://localhost:5000/kon_person_group";
+    const API_PERSON_GROUP_RELATIONS = "http://localhost:5000/person_group_relations";
+    const API_ADD_REL = "http://localhost:5000/add_person_group_rel";
+    const API_DELETE_REL = "http://localhost:5000/person_group_rel/delete";
+    const API_PERSON_BILD = "http://localhost:5000/person/bild";
+    const API_GESCHAEFTSPARTNER_KONTAKT = "http://localhost:5000/geschaeftspartner_kontakt_rel";
+
+    // Globale Daten
+    let allPersonsRaw = [];           // rohe Personen aus API (für Gruppen-Tabellen und Bilder)
+    let allPersons = [];              // gefilterte/aufbereitete Personen (für Gruppen-Tabellen)
+    let personGroups = [];
+    let groupToPersonIds = new Map();
+    let personToGroupsMap = new Map();
+    let allPersonGroupRelations = [];
+    let allGeschaeftsRelations = [];
+    let currentGroupId = null;
+    let filteredPersons = [];
+    let currentPage = 1, pageSize = 20, totalPages = 1;
+    let selectedPersonsSet = new Set();
     let personImageCache = {};
-    let blobUrlsToRevoke = [];
+    let birthTablePage = 1, birthTablePageSize = 20, birthTableTotalPages = 1, birthTableSort = { col: "pk", dir: "asc" };
+    
+    // NEU: Kalender-spezifische Daten (aus zweitem Code)
+    let calendarPersons = [];          // Personen mit vollem Geburtsdatum (für Kalenderansicht)
+    let globalBirthYearCount = new Map();   // für Diagramm (aktuelle Gruppe)
+    let globalDeathYearCount = new Map();
+    let currentFilterYear = 'all';     // Jahresfilter im Kalender
+    let statsChart = null;              // Chart.js-Instanz
 
-    // Globale Maps für die Diagramm-Statistik (basierend auf allen Rohdaten)
-    let globalBirthYearCount = new Map();   // Jahr -> Anzahl Geburten
-    let globalDeathYearCount = new Map();   // Jahr -> Anzahl Sterbefälle
-
-    const dynamicContainer = document.getElementById('dynamicContent');
-
-    // ---------- HILFSFUNKTIONEN: Jahr aus verschiedenen Feldern extrahieren ----------
-    function extractYearFromDateString(dateStr) {
-        if (!dateStr || typeof dateStr !== 'string') return null;
-        const trimmed = dateStr.trim();
-        if (trimmed === "") return null;
-        // Versuche, die ersten 4 Ziffern als Jahr zu erkennen (YYYY-MM-DD, DD.MM.YYYY, YYYYMMDD, usw.)
-        const match = trimmed.match(/\b(19|20)\d{2}\b/);
-        if (match) return parseInt(match[0], 10);
-        // Fallback: alles was wie eine 4-stellige Zahl aussieht
-        const yearMatch = trimmed.match(/\d{4}/);
-        if (yearMatch) return parseInt(yearMatch[0], 10);
+    // ---------- Hilfsfunktionen (aus erster App) ----------
+    function escapeHtml(s) { if(!s) return ''; return s.replace(/[&<>]/g, m => m==='&'?'&amp;': m==='<'?'&lt;':'&gt;'); }
+    
+    // Erweiterte parseBirthdate (für Tabellen, etc.)
+    function parseBirthdate(dateStr) {
+        if(!dateStr) return null;
+        let m = dateStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+        if(m) return { year: parseInt(m[1]), month: parseInt(m[2]), day: parseInt(m[3]) };
+        m = dateStr.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+        if(m) return { year: parseInt(m[3]), month: parseInt(m[2]), day: parseInt(m[1]) };
+        m = dateStr.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2})$/);
+        if(m) { let y = parseInt(m[3]); if(y<30) y+=2000; else if(y<100) y+=1900; return { year: y, month: parseInt(m[2]), day: parseInt(m[1]) }; }
         return null;
     }
-
-    function getBirthYearFromPerson(item) {
-        // 1. Direktes Feld GEBURTSJAHR (falls vorhanden und numerisch)
-        if (item.GEBURTSJAHR !== undefined && item.GEBURTSJAHR !== null) {
-            let y = parseInt(item.GEBURTSJAHR, 10);
-            if (!isNaN(y) && y > 1000 && y < 2200) return y;
-        }
-        // 2. Aus GEBURTSDATUM extrahieren
-        if (item.GEBURTSDATUM) {
-            let y = extractYearFromDateString(item.GEBURTSDATUM);
-            if (y) return y;
-        }
-        return null;
-    }
-
-    function getDeathYearFromPerson(item) {
-        if (item.STERBEJAHR !== undefined && item.STERBEJAHR !== null) {
-            let y = parseInt(item.STERBEJAHR, 10);
-            if (!isNaN(y) && y > 1000 && y < 2200) return y;
-        }
-        if (item.STERBEDATUM) {
-            let y = extractYearFromDateString(item.STERBEDATUM);
-            if (y) return y;
-        }
-        return null;
-    }
-
-    // ---------- VOLLSTÄNDIGES DATUM für Kalender parsen (Zeitzonen-sicher) ----------
+    
+    // NEU: Robuste Datumsparsing für Kalender (Tag/Monat/Jahr) – aus zweitem Code
     function parseFullBirthdateSafe(dateStr) {
         if (!dateStr || typeof dateStr !== 'string') return null;
         const trimmed = dateStr.trim();
         if (trimmed === "") return null;
-        
         let isoMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
         if (isoMatch) {
             let year = parseInt(isoMatch[1], 10);
@@ -484,7 +263,6 @@
             let day = parseInt(isoMatch[3], 10);
             if (validDate(year, month, day)) return { year, month, day };
         }
-        
         let deMatch = trimmed.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
         if (deMatch) {
             let day = parseInt(deMatch[1], 10);
@@ -492,22 +270,16 @@
             let year = parseInt(deMatch[3], 10);
             if (validDate(year, month, day)) return { year, month, day };
         }
-        
         let slashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
         if (slashMatch) {
             let a = parseInt(slashMatch[1], 10);
             let b = parseInt(slashMatch[2], 10);
             let y = parseInt(slashMatch[3], 10);
-            if (a > 12 && b <= 12) {
-                if (validDate(y, b, a)) return { year: y, month: b, day: a };
-            } else if (b > 12 && a <= 12) {
-                if (validDate(y, a, b)) return { year: y, month: a, day: b };
-            } else {
-                if (validDate(y, a, b)) return { year: y, month: a, day: b };
-                if (validDate(y, b, a)) return { year: y, month: b, day: a };
-            }
+            if (a > 12 && b <= 12 && validDate(y, b, a)) return { year: y, month: b, day: a };
+            else if (b > 12 && a <= 12 && validDate(y, a, b)) return { year: y, month: a, day: b };
+            else if (validDate(y, a, b)) return { year: y, month: a, day: b };
+            else if (validDate(y, b, a)) return { year: y, month: b, day: a };
         }
-        
         let compact = trimmed.match(/^(\d{4})(\d{2})(\d{2})$/);
         if (compact) {
             let y = parseInt(compact[1], 10);
@@ -517,7 +289,6 @@
         }
         return null;
     }
-    
     function validDate(year, month, day) {
         if (year < 1000 || year > 2100) return false;
         if (month < 1 || month > 12) return false;
@@ -525,8 +296,6 @@
         const daysInMonth = new Date(year, month, 0).getDate();
         return day <= daysInMonth;
     }
-    
-    // Geschlecht / Name
     function getGenderLabel(p) {
         let g = p.FK_STD_KON_PERSON_GESCHLECHT;
         if (g === undefined) g = p.geschlecht;
@@ -535,12 +304,8 @@
         if (code === 'm' || code === 'male' || code === '1') return '👨 männlich';
         if (code === 'w' || code === 'f' || code === 'female' || code === '2') return '👩 weiblich';
         if (code === 'd' || code === 'divers' || code === '3') return '⚧ divers';
-        if (g === 1) return '👨 männlich';
-        if (g === 2) return '👩 weiblich';
-        if (g === 3) return '⚧ divers';
         return `⚧ ${g}`;
     }
-    
     function getFullName(p) {
         let v = p.VORNAME?.trim() || '', n = p.NACHNAME?.trim() || '';
         if (v && n) return `${v} ${n}`;
@@ -548,198 +313,457 @@
         if (n) return n;
         return 'Unbekannt';
     }
-    
-    // Bild-Fetch
-    async function fetchPersonMainImage(personId) {
-        if (!personId) return null;
-        if (personImageCache[personId]) return personImageCache[personId];
-        try {
-            const response = await fetch(`http://localhost:5000/person/bild/${personId}`);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const data = await response.json();
-            if (!data || data.length === 0) return null;
-            let mainImage = data.find(img => img.MAIN_BILD === 1) || data[0];
-            if (!mainImage || !mainImage.FILECONTENT) return null;
-            let byteArray;
-            if (mainImage.FILECONTENT.data instanceof Array) {
-                byteArray = new Uint8Array(mainImage.FILECONTENT.data);
-            } else if (mainImage.FILECONTENT.data instanceof Uint8Array) {
-                byteArray = mainImage.FILECONTENT.data;
-            } else if (typeof mainImage.FILECONTENT.data === 'string') {
-                const binaryString = atob(mainImage.FILECONTENT.data);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-                byteArray = bytes;
-            } else return null;
-            const blob = new Blob([byteArray], { type: 'image/jpeg' });
-            const imageUrl = URL.createObjectURL(blob);
-            blobUrlsToRevoke.push(imageUrl);
-            personImageCache[personId] = imageUrl;
-            return imageUrl;
-        } catch (error) {
-            console.error(`Bildfehler ${personId}:`, error);
-            return null;
+    function getBirthYearFromPerson(item) {
+        if (item.GEBURTSJAHR !== undefined && item.GEBURTSJAHR !== null) {
+            let y = parseInt(item.GEBURTSJAHR, 10);
+            if (!isNaN(y) && y > 1000 && y < 2200) return y;
         }
+        if (item.GEBURTSDATUM) {
+            let parsed = parseFullBirthdateSafe(item.GEBURTSDATUM);
+            if (parsed) return parsed.year;
+        }
+        return null;
+    }
+    function getDeathYearFromPerson(item) {
+        if (item.STERBEJAHR !== undefined && item.STERBEJAHR !== null) {
+            let y = parseInt(item.STERBEJAHR, 10);
+            if (!isNaN(y) && y > 1000 && y < 2200) return y;
+        }
+        if (item.STERBEDATUM) {
+            let parsed = parseFullBirthdateSafe(item.STERBEDATUM);
+            if (parsed) return parsed.year;
+        }
+        return null;
     }
     
-    async function loadAllPersonImages() {
-        const avatars = document.querySelectorAll('.person-avatar, .person-avatar-small');
-        for (const img of avatars) {
-            const personId = img.getAttribute('data-person-id');
-            if (personId && personId !== 'null') {
-                const url = await fetchPersonMainImage(personId);
-                if (url) img.src = url;
-                else img.classList.add('avatar-error');
+    // ---------- Bild laden (wie erste App) ----------
+    async function fetchPersonMainImage(pid) {
+        if(personImageCache[pid] !== undefined) return personImageCache[pid];
+        try {
+            const res = await fetch(`${API_PERSON_BILD}/${pid}`);
+            if(!res.ok) { personImageCache[pid]=null; return null; }
+            const data = await res.json();
+            if(!data?.length) { personImageCache[pid]=null; return null; }
+            let main = data.find(img=>img.MAIN_BILD===1) || data[0];
+            if(!main?.FILECONTENT) { personImageCache[pid]=null; return null; }
+            let bytes = (main.FILECONTENT.data instanceof Array) ? new Uint8Array(main.FILECONTENT.data) : new Uint8Array(atob(main.FILECONTENT.data).split('').map(c=>c.charCodeAt(0)));
+            let url = URL.createObjectURL(new Blob([bytes], {type:'image/jpeg'}));
+            personImageCache[pid]=url; return url;
+        } catch(e) { personImageCache[pid]=null; return null; }
+    }
+    async function preloadImagesForPersons(persons) { await Promise.all(persons.map(p=>fetchPersonMainImage(p.PK_KON_PERSON))); }
+    
+    // ---------- Daten laden (erste App + Kalender-Daten) ----------
+    async function loadGroups() {
+        try { let res=await fetch(API_GROUP,{cache:"no-cache"}); if(!res.ok) throw new Error(); let gData=await res.json(); personGroups=Array.isArray(gData)?gData:(gData._embedded?.kon_person_group||[]); renderGroupSidebar(); populateGroupSelects(); } catch(e){console.error(e);}
+    }
+    async function loadPersonGroupRelations() {
+        try { let res=await fetch(API_PERSON_GROUP_RELATIONS,{cache:"no-cache"}); if(!res.ok) throw new Error(); let rData=await res.json(); if(rData.success && Array.isArray(rData.data)){ allPersonGroupRelations=rData.data; buildMapsFromRelations(allPersonGroupRelations); } } catch(e){console.error(e);}
+    }
+    function buildMapsFromRelations(rels) {
+        groupToPersonIds.clear(); personToGroupsMap.clear();
+        rels.forEach(rel=>{ let pid=rel.PK_KON_PERSON, gid=rel.PK_KON_PERSON_GROUP; if(!pid||!gid) return; if(!groupToPersonIds.has(gid)) groupToPersonIds.set(gid,new Set()); groupToPersonIds.get(gid).add(pid); if(!personToGroupsMap.has(pid)) personToGroupsMap.set(pid,[]); personToGroupsMap.get(pid).push({groupId:gid, groupName:rel.PERSON_GROUP_NAME||`Gruppe ${gid}`, relationId:rel.PK_REL_KON_PERSON_PERSON_GROUP}); });
+    }
+    async function loadAllPersons() {
+        try {
+            let res=await fetch(API_PERSON,{cache:"no-cache"}); if(!res.ok) throw new Error();
+            let data=await res.json();
+            allPersonsRaw = Array.isArray(data)?data:(data._embedded?.kon_person||[]);
+            // Für die bestehenden Tabellen und Gruppen: allPersons = alle Rohdaten
+            allPersons = [...allPersonsRaw];
+            filteredPersons = [...allPersons];
+            currentPage = 1;
+            
+            // Kalender-spezifische Aufbereitung: Nur Personen mit vollem Geburtsdatum
+            calendarPersons = [];
+            globalBirthYearCount.clear();
+            globalDeathYearCount.clear();
+            for (const item of allPersonsRaw) {
+                const birthParsed = parseFullBirthdateSafe(item.GEBURTSDATUM);
+                if (birthParsed) {
+                    calendarPersons.push({
+                        id: item.PK_KON_PERSON,
+                        fullName: getFullName(item),
+                        birthYear: birthParsed.year,
+                        birthMonth: birthParsed.month,
+                        birthDay: birthParsed.day,
+                        genderLabel: getGenderLabel(item),
+                        raw: item  // Referenz für Bilder
+                    });
+                }
+                // Jahresstatistiken für Diagramm (basierend auf allen Rohdaten, später gefiltert)
+                const by = getBirthYearFromPerson(item);
+                if (by) globalBirthYearCount.set(by, (globalBirthYearCount.get(by) || 0) + 1);
+                const dy = getDeathYearFromPerson(item);
+                if (dy) globalDeathYearCount.set(dy, (globalDeathYearCount.get(dy) || 0) + 1);
+            }
+            
+            renderPersonList();
+            renderBirthTable();
+            renderCalendar();       // Kalender neu zeichnen
+            renderRelationsTable();
+            renderPersonGroupTable();
+        } catch(e){ document.getElementById('personListContainer').innerHTML='<div class="error">Fehler beim Laden</div>';}
+    }
+    async function loadGeschaeftsRelations() {
+        try { let res=await fetch(API_GESCHAEFTSPARTNER_KONTAKT,{cache:"no-cache"}); if(!res.ok) throw new Error(); let data=await res.json(); allGeschaeftsRelations=(data.success && Array.isArray(data.data))?data.data:[]; renderRelationsTable(); } catch(e){console.error(e);}
+    }
+    async function refreshAllData() {
+        let btn=document.getElementById('globalRefreshBtn'); btn.innerHTML='🔄 Lade Daten...'; btn.disabled=true;
+        try {
+            await Promise.all([loadGroups(), loadPersonGroupRelations(), loadAllPersons(), loadGeschaeftsRelations()]);
+            renderBirthTable();
+            renderCalendar();
+            renderRelationsTable();
+            renderPersonGroupTable();
+            renderPersonList();
+            populateGroupSelects();
+        } catch(e){}
+        btn.innerHTML='🔄 Alle Daten neu laden (vom Webservice)'; btn.disabled=false;
+    }
+    
+    // Gruppen-Filter für Sidebar (wie erste App)
+    function renderGroupSidebar() {
+        let search=document.getElementById('groupSearch').value.toLowerCase();
+        let filtered=personGroups.filter(g=>g.PERSON_GROUP_NAME?.toLowerCase().includes(search));
+        let container=document.getElementById('groupList');
+        if(!filtered.length){ container.innerHTML='<li>Keine Gruppen</li>'; return; }
+        let html='';
+        filtered.forEach(g=>{ let active=(currentGroupId===g.PK_KON_PERSON_GROUP)?'active':''; html+=`<li class="group-item ${active}" data-id="${g.PK_KON_PERSON_GROUP}">${escapeHtml(g.PERSON_GROUP_NAME)} (${g.PK_KON_PERSON_GROUP})</li>`; });
+        container.innerHTML=html;
+        document.querySelectorAll('.group-item').forEach(el=>{ el.addEventListener('click',()=>{ currentGroupId=parseInt(el.dataset.id); renderGroupSidebar(); loadPersonsForGroup(currentGroupId); }); });
+    }
+    function populateGroupSelects() {
+        ['targetGroupSelect','calendarGroupFilter','birthTableGroupFilter'].forEach(id=>{
+            let sel=document.getElementById(id); if(sel) sel.innerHTML='<option value="all">Alle Gruppen</option>'+personGroups.map(g=>`<option value="${g.PK_KON_PERSON_GROUP}">${escapeHtml(g.PERSON_GROUP_NAME)}</option>`).join('');
+        });
+    }
+    async function loadPersonsForGroup(gid) {
+        let pids=groupToPersonIds.get(gid)||new Set(); let persons=[];
+        for(let id of pids){ try{ let res=await fetch(`http://localhost:5000/person/${id}`,{cache:"no-cache"}); if(res.ok){ let d=await res.json(); if(d?.length) persons.push(d[0]); } }catch(e){} }
+        allPersons=persons; filteredPersons=[...persons]; currentPage=1;
+        // Auch Kalenderdaten für diese Gruppe neu aufbauen
+        calendarPersons = [];
+        for (const item of persons) {
+            const birthParsed = parseFullBirthdateSafe(item.GEBURTSDATUM);
+            if (birthParsed) {
+                calendarPersons.push({
+                    id: item.PK_KON_PERSON,
+                    fullName: getFullName(item),
+                    birthYear: birthParsed.year,
+                    birthMonth: birthParsed.month,
+                    birthDay: birthParsed.day,
+                    genderLabel: getGenderLabel(item),
+                    raw: item
+                });
             }
         }
+        renderPersonList();
+        renderBirthTable();
+        renderCalendar();
     }
     
-    // ----- WOCHEN- & SPEZIALTAG-LOGIK (unverändert, basiert auf allPersons)-----
-    function getLocalMonthDay(date) {
-        return { month: date.getMonth() + 1, day: date.getDate() };
+    // ---------- Personenliste (Tab 1) ----------
+    async function renderPersonList() {
+        let searchTerm=document.getElementById('personSearch').value.toLowerCase();
+        let data=filteredPersons.filter(p=> (p.VORNAME?.toLowerCase().includes(searchTerm)||p.NACHNAME?.toLowerCase().includes(searchTerm)||p.PK_KON_PERSON.toString().includes(searchTerm)));
+        totalPages=Math.ceil(data.length/pageSize);
+        let start=(currentPage-1)*pageSize, pageData=data.slice(start,start+pageSize);
+        let container=document.getElementById('personListContainer');
+        if(!pageData.length){ container.innerHTML='<div class="info">Keine Personen gefunden</div>'; setupPagination(0); return; }
+        let html='<div class="person-grid">';
+        for(let p of pageData){
+            let imgUrl=await fetchPersonMainImage(p.PK_KON_PERSON);
+            let selected=selectedPersonsSet.has(p.PK_KON_PERSON)?'selected':'';
+            html+=`<div class="person-card ${selected}" data-id="${p.PK_KON_PERSON}">
+                <div class="card-header"><div class="person-name"><strong>${escapeHtml(p.VORNAME||'')} ${escapeHtml(p.NACHNAME||'')}</strong></div>
+                ${imgUrl?`<img src="${imgUrl}" class="person-image" onerror="this.style.display='none'">`:'<div class="person-image" style="background:#aaa;">📷</div>'}</div>
+                <div class="person-details"><div class="detail-row"><span class="detail-label">ID:</span> ${p.PK_KON_PERSON}</div>
+                <div class="detail-row"><span class="detail-label">Geburt:</span> ${p.GEBURTSDATUM?new Date(p.GEBURTSDATUM).toLocaleDateString():(p.GEBURTSJAHR?p.GEBURTSJAHR:'N/A')}</div>
+                <div class="detail-row"><span class="detail-label">Tod:</span> ${p.STERBEDATUM?new Date(p.STERBEDATUM).toLocaleDateString():(p.TODESDATUM?new Date(p.TODESDATUM).toLocaleDateString():(p.STERBEJAHR?p.STERBEJAHR:'—'))}</div>
+                <button class="show-groups-btn" data-id="${p.PK_KON_PERSON}" data-name="${escapeHtml(p.VORNAME||'')} ${escapeHtml(p.NACHNAME||'')}">Gruppen anzeigen</button></div></div>`;
+        }
+        html+='</div>'; container.innerHTML=html;
+        document.querySelectorAll('.person-card').forEach(card=>{ card.addEventListener('click',(e)=>{ if(e.target.tagName==='BUTTON') return; let pid=parseInt(card.dataset.id); if(selectedPersonsSet.has(pid)) selectedPersonsSet.delete(pid); else selectedPersonsSet.add(pid); updateSelectionUI(); renderPersonList(); }); });
+        document.querySelectorAll('.show-groups-btn').forEach(btn=>{ btn.addEventListener('click',(e)=>{ e.stopPropagation(); let pid=parseInt(btn.dataset.id), name=btn.dataset.name; showGroupModalForPerson(pid,name); }); });
+        setupPagination(data.length);
+    }
+    function setupPagination(total){
+        let totalPg=Math.ceil(total/pageSize);
+        let ctrl=document.getElementById('paginationControls');
+        if(totalPg<=1){ctrl.style.display='none'; return;}
+        ctrl.style.display='flex';
+        ctrl.innerHTML=`<button ${currentPage===1?'disabled':''} onclick="changePage(1)">Erste</button><button ${currentPage===1?'disabled':''} onclick="changePage(${currentPage-1})">←</button><span>${currentPage} / ${totalPg}</span><button ${currentPage===totalPg?'disabled':''} onclick="changePage(${currentPage+1})">→</button><button ${currentPage===totalPg?'disabled':''} onclick="changePage(${totalPg})">Letzte</button>`;
+    }
+    window.changePage=(p)=>{ currentPage=p; renderPersonList(); };
+    function updateSelectionUI(){
+        document.getElementById('selectedCount').innerText=selectedPersonsSet.size;
+        document.getElementById('clearSelectionBtn').disabled=selectedPersonsSet.size===0;
+        let target=document.getElementById('targetGroupSelect').value;
+        document.getElementById('createRelationBtn').disabled=selectedPersonsSet.size===0||!target||target==='all';
+        let listDiv=document.getElementById('selectedPersonsList');
+        if(selectedPersonsSet.size===0){ listDiv.innerHTML=''; return; }
+        let items='';
+        for(let pid of selectedPersonsSet){
+            let p=allPersons.find(x=>x.PK_KON_PERSON==pid);
+            let name=p?`${p.VORNAME||''} ${p.NACHNAME||''}`:`ID ${pid}`;
+            items+=`<div>${escapeHtml(name)} <button class="remove-selected" data-id="${pid}" style="background:transparent; color:red; border:none;">✖</button></div>`;
+        }
+        listDiv.innerHTML=items;
+        document.querySelectorAll('.remove-selected').forEach(btn=>{ btn.addEventListener('click',(e)=>{ let id=parseInt(btn.dataset.id); selectedPersonsSet.delete(id); updateSelectionUI(); renderPersonList(); }); });
+    }
+    async function createRelations(){
+        let gid=document.getElementById('targetGroupSelect').value;
+        if(!gid||gid==='all'||selectedPersonsSet.size===0) return;
+        let statusDiv=document.getElementById('relationStatus');
+        statusDiv.innerText='Erstelle...';
+        let promises=Array.from(selectedPersonsSet).map(pid=>fetch(API_ADD_REL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({FK_KON_PERSON:pid,FK_KON_PERSON_GROUP:gid})}));
+        let results=await Promise.all(promises);
+        if(results.every(r=>r.ok)){
+            statusDiv.innerHTML='<span style="color:green;">✔ Erfolgreich</span>';
+            selectedPersonsSet.clear(); updateSelectionUI(); await refreshAllData();
+        } else statusDiv.innerHTML='<span style="color:red;">Fehler</span>';
+        setTimeout(()=>statusDiv.innerHTML='',2000);
+    }
+    async function showGroupModalForPerson(pid,name){
+        let groups=personToGroupsMap.get(pid)||[];
+        let groupHtml='';
+        if(groups.length===0) groupHtml='<span class="info">Keine Gruppen zugeordnet</span>';
+        else groups.forEach(g=>{ groupHtml+=`<div class="group-badge">${escapeHtml(g.groupName)} <button class="delete-group-from-modal" data-relid="${g.relationId}" style="background:none; border:none; color:red; cursor:pointer;">✖</button></div>`; });
+        let modal=document.getElementById('groupModal');
+        document.getElementById('modalPersonName').innerHTML=`<h3>${escapeHtml(name)} (ID ${pid})</h3><div id="modalGroupListInner">${groupHtml}</div>`;
+        modal.style.display='flex';
+        document.querySelectorAll('.delete-group-from-modal').forEach(btn=>{
+            btn.addEventListener('click',async(e)=>{
+                let relId=parseInt(btn.dataset.relid);
+                if(confirm('Gruppenzuordnung löschen?')){
+                    let res=await fetch(`${API_DELETE_REL}/${relId}`,{method:'DELETE'});
+                    if(res.ok){ await refreshAllData(); modal.style.display='none'; showGroupModalForPerson(pid,name); }
+                    else alert('Fehler');
+                }
+            });
+        });
     }
     
-    function isBirthdayInRangeLocal(month, day, startDate, endDate) {
-        const start = getLocalMonthDay(startDate);
-        const end = getLocalMonthDay(endDate);
-        const birthdayVal = month * 100 + day;
-        const startVal = start.month * 100 + start.day;
-        const endVal = end.month * 100 + end.day;
-        if (startVal <= endVal) return birthdayVal >= startVal && birthdayVal <= endVal;
-        else return birthdayVal >= startVal || birthdayVal <= endVal;
+    // ---------- Geburtstagstabelle (wie erste App) ----------
+    async function renderBirthTable(){
+        let groupFilter=document.getElementById('birthTableGroupFilter').value;
+        let persons=[...allPersons];
+        if(groupFilter!=='all'){ let pids=groupToPersonIds.get(parseInt(groupFilter))||new Set(); persons=persons.filter(p=>pids.has(p.PK_KON_PERSON)); }
+        let withBirth=persons.map(p=>({...p,birthObj:parseBirthdate(p.GEBURTSDATUM)})).filter(p=>p.birthObj&&p.birthObj.day&&p.birthObj.month);
+        if(withBirth.length===0){ document.getElementById('birthTableBody').innerHTML='<tr><td colspan="7">Keine Personen mit Geburtsdatum</td></tr>'; document.getElementById('birthTablePagination').innerHTML=''; return; }
+        let col=birthTableSort.col, dir=birthTableSort.dir;
+        withBirth.sort((a,b)=>{ let va,vb; if(col==='pk'){va=a.PK_KON_PERSON;vb=b.PK_KON_PERSON;} else if(col==='vorname'){va=(a.VORNAME||'').toLowerCase();vb=(b.VORNAME||'').toLowerCase();} else if(col==='nachname'){va=(a.NACHNAME||'').toLowerCase();vb=(b.NACHNAME||'').toLowerCase();} else{va=a.GEBURTSDATUM||'';vb=b.GEBURTSDATUM||'';} if(va<vb) return dir==='asc'?-1:1; if(va>vb) return dir==='asc'?1:-1; return 0; });
+        let searchTerm=document.getElementById('birthTableSearch').value.toLowerCase();
+        let filtered=withBirth.filter(p=>{
+            let full=`${p.VORNAME||''} ${p.NACHNAME||''}`.toLowerCase();
+            let idMatch=p.PK_KON_PERSON.toString().includes(searchTerm);
+            let birthStr=p.GEBURTSDATUM?new Date(p.GEBURTSDATUM).toLocaleDateString('de-DE'):`${p.birthObj.day}.${p.birthObj.month}.${p.birthObj.year}`;
+            let deathStr=p.STERBEDATUM?new Date(p.STERBEDATUM).toLocaleDateString('de-DE'):(p.TODESDATUM?new Date(p.TODESDATUM).toLocaleDateString('de-DE'):(p.STERBEJAHR?p.STERBEJAHR:''));
+            return full.includes(searchTerm)||idMatch||birthStr.includes(searchTerm)||deathStr.includes(searchTerm);
+        });
+        birthTableTotalPages=Math.ceil(filtered.length/birthTablePageSize);
+        let start=(birthTablePage-1)*birthTablePageSize;
+        let pageData=filtered.slice(start,start+birthTablePageSize);
+        await preloadImagesForPersons(pageData);
+        let tbody=document.getElementById('birthTableBody');
+        let rows='';
+        for(let p of pageData){
+            let imgUrl=personImageCache[p.PK_KON_PERSON]||'';
+            let birthDisplay=p.GEBURTSDATUM?new Date(p.GEBURTSDATUM).toLocaleDateString('de-DE'):`${p.birthObj.day}.${p.birthObj.month}.${p.birthObj.year}`;
+            let deathDisplay=p.STERBEDATUM?new Date(p.STERBEDATUM).toLocaleDateString('de-DE'):(p.TODESDATUM?new Date(p.TODESDATUM).toLocaleDateString('de-DE'):(p.STERBEJAHR?p.STERBEJAHR:'—'));
+            let groups=personToGroupsMap.get(p.PK_KON_PERSON)||[];
+            let groupNames=groups.map(g=>g.groupName).join(', ');
+            rows+=`<tr data-pid="${p.PK_KON_PERSON}" data-name="${escapeHtml(p.VORNAME||'')} ${escapeHtml(p.NACHNAME||'')}">
+                         <td><img class="table-avatar" src="${imgUrl}" onerror="this.style.display='none'"></td>
+                         <td>${p.PK_KON_PERSON}</td>
+                         <td>${escapeHtml(p.VORNAME||'')}</td>
+                         <td>${escapeHtml(p.NACHNAME||'')}</td>
+                         <td>${birthDisplay}</td>
+                         <td>${deathDisplay}</td>
+                         <td><span class="group-badge">${escapeHtml(groupNames)||'—'}</span></td>
+                     </tr>`;
+        }
+        tbody.innerHTML=rows;
+        tbody.querySelectorAll('tr').forEach(tr=>{ tr.addEventListener('click',()=>{ let pid=parseInt(tr.dataset.pid), name=tr.dataset.name; showPersonDetailsModal(pid,name); }); });
+        let pagDiv=document.getElementById('birthTablePagination');
+        pagDiv.innerHTML=`<button ${birthTablePage===1?'disabled':''} onclick="changeBirthPage(1)">Erste</button>
+                          <button ${birthTablePage===1?'disabled':''} onclick="changeBirthPage(${birthTablePage-1})">←</button>
+                          <span>${birthTablePage} / ${birthTableTotalPages||1}</span>
+                          <button ${birthTablePage===birthTableTotalPages?'disabled':''} onclick="changeBirthPage(${birthTablePage+1})">→</button>
+                          <button ${birthTablePage===birthTableTotalPages?'disabled':''} onclick="changeBirthPage(${birthTableTotalPages})">Letzte</button>
+                          <select id="birthTablePageSizeSelect"><option value="10" ${birthTablePageSize===10?'selected':''}>10</option><option value="20" ${birthTablePageSize===20?'selected':''}>20</option><option value="50" ${birthTablePageSize===50?'selected':''}>50</option></select>`;
+        let sizeSel=document.getElementById('birthTablePageSizeSelect');
+        if(sizeSel) sizeSel.onchange=e=>{ birthTablePageSize=parseInt(e.target.value); birthTablePage=1; renderBirthTable(); };
+    }
+    window.changeBirthPage=p=>{ birthTablePage=p; renderBirthTable(); };
+    function sortBirthTable(col){ if(birthTableSort.col===col) birthTableSort.dir=birthTableSort.dir==='asc'?'desc':'asc'; else { birthTableSort.col=col; birthTableSort.dir='asc'; } birthTablePage=1; renderBirthTable(); }
+    
+    // ---------- Personendetail-Modal ----------
+    async function showPersonDetailsModal(pid,name){
+        let person=allPersons.find(p=>p.PK_KON_PERSON===pid);
+        if(!person){ try{ let res=await fetch(`http://localhost:5000/person/${pid}`,{cache:"no-cache"}); if(res.ok){ let d=await res.json(); if(d?.length) person=d[0]; } }catch(e){} }
+        if(!person) return;
+        let imgUrl=await fetchPersonMainImage(pid);
+        let birthDisplay=person.GEBURTSDATUM?new Date(person.GEBURTSDATUM).toLocaleDateString('de-DE'):(person.GEBURTSJAHR?person.GEBURTSJAHR:'N/A');
+        let deathDisplay=person.STERBEDATUM?new Date(person.STERBEDATUM).toLocaleDateString('de-DE'):(person.TODESDATUM?new Date(person.TODESDATUM).toLocaleDateString('de-DE'):(person.STERBEJAHR?person.STERBEJAHR:'—'));
+        let groups=personToGroupsMap.get(pid)||[];
+        let groupsHtml=groups.length===0?'<p>Keine Gruppen</p>':'<div style="display:flex;flex-wrap:wrap;gap:0.5rem;">'+groups.map(g=>`<div class="group-badge">${escapeHtml(g.groupName)} <button class="delete-group-from-detail" data-relid="${g.relationId}" style="background:#e74c3c;color:white;padding:2px 6px;">✖</button></div>`).join('')+'</div>';
+        let modalContent=`<div style="text-align:center;">${imgUrl?`<img src="${imgUrl}" class="person-detail-img">`:'<div style="width:80px;height:80px;background:#ccc;border-radius:50%;margin:0 auto;"></div>'}</div>
+                          <div class="detail-modal-grid">
+                              <div class="detail-field"><strong>ID:</strong> ${person.PK_KON_PERSON}</div>
+                              <div class="detail-field"><strong>Vorname:</strong> ${escapeHtml(person.VORNAME||'')}</div>
+                              <div class="detail-field"><strong>Nachname:</strong> ${escapeHtml(person.NACHNAME||'')}</div>
+                              <div class="detail-field"><strong>Geburtsdatum:</strong> ${birthDisplay}</div>
+                              <div class="detail-field"><strong>Sterbedatum:</strong> ${deathDisplay}</div>
+                              <div class="detail-field"><strong>Geschlecht:</strong> ${escapeHtml(person.GESCHLECHT||'—')}</div>
+                              <div class="detail-field"><strong>Bemerkung:</strong> ${escapeHtml(person.BEMERKUNG||'—')}</div>
+                              <div class="detail-field"><strong>Gruppen:</strong></div>${groupsHtml}
+                          </div>`;
+        document.getElementById('detailModalTitle').innerHTML=`${escapeHtml(person.VORNAME||'')} ${escapeHtml(person.NACHNAME||'')}`;
+        document.getElementById('detailModalBody').innerHTML=modalContent;
+        let modal=document.getElementById('personDetailModal'); modal.style.display='flex';
+        document.querySelectorAll('.delete-group-from-detail').forEach(btn=>{
+            btn.addEventListener('click',async(e)=>{
+                e.stopPropagation(); let relId=parseInt(btn.dataset.relid);
+                if(confirm('Gruppe entfernen?')){ await fetch(`${API_DELETE_REL}/${relId}`,{method:'DELETE'}); await refreshAllData(); modal.style.display='none'; showPersonDetailsModal(pid,name); }
+            });
+        });
     }
     
-    function getMondayLocal(date) {
-        const d = new Date(date);
-        const day = d.getDay();
-        const diff = (day === 0 ? 6 : day - 1);
-        d.setDate(d.getDate() - diff);
-        return new Date(d.setHours(0,0,0,0));
+    // ---------- NEUER KALENDER (komplett aus zweitem Code, aber mit Gruppenfilter) ----------
+    async function renderCalendar() {
+        const groupId = document.getElementById('calendarGroupFilter').value;
+        let filteredCalendarPersons = [...calendarPersons];
+        if (groupId !== 'all') {
+            const pids = groupToPersonIds.get(parseInt(groupId)) || new Set();
+            filteredCalendarPersons = calendarPersons.filter(p => pids.has(p.id));
+        }
+        if (filteredCalendarPersons.length === 0) {
+            document.getElementById('enhancedCalendarView').innerHTML = '<div class="info-message">🎂 Keine Personen mit Geburtsdatum in dieser Gruppe.</div>';
+            return;
+        }
+        // Bilder für diese Personen vorladen
+        await Promise.all(filteredCalendarPersons.map(p => fetchPersonMainImage(p.id)));
+        
+        // Jahresstatistiken für Diagramm (basierend auf gefilterten Personen)
+        const birthMap = new Map(), deathMap = new Map();
+        for (const p of filteredCalendarPersons) {
+            const by = p.birthYear;
+            if (by) birthMap.set(by, (birthMap.get(by) || 0) + 1);
+            // Sterbejahr aus der Rohperson holen
+            const rawPerson = allPersonsRaw.find(r => r.PK_KON_PERSON === p.id);
+            const dy = rawPerson ? getDeathYearFromPerson(rawPerson) : null;
+            if (dy) deathMap.set(dy, (deathMap.get(dy) || 0) + 1);
+        }
+        
+        // Rendern der Kalender-Komponenten (angepasst aus zweitem Code)
+        const specialHtml = renderSpecialDays(filteredCalendarPersons);
+        const weeksHtml = renderWeeksPanel(filteredCalendarPersons);
+        const timelineHtml = renderTimelineCollapsible(filteredCalendarPersons);
+        const quarterHtml = renderQuarterView(filteredCalendarPersons);
+        const chartsHtml = `<div class="stats-charts-section">
+            <h3>📊 Geburten & Sterbefälle pro Jahr <span style="font-size:0.8rem;">(Balkendiagramm)</span></h3>
+            <div class="charts-container"><canvas id="birthDeathChart" style="display:block; max-width:100%; height:auto;"></canvas></div>
+            <div class="chart-legend">
+                <span><i class="legend-birth"></i> Geburten (GEBURTSJAHR / GEBURTSDATUM)</span>
+                <span><i class="legend-death"></i> Sterbefälle (STERBEJAHR / STERBEDATUM)</span>
+            </div>
+        </div>`;
+        
+        document.getElementById('enhancedCalendarView').innerHTML = specialHtml + weeksHtml + chartsHtml + timelineHtml + quarterHtml;
+        
+        // Event-Listener für Jahresfilter & Navigation
+        attachCalendarEvents(filteredCalendarPersons);
+        // Diagramm zeichnen
+        drawBarCharts(birthMap, deathMap);
     }
     
-    function getWeekRangeLocal(offsetWeeks = 0) {
-        const today = new Date();
-        const mondayThis = getMondayLocal(today);
-        const start = new Date(mondayThis);
-        start.setDate(mondayThis.getDate() + (offsetWeeks * 7));
-        const end = new Date(start);
-        end.setDate(start.getDate() + 6);
-        end.setHours(23,59,59,999);
-        return { start, end };
-    }
-    
-    function getBirthdaysForWeek(offset) {
-        const { start, end } = getWeekRangeLocal(offset);
-        return allPersons.filter(p => isBirthdayInRangeLocal(p.birthMonth, p.birthDay, start, end))
-            .sort((a,b) => (a.birthMonth*100 + a.birthDay) - (b.birthMonth*100 + b.birthDay));
-    }
-    
-    function getLocalTodayTomorrowYesterday() {
+    // Hilfsfunktionen für Kalender (basierend auf übergebener Personenliste)
+    function renderSpecialDays(persons) {
         const today = new Date();
         const todayMonth = today.getMonth() + 1;
         const todayDay = today.getDate();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(today.getDate() + 1);
-        const yesterday = new Date(today);
-        yesterday.setDate(today.getDate() - 1);
-        return {
-            today: { month: todayMonth, day: todayDay, persons: allPersons.filter(p => p.birthMonth === todayMonth && p.birthDay === todayDay) },
-            tomorrow: { month: tomorrow.getMonth()+1, day: tomorrow.getDate(), persons: allPersons.filter(p => p.birthMonth === (tomorrow.getMonth()+1) && p.birthDay === tomorrow.getDate()) },
-            yesterday: { month: yesterday.getMonth()+1, day: yesterday.getDate(), persons: allPersons.filter(p => p.birthMonth === (yesterday.getMonth()+1) && p.birthDay === yesterday.getDate()) }
-        };
-    }
-    
-    // Rendering kleiner Komponenten
-    function renderCompactPerson(person, showDate = true) {
-        const dateStr = showDate ? `${person.birthDay}.${person.birthMonth}` : '';
-        return `
-            <div class="week-person">
-                <img class="person-avatar-small" data-person-id="${person.id || ''}" 
-                     src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E"
-                     style="width:32px; height:32px; border-radius:50%; object-fit:cover;">
-                <div class="person-detail">
-                    <span class="person-name">${escapeHtml(person.fullName)}</span>
-                    ${showDate ? `<span class="date-badge">🎂 ${dateStr}</span>` : ''}
-                    <span class="gender-badge">${person.genderLabel}</span>
-                </div>
-            </div>
-        `;
-    }
-    
-    function renderPersonItemLarge(person, highlightToday = false) {
-        const todayClass = highlightToday ? 'today-birthday' : '';
-        return `
-            <div class="birthday-item ${todayClass}">
-                <img class="person-avatar" data-person-id="${person.id || ''}" 
-                     src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E"
-                     style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
-                <div class="person-info">
-                    <span class="full-name">${escapeHtml(person.fullName)}</span>
-                    <span class="birth-date">🎂 ${person.birthDay}.${person.birthMonth}.${person.birthYear}</span>
-                    <span class="gender-badge">${person.genderLabel}</span>
-                </div>
-            </div>
-        `;
-    }
-    
-    function renderSpecialDays() {
-        const { today, tomorrow, yesterday } = getLocalTodayTomorrowYesterday();
+        const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+        const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+        const getPersons = (month, day) => persons.filter(p => p.birthMonth === month && p.birthDay === day);
         return `<div class="special-days">
-            <div class="special-card"><div class="special-header">🎉 HEUTE (${today.day}.${today.month})</div><div class="special-list">${today.persons.length ? today.persons.map(p => renderCompactPerson(p, true)).join('') : '<div class="empty-special">✨ Keine Geburtstage heute</div>'}</div></div>
-            <div class="special-card"><div class="special-header">🌅 MORGEN (${tomorrow.day}.${tomorrow.month})</div><div class="special-list">${tomorrow.persons.length ? tomorrow.persons.map(p => renderCompactPerson(p, true)).join('') : '<div class="empty-special">✨ Keine Geburtstage morgen</div>'}</div></div>
-            <div class="special-card"><div class="special-header">⏪ GESTERN (${yesterday.day}.${yesterday.month})</div><div class="special-list">${yesterday.persons.length ? yesterday.persons.map(p => renderCompactPerson(p, true)).join('') : '<div class="empty-special">✨ Keine Geburtstage gestern</div>'}</div></div>
+            <div class="special-card"><div class="special-header">🎉 HEUTE (${todayDay}.${todayMonth})</div><div class="special-list">${renderPersonListCompact(getPersons(todayMonth, todayDay))}</div></div>
+            <div class="special-card"><div class="special-header">🌅 MORGEN (${tomorrow.getDate()}.${tomorrow.getMonth()+1})</div><div class="special-list">${renderPersonListCompact(getPersons(tomorrow.getMonth()+1, tomorrow.getDate()))}</div></div>
+            <div class="special-card"><div class="special-header">⏪ GESTERN (${yesterday.getDate()}.${yesterday.getMonth()+1})</div><div class="special-list">${renderPersonListCompact(getPersons(yesterday.getMonth()+1, yesterday.getDate()))}</div></div>
         </div>`;
     }
-    
-    function renderWeeksPanel() {
-        const prevWeek = getBirthdaysForWeek(-1);
-        const currentWeek = getBirthdaysForWeek(0);
+    function renderPersonListCompact(persons) {
+        if (!persons.length) return '<div class="empty-special">✨ Keine Geburtstage</div>';
+        return persons.map(p => `
+            <div class="week-person">
+                <img class="person-avatar-small" data-person-id="${p.id}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" style="width:32px; height:32px; border-radius:50%; object-fit:cover;">
+                <div class="person-detail"><span class="person-name">${escapeHtml(p.fullName)}</span><span class="date-badge">🎂 ${p.birthDay}.${p.birthMonth}</span><span class="gender-badge">${p.genderLabel}</span></div>
+            </div>`).join('');
+    }
+    function renderWeeksPanel(persons) {
+        const getWeekRange = (offset) => {
+            const today = new Date();
+            const monday = new Date(today); monday.setDate(today.getDate() - today.getDay() + (today.getDay()===0?-6:1));
+            const start = new Date(monday); start.setDate(monday.getDate() + offset*7);
+            const end = new Date(start); end.setDate(start.getDate()+6);
+            return { start, end };
+        };
+        const isInRange = (p, start, end) => {
+            const date = new Date(2000, p.birthMonth-1, p.birthDay);
+            const s = new Date(2000, start.getMonth(), start.getDate());
+            const e = new Date(2000, end.getMonth(), end.getDate());
+            return date >= s && date <= e;
+        };
+        const weekData = (offset) => {
+            const {start,end} = getWeekRange(offset);
+            return persons.filter(p => isInRange(p, start, end)).sort((a,b)=>a.birthDay - b.birthDay);
+        };
         const formatRange = (offset) => {
-            const { start, end } = getWeekRangeLocal(offset);
+            const {start,end} = getWeekRange(offset);
             return `${start.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})} – ${end.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})}`;
         };
         return `<div class="weeks-panel">
-            <div class="week-card"><div class="week-header">📅 Vorherige Woche (${formatRange(-1)})</div><div class="week-list">${prevWeek.length ? prevWeek.map(p => renderCompactPerson(p, true)).join('') : '<div class="empty-special">✨ Keine Geburtstage</div>'}</div></div>
-            <div class="week-card"><div class="week-header">🎈 Diese Woche (${formatRange(0)})</div><div class="week-list">${currentWeek.length ? currentWeek.map(p => renderCompactPerson(p, true)).join('') : '<div class="empty-special">✨ Keine Geburtstage</div>'}</div></div>
+            <div class="week-card"><div class="week-header">📅 Vorherige Woche (${formatRange(-1)})</div><div class="week-list">${renderPersonListCompact(weekData(-1))}</div></div>
+            <div class="week-card"><div class="week-header">🎈 Diese Woche (${formatRange(0)})</div><div class="week-list">${renderPersonListCompact(weekData(0))}</div></div>
         </div>`;
     }
-    
-    // Quartale & Jahresfilter
-    function getSortedYears() {
-        const years = [...new Set(allPersons.map(p => p.birthYear))];
-        years.sort((a,b) => a - b);
-        return years;
+    function renderTimelineCollapsible(persons) {
+        const years = [...new Set(persons.map(p => p.birthYear))].sort((a,b)=>a-b);
+        const yearCounts = {};
+        persons.forEach(p => { yearCounts[p.birthYear] = (yearCounts[p.birthYear]||0)+1; });
+        const chips = years.map(y => `<span class="chip ${currentFilterYear === y ? 'active' : ''}" data-year="${y}">${y} <span style="opacity:0.7;">(${yearCounts[y]})</span></span>`);
+        const allActive = currentFilterYear === 'all' ? 'active' : '';
+        const allChip = `<span class="chip all-chip ${allActive}" data-year="all">🎉 Alle Jahre (${persons.length})</span>`;
+        return `<details class="timeline-collapsible" ${currentFilterYear !== 'all' ? 'open' : ''}><summary>📆 Jahresfilter · Geburtsjahr auswählen (${years.length} Jahre)</summary><div class="timeline-content"><div class="year-nav"><button class="year-nav-btn" id="prevYearBtn">← Vorjahr</button><button class="year-nav-btn" id="nextYearBtn">Nächstes Jahr →</button></div><div class="year-chips">${allChip}${chips.join('')}</div></div></details>`;
     }
-    
-    function goPrevYear() { const years = getSortedYears(); if (years.length===0) return; if (currentFilterYear==='all') currentFilterYear=years[years.length-1]; else { const idx=years.indexOf(currentFilterYear); if (idx>0) currentFilterYear=years[idx-1]; } renderFullUI(); }
-    function goNextYear() { const years = getSortedYears(); if (years.length===0) return; if (currentFilterYear==='all') currentFilterYear=years[0]; else { const idx=years.indexOf(currentFilterYear); if (idx!==-1 && idx<years.length-1) currentFilterYear=years[idx+1]; } renderFullUI(); }
-    
-    function getMonthGroupsFiltered() {
-        let buckets = Array(12).fill().map(() => []);
-        let filtered = (currentFilterYear === 'all') ? allPersons : allPersons.filter(p => p.birthYear === currentFilterYear);
-        for (const p of filtered) buckets[p.birthMonth-1].push(p);
-        for (let i=0;i<12;i++) buckets[i].sort((a,b) => (b.birthYear - a.birthYear) || (a.birthDay - b.birthDay));
-        return buckets;
-    }
-    
-    function renderQuarterView() {
-        const monthGroups = getMonthGroupsFiltered();
+    function renderQuarterView(persons) {
+        let filtered = (currentFilterYear === 'all') ? persons : persons.filter(p => p.birthYear === currentFilterYear);
         const monthNames = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
-        const quarters = [{months:[0,1,2]},{months:[3,4,5]},{months:[6,7,8]},{months:[9,10,11]}];
+        const buckets = Array(12).fill().map(() => []);
+        filtered.forEach(p => buckets[p.birthMonth-1].push(p));
+        for(let i=0;i<12;i++) buckets[i].sort((a,b)=>a.birthDay - b.birthDay);
+        const quarters = [[0,1,2],[3,4,5],[6,7,8],[9,10,11]];
         const today = new Date();
-        const currentMonth = today.getMonth() + 1;
+        const currentMonth = today.getMonth()+1;
         const currentDay = today.getDate();
         let html = `<div class="quarters-container">`;
         for (const q of quarters) {
             html += `<div class="quarter-row">`;
-            for (let mIdx of q.months) {
-                const persons = monthGroups[mIdx];
-                const monthNumber = mIdx+1;
-                const isCurrentMonth = (monthNumber === currentMonth);
-                const monthCardClass = isCurrentMonth ? 'month-card current-month' : 'month-card';
-                html += `<div class="${monthCardClass}"><div class="month-header"><span class="month-name">${monthNames[mIdx]}</span><span class="month-badge">${persons.length} Pers.</span></div><div class="birthday-list">`;
-                if (persons.length === 0) html += `<div class="empty-month">✨ Keine Geburtstage</div>`;
-                else for (const p of persons) html += renderPersonItemLarge(p, (p.birthMonth === currentMonth && p.birthDay === currentDay));
+            for (let mIdx of q) {
+                const monthPersons = buckets[mIdx];
+                const isCurrentMonth = (mIdx+1 === currentMonth);
+                html += `<div class="month-card ${isCurrentMonth ? 'current-month' : ''}">
+                            <div class="month-header"><span class="month-name">${monthNames[mIdx]}</span><span class="month-badge">${monthPersons.length} Pers.</span></div>
+                            <div class="birthday-list">`;
+                if (!monthPersons.length) html += `<div class="empty-month">✨ Keine Geburtstage</div>`;
+                else for (const p of monthPersons) {
+                    const isToday = (p.birthMonth === currentMonth && p.birthDay === currentDay);
+                    html += `<div class="birthday-item ${isToday ? 'today-birthday' : ''}">
+                                <img class="person-avatar" data-person-id="${p.id}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
+                                <div class="person-info"><span class="full-name">${escapeHtml(p.fullName)}</span><span class="birth-date">🎂 ${p.birthDay}.${p.birthMonth}.${p.birthYear}</span><span class="gender-badge">${p.genderLabel}</span></div>
+                            </div>`;
+                }
                 html += `</div></div>`;
             }
             html += `</div>`;
@@ -747,56 +771,71 @@
         html += `</div>`;
         return html;
     }
-    
-    function renderTimelineCollapsible() {
-        const years = getSortedYears();
-        const yearCountMap = {};
-        allPersons.forEach(p => { yearCountMap[p.birthYear] = (yearCountMap[p.birthYear] || 0) + 1; });
-        const chips = years.map(year => `<span class="chip ${currentFilterYear === year ? 'active' : ''}" data-year="${year}">${year} <span style="opacity:0.7;">(${yearCountMap[year]||0})</span></span>`);
-        const allActive = currentFilterYear === 'all' ? 'active' : '';
-        const allChip = `<span class="chip all-chip ${allActive}" data-year="all">🎉 Alle Jahre (${allPersons.length})</span>`;
-        return `<details class="timeline-collapsible"><summary>📆 Jahresfilter · Geburtsjahr auswählen (${years.length} Jahre)</summary><div class="timeline-content"><div class="year-nav"><button class="year-nav-btn" id="prevYearBtn">← Vorjahr</button><button class="year-nav-btn" id="nextYearBtn">Nächstes Jahr →</button></div><div class="year-chips">${allChip}${chips.join('')}</div></div></details>`;
-    }
-    
-    // ---------- BALKENDIAGRAMM basierend auf globalen Maps (alle Rohdaten) ----------
-    function computeBirthDeathYearlyFromGlobal() {
-        if (!globalBirthYearCount.size && !globalDeathYearCount.size) return { years: [], births: [], deaths: [] };
-        const allYearsSet = new Set([...globalBirthYearCount.keys(), ...globalDeathYearCount.keys()]);
-        if (allYearsSet.size === 0) return { years: [], births: [], deaths: [] };
-        const minYear = Math.min(...allYearsSet);
-        const maxYear = Math.max(...allYearsSet);
-        const years = [];
-        const births = [];
-        const deaths = [];
-        for (let y = minYear; y <= maxYear; y++) {
-            years.push(y);
-            births.push(globalBirthYearCount.get(y) || 0);
-            deaths.push(globalDeathYearCount.get(y) || 0);
+    function attachCalendarEvents(persons) {
+        document.querySelectorAll('.chip').forEach(chip => {
+            chip.removeEventListener('click', chip._listener);
+            chip._listener = () => {
+                const yearVal = chip.getAttribute('data-year');
+                if (yearVal === 'all') currentFilterYear = 'all';
+                else currentFilterYear = parseInt(yearVal, 10);
+                renderCalendar();
+            };
+            chip.addEventListener('click', chip._listener);
+        });
+        const prevBtn = document.getElementById('prevYearBtn');
+        const nextBtn = document.getElementById('nextYearBtn');
+        if (prevBtn) {
+            prevBtn.removeEventListener('click', prevBtn._listener);
+            prevBtn._listener = () => {
+                const years = [...new Set(persons.map(p => p.birthYear))].sort((a,b)=>a-b);
+                if (!years.length) return;
+                if (currentFilterYear === 'all') currentFilterYear = years[years.length-1];
+                else {
+                    const idx = years.indexOf(currentFilterYear);
+                    if (idx > 0) currentFilterYear = years[idx-1];
+                }
+                renderCalendar();
+            };
+            prevBtn.addEventListener('click', prevBtn._listener);
         }
-        return { years, births, deaths };
+        if (nextBtn) {
+            nextBtn.removeEventListener('click', nextBtn._listener);
+            nextBtn._listener = () => {
+                const years = [...new Set(persons.map(p => p.birthYear))].sort((a,b)=>a-b);
+                if (!years.length) return;
+                if (currentFilterYear === 'all') currentFilterYear = years[0];
+                else {
+                    const idx = years.indexOf(currentFilterYear);
+                    if (idx !== -1 && idx < years.length-1) currentFilterYear = years[idx+1];
+                }
+                renderCalendar();
+            };
+            nextBtn.addEventListener('click', nextBtn._listener);
+        }
+        // Bilder nachladen
+        setTimeout(() => {
+            document.querySelectorAll('.person-avatar, .person-avatar-small').forEach(img => {
+                const pid = img.getAttribute('data-person-id');
+                if (pid && personImageCache[pid]) img.src = personImageCache[pid];
+            });
+        }, 100);
     }
-    
-    function drawBarCharts() {
+    function drawBarCharts(birthMap, deathMap) {
         const canvas = document.getElementById('birthDeathChart');
         if (!canvas) return;
-        const { years, births, deaths } = computeBirthDeathYearlyFromGlobal();
-        if (years.length === 0) {
+        const allYears = new Set([...birthMap.keys(), ...deathMap.keys()]);
+        if (allYears.size === 0) {
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.font = '14px Inter, sans-serif';
             ctx.fillStyle = '#64748b';
-            ctx.fillText('Keine Jahresdaten (GEBURTSJAHR/STERBEJAHR) verfügbar', 20, 50);
+            ctx.fillText('Keine Jahresdaten', 20, 50);
             return;
         }
+        const years = Array.from(allYears).sort((a,b)=>a-b);
+        const births = years.map(y => birthMap.get(y) || 0);
+        const deaths = years.map(y => deathMap.get(y) || 0);
         
-        const groupWidth = 48;
-        const barWidth = 18;
-        const marginLeft = 60;
-        const marginRight = 30;
-        const marginTop = 30;
-        const marginBottom = 60;
-        const chartHeight = 300;
-        
+        const groupWidth = 48, barWidth = 18, marginLeft = 60, marginRight = 30, marginTop = 30, marginBottom = 60, chartHeight = 300;
         const totalWidth = marginLeft + (years.length * groupWidth) + marginRight;
         canvas.width = Math.max(700, totalWidth);
         canvas.height = chartHeight + marginTop + marginBottom;
@@ -806,177 +845,111 @@
         const maxCount = Math.max(...births, ...deaths, 1);
         const yScale = chartHeight / maxCount;
         
-        ctx.beginPath();
-        ctx.strokeStyle = '#cbd5e1';
-        ctx.lineWidth = 1;
-        ctx.moveTo(marginLeft - 4, marginTop);
-        ctx.lineTo(marginLeft - 4, marginTop + chartHeight);
-        ctx.lineTo(canvas.width - marginRight + 8, marginTop + chartHeight);
-        ctx.stroke();
-        
-        ctx.fillStyle = '#334155';
-        ctx.font = '11px Inter, monospace';
+        ctx.beginPath(); ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1;
+        ctx.moveTo(marginLeft - 4, marginTop); ctx.lineTo(marginLeft - 4, marginTop + chartHeight); ctx.lineTo(canvas.width - marginRight + 8, marginTop + chartHeight); ctx.stroke();
+        ctx.fillStyle = '#334155'; ctx.font = '11px monospace';
         for (let i = 0; i <= maxCount; i++) {
             const y = marginTop + chartHeight - (i * yScale);
             ctx.fillText(i.toString(), marginLeft - 20, y + 3);
-            ctx.beginPath();
-            ctx.strokeStyle = '#e2e8f0';
-            ctx.moveTo(marginLeft - 4, y);
-            ctx.lineTo(canvas.width - marginRight + 8, y);
-            ctx.stroke();
+            ctx.beginPath(); ctx.strokeStyle = '#e2e8f0'; ctx.moveTo(marginLeft - 4, y); ctx.lineTo(canvas.width - marginRight + 8, y); ctx.stroke();
         }
-        
         for (let idx = 0; idx < years.length; idx++) {
-            const year = years[idx];
             const xCenter = marginLeft + idx * groupWidth + groupWidth/2;
             const birthHeight = births[idx] * yScale;
             const deathHeight = deaths[idx] * yScale;
-            const birthX = xCenter - barWidth - 2;
-            const deathX = xCenter + 2;
-            
             ctx.fillStyle = '#3b82f6';
-            ctx.fillRect(birthX, marginTop + chartHeight - birthHeight, barWidth, birthHeight);
+            ctx.fillRect(xCenter - barWidth - 2, marginTop + chartHeight - birthHeight, barWidth, birthHeight);
             ctx.fillStyle = '#dc2626';
-            ctx.fillRect(deathX, marginTop + chartHeight - deathHeight, barWidth, deathHeight);
-            
-            ctx.fillStyle = '#1e293b';
-            ctx.font = '10px Inter, sans-serif';
-            ctx.save();
-            ctx.translate(xCenter, marginTop + chartHeight + 18);
-            ctx.rotate(-0.35);
-            ctx.fillText(year.toString(), 0, 0);
-            ctx.restore();
+            ctx.fillRect(xCenter + 2, marginTop + chartHeight - deathHeight, barWidth, deathHeight);
+            ctx.fillStyle = '#1e293b'; ctx.font = '10px Inter';
+            ctx.save(); ctx.translate(xCenter, marginTop + chartHeight + 18); ctx.rotate(-0.35); ctx.fillText(years[idx].toString(), 0, 0); ctx.restore();
         }
-        
-        ctx.fillStyle = '#0f172a';
-        ctx.font = 'bold 12px Inter';
+        ctx.fillStyle = '#0f172a'; ctx.font = 'bold 12px Inter';
         ctx.fillText('⬅ Geburten   |   Sterbefälle ➔', canvas.width/2 - 100, marginTop - 8);
     }
     
-    function renderChartsPlaceholder() {
-        // Zeige immer den Bereich an, auch wenn noch keine Daten da sind
-        return `<div class="stats-charts-section">
-            <h3>📊 Geburten & Sterbefälle pro Jahr <span style="font-size:0.8rem;">(Balkendiagramm)</span></h3>
-            <div class="charts-container">
-                <canvas id="birthDeathChart" style="display:block; max-width:100%; height:auto;"></canvas>
-            </div>
-            <div class="chart-legend">
-                <span><i class="legend-birth"></i> Geburten (GEBURTSJAHR / GEBURTSDATUM)</span>
-                <span><i class="legend-death"></i> Sterbefälle (STERBEJAHR / STERBEDATUM)</span>
-            </div>
-        </div>`;
+    // ---------- Tabellen (Relationen, Person-Gruppen) wie erste App ----------
+    async function renderRelationsTable(){
+        let container=document.getElementById('relationsTableContainer');
+        container.innerHTML='<div class="loading-spinner">Lade...</div>';
+        try{
+            let res=await fetch(API_GESCHAEFTSPARTNER_KONTAKT,{cache:"no-cache"});
+            if(!res.ok) throw new Error();
+            let data=await res.json();
+            let relations=(data.success && Array.isArray(data.data))?data.data:[];
+            let search=document.getElementById('relationSearch').value.toLowerCase();
+            let filtered=relations.filter(r=>(r.VORNAME?.toLowerCase().includes(search)||r.NACHNAME?.toLowerCase().includes(search)||r.LOCATION?.toLowerCase().includes(search)||r.ORG_UNIT_NAME?.toLowerCase().includes(search)));
+            if(!filtered.length){ container.innerHTML='<div>Keine Relationen gefunden</div>'; return; }
+            let html='<table class="relations-table"><thead><tr><th>Bild</th><th>Person</th><th>Location</th><th>Organisation</th></tr></thead><tbody>';
+            for(let r of filtered.slice(0,50)){
+                let imgUrl=await fetchPersonMainImage(r.PK_KON_PERSON);
+                html+=`<tr><td><img class="table-avatar" src="${imgUrl||''}" onerror="this.style.display='none'"></td><td>${escapeHtml(r.VORNAME||'')} ${escapeHtml(r.NACHNAME||'')}</td><td>${escapeHtml(r.LOCATION||'')}</td><td>${escapeHtml(r.ORG_UNIT_NAME||'')}</td></tr>`;
+            }
+            html+='</tbody></table>';
+            container.innerHTML=html;
+        } catch(e){ container.innerHTML='<div class="error">Fehler</div>'; }
+    }
+    async function renderPersonGroupTable(){
+        let container=document.getElementById('personGroupTableContainer');
+        container.innerHTML='<div class="loading-spinner">Lade...</div>';
+        try{
+            let res=await fetch(API_PERSON_GROUP_RELATIONS,{cache:"no-cache"});
+            if(!res.ok) throw new Error();
+            let rData=await res.json();
+            let relations=(rData.success && Array.isArray(rData.data))?rData.data:[];
+            let search=document.getElementById('personGroupSearch')?.value.toLowerCase()||'';
+            let filtered=relations.filter(r=>(r.VORNAME?.toLowerCase().includes(search)||r.NACHNAME?.toLowerCase().includes(search)||r.PERSON_GROUP_NAME?.toLowerCase().includes(search)));
+            let pageSizePg=25, currentPg=1;
+            let totalPg=Math.ceil(filtered.length/pageSizePg);
+            let start=(currentPg-1)*pageSizePg;
+            let pageData=filtered.slice(start,start+pageSizePg);
+            if(!pageData.length){ container.innerHTML='<div>Keine Einträge</div>'; document.getElementById('personGroupPaginationControls').innerHTML=''; return; }
+            let html='<table class="person-group-table"><thead><tr><th>Bild</th><th>Person</th><th>Gruppe</th><th>Aktion</th></tr></thead><tbody>';
+            for(let r of pageData){
+                let imgUrl=await fetchPersonMainImage(r.PK_KON_PERSON);
+                html+=`<tr><td><img class="table-avatar" src="${imgUrl||''}" onerror="this.style.display='none'"></td><td>${escapeHtml(r.VORNAME||'')} ${escapeHtml(r.NACHNAME||'')}</td><td>${escapeHtml(r.PERSON_GROUP_NAME)}</td><td><button class="delRelBtn" data-relid="${r.PK_REL_KON_PERSON_PERSON_GROUP}">Löschen</button></td></tr>`;
+            }
+            html+='</tbody></table>';
+            container.innerHTML=html;
+            document.querySelectorAll('.delRelBtn').forEach(btn=>btn.addEventListener('click',async(e)=>{ let relId=btn.dataset.relid; if(confirm('Löschen?')){ await fetch(`${API_DELETE_REL}/${relId}`,{method:'DELETE'}); await refreshAllData(); } }));
+            document.getElementById('personGroupPaginationControls').innerHTML=`<span>Seite ${currentPg} von ${totalPg}</span>`;
+        } catch(e){ container.innerHTML='<div class="error">Fehler</div>'; }
     }
     
-    // ----- Haupt-Rendering (inkl. Diagramm) -----
-    async function renderFullUI() {
-        if (!allPersons.length) {
-            dynamicContainer.innerHTML = `<div class="status-card"><span style="font-size:2rem;">🎈</span><p>Keine gültigen Geburtsdaten für Kalender.</p><p>Diagramm zeigt evtl. trotzdem Jahreszahlen.</p></div>`;
-            document.getElementById('statsCount').innerText = `0 Personen`;
-            // Diagramm trotzdem zeichnen (falls globale Maps gefüllt sind)
-            const chartsHtml = renderChartsPlaceholder();
-            dynamicContainer.innerHTML = '' ; // chartsHtml + dynamicContainer.innerHTML;
-            drawBarCharts();
-            return;
-        }
-        const totalFiltered = (currentFilterYear === 'all') ? allPersons.length : allPersons.filter(p => p.birthYear === currentFilterYear).length;
-        const yearText = (currentFilterYear !== 'all') ? `· Jahr ${currentFilterYear}` : '';
-        document.getElementById('statsCount').innerHTML = `${totalFiltered} ${totalFiltered === 1 ? 'Person' : 'Personen'} ${yearText}`;
-        
-        const specialHtml = renderSpecialDays();
-        const weeksHtml = renderWeeksPanel();
-        const chartsHtml = renderChartsPlaceholder();
-        const timelineHtml = renderTimelineCollapsible();
-        const quarterHtml = renderQuarterView();
-        
-        dynamicContainer.innerHTML = `${specialHtml}${weeksHtml}${chartsHtml}${timelineHtml}${quarterHtml}`;
-        
-        // Event-Listener für Jahresfilter
-        document.querySelectorAll('.chip').forEach(chip => {
-            chip.addEventListener('click', (e) => {
-                const yearVal = chip.getAttribute('data-year');
-                if (yearVal === 'all') currentFilterYear = 'all';
-                else currentFilterYear = parseInt(yearVal, 10);
-                renderFullUI();
-            });
+    // ---------- Event Listener & Initialisierung ----------
+    document.getElementById('globalRefreshBtn').onclick=refreshAllData;
+    document.getElementById('allPersonsBtn').onclick=()=>{ currentGroupId=null; loadAllPersons(); renderGroupSidebar(); };
+    document.getElementById('personSearch').addEventListener('input',()=>{ currentPage=1; renderPersonList(); });
+    document.getElementById('groupSearch').addEventListener('input',()=>renderGroupSidebar());
+    document.getElementById('clearSelectionBtn').onclick=()=>{ selectedPersonsSet.clear(); updateSelectionUI(); renderPersonList(); };
+    document.getElementById('createRelationBtn').onclick=createRelations;
+    document.getElementById('targetGroupSelect').onchange=()=>updateSelectionUI();
+    document.getElementById('calendarGroupFilter').onchange=()=>{ currentFilterYear='all'; renderCalendar(); };
+    document.getElementById('birthTableGroupFilter').onchange=()=>{ birthTablePage=1; renderBirthTable(); };
+    document.getElementById('birthTableSearch').addEventListener('input',()=>{ birthTablePage=1; renderBirthTable(); });
+    document.getElementById('closeDetailModalBtn').onclick=()=>document.getElementById('personDetailModal').style.display='none';
+    document.getElementById('closeModalBtn').onclick=()=>document.getElementById('groupModal').style.display='none';
+    document.getElementById('relationSearch').addEventListener('input',()=>renderRelationsTable());
+    document.getElementById('personGroupSearch').addEventListener('input',()=>renderPersonGroupTable());
+    window.onclick=e=>{ if(e.target===document.getElementById('personDetailModal')) document.getElementById('personDetailModal').style.display='none'; if(e.target===document.getElementById('groupModal')) document.getElementById('groupModal').style.display='none'; };
+    document.querySelectorAll('.tab-btn').forEach(btn=>{
+        btn.addEventListener('click',async()=>{
+            document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+            btn.classList.add('active');
+            let tab=btn.dataset.tab;
+            document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            if(tab==='calendar') await renderCalendar();
+            if(tab==='birthTable') await renderBirthTable();
+            if(tab==='relations') await renderRelationsTable();
+            if(tab==='groupRelations') await renderPersonGroupTable();
+            if(tab==='persons') renderPersonList();
         });
-        const prevBtn = document.getElementById('prevYearBtn');
-        const nextBtn = document.getElementById('nextYearBtn');
-        if (prevBtn) prevBtn.addEventListener('click', (e) => { e.preventDefault(); goPrevYear(); });
-        if (nextBtn) nextBtn.addEventListener('click', (e) => { e.preventDefault(); goNextYear(); });
-        
-        await loadAllPersonImages();
-        drawBarCharts(); // nach DOM-Aktualisierung zeichnen
-    }
+    });
+    document.querySelectorAll('#birthTableBody th').forEach((th,idx)=>{ if(idx>=1&&idx<=4) th.onclick=()=>sortBirthTable(['pk','vorname','nachname','birthdate'][idx]); });
     
-    function revokeOldBlobs() {
-        for (const url of blobUrlsToRevoke) URL.revokeObjectURL(url);
-        blobUrlsToRevoke = [];
-        personImageCache = {};
-    }
-    
-    async function fetchBirthdays() {
-        revokeOldBlobs();
-        // globale Maps zurücksetzen
-        globalBirthYearCount.clear();
-        globalDeathYearCount.clear();
-        
-        try {
-            const resp = await fetch(API_URL, { method: 'GET', headers: { 'Accept': 'application/json' } });
-            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-            let data = await resp.json();
-            let raw = [];
-            if (Array.isArray(data)) raw = data;
-            else if (data && typeof data === 'object') {
-                for (let k in data) {
-                    let v = data[k];
-                    if (v && typeof v === 'object') {
-                        if (Array.isArray(v)) raw.push(...v);
-                        else if (v.PK_KON_PERSON !== undefined || v.VORNAME) raw.push(v);
-                        else for (let sub in v) if (v[sub] && (v[sub].PK_KON_PERSON)) raw.push(v[sub]);
-                    }
-                }
-            }
-            
-            // 1. Sammle Jahr-Statistiken für Diagramm (alle Rohdaten)
-            for (const item of raw) {
-                const birthYear = getBirthYearFromPerson(item);
-                if (birthYear) globalBirthYearCount.set(birthYear, (globalBirthYearCount.get(birthYear) || 0) + 1);
-                const deathYear = getDeathYearFromPerson(item);
-                if (deathYear) globalDeathYearCount.set(deathYear, (globalDeathYearCount.get(deathYear) || 0) + 1);
-            }
-            
-            // 2. Für Kalender: benötigen vollständiges Geburtsdatum (Tag/Monat/Jahr)
-            const valid = [];
-            for (const item of raw) {
-                const birthParsed = parseFullBirthdateSafe(item.GEBURTSDATUM);
-                if (!birthParsed) continue;
-                valid.push({
-                    id: item.PK_KON_PERSON,
-                    fullName: getFullName(item),
-                    birthYear: birthParsed.year,
-                    birthMonth: birthParsed.month,
-                    birthDay: birthParsed.day,
-                    genderLabel: getGenderLabel(item)
-                });
-            }
-            
-            if (valid.length === 0 && globalBirthYearCount.size === 0 && globalDeathYearCount.size === 0) {
-                throw new Error('Keine gültigen Geburts- oder Sterbedaten gefunden');
-            }
-            
-            allPersons = valid;
-            currentFilterYear = 'all';
-            await renderFullUI();
-        } catch (err) {
-            dynamicContainer.innerHTML = `<div class="status-card"><span>⚠️</span><p style="color:#991b1b;">${err.message}</p><button class="retry" onclick="location.reload()">🔄 Wiederholen</button></div>`;
-            document.getElementById('statsCount').innerText = 'Fehler';
-        }
-    }
-    
-    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;': m==='<'?'&lt;':'&gt;'); }
-    
-    window.addEventListener('resize', () => { if(document.getElementById('birthDeathChart')) drawBarCharts(); });
-    fetchBirthdays();
+    async function init(){ await refreshAllData(); }
+    init();
 </script>
 </body>
 </html>
