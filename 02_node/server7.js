@@ -4963,6 +4963,28 @@ app.get("/kon_person", async (req, res) => {
     }
 });
 
+app.get("/wahl_umfragen", async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT 
+                   vpers.*
+                    FROM 
+                        "COMPANY"."T_WAHL_UMFRAGEN" vpers
+                   
+                  
+                     
+                    ;`
+        );
+        res.json(result.rows);
+    } catch (error) {
+        console.error("Database error:", error.message);
+        res.status(500).json({ 
+            error: "Failed to fetch accounts",
+            details: process.env.NODE_ENV === "development" ? error.message : undefined
+        });
+    }
+});
+
 app.get("/bahn_europa", async (req, res) => {
     try {
         const result = await pool.query(
