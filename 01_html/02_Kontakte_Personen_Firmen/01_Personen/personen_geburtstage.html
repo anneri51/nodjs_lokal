@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Geburtstage · Quartale · Porträts · Sterbejahr-Balken</title>
+    <title>Geburtstage · Quartale · Porträts · Sterbejahr-Balken (verbessert)</title>
     <style>
         * {
             margin: 0;
@@ -415,20 +415,64 @@
         <div class="stats" id="statsCount">– Personen</div>
     </div>
     <div id="dynamicContent"><div class="status-card"><div class="spinner"></div><p>Lade Geburts- & Sterbedaten von localhost:5000/kon_person ...</p></div></div>
-    <footer>🎂 Bilder via /person/bild/{id} · Navigation mit ← Vorjahr / Nächstes Jahr →<br>✅ Zeitzonen-sicher: Geburts- und Sterbedaten immer nackte Jahreszahlen · Balkendiagramm: Geburten / Sterbefälle pro Jahr</footer>
+    <footer>🎂 Bilder via /person/bild/{id} · Navigation mit ← Vorjahr / Nächstes Jahr →<br>✅ Zeitzonen-sicher: Geburts- und Sterbedaten immer nackte Jahreszahlen · Balkendiagramm: Geburten / Sterbefälle pro Jahr (basierend auf GEBURTSJAHR/GEBURTSDATUM und STERBEJAHR/STERBEDATUM)</footer>
 </div>
 
 <script>
     const API_URL = 'http://localhost:5000/kon_person';
-    let allPersons = [];            // speichert {id, fullName, birthYear, birthMonth, birthDay, deathYear, genderLabel}
+    let allPersons = [];            // für Kalender (muss vollständiges Geburtsdatum haben)
     let currentFilterYear = 'all';   
     let personImageCache = {};
     let blobUrlsToRevoke = [];
 
+    // Globale Maps für die Diagramm-Statistik (basierend auf allen Rohdaten)
+    let globalBirthYearCount = new Map();   // Jahr -> Anzahl Geburten
+    let globalDeathYearCount = new Map();   // Jahr -> Anzahl Sterbefälle
+
     const dynamicContainer = document.getElementById('dynamicContent');
 
-    // ---------- ZEITZONEN-SICHERES PARSEN (für Geburtsdatum & Sterbedatum) ----------
-    function parseDateSafe(dateStr) {
+    // ---------- HILFSFUNKTIONEN: Jahr aus verschiedenen Feldern extrahieren ----------
+    function extractYearFromDateString(dateStr) {
+        if (!dateStr || typeof dateStr !== 'string') return null;
+        const trimmed = dateStr.trim();
+        if (trimmed === "") return null;
+        // Versuche, die ersten 4 Ziffern als Jahr zu erkennen (YYYY-MM-DD, DD.MM.YYYY, YYYYMMDD, usw.)
+        const match = trimmed.match(/\b(19|20)\d{2}\b/);
+        if (match) return parseInt(match[0], 10);
+        // Fallback: alles was wie eine 4-stellige Zahl aussieht
+        const yearMatch = trimmed.match(/\d{4}/);
+        if (yearMatch) return parseInt(yearMatch[0], 10);
+        return null;
+    }
+
+    function getBirthYearFromPerson(item) {
+        // 1. Direktes Feld GEBURTSJAHR (falls vorhanden und numerisch)
+        if (item.GEBURTSJAHR !== undefined && item.GEBURTSJAHR !== null) {
+            let y = parseInt(item.GEBURTSJAHR, 10);
+            if (!isNaN(y) && y > 1000 && y < 2200) return y;
+        }
+        // 2. Aus GEBURTSDATUM extrahieren
+        if (item.GEBURTSDATUM) {
+            let y = extractYearFromDateString(item.GEBURTSDATUM);
+            if (y) return y;
+        }
+        return null;
+    }
+
+    function getDeathYearFromPerson(item) {
+        if (item.STERBEJAHR !== undefined && item.STERBEJAHR !== null) {
+            let y = parseInt(item.STERBEJAHR, 10);
+            if (!isNaN(y) && y > 1000 && y < 2200) return y;
+        }
+        if (item.STERBEDATUM) {
+            let y = extractYearFromDateString(item.STERBEDATUM);
+            if (y) return y;
+        }
+        return null;
+    }
+
+    // ---------- VOLLSTÄNDIGES DATUM für Kalender parsen (Zeitzonen-sicher) ----------
+    function parseFullBirthdateSafe(dateStr) {
         if (!dateStr || typeof dateStr !== 'string') return null;
         const trimmed = dateStr.trim();
         if (trimmed === "") return null;
@@ -505,7 +549,7 @@
         return 'Unbekannt';
     }
     
-    // Bild-Fetch (unverändert)
+    // Bild-Fetch
     async function fetchPersonMainImage(personId) {
         if (!personId) return null;
         if (personImageCache[personId]) return personImageCache[personId];
@@ -550,7 +594,7 @@
         }
     }
     
-    // ----- Wochen- & Spezialtag-Logik (weiterhin lokal) -----
+    // ----- WOCHEN- & SPEZIALTAG-LOGIK (unverändert, basiert auf allPersons)-----
     function getLocalMonthDay(date) {
         return { month: date.getMonth() + 1, day: date.getDate() };
     }
@@ -605,7 +649,7 @@
         };
     }
     
-    // ----- Rendering kleiner Komponenten (unverändert)-----
+    // Rendering kleiner Komponenten
     function renderCompactPerson(person, showDate = true) {
         const dateStr = showDate ? `${person.birthDay}.${person.birthMonth}` : '';
         return `
@@ -660,14 +704,14 @@
         </div>`;
     }
     
-    // Quartale & Jahresfilter (wie zuvor)
+    // Quartale & Jahresfilter
     function getSortedYears() {
         const years = [...new Set(allPersons.map(p => p.birthYear))];
         years.sort((a,b) => a - b);
         return years;
     }
     
-    function goPrevYear() { /* unverändert */ const years = getSortedYears(); if (years.length===0) return; if (currentFilterYear==='all') currentFilterYear=years[years.length-1]; else { const idx=years.indexOf(currentFilterYear); if (idx>0) currentFilterYear=years[idx-1]; } renderFullUI(); }
+    function goPrevYear() { const years = getSortedYears(); if (years.length===0) return; if (currentFilterYear==='all') currentFilterYear=years[years.length-1]; else { const idx=years.indexOf(currentFilterYear); if (idx>0) currentFilterYear=years[idx-1]; } renderFullUI(); }
     function goNextYear() { const years = getSortedYears(); if (years.length===0) return; if (currentFilterYear==='all') currentFilterYear=years[0]; else { const idx=years.indexOf(currentFilterYear); if (idx!==-1 && idx<years.length-1) currentFilterYear=years[idx+1]; } renderFullUI(); }
     
     function getMonthGroupsFiltered() {
@@ -714,15 +758,10 @@
         return `<details class="timeline-collapsible"><summary>📆 Jahresfilter · Geburtsjahr auswählen (${years.length} Jahre)</summary><div class="timeline-content"><div class="year-nav"><button class="year-nav-btn" id="prevYearBtn">← Vorjahr</button><button class="year-nav-btn" id="nextYearBtn">Nächstes Jahr →</button></div><div class="year-chips">${allChip}${chips.join('')}</div></div></details>`;
     }
     
-    // ---------- BALKENDIAGRAMM: Geburten- & Sterbefälle pro Jahr ----------
-    function computeBirthDeathYearly() {
-        const birthsMap = new Map();
-        const deathsMap = new Map();
-        for (const p of allPersons) {
-            if (p.birthYear) birthsMap.set(p.birthYear, (birthsMap.get(p.birthYear) || 0) + 1);
-            if (p.deathYear) deathsMap.set(p.deathYear, (deathsMap.get(p.deathYear) || 0) + 1);
-        }
-        const allYearsSet = new Set([...birthsMap.keys(), ...deathsMap.keys()]);
+    // ---------- BALKENDIAGRAMM basierend auf globalen Maps (alle Rohdaten) ----------
+    function computeBirthDeathYearlyFromGlobal() {
+        if (!globalBirthYearCount.size && !globalDeathYearCount.size) return { years: [], births: [], deaths: [] };
+        const allYearsSet = new Set([...globalBirthYearCount.keys(), ...globalDeathYearCount.keys()]);
         if (allYearsSet.size === 0) return { years: [], births: [], deaths: [] };
         const minYear = Math.min(...allYearsSet);
         const maxYear = Math.max(...allYearsSet);
@@ -731,8 +770,8 @@
         const deaths = [];
         for (let y = minYear; y <= maxYear; y++) {
             years.push(y);
-            births.push(birthsMap.get(y) || 0);
-            deaths.push(deathsMap.get(y) || 0);
+            births.push(globalBirthYearCount.get(y) || 0);
+            deaths.push(globalDeathYearCount.get(y) || 0);
         }
         return { years, births, deaths };
     }
@@ -740,17 +779,17 @@
     function drawBarCharts() {
         const canvas = document.getElementById('birthDeathChart');
         if (!canvas) return;
-        const { years, births, deaths } = computeBirthDeathYearly();
+        const { years, births, deaths } = computeBirthDeathYearlyFromGlobal();
         if (years.length === 0) {
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.font = '14px Inter, sans-serif';
             ctx.fillStyle = '#64748b';
-            ctx.fillText('Keine Jahresdaten verfügbar', 20, 50);
+            ctx.fillText('Keine Jahresdaten (GEBURTSJAHR/STERBEJAHR) verfügbar', 20, 50);
             return;
         }
         
-        const groupWidth = 48;        // Platz pro Jahr (inkl. zwei Balken)
+        const groupWidth = 48;
         const barWidth = 18;
         const marginLeft = 60;
         const marginRight = 30;
@@ -767,7 +806,6 @@
         const maxCount = Math.max(...births, ...deaths, 1);
         const yScale = chartHeight / maxCount;
         
-        // Achsen zeichnen
         ctx.beginPath();
         ctx.strokeStyle = '#cbd5e1';
         ctx.lineWidth = 1;
@@ -776,7 +814,6 @@
         ctx.lineTo(canvas.width - marginRight + 8, marginTop + chartHeight);
         ctx.stroke();
         
-        // Y-Achsen-Beschriftung
         ctx.fillStyle = '#334155';
         ctx.font = '11px Inter, monospace';
         for (let i = 0; i <= maxCount; i++) {
@@ -789,7 +826,6 @@
             ctx.stroke();
         }
         
-        // Balken zeichnen + X-Achse Labels
         for (let idx = 0; idx < years.length; idx++) {
             const year = years[idx];
             const xCenter = marginLeft + idx * groupWidth + groupWidth/2;
@@ -798,10 +834,8 @@
             const birthX = xCenter - barWidth - 2;
             const deathX = xCenter + 2;
             
-            // Geburten blau
             ctx.fillStyle = '#3b82f6';
             ctx.fillRect(birthX, marginTop + chartHeight - birthHeight, barWidth, birthHeight);
-            // Sterbefälle rot
             ctx.fillStyle = '#dc2626';
             ctx.fillRect(deathX, marginTop + chartHeight - deathHeight, barWidth, deathHeight);
             
@@ -814,31 +848,34 @@
             ctx.restore();
         }
         
-        // Legende Titel
         ctx.fillStyle = '#0f172a';
         ctx.font = 'bold 12px Inter';
         ctx.fillText('⬅ Geburten   |   Sterbefälle ➔', canvas.width/2 - 100, marginTop - 8);
     }
     
     function renderChartsPlaceholder() {
-        if (!allPersons.length) return '';
+        // Zeige immer den Bereich an, auch wenn noch keine Daten da sind
         return `<div class="stats-charts-section">
             <h3>📊 Geburten & Sterbefälle pro Jahr <span style="font-size:0.8rem;">(Balkendiagramm)</span></h3>
             <div class="charts-container">
                 <canvas id="birthDeathChart" style="display:block; max-width:100%; height:auto;"></canvas>
             </div>
             <div class="chart-legend">
-                <span><i class="legend-birth"></i> Geburten (GEBURTSJAHR)</span>
-                <span><i class="legend-death"></i> Sterbefälle (STERBEJAHR)</span>
+                <span><i class="legend-birth"></i> Geburten (GEBURTSJAHR / GEBURTSDATUM)</span>
+                <span><i class="legend-death"></i> Sterbefälle (STERBEJAHR / STERBEDATUM)</span>
             </div>
         </div>`;
     }
     
-    // ----- Haupt-Rendering mit Balkendiagramm -----
+    // ----- Haupt-Rendering (inkl. Diagramm) -----
     async function renderFullUI() {
         if (!allPersons.length) {
-            dynamicContainer.innerHTML = `<div class="status-card"><span style="font-size:2rem;">🎈</span><p>Keine gültigen Geburts- oder Sterbedaten.</p></div>`;
+            dynamicContainer.innerHTML = `<div class="status-card"><span style="font-size:2rem;">🎈</span><p>Keine gültigen Geburtsdaten für Kalender.</p><p>Diagramm zeigt evtl. trotzdem Jahreszahlen.</p></div>`;
             document.getElementById('statsCount').innerText = `0 Personen`;
+            // Diagramm trotzdem zeichnen (falls globale Maps gefüllt sind)
+            const chartsHtml = renderChartsPlaceholder();
+            dynamicContainer.innerHTML = '' ; // chartsHtml + dynamicContainer.innerHTML;
+            drawBarCharts();
             return;
         }
         const totalFiltered = (currentFilterYear === 'all') ? allPersons.length : allPersons.filter(p => p.birthYear === currentFilterYear).length;
@@ -847,8 +884,8 @@
         
         const specialHtml = renderSpecialDays();
         const weeksHtml = renderWeeksPanel();
-        const timelineHtml = renderTimelineCollapsible();
         const chartsHtml = renderChartsPlaceholder();
+        const timelineHtml = renderTimelineCollapsible();
         const quarterHtml = renderQuarterView();
         
         dynamicContainer.innerHTML = `${specialHtml}${weeksHtml}${chartsHtml}${timelineHtml}${quarterHtml}`;
@@ -879,6 +916,10 @@
     
     async function fetchBirthdays() {
         revokeOldBlobs();
+        // globale Maps zurücksetzen
+        globalBirthYearCount.clear();
+        globalDeathYearCount.clear();
+        
         try {
             const resp = await fetch(API_URL, { method: 'GET', headers: { 'Accept': 'application/json' } });
             if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -895,26 +936,34 @@
                     }
                 }
             }
+            
+            // 1. Sammle Jahr-Statistiken für Diagramm (alle Rohdaten)
+            for (const item of raw) {
+                const birthYear = getBirthYearFromPerson(item);
+                if (birthYear) globalBirthYearCount.set(birthYear, (globalBirthYearCount.get(birthYear) || 0) + 1);
+                const deathYear = getDeathYearFromPerson(item);
+                if (deathYear) globalDeathYearCount.set(deathYear, (globalDeathYearCount.get(deathYear) || 0) + 1);
+            }
+            
+            // 2. Für Kalender: benötigen vollständiges Geburtsdatum (Tag/Monat/Jahr)
             const valid = [];
             for (const item of raw) {
-                const birthParsed = parseDateSafe(item.GEBURTSDATUM);
+                const birthParsed = parseFullBirthdateSafe(item.GEBURTSDATUM);
                 if (!birthParsed) continue;
-                let deathYear = null;
-                if (item.STERBEDATUM) {
-                    const deathParsed = parseDateSafe(item.STERBEDATUM);
-                    if (deathParsed) deathYear = deathParsed.year;
-                }
                 valid.push({
                     id: item.PK_KON_PERSON,
                     fullName: getFullName(item),
                     birthYear: birthParsed.year,
                     birthMonth: birthParsed.month,
                     birthDay: birthParsed.day,
-                    deathYear: deathYear,
                     genderLabel: getGenderLabel(item)
                 });
             }
-            if (valid.length === 0) throw new Error('Keine gültigen Geburts- oder Sterbedaten');
+            
+            if (valid.length === 0 && globalBirthYearCount.size === 0 && globalDeathYearCount.size === 0) {
+                throw new Error('Keine gültigen Geburts- oder Sterbedaten gefunden');
+            }
+            
             allPersons = valid;
             currentFilterYear = 'all';
             await renderFullUI();
