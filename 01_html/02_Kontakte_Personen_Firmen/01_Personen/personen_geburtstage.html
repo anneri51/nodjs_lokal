@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Geburtstage · Quartale · Bilder & Navigation</title>
+    <title>Geburtstage · Quartale · Porträts · Sterbejahr-Balken</title>
     <style>
         * {
             margin: 0;
@@ -338,6 +338,64 @@
             font-size: 0.7rem;
             color: #6c86a3;
         }
+        /* BALKENDIAGRAMM STYLES */
+        .stats-charts-section {
+            background: white;
+            border-radius: 1.8rem;
+            margin: 1.8rem 0 2rem 0;
+            padding: 1.2rem 1.2rem 1.8rem 1.2rem;
+            border: 1px solid #eef2f8;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+        }
+        .stats-charts-section h3 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 1rem;
+            padding-left: 0.2rem;
+        }
+        .charts-container {
+            overflow-x: auto;
+            margin: 0.5rem 0 1rem;
+            background: #fefefe;
+            border-radius: 1.2rem;
+            padding: 0.5rem 0;
+        }
+        canvas#birthDeathChart {
+            display: block;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 1rem;
+        }
+        .chart-legend {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .legend-birth {
+            display: inline-block;
+            width: 20px;
+            height: 14px;
+            background: #3b82f6;
+            border-radius: 4px;
+            margin-right: 0.4rem;
+            vertical-align: middle;
+        }
+        .legend-death {
+            display: inline-block;
+            width: 20px;
+            height: 14px;
+            background: #dc2626;
+            border-radius: 4px;
+            margin-right: 0.4rem;
+            vertical-align: middle;
+        }
         @media (max-width: 850px) {
             body { padding: 1rem; }
             .quarter-row { grid-template-columns: 1fr; }
@@ -353,24 +411,101 @@
 <body>
 <div class="container">
     <div class="header">
-        <h1>📅 Geburtstage · Quartale & Porträts</h1>
+        <h1>📅 Geburtstage · Quartale · Porträts</h1>
         <div class="stats" id="statsCount">– Personen</div>
     </div>
-    <div id="dynamicContent"><div class="status-card"><div class="spinner"></div><p>Lade Geburtstage von localhost:5000/kon_person ...</p></div></div>
-    <footer>🎂 Bilder via /person/bild/{id} · Navigation mit ← Vorjahr / Nächstes Jahr →</footer>
+    <div id="dynamicContent"><div class="status-card"><div class="spinner"></div><p>Lade Geburts- & Sterbedaten von localhost:5000/kon_person ...</p></div></div>
+    <footer>🎂 Bilder via /person/bild/{id} · Navigation mit ← Vorjahr / Nächstes Jahr →<br>✅ Zeitzonen-sicher: Geburts- und Sterbedaten immer nackte Jahreszahlen · Balkendiagramm: Geburten / Sterbefälle pro Jahr</footer>
 </div>
 
 <script>
     const API_URL = 'http://localhost:5000/kon_person';
-    let allPersons = [];
-    let currentFilterYear = 'all';   // 'all' oder Zahl
-    let sortedYearsAsc = [];          // aufsteigend sortierte Jahreszahlen
+    let allPersons = [];            // speichert {id, fullName, birthYear, birthMonth, birthDay, deathYear, genderLabel}
+    let currentFilterYear = 'all';   
     let personImageCache = {};
     let blobUrlsToRevoke = [];
 
     const dynamicContainer = document.getElementById('dynamicContent');
 
-    // ----- Bild-Fetch mit FILECONTENT -----
+    // ---------- ZEITZONEN-SICHERES PARSEN (für Geburtsdatum & Sterbedatum) ----------
+    function parseDateSafe(dateStr) {
+        if (!dateStr || typeof dateStr !== 'string') return null;
+        const trimmed = dateStr.trim();
+        if (trimmed === "") return null;
+        
+        let isoMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+        if (isoMatch) {
+            let year = parseInt(isoMatch[1], 10);
+            let month = parseInt(isoMatch[2], 10);
+            let day = parseInt(isoMatch[3], 10);
+            if (validDate(year, month, day)) return { year, month, day };
+        }
+        
+        let deMatch = trimmed.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+        if (deMatch) {
+            let day = parseInt(deMatch[1], 10);
+            let month = parseInt(deMatch[2], 10);
+            let year = parseInt(deMatch[3], 10);
+            if (validDate(year, month, day)) return { year, month, day };
+        }
+        
+        let slashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (slashMatch) {
+            let a = parseInt(slashMatch[1], 10);
+            let b = parseInt(slashMatch[2], 10);
+            let y = parseInt(slashMatch[3], 10);
+            if (a > 12 && b <= 12) {
+                if (validDate(y, b, a)) return { year: y, month: b, day: a };
+            } else if (b > 12 && a <= 12) {
+                if (validDate(y, a, b)) return { year: y, month: a, day: b };
+            } else {
+                if (validDate(y, a, b)) return { year: y, month: a, day: b };
+                if (validDate(y, b, a)) return { year: y, month: b, day: a };
+            }
+        }
+        
+        let compact = trimmed.match(/^(\d{4})(\d{2})(\d{2})$/);
+        if (compact) {
+            let y = parseInt(compact[1], 10);
+            let m = parseInt(compact[2], 10);
+            let d = parseInt(compact[3], 10);
+            if (validDate(y, m, d)) return { year: y, month: m, day: d };
+        }
+        return null;
+    }
+    
+    function validDate(year, month, day) {
+        if (year < 1000 || year > 2100) return false;
+        if (month < 1 || month > 12) return false;
+        if (day < 1 || day > 31) return false;
+        const daysInMonth = new Date(year, month, 0).getDate();
+        return day <= daysInMonth;
+    }
+    
+    // Geschlecht / Name
+    function getGenderLabel(p) {
+        let g = p.FK_STD_KON_PERSON_GESCHLECHT;
+        if (g === undefined) g = p.geschlecht;
+        if (!g) return '⚧ unbekannt';
+        const code = String(g).toLowerCase();
+        if (code === 'm' || code === 'male' || code === '1') return '👨 männlich';
+        if (code === 'w' || code === 'f' || code === 'female' || code === '2') return '👩 weiblich';
+        if (code === 'd' || code === 'divers' || code === '3') return '⚧ divers';
+        if (g === 1) return '👨 männlich';
+        if (g === 2) return '👩 weiblich';
+        if (g === 3) return '⚧ divers';
+        return `⚧ ${g}`;
+    }
+    
+    function getFullName(p) {
+        let v = p.VORNAME?.trim() || '', n = p.NACHNAME?.trim() || '';
+        if (v && n) return `${v} ${n}`;
+        if (v) return v;
+        if (n) return n;
+        return 'Unbekannt';
+    }
+    
+    // Bild-Fetch (unverändert)
     async function fetchPersonMainImage(personId) {
         if (!personId) return null;
         if (personImageCache[personId]) return personImageCache[personId];
@@ -402,7 +537,7 @@
             return null;
         }
     }
-
+    
     async function loadAllPersonImages() {
         const avatars = document.querySelectorAll('.person-avatar, .person-avatar-small');
         for (const img of avatars) {
@@ -414,68 +549,63 @@
             }
         }
     }
-
-    // ----- Datum & Hilfen -----
-    function parseBirthdate(dateStr) {
-        if (!dateStr || typeof dateStr !== 'string') return null;
-        const trimmed = dateStr.trim();
-        if (trimmed === "") return null;
-        let year, month, day;
-        let iso = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-        if (iso) { year = parseInt(iso[1]); month = parseInt(iso[2]); day = parseInt(iso[3]); }
-        else {
-            let de = trimmed.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
-            if (de) { day = parseInt(de[1]); month = parseInt(de[2]); year = parseInt(de[3]); }
-            else {
-                let slash = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-                if (slash) {
-                    let a = parseInt(slash[1]), b = parseInt(slash[2]), y = parseInt(slash[3]);
-                    if (a > 12 && b <= 12) { day = a; month = b; year = y; }
-                    else if (b > 12 && a <= 12) { month = a; day = b; year = y; }
-                    else { month = a; day = b; year = y; }
-                } else {
-                    let compact = trimmed.match(/^(\d{4})(\d{2})(\d{2})$/);
-                    if (compact) { year = parseInt(compact[1]); month = parseInt(compact[2]); day = parseInt(compact[3]); }
-                    else if (!isNaN(Number(trimmed)) && trimmed.length > 5) {
-                        let d = new Date(Number(trimmed));
-                        if (!isNaN(d.getTime()) && d.getFullYear() > 1900) { year = d.getFullYear(); month = d.getMonth()+1; day = d.getDate(); }
-                        else return null;
-                    } else return null;
-                }
-            }
-        }
-        if (!year || !month || !day) return null;
-        if (month < 1 || month > 12 || day < 1 || day > 31) return null;
-        const daysInMonth = new Date(year, month, 0).getDate();
-        if (day > daysInMonth) return null;
-        if (year < 1000 || year > 2100) return null;
-        return { year, month, day };
+    
+    // ----- Wochen- & Spezialtag-Logik (weiterhin lokal) -----
+    function getLocalMonthDay(date) {
+        return { month: date.getMonth() + 1, day: date.getDate() };
     }
-
-    function getGenderLabel(p) {
-        let g = p.FK_STD_KON_PERSON_GESCHLECHT;
-        if (g === undefined) g = p.geschlecht;
-        if (!g) return '⚧ unbekannt';
-        const code = String(g).toLowerCase();
-        if (code === 'm' || code === 'male' || code === '1') return '👨 männlich';
-        if (code === 'w' || code === 'f' || code === 'female' || code === '2') return '👩 weiblich';
-        if (code === 'd' || code === 'divers' || code === '3') return '⚧ divers';
-        if (g === 1) return '👨 männlich';
-        if (g === 2) return '👩 weiblich';
-        if (g === 3) return '⚧ divers';
-        if (code === 'weiblich') return '👩 weiblich';
-        if (code === 'männlich') return '👨 männlich';
-        return `⚧ ${g}`;
+    
+    function isBirthdayInRangeLocal(month, day, startDate, endDate) {
+        const start = getLocalMonthDay(startDate);
+        const end = getLocalMonthDay(endDate);
+        const birthdayVal = month * 100 + day;
+        const startVal = start.month * 100 + start.day;
+        const endVal = end.month * 100 + end.day;
+        if (startVal <= endVal) return birthdayVal >= startVal && birthdayVal <= endVal;
+        else return birthdayVal >= startVal || birthdayVal <= endVal;
     }
-
-    function getFullName(p) {
-        let v = p.VORNAME?.trim() || '', n = p.NACHNAME?.trim() || '';
-        if (v && n) return `${v} ${n}`;
-        if (v) return v;
-        if (n) return n;
-        return 'Unbekannt';
+    
+    function getMondayLocal(date) {
+        const d = new Date(date);
+        const day = d.getDay();
+        const diff = (day === 0 ? 6 : day - 1);
+        d.setDate(d.getDate() - diff);
+        return new Date(d.setHours(0,0,0,0));
     }
-
+    
+    function getWeekRangeLocal(offsetWeeks = 0) {
+        const today = new Date();
+        const mondayThis = getMondayLocal(today);
+        const start = new Date(mondayThis);
+        start.setDate(mondayThis.getDate() + (offsetWeeks * 7));
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        end.setHours(23,59,59,999);
+        return { start, end };
+    }
+    
+    function getBirthdaysForWeek(offset) {
+        const { start, end } = getWeekRangeLocal(offset);
+        return allPersons.filter(p => isBirthdayInRangeLocal(p.birthMonth, p.birthDay, start, end))
+            .sort((a,b) => (a.birthMonth*100 + a.birthDay) - (b.birthMonth*100 + b.birthDay));
+    }
+    
+    function getLocalTodayTomorrowYesterday() {
+        const today = new Date();
+        const todayMonth = today.getMonth() + 1;
+        const todayDay = today.getDate();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        return {
+            today: { month: todayMonth, day: todayDay, persons: allPersons.filter(p => p.birthMonth === todayMonth && p.birthDay === todayDay) },
+            tomorrow: { month: tomorrow.getMonth()+1, day: tomorrow.getDate(), persons: allPersons.filter(p => p.birthMonth === (tomorrow.getMonth()+1) && p.birthDay === tomorrow.getDate()) },
+            yesterday: { month: yesterday.getMonth()+1, day: yesterday.getDate(), persons: allPersons.filter(p => p.birthMonth === (yesterday.getMonth()+1) && p.birthDay === yesterday.getDate()) }
+        };
+    }
+    
+    // ----- Rendering kleiner Komponenten (unverändert)-----
     function renderCompactPerson(person, showDate = true) {
         const dateStr = showDate ? `${person.birthDay}.${person.birthMonth}` : '';
         return `
@@ -491,7 +621,7 @@
             </div>
         `;
     }
-
+    
     function renderPersonItemLarge(person, highlightToday = false) {
         const todayClass = highlightToday ? 'today-birthday' : '';
         return `
@@ -507,54 +637,39 @@
             </div>
         `;
     }
-
-    // Spezialtage & Wochen
-    function getPersonsByMonthDay(month, day) {
-        return allPersons.filter(p => p.birthMonth === month && p.birthDay === day);
+    
+    function renderSpecialDays() {
+        const { today, tomorrow, yesterday } = getLocalTodayTomorrowYesterday();
+        return `<div class="special-days">
+            <div class="special-card"><div class="special-header">🎉 HEUTE (${today.day}.${today.month})</div><div class="special-list">${today.persons.length ? today.persons.map(p => renderCompactPerson(p, true)).join('') : '<div class="empty-special">✨ Keine Geburtstage heute</div>'}</div></div>
+            <div class="special-card"><div class="special-header">🌅 MORGEN (${tomorrow.day}.${tomorrow.month})</div><div class="special-list">${tomorrow.persons.length ? tomorrow.persons.map(p => renderCompactPerson(p, true)).join('') : '<div class="empty-special">✨ Keine Geburtstage morgen</div>'}</div></div>
+            <div class="special-card"><div class="special-header">⏪ GESTERN (${yesterday.day}.${yesterday.month})</div><div class="special-list">${yesterday.persons.length ? yesterday.persons.map(p => renderCompactPerson(p, true)).join('') : '<div class="empty-special">✨ Keine Geburtstage gestern</div>'}</div></div>
+        </div>`;
     }
-
-    function getTodayTomorrowYesterday() {
-        const today = new Date();
-        const todayMonth = today.getMonth() + 1;
-        const todayDay = today.getDate();
-        const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
-        const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
-        return {
-            today: { month: todayMonth, day: todayDay, persons: getPersonsByMonthDay(todayMonth, todayDay) },
-            tomorrow: { month: tomorrow.getMonth()+1, day: tomorrow.getDate(), persons: getPersonsByMonthDay(tomorrow.getMonth()+1, tomorrow.getDate()) },
-            yesterday: { month: yesterday.getMonth()+1, day: yesterday.getDate(), persons: getPersonsByMonthDay(yesterday.getMonth()+1, yesterday.getDate()) }
+    
+    function renderWeeksPanel() {
+        const prevWeek = getBirthdaysForWeek(-1);
+        const currentWeek = getBirthdaysForWeek(0);
+        const formatRange = (offset) => {
+            const { start, end } = getWeekRangeLocal(offset);
+            return `${start.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})} – ${end.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})}`;
         };
+        return `<div class="weeks-panel">
+            <div class="week-card"><div class="week-header">📅 Vorherige Woche (${formatRange(-1)})</div><div class="week-list">${prevWeek.length ? prevWeek.map(p => renderCompactPerson(p, true)).join('') : '<div class="empty-special">✨ Keine Geburtstage</div>'}</div></div>
+            <div class="week-card"><div class="week-header">🎈 Diese Woche (${formatRange(0)})</div><div class="week-list">${currentWeek.length ? currentWeek.map(p => renderCompactPerson(p, true)).join('') : '<div class="empty-special">✨ Keine Geburtstage</div>'}</div></div>
+        </div>`;
     }
-
-    function getMonday(date) {
-        const d = new Date(date);
-        const day = d.getDay();
-        const diff = (day === 0 ? 6 : day - 1);
-        d.setDate(d.getDate() - diff);
-        return new Date(d.setHours(0,0,0,0));
+    
+    // Quartale & Jahresfilter (wie zuvor)
+    function getSortedYears() {
+        const years = [...new Set(allPersons.map(p => p.birthYear))];
+        years.sort((a,b) => a - b);
+        return years;
     }
-    function getWeekRange(offsetWeeks = 0) {
-        const today = new Date();
-        const mondayThis = getMonday(today);
-        const start = new Date(mondayThis);
-        start.setDate(mondayThis.getDate() + (offsetWeeks * 7));
-        const end = new Date(start);
-        end.setDate(start.getDate() + 6);
-        end.setHours(23,59,59,999);
-        return { start, end };
-    }
-    function isBirthdayInRange(month, day, rangeStart, rangeEnd) {
-        let year = rangeStart.getFullYear();
-        let birthday = new Date(year, month-1, day);
-        if (birthday < rangeStart) birthday = new Date(year+1, month-1, day);
-        return birthday >= rangeStart && birthday <= rangeEnd;
-    }
-    function getBirthdaysForWeek(offset) {
-        return allPersons.filter(p => isBirthdayInRange(p.birthMonth, p.birthDay, ...Object.values(getWeekRange(offset))))
-            .sort((a,b) => (a.birthMonth*100 + a.birthDay) - (b.birthMonth*100 + b.birthDay));
-    }
-
-    // Quartalsansicht
+    
+    function goPrevYear() { /* unverändert */ const years = getSortedYears(); if (years.length===0) return; if (currentFilterYear==='all') currentFilterYear=years[years.length-1]; else { const idx=years.indexOf(currentFilterYear); if (idx>0) currentFilterYear=years[idx-1]; } renderFullUI(); }
+    function goNextYear() { const years = getSortedYears(); if (years.length===0) return; if (currentFilterYear==='all') currentFilterYear=years[0]; else { const idx=years.indexOf(currentFilterYear); if (idx!==-1 && idx<years.length-1) currentFilterYear=years[idx+1]; } renderFullUI(); }
+    
     function getMonthGroupsFiltered() {
         let buckets = Array(12).fill().map(() => []);
         let filtered = (currentFilterYear === 'all') ? allPersons : allPersons.filter(p => p.birthYear === currentFilterYear);
@@ -562,7 +677,7 @@
         for (let i=0;i<12;i++) buckets[i].sort((a,b) => (b.birthYear - a.birthYear) || (a.birthDay - b.birthDay));
         return buckets;
     }
-
+    
     function renderQuarterView() {
         const monthGroups = getMonthGroupsFiltered();
         const monthNames = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
@@ -578,16 +693,9 @@
                 const monthNumber = mIdx+1;
                 const isCurrentMonth = (monthNumber === currentMonth);
                 const monthCardClass = isCurrentMonth ? 'month-card current-month' : 'month-card';
-                html += `<div class="${monthCardClass}">
-                            <div class="month-header"><span class="month-name">${monthNames[mIdx]}</span><span class="month-badge">${persons.length} Pers.</span></div>
-                            <div class="birthday-list">`;
+                html += `<div class="${monthCardClass}"><div class="month-header"><span class="month-name">${monthNames[mIdx]}</span><span class="month-badge">${persons.length} Pers.</span></div><div class="birthday-list">`;
                 if (persons.length === 0) html += `<div class="empty-month">✨ Keine Geburtstage</div>`;
-                else {
-                    for (const p of persons) {
-                        const isToday = (p.birthMonth === currentMonth && p.birthDay === currentDay);
-                        html += renderPersonItemLarge(p, isToday);
-                    }
-                }
+                else for (const p of persons) html += renderPersonItemLarge(p, (p.birthMonth === currentMonth && p.birthDay === currentDay));
                 html += `</div></div>`;
             }
             html += `</div>`;
@@ -595,116 +703,157 @@
         html += `</div>`;
         return html;
     }
-
-    // Navigation: -1 / +1 Jahr
-    function getSortedYears() {
-        const years = [...new Set(allPersons.map(p => p.birthYear))];
-        years.sort((a,b) => a - b);
-        return years;
-    }
-
-    function goPrevYear() {
-        const years = getSortedYears();
-        if (years.length === 0) return;
-        if (currentFilterYear === 'all') {
-            // Setze auf das neueste Jahr (max)
-            currentFilterYear = years[years.length-1];
-        } else {
-            const idx = years.indexOf(currentFilterYear);
-            if (idx > 0) currentFilterYear = years[idx-1];
-        }
-        renderFullUI();
-    }
-
-    function goNextYear() {
-        const years = getSortedYears();
-        if (years.length === 0) return;
-        if (currentFilterYear === 'all') {
-            // Setze auf das älteste Jahr (min)
-            currentFilterYear = years[0];
-        } else {
-            const idx = years.indexOf(currentFilterYear);
-            if (idx !== -1 && idx < years.length-1) currentFilterYear = years[idx+1];
-        }
-        renderFullUI();
-    }
-
-    // Timeline & collapsible mit Nav-Buttons
+    
     function renderTimelineCollapsible() {
-        if (!allPersons.length) return '';
         const years = getSortedYears();
         const yearCountMap = {};
         allPersons.forEach(p => { yearCountMap[p.birthYear] = (yearCountMap[p.birthYear] || 0) + 1; });
-        const chips = years.map(year => {
-            const count = yearCountMap[year] || 0;
-            const activeClass = (currentFilterYear === year) ? 'active' : '';
-            return `<span class="chip ${activeClass}" data-year="${year}">${year} <span style="opacity:0.7;">(${count})</span></span>`;
-        });
-        const allCount = allPersons.length;
+        const chips = years.map(year => `<span class="chip ${currentFilterYear === year ? 'active' : ''}" data-year="${year}">${year} <span style="opacity:0.7;">(${yearCountMap[year]||0})</span></span>`);
         const allActive = currentFilterYear === 'all' ? 'active' : '';
-        const allChip = `<span class="chip all-chip ${allActive}" data-year="all">🎉 Alle Jahre (${allCount})</span>`;
-
-        return `
-            <details class="timeline-collapsible">
-                <summary>📆 Jahresfilter · Geburtsjahr auswählen (${years.length} Jahre)</summary>
-                <div class="timeline-content">
-                    <div class="year-nav">
-                        <button class="year-nav-btn" id="prevYearBtn">← Vorjahr</button>
-                        <button class="year-nav-btn" id="nextYearBtn">Nächstes Jahr →</button>
-                    </div>
-                    <div class="year-chips">
-                        ${allChip}
-                        ${chips.join('')}
-                    </div>
-                </div>
-            </details>
-        `;
+        const allChip = `<span class="chip all-chip ${allActive}" data-year="all">🎉 Alle Jahre (${allPersons.length})</span>`;
+        return `<details class="timeline-collapsible"><summary>📆 Jahresfilter · Geburtsjahr auswählen (${years.length} Jahre)</summary><div class="timeline-content"><div class="year-nav"><button class="year-nav-btn" id="prevYearBtn">← Vorjahr</button><button class="year-nav-btn" id="nextYearBtn">Nächstes Jahr →</button></div><div class="year-chips">${allChip}${chips.join('')}</div></div></details>`;
     }
-
-    function renderSpecialDays() {
-        const { today, tomorrow, yesterday } = getTodayTomorrowYesterday();
-        return `
-            <div class="special-days">
-                <div class="special-card"><div class="special-header">🎉 HEUTE (${today.day}.${today.month})</div><div class="special-list">${today.persons.length ? today.persons.map(p => renderCompactPerson(p, true)).join('') : '<div class="empty-special">✨ Keine Geburtstage heute</div>'}</div></div>
-                <div class="special-card"><div class="special-header">🌅 MORGEN (${tomorrow.day}.${tomorrow.month})</div><div class="special-list">${tomorrow.persons.length ? tomorrow.persons.map(p => renderCompactPerson(p, true)).join('') : '<div class="empty-special">✨ Keine Geburtstage morgen</div>'}</div></div>
-                <div class="special-card"><div class="special-header">⏪ GESTERN (${yesterday.day}.${yesterday.month})</div><div class="special-list">${yesterday.persons.length ? yesterday.persons.map(p => renderCompactPerson(p, true)).join('') : '<div class="empty-special">✨ Keine Geburtstage gestern</div>'}</div></div>
+    
+    // ---------- BALKENDIAGRAMM: Geburten- & Sterbefälle pro Jahr ----------
+    function computeBirthDeathYearly() {
+        const birthsMap = new Map();
+        const deathsMap = new Map();
+        for (const p of allPersons) {
+            if (p.birthYear) birthsMap.set(p.birthYear, (birthsMap.get(p.birthYear) || 0) + 1);
+            if (p.deathYear) deathsMap.set(p.deathYear, (deathsMap.get(p.deathYear) || 0) + 1);
+        }
+        const allYearsSet = new Set([...birthsMap.keys(), ...deathsMap.keys()]);
+        if (allYearsSet.size === 0) return { years: [], births: [], deaths: [] };
+        const minYear = Math.min(...allYearsSet);
+        const maxYear = Math.max(...allYearsSet);
+        const years = [];
+        const births = [];
+        const deaths = [];
+        for (let y = minYear; y <= maxYear; y++) {
+            years.push(y);
+            births.push(birthsMap.get(y) || 0);
+            deaths.push(deathsMap.get(y) || 0);
+        }
+        return { years, births, deaths };
+    }
+    
+    function drawBarCharts() {
+        const canvas = document.getElementById('birthDeathChart');
+        if (!canvas) return;
+        const { years, births, deaths } = computeBirthDeathYearly();
+        if (years.length === 0) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.font = '14px Inter, sans-serif';
+            ctx.fillStyle = '#64748b';
+            ctx.fillText('Keine Jahresdaten verfügbar', 20, 50);
+            return;
+        }
+        
+        const groupWidth = 48;        // Platz pro Jahr (inkl. zwei Balken)
+        const barWidth = 18;
+        const marginLeft = 60;
+        const marginRight = 30;
+        const marginTop = 30;
+        const marginBottom = 60;
+        const chartHeight = 300;
+        
+        const totalWidth = marginLeft + (years.length * groupWidth) + marginRight;
+        canvas.width = Math.max(700, totalWidth);
+        canvas.height = chartHeight + marginTop + marginBottom;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        const maxCount = Math.max(...births, ...deaths, 1);
+        const yScale = chartHeight / maxCount;
+        
+        // Achsen zeichnen
+        ctx.beginPath();
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 1;
+        ctx.moveTo(marginLeft - 4, marginTop);
+        ctx.lineTo(marginLeft - 4, marginTop + chartHeight);
+        ctx.lineTo(canvas.width - marginRight + 8, marginTop + chartHeight);
+        ctx.stroke();
+        
+        // Y-Achsen-Beschriftung
+        ctx.fillStyle = '#334155';
+        ctx.font = '11px Inter, monospace';
+        for (let i = 0; i <= maxCount; i++) {
+            const y = marginTop + chartHeight - (i * yScale);
+            ctx.fillText(i.toString(), marginLeft - 20, y + 3);
+            ctx.beginPath();
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.moveTo(marginLeft - 4, y);
+            ctx.lineTo(canvas.width - marginRight + 8, y);
+            ctx.stroke();
+        }
+        
+        // Balken zeichnen + X-Achse Labels
+        for (let idx = 0; idx < years.length; idx++) {
+            const year = years[idx];
+            const xCenter = marginLeft + idx * groupWidth + groupWidth/2;
+            const birthHeight = births[idx] * yScale;
+            const deathHeight = deaths[idx] * yScale;
+            const birthX = xCenter - barWidth - 2;
+            const deathX = xCenter + 2;
+            
+            // Geburten blau
+            ctx.fillStyle = '#3b82f6';
+            ctx.fillRect(birthX, marginTop + chartHeight - birthHeight, barWidth, birthHeight);
+            // Sterbefälle rot
+            ctx.fillStyle = '#dc2626';
+            ctx.fillRect(deathX, marginTop + chartHeight - deathHeight, barWidth, deathHeight);
+            
+            ctx.fillStyle = '#1e293b';
+            ctx.font = '10px Inter, sans-serif';
+            ctx.save();
+            ctx.translate(xCenter, marginTop + chartHeight + 18);
+            ctx.rotate(-0.35);
+            ctx.fillText(year.toString(), 0, 0);
+            ctx.restore();
+        }
+        
+        // Legende Titel
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 12px Inter';
+        ctx.fillText('⬅ Geburten   |   Sterbefälle ➔', canvas.width/2 - 100, marginTop - 8);
+    }
+    
+    function renderChartsPlaceholder() {
+        if (!allPersons.length) return '';
+        return `<div class="stats-charts-section">
+            <h3>📊 Geburten & Sterbefälle pro Jahr <span style="font-size:0.8rem;">(Balkendiagramm)</span></h3>
+            <div class="charts-container">
+                <canvas id="birthDeathChart" style="display:block; max-width:100%; height:auto;"></canvas>
             </div>
-        `;
-    }
-
-    function renderWeeksPanel() {
-        const prevWeek = getBirthdaysForWeek(-1);
-        const currentWeek = getBirthdaysForWeek(0);
-        const formatRange = (offset) => {
-            const { start, end } = getWeekRange(offset);
-            return `${start.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})} – ${end.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})}`;
-        };
-        return `
-            <div class="weeks-panel">
-                <div class="week-card"><div class="week-header">📅 Vorherige Woche (${formatRange(-1)})</div><div class="week-list">${prevWeek.length ? prevWeek.map(p => renderCompactPerson(p, true)).join('') : '<div class="empty-special">✨ Keine Geburtstage</div>'}</div></div>
-                <div class="week-card"><div class="week-header">🎈 Diese Woche (${formatRange(0)})</div><div class="week-list">${currentWeek.length ? currentWeek.map(p => renderCompactPerson(p, true)).join('') : '<div class="empty-special">✨ Keine Geburtstage</div>'}</div></div>
+            <div class="chart-legend">
+                <span><i class="legend-birth"></i> Geburten (GEBURTSJAHR)</span>
+                <span><i class="legend-death"></i> Sterbefälle (STERBEJAHR)</span>
             </div>
-        `;
+        </div>`;
     }
-
+    
+    // ----- Haupt-Rendering mit Balkendiagramm -----
     async function renderFullUI() {
         if (!allPersons.length) {
-            dynamicContainer.innerHTML = `<div class="status-card"><span style="font-size:2rem;">🎈</span><p>Keine gültigen Geburtstage.</p></div>`;
+            dynamicContainer.innerHTML = `<div class="status-card"><span style="font-size:2rem;">🎈</span><p>Keine gültigen Geburts- oder Sterbedaten.</p></div>`;
             document.getElementById('statsCount').innerText = `0 Personen`;
             return;
         }
         const totalFiltered = (currentFilterYear === 'all') ? allPersons.length : allPersons.filter(p => p.birthYear === currentFilterYear).length;
         const yearText = (currentFilterYear !== 'all') ? `· Jahr ${currentFilterYear}` : '';
         document.getElementById('statsCount').innerHTML = `${totalFiltered} ${totalFiltered === 1 ? 'Person' : 'Personen'} ${yearText}`;
-
+        
         const specialHtml = renderSpecialDays();
         const weeksHtml = renderWeeksPanel();
         const timelineHtml = renderTimelineCollapsible();
+        const chartsHtml = renderChartsPlaceholder();
         const quarterHtml = renderQuarterView();
-
-        dynamicContainer.innerHTML = `${specialHtml}${weeksHtml}${timelineHtml}${quarterHtml}`;
-
-        // Event listener für Jahres-Chips
+        
+        dynamicContainer.innerHTML = `${specialHtml}${weeksHtml}${chartsHtml}${timelineHtml}${quarterHtml}`;
+        
+        // Event-Listener für Jahresfilter
         document.querySelectorAll('.chip').forEach(chip => {
             chip.addEventListener('click', (e) => {
                 const yearVal = chip.getAttribute('data-year');
@@ -713,21 +862,21 @@
                 renderFullUI();
             });
         });
-        // Event listener für Navigation
         const prevBtn = document.getElementById('prevYearBtn');
         const nextBtn = document.getElementById('nextYearBtn');
         if (prevBtn) prevBtn.addEventListener('click', (e) => { e.preventDefault(); goPrevYear(); });
         if (nextBtn) nextBtn.addEventListener('click', (e) => { e.preventDefault(); goNextYear(); });
-
+        
         await loadAllPersonImages();
+        drawBarCharts(); // nach DOM-Aktualisierung zeichnen
     }
-
+    
     function revokeOldBlobs() {
         for (const url of blobUrlsToRevoke) URL.revokeObjectURL(url);
         blobUrlsToRevoke = [];
         personImageCache = {};
     }
-
+    
     async function fetchBirthdays() {
         revokeOldBlobs();
         try {
@@ -748,28 +897,36 @@
             }
             const valid = [];
             for (const item of raw) {
-                const parsed = parseBirthdate(item.GEBURTSDATUM);
-                if (!parsed) continue;
+                const birthParsed = parseDateSafe(item.GEBURTSDATUM);
+                if (!birthParsed) continue;
+                let deathYear = null;
+                if (item.STERBEDATUM) {
+                    const deathParsed = parseDateSafe(item.STERBEDATUM);
+                    if (deathParsed) deathYear = deathParsed.year;
+                }
                 valid.push({
                     id: item.PK_KON_PERSON,
                     fullName: getFullName(item),
-                    birthYear: parsed.year,
-                    birthMonth: parsed.month,
-                    birthDay: parsed.day,
+                    birthYear: birthParsed.year,
+                    birthMonth: birthParsed.month,
+                    birthDay: birthParsed.day,
+                    deathYear: deathYear,
                     genderLabel: getGenderLabel(item)
                 });
             }
-            if (valid.length === 0) throw new Error('Keine gültigen Geburtsdaten');
+            if (valid.length === 0) throw new Error('Keine gültigen Geburts- oder Sterbedaten');
             allPersons = valid;
-            currentFilterYear = 'all';  // Standard: Alle Jahre
+            currentFilterYear = 'all';
             await renderFullUI();
         } catch (err) {
             dynamicContainer.innerHTML = `<div class="status-card"><span>⚠️</span><p style="color:#991b1b;">${err.message}</p><button class="retry" onclick="location.reload()">🔄 Wiederholen</button></div>`;
             document.getElementById('statsCount').innerText = 'Fehler';
         }
     }
-
+    
     function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;': m==='<'?'&lt;':'&gt;'); }
+    
+    window.addEventListener('resize', () => { if(document.getElementById('birthDeathChart')) drawBarCharts(); });
     fetchBirthdays();
 </script>
 </body>
